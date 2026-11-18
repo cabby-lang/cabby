@@ -1,6 +1,6 @@
 # The Cabby Manual
 
-*For Cabby 0.33.1 (2026-11-19).*
+*For Cabby 0.33.2 (2026-11-19).*
 
 A book for learning Cabby one idea at a time, and a reference to come back
 to afterwards.
@@ -762,6 +762,31 @@ println 0.1 + 0.2, 0.1 + 0.2 == 0.3
 
 This is true in every language that uses the computer's floating point. Don't
 compare floating-point results with `==`; check that they're close instead.
+`abs` gives a number without its sign (it's built in, and works on every
+kind of number, so it's C's `fabs` and `fabsf` in one), so the gap between
+two numbers is `abs(A - B)`:
+
+<!-- main -->
+```cabby
+double D = 0.1 + 0.2
+float F = 0.1f + 0.2f
+println D == 0.3, abs(D - 0.3) < 0.000000001
+println F == 0.3f, abs(F - 0.3f) < 0.0001f
+println abs(-2.5), abs(-2.5f)
+```
+
+```text
+false true
+true true
+2.5 2.5
+```
+
+How close is close enough depends on the type. A `double` keeps about 15
+significant digits, so for numbers near 1 a gap under `0.000000001` is
+safe; a `float` keeps only about 7, so it needs a looser limit, like
+`0.0001f`. (Here `0.1f + 0.2f` happens to round to exactly the `float`
+nearest 0.3, but another sum might not.) For big numbers, scale the limit
+with them: `abs(A - B) < 0.000000001 * abs(B)`.
 
 #### Integers and doubles together
 
