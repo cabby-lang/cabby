@@ -370,5 +370,41 @@ dseditgroup [-o] [delete] [band]
 sysadminctl [-deleteUser] [grace] [-keepHome]
 sysadminctl [-deleteUser] [ada]"
 
+# ---- screens, mouse and keyboard, each desktop's way. tools/settings-tool
+# stands for swaymsg, xrandr, kscreen-doctor, gsettings, xset, setxkbmap
+# and xinput, changing the computer computer.json describes; the desktop
+# is told by SWAYSOCK, XDG_CURRENT_DESKTOP and DISPLAY. GNOME's monitors
+# are asked of fake-mutter.cby, on a session bus of the test's own.
+SETTINGS="-u DISPLAY -u WAYLAND_DISPLAY -u SWAYSOCK -u XDG_CURRENT_DESKTOP CABBY_DESKTOP_AS=linux CABBY_TOOLS=$T CABBY_TEST_STATE=$STATE CABBY_XKB_RULES=$DIR/xkb/evdev.lst CABBY_LEDS=$DIR/leds"
+settings() {   # (the desktop, its tools, which library, the expected output's name)
+	cp "$DIR/computer.json" "$STATE/computer.json"
+	check "$3, on $4" "$SETTINGS $1 CABBY_HAVE=$2" "$3" "$(cat "$DIR/expect/$3-$4.out")"
+}
+for lib in screens mouse keyboard; do
+	settings SWAYSOCK=/run/sway.sock swaymsg $lib sway
+	settings WAYLAND_DISPLAY=wayland-1 none $lib none
+done
+settings DISPLAY=:0 xrandr screens x11
+settings DISPLAY=:0 xinput mouse x11
+settings DISPLAY=:0 xset,setxkbmap keyboard x11
+settings XDG_CURRENT_DESKTOP=KDE kscreen-doctor screens kde
+settings XDG_CURRENT_DESKTOP=GNOME gsettings mouse gnome
+settings XDG_CURRENT_DESKTOP=GNOME gsettings keyboard gnome
+if command -v dbus-daemon > /dev/null; then
+	mkdir -p "$TMP/bus"
+	bus=$(dbus-daemon --session --fork --print-address=1 --print-pid=3 --address="unix:path=$TMP/bus/socket" 3> "$TMP/bus/pid" < /dev/null 2> /dev/null)
+	if [[ -n "$bus" ]]; then
+		DBUS_SESSION_BUS_ADDRESS=$bus "$CLI" "$DIR/fake-mutter.cby" "$DIR/mutter.json" "$TMP/bus/ready" > "$TMP/bus/mutter.log" 2>&1 &
+		mutter=$!
+		for _ in $(seq 100); do [[ -f "$TMP/bus/ready" ]] && break; sleep 0.1; done
+		check "screens, on gnome" "$SETTINGS XDG_CURRENT_DESKTOP=GNOME CABBY_HAVE=none DBUS_SESSION_BUS_ADDRESS=$bus" screens "$(cat "$DIR/expect/screens-gnome.out")"
+		kill $mutter 2> /dev/null
+		kill "$(cat "$TMP/bus/pid")" 2> /dev/null
+	fi
+fi
+if [[ "$(uname)" != Darwin ]]; then   # (on a Mac, its own screens are there)
+	check "screens on a Mac (from Linux)" "$SETTINGS CABBY_DESKTOP_AS=macos CABBY_HAVE=none" screens "$(cat "$DIR/expect/screens-mac.out")"
+fi
+
 echo "desktop and power ($MODE): $pass passed, $fail failed"
 [[ $fail -eq 0 ]]

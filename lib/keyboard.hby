@@ -1,0 +1,445 @@
+// keyboard.hby — the keyboard: its layouts (which letters its keys
+// type), how soon and how fast a held key repeats, and whether Caps Lock
+// and Num Lock are on.
+//
+//     use keyboard
+//
+//     println keyboard.layouts, "repeats after", keyboard.repeat_delay, "ms"
+//     keyboard.set_layouts {"us", "de"}
+//     keyboard.set_repeat_rate 40
+//
+// A layout is named as X11's keyboard files name it: "us", "gb", "de",
+// "fr", and a variant in parentheses: "us(dvorak)", "de(neo)". Each
+// desktop keeps these settings its own way: Sway's are changed by
+// swaymsg (until Sway starts again: its config keeps them for good);
+// GNOME's are gsettings', kept as its Settings app keeps them; any other
+// desktop on X11 has setxkbmap and xset (until X starts again). KDE
+// Plasma's and a Mac's aren't here yet, though the lock keys are read on
+// any Linux.
+//
+// The full reference is keyboard.md, next to this file.
+
+use addresses
+use files
+use json
+use shell
+
+// ---- the C side (runtime/desktop.c)
+
+extern long cby_desktop_kind void
+extern long cby_desktop_capture str line, str input, int has_input
+extern void cby_desktop_take_text address char dst
+extern long cby_keyboard_lock long which
+
+// What a program prints, run with its arguments (each after a "\x1f"):
+// "\x1e" (which nothing prints) if it couldn't be run or didn't work.
+static str keyboard_run const str &Line {
+	long Length = cby_desktop_capture Line, "", 0
+	if Length < 0 {
+		return "\x1e"
+	}
+	str Text = " ".repeat Length
+	address char Room = addresses.of_text Text
+	cby_desktop_take_text Room
+	return Text
+}
+
+static bool keyboard_do const str &Line {
+	return keyboard_run(Line) is not "\x1e"
+}
+
+// the words of a line, without the spaces between them
+static list str keyboard_words const str &Line {
+	list str Words
+	for Word in Line.trim.split " " {
+		if Word is not "" {
+			Words.add Word.copy
+		}
+	}
+	return Words
+}
+
+// "us(dvorak)" as its layout ("us") and its variant ("dvorak", or "")
+static str keyboard_layout_of const str &Name {
+	long Open = Name.find "("
+	if Open < 0 {
+		return Name.copy
+	}
+	return Name[to Open - 1]
+}
+
+static str keyboard_variant_of const str &Name {
+	long Open = Name.find "("
+	if Open < 0 or !Name.ends_with(")") {
+		return ""
+	}
+	return Name[Open + 1 to Name.length - 2]
+}
+
+// layouts and their variants, as two lists joined by commas, as X11's
+// tools take them: "us,de" and ",neo"
+static str keyboard_joined const list str &Names, bool Variants {
+	str Joined = ""
+	for long I = 0; I < Names.length; I++ {
+		if I > 0 {
+			Joined += ","
+		}
+		if Variants {
+			Joined += keyboard_variant_of Names[I]
+		} else {
+			Joined += keyboard_layout_of Names[I]
+		}
+	}
+	return Joined
+}
+
+// "us", "de" back from what the two lists say
+static list str keyboard_names const str &Layouts, const str &Variants {
+	list str Names
+	list str Vs = Variants.split ","
+	long I = 0
+	for L in Layouts.split "," {
+		str Name = L.trim
+		if I < Vs.length and Vs[I].trim is not "" {
+			Name += "(" + Vs[I].trim + ")"
+		}
+		if Name is not "" {
+			Names.add Name
+		}
+		I++
+	}
+	return Names
+}
+
+// ---- Sway's: swaymsg's list of inputs
+
+static json keyboard_sway {
+	str Said = keyboard_run "swaymsg\x1f-t\x1fget_inputs\x1f-r"
+	if json.can_read Said {
+		json All = json.read Said
+		for long I = 0; I < All.length; I++ {
+			if All.item_at(I)["type"].str_or("") is "keyboard" {
+				return All.item_at(I).copy
+			}
+		}
+	}
+	return json.null
+}
+
+// Sway gives each layout's description ("English (US)"); X11's list of
+// them (evdev.lst) says which name that is ("us")
+static str keyboard_name_of const str &Description {
+	str Rules = "/usr/share/X11/xkb/rules/evdev.lst"
+	str Instead = shell.get "CABBY_XKB_RULES"     // (the tests' own list)
+	if Instead is not "" {
+		Rules = Instead
+	}
+	if !files.exists(Rules) {
+		return Description.copy
+	}
+	str Section = ""
+	for Line in files.read(Rules).split "\n" {
+		if Line.starts_with "! " {
+			str S = Line[2 to]
+			Section = S.trim
+			continue
+		}
+		list str Words = keyboard_words Line
+		if Words.length < 2 {
+			continue
+		}
+		str Rest = Line.trim[Words[0].length to]
+		str Said = Rest.trim
+		if Section is "layout" and Said is Description {
+			return Words[0].copy
+		}
+		// a variant's: "  dvorak          us: English (Dvorak)"
+		if Section is "variant" and Words[1].ends_with(":") {
+			str Base = Words[1][to Words[1].length - 2]
+			str Named = Said[Words[1].length to]
+			if Named.trim is Description {
+				return Base + "(" + Words[0] + ")"
+			}
+		}
+	}
+	return Description.copy
+}
+
+// ---- GNOME's: gsettings
+
+static str keyboard_gsettings const str &Schema, const str &Key {
+	str Said = keyboard_run "gsettings\x1fget\x1f" + Schema + "\x1f" + Key
+	if Said is "\x1e" {
+		return ""
+	}
+	return Said.trim
+}
+
+static bool keyboard_gsettings_set const str &Schema, const str &Key, const str &Value {
+	return keyboard_do "gsettings\x1fset\x1f" + Schema + "\x1f" + Key + "\x1f" + Value
+}
+
+// a number gsettings gives ("uint32 500"), or -1
+static long keyboard_gnome_number const str &Key {
+	str Said = keyboard_gsettings "org.gnome.desktop.peripherals.keyboard", Key
+	str N = Said.replace("uint32", "").trim
+	if N.is_long {
+		return N.to_long
+	}
+	return -1
+}
+
+// GNOME's input sources: "[('xkb', 'us'), ('xkb', 'de+neo')]"
+static list str keyboard_gnome_layouts {
+	list str Names
+	str Said = keyboard_gsettings "org.gnome.desktop.input-sources", "sources"
+	for Part in Said.split "('xkb', '" {
+		long End = Part.find "'"
+		if End > 0 and !Part.starts_with("[") {
+			str Name = Part[to End - 1]
+			long Plus = Name.find "+"
+			if Plus > 0 {
+				Names.add Name[to Plus - 1] + "(" + Name[Plus + 1 to] + ")"
+			} else {
+				Names.add Name
+			}
+		}
+	}
+	return Names
+}
+
+// ---- X11's: setxkbmap and xset
+
+// what setxkbmap -query says for "layout:" or "variant:"
+static str keyboard_x11_query const str &Key {
+	for Line in keyboard_run("setxkbmap\x1f-query").split "\n" {
+		if Line.starts_with Key + ":" {
+			str Value = Line[Key.length + 1 to]
+			return Value.trim
+		}
+	}
+	return ""
+}
+
+// xset q's "auto repeat delay:  660    repeat rate:  25": Which 0 the
+// delay, 1 the rate (-1 if it doesn't say)
+static long keyboard_x11_repeat int Which {
+	for Line in keyboard_run("xset\x1fq").split "\n" {
+		if Line.contains "auto repeat delay:" {
+			list str Words = keyboard_words Line
+			// auto repeat delay: 660 repeat rate: 25
+			if Words.length >= 7 {
+				str N = Words[3].copy
+				if Which == 1 {
+					N = Words[6].copy
+				}
+				if N.is_long {
+					return N.to_long
+				}
+			}
+		}
+	}
+	return -1
+}
+
+// ---- the layouts
+
+// the layouts to choose between, in order: {"us", "de"} (empty if they
+// can't be found out)
+list str keyboard.layouts {
+	long Kind = cby_desktop_kind
+	list str Names
+	if Kind == 1 {
+		json K = keyboard_sway
+		json Shown = K["xkb_layout_names"]
+		for long I = 0; I < Shown.length; I++ {
+			Names.add keyboard_name_of(Shown.item_at(I).str_or(""))
+		}
+	} else if Kind == 2 {
+		return keyboard_gnome_layouts
+	} else if Kind == 4 {
+		return keyboard_names keyboard_x11_query("layout"), keyboard_x11_query("variant")
+	}
+	return Names
+}
+
+// the layout typed with now ("" if it can't be found out)
+str keyboard.layout {
+	list str All = keyboard.layouts
+	if All.length == 0 {
+		return ""
+	}
+	long At = 0
+	if cby_desktop_kind == 1 {
+		At = keyboard_sway["xkb_active_layout_index"].long_or 0
+	}
+	if At < 0 or At >= All.length {
+		At = 0
+	}
+	return All[At].copy
+}
+
+// sets the layouts to choose between; the first is typed with now
+bool keyboard.set_layouts const list str &Names {
+	if Names.length == 0 {
+		return false
+	}
+	for Name in Names {
+		if Name is "" or Name.contains(",") or Name.contains("'") or Name.contains(" ") {
+			return false
+		}
+	}
+	long Kind = cby_desktop_kind
+	str Layouts = keyboard_joined Names, false
+	str Variants = keyboard_joined Names, true
+	if Kind == 1 {
+		if keyboard_sway.is_null {
+			return false
+		}
+		str V = Variants.copy
+		if V is "" {
+			V = ","
+		}
+		return keyboard_do("swaymsg\x1finput\x1ftype:keyboard\x1fxkb_variant\x1f" + V) and
+		keyboard_do("swaymsg\x1finput\x1ftype:keyboard\x1fxkb_layout\x1f" + Layouts)
+	}
+	if Kind == 2 {
+		str Sources = "["
+		for long I = 0; I < Names.length; I++ {
+			if I > 0 {
+				Sources += ", "
+			}
+			str Name = keyboard_layout_of Names[I]
+			str Variant = keyboard_variant_of Names[I]
+			if Variant is not "" {
+				Name += "+" + Variant
+			}
+			Sources += "('xkb', '" + Name + "')"
+		}
+		return keyboard_gsettings_set "org.gnome.desktop.input-sources", "sources", Sources + "]"
+	}
+	if Kind == 4 {
+		return keyboard_do "setxkbmap\x1f-layout\x1f" + Layouts + "\x1f-variant\x1f" + Variants
+	}
+	return false
+}
+
+// sets just one layout
+bool keyboard.set_layout const str &Name {
+	list str One = {Name.copy}
+	return keyboard.set_layouts One
+}
+
+// ---- repeating
+
+// how long a key is held before it repeats, in milliseconds (-1 if it
+// can't be found out)
+long keyboard.repeat_delay {
+	long Kind = cby_desktop_kind
+	if Kind == 1 {
+		return keyboard_sway["repeat_delay"].long_or -1
+	}
+	if Kind == 2 {
+		return keyboard_gnome_number "delay"
+	}
+	if Kind == 4 {
+		return keyboard_x11_repeat 0
+	}
+	return -1
+}
+
+// how many times a second a held key repeats (-1 if it can't be found
+// out)
+long keyboard.repeat_rate {
+	long Kind = cby_desktop_kind
+	if Kind == 1 {
+		return keyboard_sway["repeat_rate"].long_or -1
+	}
+	if Kind == 2 {
+		// GNOME keeps the time between repeats
+		long Between = keyboard_gnome_number "repeat-interval"
+		if Between <= 0 {
+			return -1
+		}
+		return (1000 + Between / 2) / Between
+	}
+	if Kind == 4 {
+		return keyboard_x11_repeat 1
+	}
+	return -1
+}
+
+bool keyboard.set_repeat_delay long Milliseconds {
+	if Milliseconds < 100 or Milliseconds > 2000 {
+		return false
+	}
+	long Kind = cby_desktop_kind
+	if Kind == 1 {
+		return !keyboard_sway.is_null and keyboard_do("swaymsg\x1finput\x1ftype:keyboard\x1frepeat_delay\x1f" + Milliseconds.text)
+	}
+	if Kind == 2 {
+		return keyboard_gsettings_set "org.gnome.desktop.peripherals.keyboard", "delay", Milliseconds.text
+	}
+	if Kind == 4 {
+		long Rate = keyboard_x11_repeat 1
+		if Rate < 0 {
+			Rate = 25
+		}
+		return keyboard_do "xset\x1fr\x1frate\x1f" + Milliseconds.text + "\x1f" + Rate.text
+	}
+	return false
+}
+
+bool keyboard.set_repeat_rate long PerSecond {
+	if PerSecond < 1 or PerSecond > 100 {
+		return false
+	}
+	long Kind = cby_desktop_kind
+	if Kind == 1 {
+		return !keyboard_sway.is_null and keyboard_do("swaymsg\x1finput\x1ftype:keyboard\x1frepeat_rate\x1f" + PerSecond.text)
+	}
+	if Kind == 2 {
+		long Between = (1000 + PerSecond / 2) / PerSecond
+		return keyboard_gsettings_set "org.gnome.desktop.peripherals.keyboard", "repeat-interval", Between.text
+	}
+	if Kind == 4 {
+		long Delay = keyboard_x11_repeat 0
+		if Delay < 0 {
+			Delay = 600
+		}
+		return keyboard_do "xset\x1fr\x1frate\x1f" + Delay.text + "\x1f" + PerSecond.text
+	}
+	return false
+}
+
+// ---- the lock keys (any Linux, from the keyboard's lights)
+
+// true if Caps Lock is on
+bool keyboard.caps_lock {
+	return cby_keyboard_lock(0) == 1
+}
+
+// true if Num Lock is on
+bool keyboard.num_lock {
+	return cby_keyboard_lock(1) == 1
+}
+
+// true if there's a keyboard light that says Caps Lock's state
+bool keyboard.has_lock_lights {
+	return cby_keyboard_lock(0) >= 0
+}
+
+// true if this desktop's keyboard settings are ones Cabby can change
+bool keyboard.can_change {
+	long Kind = cby_desktop_kind
+	if Kind == 1 {
+		return !keyboard_sway.is_null
+	}
+	if Kind == 2 {
+		return keyboard_gnome_number("delay") >= 0
+	}
+	if Kind == 4 {
+		return keyboard_x11_repeat(0) >= 0
+	}
+	return false
+}

@@ -1667,3 +1667,251 @@ int cby_system_set_hostname(const char *name)
 
 /* speech.hear's: why it can't */
 void cby_speech_panic(const char *why) { rt_panic(NULL, 0, 0, "%s", why); }
+
+/* ------------------------------------------------------------ which desktop
+ *
+ * For screens, mouse and keyboard, whose settings each desktop keeps its
+ * own way: 1 Sway (its IPC, by swaymsg), 2 GNOME (Mutter over D-Bus, and
+ * gsettings), 3 KDE Plasma (kscreen-doctor), 4 another desktop on X11
+ * (xrandr, xinput, xset, setxkbmap), 5 macOS, 0 none Cabby knows (another
+ * Wayland compositor, or no desktop at all). The tests set SWAYSOCK,
+ * XDG_CURRENT_DESKTOP and DISPLAY to be each. */
+int64_t cby_desktop_kind(void)
+{
+	if (as_mac())
+		return 5;
+	const char *sway = getenv("SWAYSOCK");
+	if (sway && *sway)
+		return 1;
+	const char *d = getenv("XDG_CURRENT_DESKTOP");
+	if (d && strstr(d, "GNOME"))
+		return 2;
+	if (d && strstr(d, "KDE"))
+		return 3;
+	const char *x = getenv("DISPLAY"), *w = getenv("WAYLAND_DISPLAY");
+	if (x && *x && !(w && *w))
+		return 4;
+	return 0;
+}
+
+/* ------------------------------------------------------------ a Mac's screens
+ *
+ * CoreGraphics, opened when first wanted (so nothing links it on Linux):
+ * the screens in use, each one's mode (its resolution, in pixels and in
+ * points, and refresh), where it is and how it's turned, and setting a
+ * mode or a place, kept after a restart as System Settings keeps them.
+ * Turning one isn't possible from outside Apple's own programs. */
+
+#ifdef __APPLE__
+typedef struct { double x, y, w, h; } MacRect;
+typedef const void *MacRef;
+static void *mac_cg, *mac_cf;
+
+static void *mac_fn(const char *name)
+{
+	if (!mac_cg)
+		mac_cg = dlopen("/System/Library/Frameworks/CoreGraphics.framework/CoreGraphics", RTLD_LAZY);
+	if (!mac_cf)
+		mac_cf = dlopen("/System/Library/Frameworks/CoreFoundation.framework/CoreFoundation", RTLD_LAZY);
+	void *p = mac_cg ? dlsym(mac_cg, name) : NULL;
+	if (!p && mac_cf)
+		p = dlsym(mac_cf, name);
+	return p;
+}
+
+#define MAC_FN(ret, var, args, name) ret (*var) args; { void *p_ = mac_fn(name); memcpy(&var, &p_, sizeof p_); }
+
+static uint32_t mac_displays[16];
+
+static int mac_screens(void)
+{
+	MAC_FN(int, list, (uint32_t, uint32_t *, uint32_t *), "CGGetActiveDisplayList");
+	uint32_t n = 0;
+	if (!list || list(16, mac_displays, &n) != 0)
+		return 0;
+	return (int)n;
+}
+
+/* the i-th screen's modes: a CFArray, released by the caller */
+static MacRef mac_modes(uint32_t d)
+{
+	MAC_FN(MacRef, all, (uint32_t, MacRef), "CGDisplayCopyAllDisplayModes");
+	return all ? all(d, NULL) : NULL;
+}
+
+static void mac_release(MacRef r)
+{
+	MAC_FN(void, rel, (MacRef), "CFRelease");
+	if (r && rel)
+		rel(r);
+}
+
+/* what = 0 width in pixels, 1 height, 2 refresh (Hz x 1000), 3 width in
+ * points (the scale is pixels / points) */
+static int64_t mac_mode_number(MacRef m, int what)
+{
+	MAC_FN(size_t, pw, (MacRef), "CGDisplayModeGetPixelWidth");
+	MAC_FN(size_t, ph, (MacRef), "CGDisplayModeGetPixelHeight");
+	MAC_FN(size_t, w, (MacRef), "CGDisplayModeGetWidth");
+	MAC_FN(double, hz, (MacRef), "CGDisplayModeGetRefreshRate");
+	if (!m || !pw || !ph || !w || !hz)
+		return -1;
+	switch (what) {
+	case 0: return (int64_t)pw(m);
+	case 1: return (int64_t)ph(m);
+	case 2: { double r = hz(m); return (int64_t)((r > 0 ? r : 60.0) * 1000 + 0.5); }
+	default: return (int64_t)w(m);
+	}
+}
+#endif
+
+int64_t cby_screens_mac_count(void)
+{
+#ifdef __APPLE__
+	return mac_screens();
+#else
+	return 0;
+#endif
+}
+
+/* the i-th screen's: 0 its number, 1 width in pixels, 2 height, 3 refresh
+ * (Hz x 1000), 4 x, 5 y (in points), 6 how far it's turned (degrees,
+ * clockwise), 7 1 if it's the main one, 8 1 if it's built in, 9 width in
+ * points, 10 how many modes it has */
+int64_t cby_screens_mac_number(int64_t i, int64_t what)
+{
+#ifdef __APPLE__
+	int n = mac_screens();
+	if (i < 0 || i >= n)
+		return -1;
+	uint32_t d = mac_displays[i];
+	if (what == 0)
+		return d;
+	if ((what >= 1 && what <= 3) || what == 9) {
+		MAC_FN(MacRef, cur, (uint32_t), "CGDisplayCopyDisplayMode");
+		MacRef m = cur ? cur(d) : NULL;
+		int64_t v = mac_mode_number(m, what == 9 ? 3 : (int)what - 1);
+		mac_release(m);
+		return v;
+	}
+	if (what == 4 || what == 5) {
+		MAC_FN(MacRect, bounds, (uint32_t), "CGDisplayBounds");
+		if (!bounds)
+			return 0;
+		MacRect r = bounds(d);
+		return (int64_t)(what == 4 ? r.x : r.y);
+	}
+	if (what == 6) {
+		MAC_FN(double, rot, (uint32_t), "CGDisplayRotation");
+		return rot ? (int64_t)rot(d) : 0;
+	}
+	if (what == 7 || what == 8) {
+		MAC_FN(uint32_t, is, (uint32_t), what == 7 ? "CGDisplayIsMain" : "CGDisplayIsBuiltin");
+		return is ? is(d) != 0 : 0;
+	}
+	if (what == 10) {
+		MAC_FN(long, count, (MacRef), "CFArrayGetCount");
+		MacRef all = mac_modes(d);
+		long c = all && count ? count(all) : 0;
+		mac_release(all);
+		return c;
+	}
+#else
+	(void)i; (void)what;
+#endif
+	return -1;
+}
+
+/* the i-th screen's m-th mode: 0 width in pixels, 1 height, 2 refresh
+ * (Hz x 1000), 3 width in points */
+int64_t cby_screens_mac_mode(int64_t i, int64_t m, int64_t what)
+{
+#ifdef __APPLE__
+	if (i < 0 || i >= mac_screens())
+		return -1;
+	MAC_FN(long, count, (MacRef), "CFArrayGetCount");
+	MAC_FN(MacRef, at, (MacRef, long), "CFArrayGetValueAtIndex");
+	MacRef all = mac_modes(mac_displays[i]);
+	int64_t v = -1;
+	if (all && count && at && m >= 0 && m < count(all))
+		v = mac_mode_number(at(all, (long)m), (int)what);
+	mac_release(all);
+	return v;
+#else
+	(void)i; (void)m; (void)what;
+	return -1;
+#endif
+}
+
+/* sets the i-th screen's mode to its m-th (m >= 0), or its place to x, y
+ * (m < 0): 1 if it was set */
+int cby_screens_mac_set(int64_t i, int64_t m, int64_t x, int64_t y)
+{
+#ifdef __APPLE__
+	if (i < 0 || i >= mac_screens())
+		return 0;
+	uint32_t d = mac_displays[i];
+	MAC_FN(int, begin, (void **), "CGBeginDisplayConfiguration");
+	MAC_FN(int, set_mode, (void *, uint32_t, MacRef, MacRef), "CGConfigureDisplayWithDisplayMode");
+	MAC_FN(int, set_origin, (void *, uint32_t, int32_t, int32_t), "CGConfigureDisplayOrigin");
+	MAC_FN(int, complete, (void *, uint32_t), "CGCompleteDisplayConfiguration");
+	MAC_FN(int, cancel, (void *), "CGCancelDisplayConfiguration");
+	MAC_FN(long, count, (MacRef), "CFArrayGetCount");
+	MAC_FN(MacRef, at, (MacRef, long), "CFArrayGetValueAtIndex");
+	void *cfg = NULL;
+	if (!begin || !set_mode || !set_origin || !complete || !cancel || !count || !at || begin(&cfg) != 0)
+		return 0;
+	int bad = 0;
+	MacRef all = NULL;
+	if (m >= 0) {
+		all = mac_modes(d);
+		if (!all || m >= count(all))
+			bad = 1;
+		else
+			bad = set_mode(cfg, d, at(all, (long)m), NULL) != 0;
+	} else {
+		bad = set_origin(cfg, d, (int32_t)x, (int32_t)y) != 0;
+	}
+	int ok = 0;
+	if (bad)
+		cancel(cfg);
+	else
+		ok = complete(cfg, 2) == 0;   /* kCGConfigurePermanently */
+	mac_release(all);
+	return ok;
+#else
+	(void)i; (void)m; (void)x; (void)y;
+	return 0;
+#endif
+}
+
+/* ------------------------------------------------------------ the lock keys
+ *
+ * Whether Caps Lock (which 0) or Num Lock (1) is on, from the keyboards'
+ * lights: /sys/class/leds/<keyboard>::capslock/brightness, which anyone
+ * may read (CABBY_LEDS names a folder to read instead, the tests'). 1 on
+ * (on any keyboard), 0 off, -1 if there's no such light to ask. */
+int64_t cby_keyboard_lock(int64_t which)
+{
+	const char *base = instead("CABBY_LEDS", "/sys/class/leds");
+	const char *end = which == 0 ? "::capslock" : "::numlock";
+	DIR *d = opendir(base);
+	if (!d)
+		return -1;
+	int64_t found = -1;
+	struct dirent *e;
+	while ((e = readdir(d))) {
+		size_t n = strlen(e->d_name), m = strlen(end);
+		if (n <= m || strcmp(e->d_name + n - m, end) != 0)
+			continue;
+		char dir[600];
+		snprintf(dir, sizeof dir, "%s/%s", base, e->d_name);
+		long v = read_number(dir, "brightness");
+		if (v > 0)
+			found = 1;
+		else if (v == 0 && found < 0)
+			found = 0;
+	}
+	closedir(d);
+	return found;
+}

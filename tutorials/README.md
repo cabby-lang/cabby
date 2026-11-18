@@ -1,6 +1,6 @@
 # Cabby tutorials
 
-*For Cabby 0.34.0 (2026-11-19).*
+*For Cabby 0.35.0 (2026-11-19).*
 
 A hundred and six short programs, each about one keyword, feature or library, in
 an order where each uses only what came before it. Each one
@@ -259,6 +259,7 @@ between `{` and `}` to run them as one input and see them as a program would. (`
 | 104 | `104-speech.cby` | `use speech`: English and Latin said aloud, saved, and heard back |
 | 105 | `105-bluetooth.cby` | `use bluetooth`: the devices known, and a search |
 | 106 | `106-dbus.cby` | `use dbus`: the services on the session bus, and who shows notifications |
+| 107 | `107-screens.cby` | `use screens`, `use mouse`, `use keyboard`: the monitors, the mouse and touchpad, and the keyboard's layouts |
 
 Every keyword in the language appears in at least one tutorial. The manual's
 appendices and the main README (installed as

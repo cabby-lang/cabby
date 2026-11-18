@@ -1,0 +1,14 @@
+! model
+  pc105           Generic 105-key PC
+
+! layout
+  us              English (US)
+  de              German
+  fr              French
+
+! variant
+  dvorak          us: English (Dvorak)
+  neo             de: German (Neo 2)
+
+! option
+  caps:escape          Make Caps Lock an additional Esc

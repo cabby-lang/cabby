@@ -369,7 +369,7 @@ static const char *name_hint(const char *n)
 	static const char *const libraries[] = {
 		"archives", "bluetooth", "brightness", "bytes", "databases", "dates", "dbus", "desktop", "emails", "hashes", "html", "images", "json", "linux",
 		"markup", "math", "media", "mime", "networks", "os", "patterns", "power", "printing", "secrets", "speech", "standard", "strings", "system",
-		"threads", "time", "users", "videos", "volume", "xml", NULL };
+		"threads", "time", "users", "videos", "volume", "xml", "screens", "mouse", "keyboard", NULL };
 	static char said[120];
 	for (int i = 0; libraries[i]; i++)
 		if (strcmp(n, libraries[i]) == 0) {

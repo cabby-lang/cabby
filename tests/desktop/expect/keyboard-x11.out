@@ -1,0 +1,9 @@
+can change: true
+  layouts: [us, de] now: us
+  repeat: 660 ms, 25 a second
+set: true true true
+not set: false false false
+  layouts: [us(dvorak), de] now: us(dvorak)
+  repeat: 300 ms, 40 a second
+one: true [fr]
+lock lights: true caps: true num: false

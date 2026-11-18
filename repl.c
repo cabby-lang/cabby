@@ -1088,7 +1088,7 @@ static int complete_word(const char *line, int pos, int *start, char ***items)
 			"end_of_input", "read_char", "read_key", "stdout", "stderr", "exit", "abs", "close_to", "random", "random_seed", "cabby", NULL,
 		};
 		cand_add_all(&c, words);
-		static const char *const libs[] = { "files", "directories", "shell", "processes", "events", "addresses", "time", "dates", "json", "bytes", "networks", "html", "xml", "gui", "gtk", "tui", "game", "tgame", "world", "sound", "bluetooth", "emails", "secrets", "volume", "brightness", "printing", "speech", "system", "videos", "os", "linux", NULL };
+		static const char *const libs[] = { "files", "directories", "shell", "processes", "events", "addresses", "time", "dates", "json", "bytes", "networks", "html", "xml", "gui", "gtk", "tui", "game", "tgame", "world", "sound", "bluetooth", "emails", "secrets", "volume", "brightness", "printing", "speech", "system", "videos", "os", "linux", "screens", "mouse", "keyboard", NULL };
 		for (int i = 0; libs[i]; i++)
 			if (header_used(libs[i]))
 				cand_add(&c, libs[i]);

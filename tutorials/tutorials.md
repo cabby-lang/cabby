@@ -1,6 +1,6 @@
 # The Cabby Manual
 
-*For Cabby 0.34.0 (2026-11-19).*
+*For Cabby 0.35.0 (2026-11-19).*
 
 A book for learning Cabby one idea at a time, and a reference to come back
 to afterwards.
@@ -209,6 +209,7 @@ int main {
 104. [Speech](#chapter-104-speech): `use speech`: said aloud in many languages, and heard by Whisper
 105. [Bluetooth](#chapter-105-bluetooth): `use bluetooth`: devices, searching, pairing, connecting
 106. [D-Bus](#chapter-106-d-bus): `use dbus`: calling the desktop's programs, reading properties, being told
+107. [Screens, the mouse and the keyboard](#chapter-107-screens-the-mouse-and-the-keyboard): `use screens`, `use mouse`, `use keyboard`: monitors' resolution and rotation, the cursor, layouts
 
 **[Appendices](#appendices)**
 
@@ -15669,8 +15670,8 @@ true
 
 The programs a person sees and hears around their own: notifications,
 files opened in what opens them, the music playing, the printer, voices
-that speak and listen, Bluetooth devices, and D-Bus, which the desktop's
-own programs talk over. Most of these make something happen on the
+that speak and listen, Bluetooth devices, D-Bus, which the desktop's
+own programs talk over, and the monitors, mouse and keyboard's settings. Most of these make something happen on the
 screen or the speakers, so their tutorials only do it when asked, with a
 word after the program's name (`cabby 101-desktop.cby show`); without
 it, as the tests run them, they only look.
@@ -16208,7 +16209,203 @@ int main {
 }
 ```
 
-[← Chapter 105](#chapter-105-bluetooth) · [Contents](#contents) · [Appendices →](#appendices)
+[← Chapter 105](#chapter-105-bluetooth) · [Contents](#contents) · [Chapter 107 →](#chapter-107-screens-the-mouse-and-the-keyboard)
+
+---
+### Chapter 107: Screens, the mouse and the keyboard
+
+*Program: `107-screens.cby`. Libraries: `use screens`, `use mouse`, `use keyboard`.*
+
+#### The monitors
+
+<!-- check -->
+```cabby
+use screens
+
+int main {
+	if !screens.can_change {
+		println "no screens here Cabby can change"
+		return 1
+	}
+	for S in screens.all {
+		println S.text
+		println "  can show:", S.modes
+	}
+	screens.screen Main = screens.main
+	println "the main one is", Main.name, "(" + Main.description + ")"
+}
+```
+
+```text
+DP-1: 2560x1440 at 59.95 Hz, scale 1.5, at 0,0
+  can show: [2560x1440@59.95, 1920x1080@60]
+HDMI-A-1: 1920x1080 at 60 Hz, at 1707,0
+  can show: [1920x1080@60, 1920x1080@59.94, 1280x720@60]
+the main one is DP-1 (Dell Inc. DELL U2720Q)
+```
+
+`screens.all` is every monitor plugged in, on or off. Each has its
+`name` (`"DP-1"`, `"HDMI-A-1"`; a Mac's are `"built-in"` and `"display
+2"`), its `description`, whether it's `on` and the `main` one, its
+`width` and `height` in pixels, its `refresh`, `scale`, `x` and `y` on
+the desktop, its `rotation`, and the `modes` it can show.
+`screens.named "HDMI-A-1"` finds one by name.
+
+Each desktop keeps these settings its own way, so Cabby asks each its own
+way: Sway by `swaymsg`, GNOME by Mutter over D-Bus (as its Settings app
+does), KDE Plasma by `kscreen-doctor`, any other desktop on X11 by
+`xrandr`, and a Mac by CoreGraphics. `screens.desktop` says which it is.
+Another Wayland compositor has no way Cabby knows yet, and there
+`screens.all` is empty.
+
+#### Changing one
+
+<!-- check -->
+```cabby
+use screens
+
+int main {
+	screens.screen Side = screens.named "HDMI-A-1"
+	if !Side.found {
+		println "no HDMI-A-1 here"
+		return 1
+	}
+	Side.set_rotation 90                     // on its side, for reading
+	Side.set_position 2560, 0                // to the right of the main one
+	Side.set_resolution 1920, 1080           // at the best refresh it has for it
+	println Side.text
+}
+```
+
+Each change gives `true` if it was done, and reads the screen again so
+its values are the new ones; `set_refresh`, `set_scale`, `turn_on` and
+`turn_off` work the same way. What a desktop can't do gives `false`: X11
+has no scale, GNOME allows only the scales a mode lists, and a Mac can't
+be turned or turned off from outside its own settings. Sway's changes
+last until Sway starts again (its config keeps them for good); the
+others' are kept as their Settings apps keep them.
+
+#### The mouse and the touchpad
+
+<!-- check -->
+```cabby
+use mouse
+
+int main {
+	println "speed:", mouse.speed, "natural scrolling:", mouse.natural_scrolling
+	mouse.set_speed 0.3                      // from -1.0 to 1.0; 0.0 is the usual
+	if mouse.has_touchpad {
+		mouse.set_tap_to_click true
+		mouse.set_touchpad_natural_scrolling true
+	}
+	println "cursor:", mouse.cursor_theme, mouse.cursor_size
+	mouse.set_cursor_size 48                 // twice the usual 24
+}
+```
+
+The mouse and the touchpad each have their own speed and scrolling,
+since many people want natural scrolling on one and not the other.
+`left_handed` swaps the buttons. The cursor's size and look
+(`cursor_theme`) are set on Sway and GNOME; X11 can set the mouse and
+touchpad but not the cursor. KDE Plasma's and a Mac's aren't here yet
+(`mouse.can_change` is `false` there).
+
+#### The keyboard
+
+<!-- check -->
+```cabby
+use keyboard
+
+int main {
+	println keyboard.layouts, "typing with", keyboard.layout
+	list str Mine = {"us", "de", "gr"}
+	keyboard.set_layouts Mine                // English, German and Greek
+	keyboard.set_repeat_delay 300            // milliseconds before a held key repeats
+	keyboard.set_repeat_rate 40              // and then 40 times a second
+	if keyboard.caps_lock {
+		println "Caps Lock is on"
+	}
+}
+```
+
+A layout is named as X11's keyboard files name it, which Sway, GNOME and
+X11 all use: `"us"`, `"gb"`, `"de"`, `"gr"`, and a variant in
+parentheses: `"us(dvorak)"`. The first one set is the one typed with.
+`caps_lock` and `num_lock` are read from the keyboard's own lights, on
+any Linux.
+
+The chapter's program shows what all three are set to, and changes
+nothing unless asked: `cabby 107-screens.cby bigger` makes the cursor
+twice as big for five seconds, then puts it back.
+
+#### In short
+
+* `screens.all`, `named`, `main`, `can_change`, `desktop`; a screen's
+  `text`, `modes`, `set_resolution`, `set_rotation`, `set_scale`,
+  `set_position`, `turn_on`, `turn_off`.
+* `mouse.speed`, `natural_scrolling`, `left_handed`, the touchpad's own,
+  `tap_to_click`, `cursor_size`, `cursor_theme`, each with its `set_`.
+* `keyboard.layouts`, `set_layouts`, `repeat_delay`, `repeat_rate`,
+  `caps_lock`, `num_lock`.
+* Each desktop's own way, asked by Cabby: Sway, GNOME, KDE (screens),
+  X11, a Mac (screens).
+
+#### Try this
+
+* Turn your second monitor on its side, and back again.
+* Print the layout you're typing with every second, only when it
+  changes.
+* Write a "presenting" program that turns the projector on and makes the
+  cursor bigger, and a "done" one that puts both back.
+
+#### More examples
+
+*The rest of what's in the reference tables, for when you need it. Skip
+this on a first read: nothing later depends on it.*
+
+**A mode of your own, and a monitor off.** `set_mode` sets the resolution
+and refresh together; `turn_off` won't turn off the last monitor that's
+on. A screen in a `for` loop over `screens.all` can only be read, so one
+to change is found by name:
+
+<!-- check -->
+```cabby
+use screens
+
+int main {
+	for S in screens.all {                   // (each S can be read, not changed)
+		if !S.main and S.on {
+			screens.screen Other = screens.named S.name
+			Other.turn_off
+		}
+	}
+	screens.screen Main = screens.main
+	if !Main.set_mode(1920, 1080, 60.0) {
+		println "it has no 1920x1080 at 60 Hz:", Main.modes
+	}
+	Main.set_scale 1.0
+	println "screens:", screens.count, "on", screens.desktop
+}
+```
+
+**One layout, and the speed of the touchpad.**
+
+<!-- check -->
+```cabby
+use keyboard
+use mouse
+
+int main {
+	keyboard.set_layout "us(dvorak)"
+	println keyboard.repeat_delay, keyboard.num_lock, keyboard.has_lock_lights
+	mouse.set_touchpad_speed 0.5
+	mouse.set_left_handed false
+	mouse.set_cursor_theme "Adwaita"
+	println mouse.touchpad_speed, mouse.left_handed, mouse.can_change, keyboard.can_change
+}
+```
+
+[← Chapter 106](#chapter-106-d-bus) · [Contents](#contents) · [Appendices →](#appendices)
 
 ---
 ## Appendices
@@ -16657,6 +16854,9 @@ folder):
 | `printing.md` | printing files and text, with copies, both sides and more (`use printing`) |
 | `speech.md` | text said aloud, and speech heard by Whisper (`use speech`) |
 | `bluetooth.md` | Bluetooth devices: searching, pairing and connecting (`use bluetooth`) |
+| `screens.md` | the monitors: resolution, refresh, rotation, scale, position, on and off (`use screens`) |
+| `mouse.md` | the mouse, the touchpad and the cursor: speed, scrolling, tapping, the cursor's size (`use mouse`) |
+| `keyboard.md` | the keyboard's layouts, how a held key repeats, and the lock keys (`use keyboard`) |
 
 ```sh
 less /usr/local/lib/cabby/gui.md

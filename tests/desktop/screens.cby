@@ -1,0 +1,28 @@
+use screens
+
+void show {
+	for S in screens.all {
+		println " ", S.text, "| main:", S.main, "|", S.description, "|", S.modes
+	}
+}
+
+int main {
+	println "desktop:", screens.desktop, "can change:", screens.can_change, "count:", screens.count
+	show
+	screens.screen Side = screens.named "HDMI-A-1"
+	println "found:", Side.found, screens.named("VGA-9").found, "main:", screens.main.name
+	println "resolution:", Side.set_resolution(1280, 720), Side.width, Side.height, Side.refresh
+	println "no such mode:", Side.set_resolution(800, 600)
+	println "refresh:", Side.set_resolution(1920, 1080), Side.set_refresh(59.9), Side.refresh
+	println "rotation:", Side.set_rotation(90), Side.rotation, Side.set_rotation(45)
+	println "scale:", Side.set_scale(2.0), Side.scale
+	screens.screen First = screens.named "DP-1"
+	println "a resolution its scale doesn't fit:", First.set_resolution(1920, 1080), First.scale, First.set_resolution(2560, 1440)
+	println "position:", Side.set_position(2560, 0), Side.x, Side.y
+	println "off:", Side.turn_off, Side.on
+	println "on:", Side.turn_on, Side.on
+	screens.screen Main = screens.main
+	println "off, the last one:", Side.turn_off, Main.turn_off, Main.on
+	println "back on:", Side.turn_on
+	show
+}
