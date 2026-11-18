@@ -1365,6 +1365,21 @@ the patch number with fixes alone.
   - "this line should be indented by 2 tabs, not 1" counted the tab the
     session puts in front of each statement (they're inside `main`):
     it counts only the tabs typed now ("by 1 tab, not 0").
+- **WebSockets on a Mac, now and then** (tutorial 93 aborting or hanging
+  in GitHub's tests): a server in the main thread and a worker opening
+  connections to it could both add to the table of connections at once,
+  and one growing it with realloc could free it under the other. Two
+  causes, both fixed:
+  - Until the first worker, the main thread runs without taking the
+    interpreter's lock, though it counts as holding it; when the worker
+    started, it still didn't, so the two ran Cabby code together. It
+    takes the lock for real when the first worker starts.
+  - The tables of connections, servers, watched files and timers never
+    move now (a fixed size, far more than a program needs), and a slot
+    is claimed under a lock of their own, as library code runs in more
+    than one thread at once.
+  - Found with ThreadSanitizer, which is clean on tutorials 63, 91 to
+    94 now; tutorial 93 ran 300 times without a fault.
 
 *Version 0.36.0:*
 
