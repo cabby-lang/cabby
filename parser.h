@@ -35,6 +35,11 @@ const char *retired_header_hint(const char *name, int len);
  * directory. `src` must be malloc'd; the Program owns it (files[0].src). */
 Program *parse_program_source(Arena *arena, const char *name, char *src, const char *const *lib_dirs);
 
+/* The interactive session puts its own tabs in front of what's typed (a
+ * statement is inside main): this says how many, for a line of a file,
+ * so an indentation message counts only the ones typed. NULL elsewhere. */
+extern int (*parser_tabs_added)(int file, int line);
+
 /* AST printer (ast_print.c): used by tests and `cabby --dump-ast`. */
 void ast_print_program(FILE *out, const Program *prog);
 void ast_print_expr(FILE *out, const Expr *e);

@@ -327,6 +327,8 @@ static bool expect_newline(Parser *P, const char *after)
 }
 
 /* Layout check for a token that must start a line at `indent` tabs. */
+int (*parser_tabs_added)(int file, int line);
+
 static void check_layout(Parser *P, Token t, int indent, const char *what)
 {
 	if (t.kind == TOK_EOF || P->layout_errors > 0)
@@ -346,9 +348,13 @@ static void check_layout(Parser *P, Token t, int indent, const char *what)
 	}
 	if (t.indent != indent) {
 		P->layout_errors++;
+		/* (in the session, the tabs it added itself aren't counted) */
+		int added = parser_tabs_added ? parser_tabs_added(P->file, t.line) : 0;
+		int want = indent - added, got = t.indent - added;
+		if (want < 0 || got < 0)
+			want = indent, got = t.indent;
 		diag_report_in(DIAG_ERROR, P->file, t.line, t.col,
-			       "%s should be indented by %d tab%s, not %d", what, indent, indent == 1 ? "" : "s",
-			       t.indent);
+			       "%s should be indented by %d tab%s, not %d", what, want, want == 1 ? "" : "s", got);
 	}
 }
 

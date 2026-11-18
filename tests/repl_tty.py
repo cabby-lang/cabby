@@ -62,6 +62,9 @@ s = screen(['else {', 'println "tiny"', '}'])
 check('last_else_runs', s[-2:] == ['medium', '>>>'], s)
 s = screen(['if x > 5 {', 'println "big"', '}', ''])
 check('blank_line_ends_if', s[-1] == '>>>', s)
+# a comment after the `{` doesn't stop the next line being indented
+s = screen(['if 1 > 2 {    // never', 'println "no"', '}', ''])
+check('indent_after_comment', '...     println "no"' in s and s[-1] == '>>>', s)
 # a block comment's lines start " * ", as in Vim, and a slash then closes it
 s = screen(['/* A block comment,', 'over two lines.', '/'])
 check('comment_leader', s[-3:] == ['...  * over two lines.', '...  */', '>>>'], s)
