@@ -1,0 +1,10 @@
+can change: true
+  mouse: 0.0 false false
+  touchpad: true 0.2 true true
+  cursor: -1 
+set: true true true
+touchpad: true true true
+cursor: false false false false
+  mouse: 0.5 true true
+  touchpad: true 1.0 false false
+  cursor: -1 

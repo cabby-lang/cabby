@@ -1,0 +1,17 @@
+desktop: gnome can change: true count: 2
+  DP-1: 2560x1440 at 59.95 Hz, scale 1.5, at 0,0 | main: true | Dell 27" | [2560x1440@59.95, 1920x1080@60]
+  HDMI-A-1: 1920x1080 at 60 Hz, at 1707,0 | main: false | LG Electronics 27" | [1920x1080@60, 1920x1080@59.94, 1280x720@60]
+found: true false main: DP-1
+resolution: true 1280 720 60.0
+no such mode: false
+refresh: true true 59.94
+rotation: true 90 false
+scale: true 2.0
+a resolution its scale doesn't fit: true 1.0 true
+position: true 2560 0
+off: true false
+on: true true
+off, the last one: true false true
+back on: true
+  DP-1: 2560x1440 at 59.95 Hz, at 0,0 | main: true | Dell 27" | [2560x1440@59.95, 1920x1080@60]
+  HDMI-A-1: 1920x1080 at 60 Hz, at 2560,0 | main: false | LG Electronics 27" | [1920x1080@60, 1920x1080@59.94, 1280x720@60]

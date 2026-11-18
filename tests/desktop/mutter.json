@@ -1,0 +1,13 @@
+{
+ "serial": 7,
+ "monitors": [
+  {"connector": "DP-1", "vendor": "DEL", "product": "DELL U2720Q", "serial": "ABC123", "name": "Dell 27\"",
+   "modes": [["2560x1440@59.951", 2560, 1440, 59.951, 1.5, [1.0, 1.25, 1.5, 2.0], true, true],
+             ["1920x1080@60.000", 1920, 1080, 60.0, 1.0, [1.0, 2.0], false, false]]},
+  {"connector": "HDMI-A-1", "vendor": "GSM", "product": "LG HDR 4K", "serial": "XYZ", "name": "LG Electronics 27\"",
+   "modes": [["1920x1080@60.000", 1920, 1080, 60.0, 1.0, [1.0, 2.0], true, true],
+             ["1920x1080@59.940", 1920, 1080, 59.94, 1.0, [1.0, 2.0], false, false],
+             ["1280x720@60.000", 1280, 720, 60.0, 1.0, [1.0], false, false]]}
+ ],
+ "logical": [[0, 0, 1.5, 0, true, ["DP-1"]], [1707, 0, 1.0, 0, false, ["HDMI-A-1"]]]
+}

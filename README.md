@@ -15,7 +15,7 @@ cabby --check     prog.cby              type- and ownership-check only
 cabby --style     prog.cby              list names and calls that don't follow STYLE.md
 cabby --dump-ast  prog.cby              print the syntax tree
 cabby --dump-tokens prog.cby            print the token stream
-cabby --version                         which Cabby this is: "Cabby 0.34.0 (2026-11-19)"
+cabby --version                         which Cabby this is: "Cabby 0.35.0 (2026-11-19)"
 cabby --license                         Cabby's license (MIT)
 ```
 
@@ -1158,7 +1158,7 @@ Run `cabby` with no file to type Cabby a piece at a time:
 
 ```
 $ cabby
-Cabby 0.34.0 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
+Cabby 0.35.0 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
 Cabby comes with ABSOLUTELY NO WARRANTY, under the MIT License; "cabby.license" for details.
 >>> int add int a, int b {
 ... 	return a + b
@@ -1532,8 +1532,23 @@ or too far away). A keyboard's pairing code is shown to type on it. A
 or is found. It's BlueZ, over D-Bus, on Linux, and the Mac's own
 (IOBluetooth) on a Mac.
 The reference page is `lib/bluetooth.md`; manual chapter 105 teaches it,
-and chapters 101 to 106 the rest of the desktop: notifications and file
-kinds, what's playing, printing, speech, and D-Bus.
+and chapters 101 to 107 the rest of the desktop: notifications and file
+kinds, what's playing, printing, speech, D-Bus, and the next three.
+
+**Screens, the mouse and the keyboard.** `use screens` lists the monitors
+(`screens.all`, `screens.named "HDMI-A-1"`), each with its resolution,
+refresh, scale, rotation, place and modes, and changes them
+(`set_resolution 1920, 1080`, `set_rotation 90`, `set_scale 1.5`,
+`set_position 2560, 0`, `turn_off`). `use mouse` reads and sets the
+pointer's speed, natural scrolling and left-handed buttons, the
+touchpad's own, tapping to click, and the cursor's size and theme. `use
+keyboard` reads and sets the layouts (`keyboard.set_layouts {"us",
+"de"}`) and how a held key repeats, and says whether Caps Lock and Num
+Lock are on. Each desktop is asked its own way: Sway by swaymsg, GNOME
+by Mutter and gsettings, KDE Plasma by kscreen-doctor (screens), X11 by
+xrandr, xinput, setxkbmap and xset, and a Mac by CoreGraphics (screens).
+The reference pages are `lib/screens.md`, `lib/mouse.md` and
+`lib/keyboard.md`; manual chapter 107 teaches them.
 
 ---
 

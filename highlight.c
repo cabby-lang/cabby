@@ -44,7 +44,7 @@ static const char *const lib_function_names[] = {
 	"files", "directories", "shell", "addresses", "events", "time", "dates", "json", "cabby", "networks",
 	"html", "xml", "bytes", "sound", "archives", "patterns", "hashes", "databases", "threads", "dbus",
 	"desktop", "power", "volume", "system", "users", "mime", "media", "images", "brightness", "printing", "speech",
-	"bluetooth", "emails", "secrets", "videos", "os", "linux", NULL
+	"bluetooth", "emails", "secrets", "videos", "os", "linux", "screens", "mouse", "keyboard", NULL
 };
 
 /* and the types among them, by their whole names: threads.worker */

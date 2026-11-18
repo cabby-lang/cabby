@@ -1,0 +1,302 @@
+#!/usr/bin/env python3
+# A stand-in for each desktop's settings programs (run_desktop_tests.sh):
+# swaymsg, xrandr, kscreen-doctor, gsettings, xset, setxkbmap and xinput
+# are links to this, each there only when CABBY_HAVE names it. The
+# computer they pretend to be is $CABBY_TEST_STATE/computer.json, which
+# the test writes first and each change is made to; every run is logged
+# in admin.log, as the other stand-ins' are.
+import json, os, sys
+
+me = os.path.basename(sys.argv[0])
+if me not in os.environ.get("CABBY_HAVE", "").split(","):
+    sys.exit(127)
+args = sys.argv[1:]
+state_dir = os.environ["CABBY_TEST_STATE"]
+with open(os.path.join(state_dir, "admin.log"), "a") as log:
+    log.write(me + "".join(" [%s]" % a for a in args) + "\n")
+path = os.path.join(state_dir, "computer.json")
+with open(path) as f:
+    pc = json.load(f)
+
+
+def save():
+    with open(path, "w") as f:
+        json.dump(pc, f, indent=1)
+
+
+def fail(why):
+    print(why, file=sys.stderr)
+    sys.exit(1)
+
+
+def output(name):
+    for o in pc["screens"]:
+        if o["name"] == name:
+            return o
+    fail("no output " + name)
+
+
+def hz_text(hz):
+    return "%.2f" % hz
+
+
+# ---- swaymsg: get_outputs, get_inputs, get_config, and commands
+if me == "swaymsg":
+    if args[:2] == ["-t", "get_outputs"]:
+        out = []
+        for o in pc["screens"]:
+            w, h, hz = o["mode"]
+            turn = {0: "normal", 90: "90", 180: "180", 270: "270"}[o["rotation"]]
+            item = {"name": o["name"], "make": o.get("make", "Unknown"), "model": o.get("model", "Unknown"),
+                    "active": o["on"], "focused": o.get("main", False), "scale": o["scale"] if o["on"] else -1.0,
+                    "transform": turn,
+                    "modes": [{"width": m[0], "height": m[1], "refresh": int(round(m[2] * 1000))} for m in o["modes"]]}
+            if o["on"]:
+                item["current_mode"] = {"width": w, "height": h, "refresh": int(round(hz * 1000))}
+                item["rect"] = {"x": o["x"], "y": o["y"], "width": int(w / o["scale"]), "height": int(h / o["scale"])}
+            out.append(item)
+        print(json.dumps(out))
+        sys.exit(0)
+    if args[:2] == ["-t", "get_inputs"]:
+        out = []
+        for i in pc["inputs"]:
+            out.append(i)
+        print(json.dumps(out))
+        sys.exit(0)
+    if args[:2] == ["-t", "get_config"]:
+        print(json.dumps({"config": pc.get("sway_config", "")}))
+        sys.exit(0)
+    words = args
+    if words[0] == "output":
+        o = output(words[1])
+        what = words[2]
+        if what == "mode":
+            size, hz = words[3].rstrip("Hz").split("@")
+            w, h = [int(x) for x in size.split("x")]
+            for m in o["modes"]:
+                if m[0] == w and m[1] == h and abs(m[2] - float(hz)) < 0.01:
+                    o["mode"] = m
+                    break
+            else:
+                print(json.dumps([{"success": False}]))
+                sys.exit(2)
+        elif what == "transform":
+            o["rotation"] = {"normal": 0, "90": 90, "180": 180, "270": 270}[words[3]]
+        elif what == "scale":
+            o["scale"] = float(words[3])
+        elif what == "position":
+            o["x"], o["y"] = int(words[3]), int(words[4])
+        elif what in ("enable", "disable"):
+            o["on"] = what == "enable"
+    elif words[0] == "input":
+        kind = words[1].split(":")[1]
+        for i in pc["inputs"]:
+            if i["type"] != kind:
+                continue
+            what, value = words[2], words[3]
+            if what == "accel_speed":
+                i["libinput"]["accel_speed"] = float(value)
+            elif what in ("natural_scroll", "left_handed", "tap"):
+                i["libinput"][what] = value
+            elif what == "xkb_layout":
+                i["layouts"] = value.split(",")
+            elif what == "xkb_variant":
+                i["variants"] = value.split(",")
+            elif what in ("repeat_delay", "repeat_rate"):
+                i[what] = int(value)
+            if "layouts" in i:
+                names = pc["layout_names"]
+                variants = i.get("variants", [""] * len(i["layouts"]))
+                i["xkb_layout_names"] = [names.get(l + ("(" + v + ")" if v else ""), l) for l, v in
+                                         zip(i["layouts"], variants + [""] * len(i["layouts"]))]
+                i["xkb_active_layout_index"] = 0
+                i["xkb_active_layout_name"] = i["xkb_layout_names"][0]
+    elif words[0] == "seat":
+        pc["sway_config"] = "seat * xcursor_theme %s %s\n" % (words[3], words[4])
+    save()
+    print(json.dumps([{"success": True}]))
+    sys.exit(0)
+
+# ---- xrandr: --query, and --output NAME ...
+if me == "xrandr":
+    if args == ["--query"]:
+        print("Screen 0: minimum 8 x 8, current 4480 x 1440, maximum 32767 x 32767")
+        for o in pc["screens"]:
+            line = o["name"] + " connected"
+            if o.get("main"):
+                line += " primary"
+            if o["on"]:
+                w, h, hz = o["mode"]
+                if o["rotation"] in (90, 270):
+                    w, h = h, w
+                line += " %dx%d+%d+%d" % (w, h, o["x"], o["y"])
+                if o["rotation"]:
+                    line += " " + {90: "right", 180: "inverted", 270: "left"}[o["rotation"]]
+            line += " (normal left inverted right x axis y axis) 597mm x 336mm"
+            print(line)
+            sizes = []
+            for m in o["modes"]:
+                if (m[0], m[1]) not in sizes:
+                    sizes.append((m[0], m[1]))
+            for w, h in sizes:
+                rates = ""
+                for m in o["modes"]:
+                    if (m[0], m[1]) == (w, h):
+                        mark = "*" if o["on"] and m == o["mode"] else " "
+                        rates += "  %6s%s " % (hz_text(m[2]), mark)
+                print("   %-12s%s" % ("%dx%d" % (w, h), rates))
+        print("DP-2 disconnected (normal left inverted right x axis y axis)")
+        sys.exit(0)
+    o = output(args[1])
+    i = 2
+    while i < len(args):
+        a = args[i]
+        if a == "--mode":
+            w, h = [int(x) for x in args[i + 1].split("x")]
+            rate = None
+            if i + 2 < len(args) and args[i + 2] == "--rate":
+                rate = float(args[i + 3])
+            for m in o["modes"]:
+                if m[0] == w and m[1] == h and (rate is None or abs(m[2] - rate) < 0.01):
+                    o["mode"] = m
+                    o["on"] = True
+                    break
+            else:
+                fail("xrandr: cannot find mode")
+            i += 4 if rate is not None else 2
+            continue
+        if a == "--rotate":
+            o["rotation"] = {"normal": 0, "right": 90, "inverted": 180, "left": 270}[args[i + 1]]
+        elif a == "--pos":
+            o["x"], o["y"] = [int(x) for x in args[i + 1].split("x")]
+        elif a == "--off":
+            o["on"] = False
+            i += 1
+            continue
+        elif a == "--auto":
+            o["on"] = True
+            o["mode"] = o["modes"][0]
+            i += 1
+            continue
+        i += 2
+    save()
+    sys.exit(0)
+
+# ---- kscreen-doctor: -j, and output.NAME.what.value
+if me == "kscreen-doctor":
+    if args == ["-j"]:
+        outs = []
+        for n, o in enumerate(pc["screens"]):
+            modes = []
+            current = ""
+            for k, m in enumerate(o["modes"]):
+                mid = str(k + 1)
+                modes.append({"id": mid, "name": "%dx%d@%s" % (m[0], m[1], round(m[2])), "refreshRate": m[2],
+                              "size": {"width": m[0], "height": m[1]}})
+                if m == o["mode"]:
+                    current = mid
+            outs.append({"id": n + 1, "name": o["name"], "connected": True, "enabled": o["on"],
+                         "priority": 1 if o.get("main") else 2, "pos": {"x": o["x"], "y": o["y"]},
+                         "rotation": {0: 1, 90: 8, 180: 4, 270: 2}[o["rotation"]], "scale": o["scale"],
+                         "currentModeId": current, "modes": modes})
+        outs.append({"id": 9, "name": "DP-2", "connected": False, "enabled": False, "modes": []})
+        print(json.dumps({"outputs": outs}))
+        sys.exit(0)
+    for a in args:
+        parts = a.split(".", 3)
+        o = output(parts[1])
+        what = parts[2]
+        if what == "mode":
+            # by its id (its place in the list, from 1), as Cabby asks
+            k = int(parts[3]) - 1
+            if not 0 <= k < len(o["modes"]):
+                fail("no such mode")
+            o["mode"] = o["modes"][k]
+        elif what == "rotation":
+            o["rotation"] = {"none": 0, "right": 90, "inverted": 180, "left": 270}[parts[3]]
+        elif what == "scale":
+            o["scale"] = float(parts[3])
+        elif what == "position":
+            o["x"], o["y"] = [int(x) for x in parts[3].split(",")]
+        elif what in ("enable", "disable"):
+            o["on"] = what == "enable"
+    save()
+    sys.exit(0)
+
+# ---- gsettings get/set SCHEMA KEY [VALUE], in GVariant's text
+if me == "gsettings":
+    key = args[1] + " " + args[2]
+    settings = pc["gsettings"]
+    if args[0] == "get":
+        if key not in settings:
+            fail("No such key")
+        print(settings[key])
+    elif args[0] == "set":
+        if key not in settings:
+            fail("No such key")
+        value = args[3]
+        if settings[key].startswith("uint32 "):
+            value = "uint32 " + value
+        settings[key] = value
+        save()
+    sys.exit(0)
+
+# ---- xset q, and xset r rate DELAY RATE
+if me == "xset":
+    k = pc["x11_keyboard"]
+    if args == ["q"]:
+        print("Keyboard Control:")
+        print("  auto repeat:  on    key click percentage:  0    LED mask:  00000000")
+        print("  auto repeat delay:  %d    repeat rate:  %d" % (k["delay"], k["rate"]))
+    elif args[:2] == ["r", "rate"]:
+        k["delay"], k["rate"] = int(args[2]), int(args[3])
+        save()
+    sys.exit(0)
+
+# ---- setxkbmap -query, and setxkbmap -layout L [-variant V]
+if me == "setxkbmap":
+    k = pc["x11_keyboard"]
+    if args == ["-query"]:
+        print("rules:      evdev")
+        print("model:      pc105")
+        print("layout:     " + ",".join(k["layouts"]))
+        if any(k["variants"]):
+            print("variant:    " + ",".join(k["variants"]))
+    else:
+        k["layouts"] = args[args.index("-layout") + 1].split(",")
+        k["variants"] = args[args.index("-variant") + 1].split(",") if "-variant" in args else [""] * len(k["layouts"])
+        save()
+    sys.exit(0)
+
+# ---- xinput list, list-props ID, set-prop ID NAME VALUE
+if me == "xinput":
+    devices = pc["x11_pointers"]
+    if args == ["list"]:
+        print("⎡ Virtual core pointer                    \tid=2\t[master pointer  (3)]")
+        print("⎜   ↳ Virtual core XTEST pointer              \tid=4\t[slave  pointer  (2)]")
+        for d in devices:
+            print("⎜   ↳ %-40s\tid=%d\t[slave  pointer  (2)]" % (d["name"], d["id"]))
+        print("⎣ Virtual core keyboard                   \tid=3\t[master keyboard (2)]")
+        print("    ↳ AT Translated Set 2 keyboard           \tid=14\t[slave  keyboard (3)]")
+        sys.exit(0)
+    dev = None
+    for d in devices:
+        if str(d["id"]) == args[1]:
+            dev = d
+    if dev is None:
+        fail("unable to find device " + args[1])
+    if args[0] == "list-props":
+        print("Device '%s':" % dev["name"])
+        print("\tDevice Enabled (190):\t1")
+        for n, (name, value) in enumerate(dev["props"].items()):
+            print("\t%s (%d):\t%s" % (name, 300 + n, value))
+            if name == "libinput Accel Speed":
+                print("\tlibinput Accel Speed Default (%d):\t0.000000" % (350 + n))
+    elif args[0] == "set-prop":
+        if args[2] not in dev["props"]:
+            fail("property '%s' doesn't exist" % args[2])
+        dev["props"][args[2]] = args[3]
+        save()
+    sys.exit(0)
+
+sys.exit(127)

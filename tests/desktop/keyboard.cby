@@ -1,0 +1,17 @@
+use keyboard
+
+void show {
+	println "  layouts:", keyboard.layouts, "now:", keyboard.layout
+	println "  repeat:", keyboard.repeat_delay, "ms,", keyboard.repeat_rate, "a second"
+}
+
+int main {
+	println "can change:", keyboard.can_change
+	show
+	list str Mine = {"us(dvorak)", "de"}
+	println "set:", keyboard.set_layouts(Mine), keyboard.set_repeat_delay(300), keyboard.set_repeat_rate(40)
+	println "not set:", keyboard.set_layout("a b"), keyboard.set_repeat_delay(5), keyboard.set_repeat_rate(0)
+	show
+	println "one:", keyboard.set_layout("fr"), keyboard.layouts
+	println "lock lights:", keyboard.has_lock_lights, "caps:", keyboard.caps_lock, "num:", keyboard.num_lock
+}

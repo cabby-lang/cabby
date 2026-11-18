@@ -1,0 +1,427 @@
+// mouse.hby — the mouse, the touchpad and the cursor: how fast the
+// pointer moves, which way scrolling goes, left-handed buttons, tapping
+// to click, and the cursor's size and look.
+//
+//     use mouse
+//
+//     println "speed:", mouse.speed, "natural scrolling:", mouse.natural_scrolling
+//     mouse.set_speed 0.4
+//     mouse.set_cursor_size 48
+//
+// Each desktop keeps these settings its own way: Sway's are changed by
+// swaymsg (until Sway starts again: its config keeps them for good);
+// GNOME's are gsettings', kept as its Settings app keeps them; any other
+// desktop on X11 has xinput for the mouse and touchpad (until X starts
+// again), though not the cursor. KDE Plasma's and a Mac's aren't here
+// yet (can_change is false).
+//
+// The full reference is mouse.md, next to this file.
+
+use addresses
+use json
+
+// ---- the C side (runtime/desktop.c)
+
+extern long cby_desktop_kind void
+extern long cby_desktop_capture str line, str input, int has_input
+extern void cby_desktop_take_text address char dst
+
+// What a program prints, run with its arguments (each after a "\x1f"):
+// "\x1e" (which nothing prints) if it couldn't be run or didn't work.
+static str mouse_run const str &Line {
+	long Length = cby_desktop_capture Line, "", 0
+	if Length < 0 {
+		return "\x1e"
+	}
+	str Text = " ".repeat Length
+	address char Room = addresses.of_text Text
+	cby_desktop_take_text Room
+	return Text
+}
+
+static bool mouse_do const str &Line {
+	return mouse_run(Line) is not "\x1e"
+}
+
+// ---- Sway's: swaymsg's list of inputs
+
+// the first input of that type ("pointer", "touchpad"), or null
+static json mouse_sway_input const str &Type {
+	str Said = mouse_run "swaymsg\x1f-t\x1fget_inputs\x1f-r"
+	if json.can_read Said {
+		json All = json.read Said
+		for long I = 0; I < All.length; I++ {
+			if All.item_at(I)["type"].str_or("") is Type {
+				return All.item_at(I).copy
+			}
+		}
+	}
+	return json.null
+}
+
+static bool mouse_sway_set const str &Type, const str &Setting, const str &Value {
+	return mouse_sway_input(Type)["type"].str_or("") is Type and
+	mouse_do("swaymsg\x1finput\x1ftype:" + Type + "\x1f" + Setting + "\x1f" + Value)
+}
+
+// Sway's cursor, from its seat's setting ("seat seat0 xcursor_theme
+// Adwaita 32"): Which 0 the theme, 1 the size ("" if it isn't set)
+static str mouse_sway_cursor int Which {
+	str Said = mouse_run "swaymsg\x1f-t\x1fget_config\x1f-r"
+	if json.can_read Said {
+		for Line in json.read(Said)["config"].str_or("").split "\n" {
+			list str Words
+			for Word in Line.trim.split " " {
+				if Word is not "" {
+					Words.add Word.copy
+				}
+			}
+			if Words.length >= 4 and Words[0] is "seat" and Words[2] is "xcursor_theme" {
+				if Which == 0 {
+					return Words[3].copy
+				}
+				if Words.length >= 5 {
+					return Words[4].copy
+				}
+			}
+		}
+	}
+	return ""
+}
+
+// ---- GNOME's: gsettings
+
+static str mouse_gsettings const str &Schema, const str &Key {
+	str Said = mouse_run "gsettings\x1fget\x1f" + Schema + "\x1f" + Key
+	if Said is "\x1e" {
+		return ""
+	}
+	return Said.trim
+}
+
+static bool mouse_gsettings_set const str &Schema, const str &Key, const str &Value {
+	return mouse_do "gsettings\x1fset\x1f" + Schema + "\x1f" + Key + "\x1f" + Value
+}
+
+static const str mouse_gnome = "org.gnome.desktop.peripherals."
+
+// ---- X11's: xinput, for each device with libinput's settings
+
+// the ids of the pointing devices xinput lists, touchpads (Touchpads
+// true) or the rest
+static list str mouse_x11_devices bool Touchpads {
+	list str Ids
+	str Said = mouse_run "xinput\x1flist"
+	if Said is "\x1e" {
+		return Ids
+	}
+	for Line in Said.split "\n" {
+		if !Line.contains("slave  pointer") or Line.contains("XTEST") {
+			continue
+		}
+		long At = Line.find "id="
+		if At < 0 {
+			continue
+		}
+		str Rest = Line[At + 3 to]
+		long Tab = Rest.find "\t"
+		str Id = Rest.copy
+		if Tab > 0 {
+			Id = Rest[to Tab - 1]
+		}
+		bool IsPad = Line.lower.contains("touchpad") or Line.lower.contains("trackpad")
+		if IsPad == Touchpads and Id.trim.is_long {
+			Ids.add Id.trim
+		}
+	}
+	return Ids
+}
+
+// a property's value, as list-props shows it: "\tlibinput Accel Speed (306):\t0.000000"
+static str mouse_x11_prop const str &Id, const str &Name {
+	str Said = mouse_run "xinput\x1flist-props\x1f" + Id
+	if Said is "\x1e" {
+		return ""
+	}
+	for Line in Said.split "\n" {
+		str T = Line.trim
+		if T.starts_with Name + " (" {
+			long Colon = T.find ":"
+			if Colon > 0 {
+				str Value = T[Colon + 1 to]
+				return Value.trim
+			}
+		}
+	}
+	return ""
+}
+
+static str mouse_x11_first const str &Name, bool Touchpads {
+	for Id in mouse_x11_devices Touchpads {
+		str Value = mouse_x11_prop Id, Name
+		if Value is not "" {
+			return Value
+		}
+	}
+	return ""
+}
+
+// sets it on every such device that has it: true if any did
+static bool mouse_x11_set const str &Name, const str &Value, bool Touchpads {
+	bool Any = false
+	for Id in mouse_x11_devices Touchpads {
+		if mouse_x11_prop(Id, Name) is not "" and mouse_do("xinput\x1fset-prop\x1f" + Id + "\x1f" + Name + "\x1f" + Value) {
+			Any = true
+		}
+	}
+	return Any
+}
+
+// ---- one setting, each desktop's way
+
+// Setting is Sway's name for it; GnomeKey gsettings' (under Device's
+// schema, "mouse" or "touchpad"); X11 xinput's property.
+static str mouse_get const str &Device, const str &Setting, const str &GnomeKey, const str &X11 {
+	long Kind = cby_desktop_kind
+	str SwayType = "pointer"
+	if Device is "touchpad" {
+		SwayType = "touchpad"
+	}
+	if Kind == 1 {
+		json Input = mouse_sway_input SwayType
+		if Input.is_null {
+			return ""
+		}
+		json Value = Input["libinput"][Setting]
+		if Value.is_number {
+			return Value.double_.text
+		}
+		return Value.str_or ""
+	}
+	if Kind == 2 {
+		return mouse_gsettings mouse_gnome + Device, GnomeKey
+	}
+	if Kind == 4 {
+		return mouse_x11_first X11, Device is "touchpad"
+	}
+	return ""
+}
+
+static bool mouse_yes const str &Value {
+	return Value is "enabled" or Value is "true" or Value is "1"
+}
+
+static double mouse_number const str &Value {
+	if Value.trim.is_number {
+		return Value.trim.to_double
+	}
+	return 0.0
+}
+
+static bool mouse_set const str &Device, const str &Setting, const str &GnomeKey, const str &X11, const str &Value {
+	long Kind = cby_desktop_kind
+	if Kind == 1 {
+		str SwayType = "pointer"
+		if Device is "touchpad" {
+			SwayType = "touchpad"
+		}
+		return mouse_sway_set SwayType, Setting, Value
+	}
+	if Kind == 2 {
+		str Given = Value.copy
+		if Value is "enabled" {
+			Given = "true"
+		} else if Value is "disabled" {
+			Given = "false"
+		}
+		return mouse_gsettings_set mouse_gnome + Device, GnomeKey, Given
+	}
+	if Kind == 4 {
+		str Given = Value.copy
+		if Value is "enabled" {
+			Given = "1"
+		} else if Value is "disabled" {
+			Given = "0"
+		}
+		return mouse_x11_set X11, Given, Device is "touchpad"
+	}
+	return false
+}
+
+static str mouse_switch bool Yes {
+	if Yes {
+		return "enabled"
+	}
+	return "disabled"
+}
+
+// a speed kept from -1 to 1
+static str mouse_speed_text double Speed {
+	double S = Speed
+	if S < -1.0 {
+		S = -1.0
+	} else if S > 1.0 {
+		S = 1.0
+	}
+	return S.text 3
+}
+
+// ---- the mouse
+
+// how fast the pointer moves: from -1.0 (slowest) through 0.0 (the
+// usual) to 1.0 (fastest)
+double mouse.speed {
+	return mouse_number mouse_get("mouse", "accel_speed", "speed", "libinput Accel Speed")
+}
+
+bool mouse.set_speed double Speed {
+	return mouse_set "mouse", "accel_speed", "speed", "libinput Accel Speed", mouse_speed_text(Speed)
+}
+
+// true if scrolling moves what's shown the way the fingers go, as on a
+// phone, rather than the way the scroll bar goes
+bool mouse.natural_scrolling {
+	return mouse_yes mouse_get("mouse", "natural_scroll", "natural-scroll", "libinput Natural Scrolling Enabled")
+}
+
+bool mouse.set_natural_scrolling bool Yes {
+	return mouse_set "mouse", "natural_scroll", "natural-scroll", "libinput Natural Scrolling Enabled", mouse_switch(Yes)
+}
+
+// true if the buttons are swapped, for the left hand
+bool mouse.left_handed {
+	return mouse_yes mouse_get("mouse", "left_handed", "left-handed", "libinput Left Handed Enabled")
+}
+
+bool mouse.set_left_handed bool Yes {
+	return mouse_set "mouse", "left_handed", "left-handed", "libinput Left Handed Enabled", mouse_switch(Yes)
+}
+
+// ---- the touchpad
+
+// true if there's a touchpad whose settings can be read
+bool mouse.has_touchpad {
+	long Kind = cby_desktop_kind
+	if Kind == 1 {
+		return !mouse_sway_input("touchpad").is_null
+	}
+	if Kind == 4 {
+		return mouse_x11_devices(true).length > 0
+	}
+	if Kind == 2 {
+		return mouse_gsettings(mouse_gnome + "touchpad", "speed") is not ""
+	}
+	return false
+}
+
+double mouse.touchpad_speed {
+	return mouse_number mouse_get("touchpad", "accel_speed", "speed", "libinput Accel Speed")
+}
+
+bool mouse.set_touchpad_speed double Speed {
+	return mouse_set "touchpad", "accel_speed", "speed", "libinput Accel Speed", mouse_speed_text(Speed)
+}
+
+bool mouse.touchpad_natural_scrolling {
+	return mouse_yes mouse_get("touchpad", "natural_scroll", "natural-scroll", "libinput Natural Scrolling Enabled")
+}
+
+bool mouse.set_touchpad_natural_scrolling bool Yes {
+	return mouse_set "touchpad", "natural_scroll", "natural-scroll", "libinput Natural Scrolling Enabled", mouse_switch(Yes)
+}
+
+// true if a tap on the touchpad is a click
+bool mouse.tap_to_click {
+	return mouse_yes mouse_get("touchpad", "tap", "tap-to-click", "libinput Tapping Enabled")
+}
+
+bool mouse.set_tap_to_click bool Yes {
+	return mouse_set "touchpad", "tap", "tap-to-click", "libinput Tapping Enabled", mouse_switch(Yes)
+}
+
+// ---- the cursor
+
+// how big the cursor is, in pixels: 24 is the usual; 32, 48 and 64 are
+// bigger (-1 if it can't be found out)
+long mouse.cursor_size {
+	long Kind = cby_desktop_kind
+	str Size = ""
+	if Kind == 1 {
+		Size = mouse_sway_cursor 1
+	} else if Kind == 2 {
+		Size = mouse_gsettings "org.gnome.desktop.interface", "cursor-size"
+	} else {
+		return -1
+	}
+	if Size.is_long {
+		return Size.to_long
+	}
+	return 24
+}
+
+// the cursor's look: "Adwaita", "Breeze", "Bibata-Modern-Classic" (""
+// if it can't be found out)
+str mouse.cursor_theme {
+	long Kind = cby_desktop_kind
+	if Kind == 1 {
+		str Theme = mouse_sway_cursor 0
+		if Theme is "" {
+			return "default"
+		}
+		return Theme
+	}
+	if Kind == 2 {
+		str Said = mouse_gsettings "org.gnome.desktop.interface", "cursor-theme"
+		return Said.replace "'", ""
+	}
+	return ""
+}
+
+bool mouse.set_cursor_size long Pixels {
+	if Pixels < 8 or Pixels > 256 {
+		return false
+	}
+	long Kind = cby_desktop_kind
+	if Kind == 1 {
+		return mouse_do "swaymsg\x1fseat\x1f*\x1fxcursor_theme\x1f" + mouse.cursor_theme + "\x1f" + Pixels.text
+	}
+	if Kind == 2 {
+		return mouse_gsettings_set "org.gnome.desktop.interface", "cursor-size", Pixels.text
+	}
+	return false
+}
+
+// (a theme is a folder in ~/.icons or /usr/share/icons with a cursors
+// folder inside)
+bool mouse.set_cursor_theme const str &Theme {
+	if Theme is "" or Theme.contains("'") or Theme.contains(" ") {
+		return false
+	}
+	long Kind = cby_desktop_kind
+	if Kind == 1 {
+		long Size = mouse.cursor_size
+		if Size < 0 {
+			Size = 24
+		}
+		return mouse_do "swaymsg\x1fseat\x1f*\x1fxcursor_theme\x1f" + Theme + "\x1f" + Size.text
+	}
+	if Kind == 2 {
+		return mouse_gsettings_set "org.gnome.desktop.interface", "cursor-theme", "'" + Theme + "'"
+	}
+	return false
+}
+
+// true if this desktop's mouse settings are ones Cabby can change
+bool mouse.can_change {
+	long Kind = cby_desktop_kind
+	if Kind == 1 {
+		return !mouse_sway_input("pointer").is_null or !mouse_sway_input("touchpad").is_null
+	}
+	if Kind == 2 {
+		return mouse_gsettings(mouse_gnome + "mouse", "speed") is not ""
+	}
+	if Kind == 4 {
+		return mouse_x11_devices(false).length + mouse_x11_devices(true).length > 0
+	}
+	return false
+}

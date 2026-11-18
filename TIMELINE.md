@@ -78,6 +78,7 @@ the patch number with fixes alone.
 | 0.33.2 | 19 November | chapter 4 shows how to check that two floating-point numbers are close, with `abs` |
 | 0.33.3 | 19 November | in the interactive session, a block comment's lines start ` * `, as in Vim |
 | 0.34.0 | 19 November | `close_to`, and a warning for `==` on rounded floating-point numbers; chapter 6's comparisons and logic in two tables |
+| 0.35.0 | 19 November | `use screens`, `use mouse` and `use keyboard`: the monitors, the pointer and cursor, and the layouts, each desktop's way; chapter 107 |
 
 ---
 
@@ -1334,6 +1335,25 @@ the patch number with fixes alone.
 - Chapter 4 has "Close enough", and the manual's tests a
   `<!-- warning-main: TEXT -->` marker; chapter 6's table of comparisons
   and logic is two tables.
+
+*Version 0.35.0:*
+
+- **Three new libraries, for the desktop's settings**, each asking each
+  desktop its own way (Sway by swaymsg; GNOME by Mutter over D-Bus and
+  gsettings; KDE Plasma by kscreen-doctor; X11 by xrandr, xinput,
+  setxkbmap and xset; a Mac by CoreGraphics):
+  - `use screens`: each monitor's resolution, refresh, scale, rotation,
+    place and modes, and changing them, or turning one off.
+  - `use mouse`: the pointer's speed, natural scrolling and left-handed
+    buttons, the touchpad's own and tapping to click, and the cursor's
+    size and theme.
+  - `use keyboard`: the layouts (`"us"`, `"de(neo)"`), how a held key
+    repeats, and whether Caps Lock and Num Lock are on.
+- Chapter 107, "Screens, the mouse and the keyboard", with tutorial
+  107-screens.cby; the reference pages screens.md, mouse.md and
+  keyboard.md.
+- Tested against stand-ins for each desktop's programs, and a stand-in
+  Mutter written in Cabby on a session bus of the test's own.
 
 ## Along the way (dates not recorded)
 

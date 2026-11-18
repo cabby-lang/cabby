@@ -1,0 +1,9 @@
+can change: false
+  layouts: [] now: 
+  repeat: -1 ms, -1 a second
+set: false false false
+not set: false false false
+  layouts: [] now: 
+  repeat: -1 ms, -1 a second
+one: false []
+lock lights: true caps: true num: false

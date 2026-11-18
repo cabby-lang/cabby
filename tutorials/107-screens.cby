@@ -1,0 +1,90 @@
+// Tutorial 107: Screens, the mouse and the keyboard — the desktop's settings
+//
+// Run it:      cabby 107-screens.cby
+// Or compile:  cabby -c 107-screens.cby && ./107-screens
+// Libraries:   use screens, use mouse, use keyboard
+// Topics:      screens.all, can_change, desktop, and each screen's name,
+//              text, modes, on, main; mouse.speed, natural_scrolling,
+//              has_touchpad, tap_to_click, cursor_size, set_cursor_size;
+//              keyboard.layouts, layout, repeat_delay, repeat_rate,
+//              caps_lock (and, in the chapter: set_resolution,
+//              set_rotation, set_scale, set_position, turn_off, and the
+//              rest of the setting calls)
+//
+// What the desktop is set to: each monitor, the mouse and touchpad, and
+// the keyboard. It changes nothing unless asked: `cabby 107-screens.cby
+// bigger` makes the cursor twice as big for five seconds, then puts it
+// back. Each desktop keeps these its own way (Sway, GNOME, KDE for the
+// screens, X11, a Mac for the screens), and Cabby asks each its own way.
+
+use screens
+use mouse
+use keyboard
+use time
+
+int main int Argc, str Argv[] {
+	// ---- the monitors
+	if screens.desktop is "" {
+		println "No screens here Cabby knows how to ask about"
+	} else {
+		println "Screens (" + screens.desktop + "'s):", screens.count
+	}
+	for S in screens.all {
+		str Main = ""
+		if S.main {
+			Main = " (the main one)"
+		}
+		println " ", S.text + Main
+		if S.on and S.modes.length > 0 {
+			println "    it can show", S.modes.length, "modes, from", S.modes[0]
+		}
+	}
+
+	// ---- the mouse, and the touchpad
+	if mouse.can_change {
+		println("Mouse speed:", mouse.speed, "| natural scrolling:", mouse.natural_scrolling,
+			"| left-handed:", mouse.left_handed)
+		if mouse.has_touchpad {
+			println "Touchpad: tap to click:", mouse.tap_to_click, "| natural scrolling:", mouse.touchpad_natural_scrolling
+		}
+		println "Cursor:", mouse.cursor_theme, mouse.cursor_size, "pixels"
+	} else {
+		println "No mouse settings here Cabby can change"
+	}
+
+	// ---- the keyboard
+	if keyboard.can_change {
+		println "Keyboard layouts:", keyboard.layouts, "| typing with:", keyboard.layout
+		println "A held key repeats after", keyboard.repeat_delay, "ms,", keyboard.repeat_rate, "times a second"
+	} else {
+		println "No keyboard settings here Cabby can change"
+	}
+	if keyboard.has_lock_lights {
+		println "Caps Lock:", keyboard.caps_lock, "| Num Lock:", keyboard.num_lock
+	}
+
+	// ---- a change, only when asked
+	if Argc > 1 and Argv[1] is "bigger" {
+		long Was = mouse.cursor_size
+		if Was < 0 or !mouse.set_cursor_size(Was * 2) {
+			println "This desktop's cursor can't be changed from here"
+			return 1
+		}
+		println "The cursor is", mouse.cursor_size, "pixels for five seconds..."
+		time.sleep time.seconds(5)
+		mouse.set_cursor_size Was
+		println "and back to", mouse.cursor_size
+	}
+}
+
+// Try this:
+//  - Turn your second monitor on its side (set_rotation 90), and back.
+//  - Print the layout you're typing with whenever it changes.
+//  - Make a "presenting" program: the cursor bigger and the projector on;
+//    and a "done" one that puts them back.
+
+// ---------------------------------------------------------------- output
+// output varies: what one computer said (one with no desktop)
+//> No screens here Cabby knows how to ask about
+//> No mouse settings here Cabby can change
+//> No keyboard settings here Cabby can change

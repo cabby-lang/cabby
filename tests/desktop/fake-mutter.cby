@@ -1,0 +1,227 @@
+// A stand-in for GNOME's Mutter, for run_desktop_tests.sh: it owns
+// org.gnome.Mutter.DisplayConfig on the session bus and answers
+// GetCurrentState and ApplyMonitorsConfig from mutter.json (given as
+// its argument), as Mutter does, refusing a layout it can't show. It
+// writes a file named by its second argument once it's ready.
+use dbus
+use events
+use files
+use json
+
+object mutter {
+	dbus.bus Bus
+	json State
+
+	void begin const str &From, const str &Ready {
+		State = json.read files.read(From)
+		Bus = dbus.session
+		Bus.own_name "org.gnome.Mutter.DisplayConfig"
+		Bus.serve "/org/gnome/Mutter/DisplayConfig"
+		Bus.on_call answer
+		files.write Ready, "ready"
+		events.run
+	}
+
+	void answer {
+		if Bus.call_name is "GetCurrentState" {
+			Bus.reply current_state
+		} else if Bus.call_name is "ApplyMonitorsConfig" {
+			apply Bus.call_values
+		} else {
+			Bus.fail "org.freedesktop.DBus.Error.UnknownMethod", "no " + Bus.call_name
+		}
+	}
+
+	void add_spec dbus.message &A, const json &Mon {
+		A.begin_struct
+		A.add_str Mon["connector"].str_
+		A.add_str Mon["vendor"].str_
+		A.add_str Mon["product"].str_
+		A.add_str Mon["serial"].str_
+		A.end_struct
+	}
+
+	void add_flag dbus.message &A, const str &Name {
+		A.add_str Name
+		A.begin_variant "b"
+		A.add_bool true
+		A.end_variant
+	}
+
+	dbus.message current_state {
+		dbus.message A = dbus.answer
+		A.add_uint State["serial"].long_
+		A.begin_list "((ssss)a(siiddada{sv})a{sv})"
+		json Monitors = State["monitors"]
+		for long I = 0; I < Monitors.length; I++ {
+			json Mon = Monitors.item_at I
+			A.begin_struct
+			add_spec A, Mon
+			A.begin_list "(siiddada{sv})"
+			json Modes = Mon["modes"]
+			for long M = 0; M < Modes.length; M++ {
+				json Mode = Modes.item_at M
+				A.begin_struct
+				A.add_str Mode.item_at(0).str_
+				A.add_int Mode.item_at(1).long_
+				A.add_int Mode.item_at(2).long_
+				A.add_double Mode.item_at(3).double_
+				A.add_double Mode.item_at(4).double_
+				A.begin_list "d"
+				json Scales = Mode.item_at 5
+				for long K = 0; K < Scales.length; K++ {
+					A.add_double Scales.item_at(K).double_
+				}
+				A.end_list
+				A.begin_lookup "s", "v"
+				if Mode.item_at(6).bool_ {
+					add_flag A, "is-current"
+				}
+				if Mode.item_at(7).bool_ {
+					add_flag A, "is-preferred"
+				}
+				A.end_lookup
+				A.end_struct
+			}
+			A.end_list
+			A.begin_lookup "s", "v"
+			A.add_str "display-name"
+			A.begin_variant "s"
+			A.add_str Mon["name"].str_
+			A.end_variant
+			A.end_lookup
+			A.end_struct
+		}
+		A.end_list
+		A.begin_list "(iiduba(ssss)a{sv})"
+		json Logical = State["logical"]
+		for long L = 0; L < Logical.length; L++ {
+			json One = Logical.item_at L
+			A.begin_struct
+			A.add_int One.item_at(0).long_
+			A.add_int One.item_at(1).long_
+			A.add_double One.item_at(2).double_
+			A.add_uint One.item_at(3).long_
+			A.add_bool One.item_at(4).bool_
+			A.begin_list "(ssss)"
+			json Shows = One.item_at 5
+			for long K = 0; K < Shows.length; K++ {
+				add_spec A, monitor(Shows.item_at(K).str_)
+			}
+			A.end_list
+			A.begin_lookup "s", "v"
+			A.end_lookup
+			A.end_struct
+		}
+		A.end_list
+		A.begin_lookup "s", "v"
+		A.end_lookup
+		return A
+	}
+
+	json monitor const str &Connector {
+		json Monitors = State["monitors"]
+		for long I = 0; I < Monitors.length; I++ {
+			if Monitors.item_at(I)["connector"].str_ is Connector {
+				return Monitors.item_at(I).copy
+			}
+		}
+		return json.null
+	}
+
+	long monitor_at const str &Connector {
+		json Monitors = State["monitors"]
+		for long I = 0; I < Monitors.length; I++ {
+			if Monitors.item_at(I)["connector"].str_ is Connector {
+				return I
+			}
+		}
+		return -1
+	}
+
+	// [serial, method, [[x, y, scale, turn, main, [[connector, mode, {}]]]], {}]
+	void apply const json &Values {
+		if Values.item_at(0).long_ != State["serial"].long_ {
+			Bus.fail "org.freedesktop.DBus.Error.AccessDenied", "The requested configuration is based on stale information"
+			return
+		}
+		json Given = Values.item_at 2
+		json Logical = json.list
+		for long L = 0; L < Given.length; L++ {
+			json One = Given.item_at L
+			json Shows = json.list
+			json Pairs = One.item_at 5
+			for long K = 0; K < Pairs.length; K++ {
+				str Connector = Pairs.item_at(K).item_at(0).str_
+				str Mode = Pairs.item_at(K).item_at(1).str_
+				long At = monitor_at Connector
+				if At < 0 {
+					Bus.fail "org.freedesktop.DBus.Error.InvalidArgs", "Invalid connector"
+					return
+				}
+				bool Found = false
+				json Modes = State["monitors"].item_at(At)["modes"]
+				for long M = 0; M < Modes.length; M++ {
+					if Modes.item_at(M).item_at(0).str_ is Mode {
+						Found = true
+						bool Fits = false
+						json Scales = Modes.item_at(M).item_at 5
+						for long S = 0; S < Scales.length; S++ {
+							if close_to Scales.item_at(S).double_, One.item_at(2).double_, 0.001 {
+								Fits = true
+							}
+						}
+						if !Fits {
+							Bus.fail "org.freedesktop.DBus.Error.InvalidArgs", "Scale not supported by mode"
+							return
+						}
+					}
+				}
+				if !Found {
+					Bus.fail "org.freedesktop.DBus.Error.InvalidArgs", "Invalid mode"
+					return
+				}
+				Shows.add json.from_str(Connector)
+			}
+			json Place = json.list
+			Place.add One.item_at(0).copy
+			Place.add One.item_at(1).copy
+			Place.add One.item_at(2).copy
+			Place.add One.item_at(3).copy
+			Place.add One.item_at(4).copy
+			Place.add Shows
+			Logical.add Place
+		}
+		// each monitor's current mode is the one it was given (none if off)
+		json Monitors = State["monitors"]
+		for long I = 0; I < Monitors.length; I++ {
+			str Connector = Monitors.item_at(I)["connector"].str_
+			str Wanted = ""
+			for long L = 0; L < Given.length; L++ {
+				json Pairs = Given.item_at(L).item_at 5
+				for long K = 0; K < Pairs.length; K++ {
+					if Pairs.item_at(K).item_at(0).str_ is Connector {
+						Wanted = Pairs.item_at(K).item_at(1).str_
+					}
+				}
+			}
+			json Modes = Monitors.item_at(I)["modes"]
+			for long M = 0; M < Modes.length; M++ {
+				json Mode = Modes.item_at M
+				Mode.set_item_at 6, json.from_bool(Mode.item_at(0).str_ is Wanted)
+				Modes.set_item_at M, Mode
+			}
+			json Mon = Monitors.item_at I
+			Mon.set_item "modes", Modes
+			Monitors.set_item_at I, Mon
+		}
+		State.set_item "monitors", Monitors
+		State.set_item "logical", Logical
+		State.set_item "serial", json.from_long(State["serial"].long_ + 1)
+	}
+}
+
+int main int Argc, str Argv[] {
+	mutter M
+	M.begin Argv[1], Argv[2]
+}

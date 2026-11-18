@@ -1,0 +1,16 @@
+use mouse
+
+void show {
+	println "  mouse:", mouse.speed, mouse.natural_scrolling, mouse.left_handed
+	println "  touchpad:", mouse.has_touchpad, mouse.touchpad_speed, mouse.touchpad_natural_scrolling, mouse.tap_to_click
+	println "  cursor:", mouse.cursor_size, mouse.cursor_theme
+}
+
+int main {
+	println "can change:", mouse.can_change
+	show
+	println "set:", mouse.set_speed(0.5), mouse.set_natural_scrolling(true), mouse.set_left_handed(true)
+	println "touchpad:", mouse.set_touchpad_speed(2.0), mouse.set_touchpad_natural_scrolling(false), mouse.set_tap_to_click(false)
+	println "cursor:", mouse.set_cursor_size(48), mouse.set_cursor_theme("Bibata"), mouse.set_cursor_size(1000), mouse.set_cursor_theme("a b")
+	show
+}

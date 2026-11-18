@@ -1,0 +1,41 @@
+{
+ "screens": [
+  {"name": "DP-1", "make": "Dell Inc.", "model": "DELL U2720Q", "on": true, "main": true,
+   "mode": [2560, 1440, 59.951], "scale": 1.5, "x": 0, "y": 0, "rotation": 0,
+   "modes": [[2560, 1440, 59.951], [2560, 1440, 29.97], [1920, 1080, 60.0], [1920, 1080, 50.0]]},
+  {"name": "HDMI-A-1", "make": "Unknown", "on": true, "main": false,
+   "mode": [1920, 1080, 60.0], "scale": 1.0, "x": 1707, "y": 0, "rotation": 0,
+   "modes": [[1920, 1080, 60.0], [1920, 1080, 59.94], [1280, 720, 60.0]]}
+ ],
+ "inputs": [
+  {"identifier": "1133:49970:Logitech_Gaming_Mouse_G502", "name": "Logitech Gaming Mouse G502", "type": "pointer",
+   "libinput": {"accel_speed": 0.0, "natural_scroll": "disabled", "left_handed": "disabled"}},
+  {"identifier": "1739:52710:SYNA_Touchpad", "name": "SYNA Touchpad", "type": "touchpad",
+   "libinput": {"accel_speed": 0.2, "natural_scroll": "enabled", "left_handed": "disabled", "tap": "enabled"}},
+  {"identifier": "1:1:AT_Translated_Set_2_keyboard", "name": "AT Translated Set 2 keyboard", "type": "keyboard",
+   "repeat_delay": 600, "repeat_rate": 25, "layouts": ["us", "de"], "variants": ["", ""],
+   "xkb_layout_names": ["English (US)", "German"], "xkb_active_layout_index": 0, "xkb_active_layout_name": "English (US)"}
+ ],
+ "layout_names": {"us": "English (US)", "de": "German", "fr": "French", "us(dvorak)": "English (Dvorak)"},
+ "sway_config": "seat seat0 xcursor_theme Adwaita 32\n",
+ "gsettings": {
+  "org.gnome.desktop.interface cursor-size": "24",
+  "org.gnome.desktop.interface cursor-theme": "'Adwaita'",
+  "org.gnome.desktop.peripherals.mouse speed": "0.0",
+  "org.gnome.desktop.peripherals.mouse natural-scroll": "false",
+  "org.gnome.desktop.peripherals.mouse left-handed": "false",
+  "org.gnome.desktop.peripherals.touchpad speed": "0.2",
+  "org.gnome.desktop.peripherals.touchpad natural-scroll": "true",
+  "org.gnome.desktop.peripherals.touchpad tap-to-click": "true",
+  "org.gnome.desktop.peripherals.keyboard delay": "uint32 500",
+  "org.gnome.desktop.peripherals.keyboard repeat-interval": "uint32 30",
+  "org.gnome.desktop.input-sources sources": "[('xkb', 'us'), ('xkb', 'de')]"
+ },
+ "x11_keyboard": {"delay": 660, "rate": 25, "layouts": ["us", "de"], "variants": ["", ""]},
+ "x11_pointers": [
+  {"id": 11, "name": "Logitech Gaming Mouse G502", "props": {"libinput Accel Speed": "0.000000",
+   "libinput Natural Scrolling Enabled": "0", "libinput Left Handed Enabled": "0"}},
+  {"id": 12, "name": "SynPS/2 Synaptics TouchPad", "props": {"libinput Accel Speed": "0.200000",
+   "libinput Natural Scrolling Enabled": "1", "libinput Left Handed Enabled": "0", "libinput Tapping Enabled": "1"}}
+ ]
+}
