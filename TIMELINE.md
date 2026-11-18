@@ -75,6 +75,7 @@ the patch number with fixes alone.
 | 0.32.0 | 18 November | sixteen new chapters (91 to 106): servers, a web server, WebSockets, encryption, email, the computer, and the desktop; one field read while another is lent |
 | 0.33.0 | 18 November | a read-through: changing files in place after bytes, every chapter with "In short" and "Try this", links and appendices put right |
 | 0.33.1 | 19 November | the interactive session: a `/*` comment carries on until its `*/`, and why `print` looks different there |
+| 0.33.2 | 19 November | chapter 4 shows how to check that two floating-point numbers are close, with `abs` |
 
 ---
 
@@ -1303,6 +1304,12 @@ the patch number with fixes alone.
     a line at a time looks different there than in a program. "How to
     read this book", Chapter 1, Appendix B and the READMEs say so, and
     that lines typed between `{` and `}` run as one input.
+
+*Version 0.33.2:*
+
+- Chapter 4 said to check that floating-point results are close rather
+  than equal, but not how: it shows `abs(A - B) < limit` now, for a
+  `double` and a `float`, and how big the limit should be for each.
 
 ## Along the way (dates not recorded)
 
