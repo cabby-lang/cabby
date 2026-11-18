@@ -28,7 +28,7 @@ int main int Argc, str Argv[] {
 	speech.speaker Latin
 	Latin.set_language "la"
 	Latin.set_rate 140                        // a little slower than usual
-	if Argc > 1 and Argv[1] is "say" {
+	if Argc > 1 && Argv[1] == "say" {
 		speech.say "Hello from Cabby."
 		Latin.say "Salve, magister. Quid agis?"
 	}

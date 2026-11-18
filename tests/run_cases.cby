@@ -2157,15 +2157,15 @@ int main {
 	int First = random 1 to 6
 	long Big = random 1 to 5000000000
 	random_seed 42
-	bool Same = First == random(1 to 6) and Big == random(1 to 5000000000)
+	bool Same = First == random(1 to 6) && Big == random(1 to 5000000000)
 	bool InRange = true
 	lookup int int Seen
 	for I in 6000 {
 		int R = random 1 to 6
-		InRange = InRange and R >= 1 and R <= 6
+		InRange = InRange && R >= 1 && R <= 6
 		Seen[R] = 1
 		double D = random 0.0 to 1.0
-		InRange = InRange and D >= 0 and D < 1
+		InRange = InRange && D >= 0 && D < 1
 	}
 	println Same, InRange, Seen.length == 6
 	str Bad = Price.text(-1) else "no"
@@ -2321,9 +2321,9 @@ int main {
 //> true
 int main {
 	int Count = 3
-	until Count is 0 {
+	until Count == 0 {
 		print Count
-		if Count is not 1 {
+		if Count != 1 {
 			print " "
 		}
 		Count--
@@ -2333,17 +2333,17 @@ int main {
 	int Tries = 0
 	do {
 		Tries++
-		if Tries is 2 {
+		if Tries == 2 {
 			Answer = "yes"
 		}
-	} until Answer is "yes" or Tries > 5
+	} until Answer == "yes" || Tries > 5
 	println Answer, Tries
 	bool Done = false
-	println not Done, not Count is 0, Count is not 0, not Done and Count is 0
-	if Tries > 1 and Answer is not "no" {
+	println !Done, Count != 0, Count != 0, !Done && Count == 0
+	if Tries > 1 && Answer != "no" {
 		println "both"
 	}
-	while not Done {
+	while !Done {
 		Done = true
 	}
 	println Done
@@ -2665,7 +2665,7 @@ object countdown {
 
 	void tick {
 		Left--
-		if Left is 0 {
+		if Left == 0 {
 			Done.call
 		}
 	}
@@ -2751,7 +2751,7 @@ int main {
 	address int S = addresses.of Scores
 	println S.value, S[1], (S + 2).value, S[3]
 	address int Last = addresses.of Scores[3]
-	println Last - S, Last > S, Last is S + 3
+	println Last - S, Last > S, Last == S + 3
 	S[2] = 99
 	println Scores[2]
 	int Total = 0
@@ -2769,7 +2769,7 @@ int main {
 	println Pt.Y
 
 	address int N = addresses.none
-	println N.is_none, A.is_none, N is addresses.none
+	println N.is_none, A.is_none, N == addresses.none
 
 	char Text[6] = {'h', 'e', 'l', 'l', 'o', '\0'}
 	address char T = addresses.of Text
@@ -3202,7 +3202,7 @@ int main {
 	date Christmas = dates.make D.year, 12, 25
 	println Christmas - D, "days to go"
 	println D + 14, D.add_months(3), (dates.make 2026, 1, 31).add_months(1)
-	println D.weekday is TUESDAY, D.month is NOVEMBER
+	println D.weekday == TUESDAY, D.month == NOVEMBER
 	time_of_day Alarm = dates.time 7, 30
 	println Alarm, Alarm.format("h:mm am/pm"), Alarm + time.hours(6)
 	date_time DT = D.at Alarm
@@ -3569,7 +3569,7 @@ object clock {
 	inner void show {
 		Count++
 		println "tick", Count
-		if Count is 5 {
+		if Count == 5 {
 			Tick.stop
 		}
 	}
@@ -4069,7 +4069,7 @@ object app {
 
 	void finished {
 		Told++
-		if Told is 1 {
+		if Told == 1 {
 			println "done:", Sum.Total
 			Sum.Upto = 100
 			Sum.start
@@ -4424,7 +4424,7 @@ int main {
 	Global[2] += Global[2]
 	println Global[2]
 	for I in 4 {
-		Flags[I] = I % 2 is 0
+		Flags[I] = I % 2 == 0
 	}
 	println Flags[0], Flags[1], Flags[2], Flags[3]
 	int G[2][3]

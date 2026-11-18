@@ -51,7 +51,7 @@ object player {
 	// the beat it is now, at 120 beats a minute (two a second), counted
 	// from the first note
 	double beat {
-		if not Begun {
+		if !Begun {
 			Started = time.now
 			Begun = true
 		}

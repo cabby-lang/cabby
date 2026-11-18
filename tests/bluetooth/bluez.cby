@@ -173,23 +173,23 @@ object bluez {
 		} else if Name == "Set" {
 			str Prop = Values[1].str
 			bool To = Values[2].bool
-			if Path == "/org/bluez/hci0" and Prop == "Powered" {
+			if Path == "/org/bluez/hci0" && Prop == "Powered" {
 				Powered = To
-			} else if Path == "/org/bluez/hci0" and Prop == "Discoverable" {
+			} else if Path == "/org/bluez/hci0" && Prop == "Discoverable" {
 				Discoverable = To
-			} else if which(Path) >= 0 and Prop == "Trusted" {
+			} else if which(Path) >= 0 && Prop == "Trusted" {
 				Devices[which(Path)].Trusted = To
 			} else {
 				Bus.fail "org.bluez.Error.InvalidArguments", "can't set " + Prop
 				return
 			}
-		} else if Name == "StartDiscovery" or Name == "StopDiscovery" {
+		} else if Name == "StartDiscovery" || Name == "StopDiscovery" {
 			if !Powered {
 				Bus.fail "org.bluez.Error.NotReady", "Resource Not Ready"
 				return
 			}
 			Searching = Name == "StartDiscovery"
-			if Searching and !Devices[2].Seen {
+			if Searching && !Devices[2].Seen {
 				Devices[2].Seen = true
 				dbus.message S = dbus.signal_message "/", "org.freedesktop.DBus.ObjectManager", "InterfacesAdded"
 				S.add_path Devices[2].Path

@@ -31,7 +31,7 @@ reader can see which files need care.
 | `A[i]` | what's `i` values along: `(A + i).value` |
 | `A + n`, `A - n` | `n` values along (not `n` bytes) |
 | `B - A` | how many values apart two addresses are, as a `long` |
-| `A == B`, `A < B` | comparing (also `is` and `is not`) |
+| `A == B`, `A < B` | comparing (and `!=`, `<=` and the rest) |
 | `A.is_none` | `true` for `addresses.none` |
 | `A.number` | the address as a `long`, to print or work out |
 | `(address char)A` | the same memory, read as another kind |

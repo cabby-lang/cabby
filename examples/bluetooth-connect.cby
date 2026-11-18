@@ -49,7 +49,7 @@ int main {
 	if !bluetooth.is_on {
 		print "Bluetooth is off. Turn it on? (Y/n) "
 		char Answer = read_char
-		if Answer == 'n' or Answer == 'N' {
+		if Answer == 'n' || Answer == 'N' {
 			return 1
 		}
 		if !bluetooth.turn_on {
@@ -82,7 +82,7 @@ int main {
 	}
 	str Input = input "Connect to which? "
 	int Choice = Input.to_int else 0
-	if Choice < 1 or Choice > Devices.length {
+	if Choice < 1 || Choice > Devices.length {
 		println "That isn't one of them."
 		return 2
 	}
@@ -90,7 +90,7 @@ int main {
 	str Address = Devices[Choice - 1].Address.copy
 	bluetooth.device Chosen = bluetooth.device_named Address
 	bool WasPaired = Chosen.paired
-	if !WasPaired and !pair_with(Chosen) {
+	if !WasPaired && !pair_with(Chosen) {
 		return 3
 	}
 	println "Connecting..."
@@ -106,7 +106,7 @@ int main {
 	// another computer, or reset): forgotten, and paired afresh
 	print "Forget it and pair again? (Y/n) "
 	char Again = read_char
-	if Again == 'n' or Again == 'N' {
+	if Again == 'n' || Again == 'N' {
 		return 3
 	}
 	if !Chosen.forget {

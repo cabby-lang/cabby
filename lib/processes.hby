@@ -93,7 +93,7 @@ object process {
 	// none has come yet. At the end it gives "".
 	str read_line {
 		open
-		if cby_process_line_ready(Id) is 0 {
+		if cby_process_line_ready(Id) == 0 {
 			cby_process_no_line Id
 			return ""
 		}
@@ -105,13 +105,13 @@ object process {
 	// (waits until it knows)
 	bool at_end {
 		open
-		return cby_process_line_ready(Id) is 0
+		return cby_process_line_ready(Id) == 0
 	}
 
 	// The line just read, or just handed to the line handler.
 	str line const {
 		str s
-		if Id is 0 {
+		if Id == 0 {
 			return s
 		}
 		for i in cby_process_line_length Id {
@@ -130,7 +130,7 @@ object process {
 	// true while it is still running
 	bool is_running {
 		open
-		return cby_process_is_running(Id) is not 0
+		return cby_process_is_running(Id) != 0
 	}
 
 	// Its exit status, once it has ended (-1 before then).
@@ -165,7 +165,7 @@ object process {
 	// yet. At the end it gives "".
 	str read_error_line {
 		open
-		if cby_process_line_ready_of(Id, 1) is 0 {
+		if cby_process_line_ready_of(Id, 1) == 0 {
 			cby_process_no_line_of Id, 1
 			return ""
 		}
@@ -176,13 +176,13 @@ object process {
 	// true when its stderr has ended and every line has been read
 	bool errors_at_end {
 		open
-		return cby_process_line_ready_of(Id, 1) is 0
+		return cby_process_line_ready_of(Id, 1) == 0
 	}
 
 	// The error line just read, or just handed to the error line handler.
 	str error_line const {
 		str s
-		if Id is 0 {
+		if Id == 0 {
 			return s
 		}
 		for i in cby_process_line_length_of Id, 1 {
@@ -202,7 +202,7 @@ object process {
 	}
 
 	void pass_error_lines {
-		while cby_process_take_line_of(Id, 1) is 1 {
+		while cby_process_take_line_of(Id, 1) == 1 {
 			ErrorLineHandler.call
 		}
 	}
@@ -226,7 +226,7 @@ object process {
 	}
 
 	void pass_lines {
-		while cby_process_take_line(Id) is 1 {
+		while cby_process_take_line(Id) == 1 {
 			LineHandler.call
 		}
 	}
@@ -237,13 +237,13 @@ object process {
 
 	// (the process is made when it is first needed)
 	void open {
-		if Id is 0 {
+		if Id == 0 {
 			Id = cby_process_new
 		}
 	}
 
 	~process {
-		if Id is not 0 {
+		if Id != 0 {
 			cby_process_free Id
 		}
 	}

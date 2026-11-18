@@ -22,7 +22,7 @@ extern int cby_desktop_on_a_mac void
 // (false: nothing shows them, as on a computer with no notification
 // server running).
 bool desktop.notify const str &Title, const str &Body {
-	return cby_desktop_notify("Cabby", Title, Body, 0) is not 0
+	return cby_desktop_notify("Cabby", Title, Body, 0) != 0
 }
 
 // A notification that can be changed where it is afterwards: its number,
@@ -41,10 +41,10 @@ long desktop.notify_again long Number, const str &Title, const str &Body {
 // A file, a folder or a web address, opened in what the desktop opens it
 // with (a browser, the file manager, a picture viewer): true if it was.
 bool desktop.open const str &What {
-	return cby_desktop_open(What) is not 0
+	return cby_desktop_open(What) != 0
 }
 
 // true on a Mac, false on Linux: for the rare thing that has to differ
 bool desktop.on_a_mac {
-	return cby_desktop_on_a_mac is not 0
+	return cby_desktop_on_a_mac != 0
 }

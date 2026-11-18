@@ -19,7 +19,7 @@ when it needs quiet.
 use media
 
 int main {
-	if media.player is "" {
+	if media.player == "" {
 		println "nothing's open to play anything"
 	} else if media.playing {
 		println "playing:", media.title, "by", media.artist, "in", media.player

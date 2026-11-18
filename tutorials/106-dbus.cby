@@ -41,7 +41,7 @@ int main {
 	dbus.message Who = dbus.method_call "org.freedesktop.DBus", "/org/freedesktop/DBus", "org.freedesktop.DBus", "GetNameOwner"
 	Who.add_str "org.freedesktop.Notifications"
 	json Owner = Bus.try_call Who
-	if Bus.error is "" {
+	if Bus.error == "" {
 		println "Notifications are shown by", Owner[0].str
 	} else {
 		println "Nothing shows notifications:", Bus.error

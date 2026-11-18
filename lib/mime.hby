@@ -51,7 +51,7 @@ bool mime.is_image const str &Path {
 // XML, YAML and TOML)
 bool mime.is_text const str &Path {
 	str Kind = mime.of_file(Path)
-	return Kind.starts_with("text/") or Kind is "application/json" or Kind is "application/xml" or Kind is "image/svg+xml" or Kind is "application/yaml" or Kind is "application/toml"
+	return Kind.starts_with("text/") || Kind == "application/json" || Kind == "application/xml" || Kind == "image/svg+xml" || Kind == "application/yaml" || Kind == "application/toml"
 }
 
 // true for sound (audio/...)

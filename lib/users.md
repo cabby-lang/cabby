@@ -12,7 +12,7 @@ use users
 
 int main {
 	str Name = users.full_name
-	if Name is "" {
+	if Name == "" {
 		Name = users.name
 	}
 	println "Hello,", Name

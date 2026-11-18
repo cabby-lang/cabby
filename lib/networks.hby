@@ -69,7 +69,7 @@ int networks.status const str &Url {
 // true if something is there and answering
 bool networks.can_reach const str &Url {
 	int Code = networks.status Url
-	return Code >= 200 and Code < 400
+	return Code >= 200 && Code < 400
 }
 
 // ---- web addresses (URLs), in their parts
@@ -292,7 +292,7 @@ str networks.local_address {
 // true when it's on a network (Wi-Fi, a cable): whether the internet
 // answers is networks.can_reach's to say
 bool networks.connected {
-	return networks.local_address is not ""
+	return networks.local_address != ""
 }
 
 // the Wi-Fi network's name ("" when it isn't on Wi-Fi). Linux: iwgetid or
@@ -420,7 +420,7 @@ object networks.request {
 	// true for a status from 200 to 299: it worked
 	bool worked const {
 		int S = status
-		return S >= 200 and S < 300
+		return S >= 200 && S < 300
 	}
 
 	// what came back, as text
@@ -595,18 +595,18 @@ object networks.connection {
 	// whether it's encrypted (networks.connect_encrypted, or to a server
 	// with a certificate)
 	bool encrypted const {
-		return cby_conn_encrypted(Id) is not 0
+		return cby_conn_encrypted(Id) != 0
 	}
 
 	// sends text as it is (false if the other end has gone)
 	bool send const str &Text {
-		return cby_conn_send(Id, Text, Text.length) is not 0
+		return cby_conn_send(Id, Text, Text.length) != 0
 	}
 
 	// sends a line: the text, and a line end
 	bool send_line const str &Text {
 		str Whole = Text + "\n"
-		return cby_conn_send(Id, Whole, Whole.length) is not 0
+		return cby_conn_send(Id, Whole, Whole.length) != 0
 	}
 
 	// Waits for the next line, for `line` to give: false when the other
@@ -658,7 +658,7 @@ object networks.connection {
 
 	// true until either end closes it
 	bool is_open const {
-		return cby_conn_is_open(Id) is not 0
+		return cby_conn_is_open(Id) != 0
 	}
 
 	// where it's connected to: the computer's name, as given to connect
@@ -672,7 +672,7 @@ object networks.connection {
 	}
 
 	~connection {
-		if Id is not 0 {
+		if Id != 0 {
 			cby_conn_free Id
 		}
 	}
@@ -684,7 +684,7 @@ object networks.connection {
 // says why; networks.can_connect looks first.
 networks.connection networks.connect const str &Host, long Port {
 	long Id = cby_conn_open Host, Port
-	if Id is 0 {
+	if Id == 0 {
 		cby_conn_panic
 	}
 	return networks.connection{.Id = Id}
@@ -696,7 +696,7 @@ networks.connection networks.connect const str &Host, long Port {
 // that isn't trusted is a panic that says why.
 networks.connection networks.connect_encrypted const str &Host, long Port {
 	long Id = cby_conn_open_encrypted Host, Port
-	if Id is 0 {
+	if Id == 0 {
 		cby_conn_panic
 	}
 	return networks.connection{.Id = Id}
@@ -706,7 +706,7 @@ networks.connection networks.connect_encrypted const str &Host, long Port {
 // a certificate that's trusted
 bool networks.can_connect_encrypted const str &Host, long Port {
 	long Id = cby_conn_open_encrypted Host, Port
-	if Id is 0 {
+	if Id == 0 {
 		return false
 	}
 	cby_conn_free Id
@@ -716,7 +716,7 @@ bool networks.can_connect_encrypted const str &Host, long Port {
 // true if a program is listening on that port, there
 bool networks.can_connect const str &Host, long Port {
 	long Id = cby_conn_open Host, Port
-	if Id is 0 {
+	if Id == 0 {
 		return false
 	}
 	cby_conn_free Id
@@ -756,17 +756,17 @@ object networks.server {
 	}
 
 	inner void start long Port, int HereOnly {
-		if Id is not 0 {
+		if Id != 0 {
 			cby_server_close Id
 		}
 		Id = cby_server_listen Port, HereOnly
-		if Id is 0 {
+		if Id == 0 {
 			cby_conn_panic
 		}
 		cby_server_on Id, 0, say_connected
 		cby_server_on Id, 1, say_line
 		cby_server_on Id, 2, say_closed
-		if CertificateFile is not "" {
+		if CertificateFile != "" {
 			cby_server_set_certificate Id, CertificateFile, KeyFile
 		}
 	}
@@ -778,19 +778,19 @@ object networks.server {
 	void set_certificate const str &Certificate, const str &Key {
 		CertificateFile = Certificate.copy
 		KeyFile = Key.copy
-		if Id is not 0 {
+		if Id != 0 {
 			cby_server_set_certificate Id, CertificateFile, KeyFile
 		}
 	}
 
 	// whether it's encrypted (it has a certificate)
 	bool encrypted const {
-		return CertificateFile is not ""
+		return CertificateFile != ""
 	}
 
 	// the port it listens on (0 before listen)
 	long port const {
-		if Id is 0 {
+		if Id == 0 {
 			return 0
 		}
 		return cby_server_port Id
@@ -847,12 +847,12 @@ object networks.server {
 	// text to a connection, as it is; a line to it; and (in a handler) a
 	// line back to the one it's about. False if it has gone.
 	bool send_to long Who, const str &Text {
-		return cby_conn_send(Who, Text, Text.length) is not 0
+		return cby_conn_send(Who, Text, Text.length) != 0
 	}
 
 	bool send_line_to long Who, const str &Text {
 		str Whole = Text + "\n"
-		return cby_conn_send(Who, Whole, Whole.length) is not 0
+		return cby_conn_send(Who, Whole, Whole.length) != 0
 	}
 
 	bool reply const str &Text {
@@ -869,7 +869,7 @@ object networks.server {
 	// the connections open, by number
 	list long connections const {
 		list long Open
-		if Id is 0 {
+		if Id == 0 {
 			return Open
 		}
 		long Count = cby_server_count Id
@@ -886,7 +886,7 @@ object networks.server {
 
 	// stops listening, and closes every connection
 	void close {
-		if Id is not 0 {
+		if Id != 0 {
 			cby_server_close Id
 			Id = 0
 		}
@@ -936,17 +936,17 @@ object networks.web_server {
 	}
 
 	inner void start long Port, int HereOnly {
-		if Id is not 0 {
+		if Id != 0 {
 			cby_server_close Id
 		}
 		Id = cby_web_listen Port, HereOnly
-		if Id is 0 {
+		if Id == 0 {
 			cby_conn_panic
 		}
 		cby_web_on_request Id, say_request
 		cby_web_on_socket Id, 0, say_message
 		cby_web_on_socket Id, 1, say_socket_closed
-		if CertificateFile is not "" {
+		if CertificateFile != "" {
 			cby_server_set_certificate Id, CertificateFile, KeyFile
 		}
 	}
@@ -958,18 +958,18 @@ object networks.web_server {
 	void set_certificate const str &Certificate, const str &Key {
 		CertificateFile = Certificate.copy
 		KeyFile = Key.copy
-		if Id is not 0 {
+		if Id != 0 {
 			cby_server_set_certificate Id, CertificateFile, KeyFile
 		}
 	}
 
 	// whether it's encrypted (it has a certificate)
 	bool encrypted const {
-		return CertificateFile is not ""
+		return CertificateFile != ""
 	}
 
 	long port const {
-		if Id is 0 {
+		if Id == 0 {
 			return 0
 		}
 		return cby_server_port Id
@@ -989,7 +989,7 @@ object networks.web_server {
 
 	// stops listening, and closes every connection
 	void close {
-		if Id is not 0 {
+		if Id != 0 {
 			cby_server_close Id
 			Id = 0
 		}
@@ -1210,7 +1210,7 @@ object networks.web_server {
 	// the WebSockets open, by number
 	list long sockets const {
 		list long Open
-		if Id is 0 {
+		if Id == 0 {
 			return Open
 		}
 		long Count = cby_web_socket_count Id
@@ -1295,7 +1295,7 @@ object networks.socket {
 
 	// true until either end closes it
 	bool is_open const {
-		return cby_conn_is_open(Id) is not 0
+		return cby_conn_is_open(Id) != 0
 	}
 
 	// closes it, saying so to the server (on_close isn't called for it)
@@ -1304,7 +1304,7 @@ object networks.socket {
 	}
 
 	~socket {
-		if Id is not 0 {
+		if Id != 0 {
 			cby_ws_close Id
 			cby_conn_free Id
 		}
@@ -1316,7 +1316,7 @@ object networks.socket {
 // why. (ws:// only, for now: not wss://.)
 networks.socket networks.open_socket const str &Address {
 	long Id = cby_ws_open Address
-	if Id is 0 {
+	if Id == 0 {
 		cby_conn_panic
 	}
 	return networks.socket{.Id = Id}

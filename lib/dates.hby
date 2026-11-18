@@ -260,7 +260,7 @@ moment date_time.moment_in date_time DT, const str &Zone {
 
 // true if there's a time zone called Name
 bool dates.is_zone const str &Name {
-	return cby_zone_exists(Name) is not 0
+	return cby_zone_exists(Name) != 0
 }
 
 // this computer's time zone's name: "Australia/Sydney" ("" if it can't
@@ -273,7 +273,7 @@ str dates.zone_here {
 list str dates.zones {
 	str All = dates_zone_text(cby_zone_list())
 	list str Names
-	if All is not "" {
+	if All != "" {
 		Names = All.split "\n"
 	}
 	return Names
@@ -395,7 +395,7 @@ str time_of_day.format time_of_day T, str Pattern {
 date date_time.date date_time DT {
 	long Ns = (long)DT
 	long Days = Ns / dates_day()
-	if Ns < 0 and Ns % dates_day() != 0 {
+	if Ns < 0 && Ns % dates_day() != 0 {
 		Days = Days - 1
 	}
 	return (date)Days

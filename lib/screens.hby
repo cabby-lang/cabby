@@ -47,7 +47,7 @@ static str screens_run const str &Line {
 
 // true if the program ran and worked
 static bool screens_do const str &Line {
-	return screens_run(Line) is not "\x1e"
+	return screens_run(Line) != "\x1e"
 }
 
 // a number in text, or Otherwise if it isn't one
@@ -91,7 +91,7 @@ static long screens_gnome_logical const json &State, const str &Connector {
 	for long L = 0; L < Logical.length; L++ {
 		json Shows = Logical.item_at(L).item_at 5
 		for long K = 0; K < Shows.length; K++ {
-			if Shows.item_at(K).item_at(0).str_or("") is Connector {
+			if Shows.item_at(K).item_at(0).str_or("") == Connector {
 				return L
 			}
 		}
@@ -103,7 +103,7 @@ static long screens_gnome_logical const json &State, const str &Connector {
 static long screens_gnome_monitor const json &State, const str &Connector {
 	json Monitors = State[1]
 	for long I = 0; I < Monitors.length; I++ {
-		if Monitors.item_at(I).item_at(0).item_at(0).str_or("") is Connector {
+		if Monitors.item_at(I).item_at(0).item_at(0).str_or("") == Connector {
 			return I
 		}
 	}
@@ -128,7 +128,7 @@ static str screens_gnome_mode_id const json &State, const str &Connector, bool P
 			return Mode.item_at(0).str_or ""
 		}
 	}
-	if Preferred and Modes.length > 0 {
+	if Preferred && Modes.length > 0 {
 		return Modes.item_at(0).item_at(0).str_or ""
 	}
 	return ""
@@ -172,7 +172,7 @@ object screens.gnome_place {
 
 	void set_mode const str &Connector, const str &Mode {
 		for long I = 0; I < Connectors.length; I++ {
-			if Connectors[I] is Connector {
+			if Connectors[I] == Connector {
 				Modes[I] = Mode.copy
 			}
 		}
@@ -242,7 +242,7 @@ static list screens.gnome_place screens_gnome_places const json &State {
 // asks Mutter to show Places, kept as Settings keeps them
 static bool screens_gnome_apply const json &State, const list screens.gnome_place &Places {
 	dbus.bus Bus = dbus.try_session
-	if !Bus.is_open or Places.length == 0 {
+	if !Bus.is_open || Places.length == 0 {
 		return false
 	}
 	dbus.message M = dbus.method_call screens_mutter, screens_mutter_path, screens_mutter, "ApplyMonitorsConfig"
@@ -256,7 +256,7 @@ static bool screens_gnome_apply const json &State, const list screens.gnome_plac
 	M.begin_lookup "s", "v"
 	M.end_lookup
 	json Answer = Bus.try_call M
-	return Bus.error is ""
+	return Bus.error == ""
 }
 
 // Mutter's turns are 0 to 3, each a quarter turn clockwise
@@ -276,14 +276,14 @@ static str screens_kde_mode_id const str &Name, long W, long H, double Hz {
 	double Gap = 1000.0
 	for long I = 0; I < All.length; I++ {
 		json O = All.item_at I
-		if O["name"].str_or("") is not Name {
+		if O["name"].str_or("") != Name {
 			continue
 		}
 		json Modes = O["modes"]
 		for long M = 0; M < Modes.length; M++ {
 			json Mode = Modes.item_at M
 			double Rate = Mode["refreshRate"].double_or 0
-			if Mode["size"]["width"].long_or(0) == W and Mode["size"]["height"].long_or(0) == H and abs(Rate - Hz) < Gap {
+			if Mode["size"]["width"].long_or(0) == W && Mode["size"]["height"].long_or(0) == H && abs(Rate - Hz) < Gap {
 				Gap = abs Rate - Hz
 				Best = Mode["id"].str_or ""
 			}
@@ -337,7 +337,7 @@ object screens.screen {
 
 	void add_mode long W, long H, double Hz {
 		for long I = 0; I < ModeWidths.length; I++ {
-			if ModeWidths[I] == W and ModeHeights[I] == H and close_to(ModeRates[I], Hz, 0.005) {
+			if ModeWidths[I] == W && ModeHeights[I] == H && close_to(ModeRates[I], Hz, 0.005) {
 				return
 			}
 		}
@@ -352,7 +352,7 @@ object screens.screen {
 
 	// false for a screens.named that found none
 	bool found const {
-		return Name is not ""
+		return Name != ""
 	}
 
 	// its name, as the system calls it: "DP-1", "HDMI-A-1", "eDP-1" (a
@@ -441,7 +441,7 @@ object screens.screen {
 	double best_rate long W, long H const {
 		double Best = 0.0
 		for long I = 0; I < ModeWidths.length; I++ {
-			if ModeWidths[I] == W and ModeHeights[I] == H and ModeRates[I] > Best {
+			if ModeWidths[I] == W && ModeHeights[I] == H && ModeRates[I] > Best {
 				Best = ModeRates[I]
 			}
 		}
@@ -452,7 +452,7 @@ object screens.screen {
 	double nearest_rate long W, long H, double Hz const {
 		double Best = 0.0
 		for long I = 0; I < ModeWidths.length; I++ {
-			if ModeWidths[I] == W and ModeHeights[I] == H and (Best == 0 or abs(ModeRates[I] - Hz) < abs(Best - Hz)) {
+			if ModeWidths[I] == W && ModeHeights[I] == H && (Best == 0 || abs(ModeRates[I] - Hz) < abs(Best - Hz)) {
 				Best = ModeRates[I]
 			}
 		}
@@ -462,7 +462,7 @@ object screens.screen {
 	// reads it again, after a change
 	void read_again {
 		for S in screens.all {
-			if S.name is Name {
+			if S.name == Name {
 				Description = S.description
 				On = S.on
 				Main = S.main
@@ -510,14 +510,14 @@ object screens.screen {
 			Done = screens_gnome_change Name, "mode", Size + "@" + Hz.text(3)
 		} else if Kind == 3 {
 			str Id = screens_kde_mode_id Name, W, H, Hz
-			Done = Id is not "" and screens_do("kscreen-doctor\x1foutput." + Name + ".mode." + Id)
+			Done = Id != "" && screens_do("kscreen-doctor\x1foutput." + Name + ".mode." + Id)
 		} else if Kind == 4 {
 			Done = screens_do "xrandr\x1f--output\x1f" + Name + "\x1f--mode\x1f" + Size + "\x1f--rate\x1f" + Hz.text(2)
 		} else if Kind == 5 {
 			for long M = 0; M < cby_screens_mac_number(Index, 10); M++ {
-				if cby_screens_mac_mode(Index, M, 0) == W and cby_screens_mac_mode(Index, M, 1) == H and
+				if cby_screens_mac_mode(Index, M, 0) == W && cby_screens_mac_mode(Index, M, 1) == H &&
 				close_to((double)cby_screens_mac_mode(Index, M, 2) / 1000, Hz, 0.01) {
-					Done = cby_screens_mac_set(Index, M, 0, 0) is not 0
+					Done = cby_screens_mac_set(Index, M, 0, 0) != 0
 					break
 				}
 			}
@@ -531,7 +531,7 @@ object screens.screen {
 	// turns it clockwise: 0, 90, 180 or 270 degrees (for a monitor on its
 	// side, 90 or 270)
 	bool set_rotation int Degrees {
-		if Degrees % 90 != 0 or Degrees < 0 or Degrees > 270 {
+		if Degrees % 90 != 0 || Degrees < 0 || Degrees > 270 {
 			return false
 		}
 		long Kind = cby_desktop_kind
@@ -589,7 +589,7 @@ object screens.screen {
 		} else if Kind == 4 {
 			Done = screens_do "xrandr\x1f--output\x1f" + Name + "\x1f--pos\x1f" + Px.text + "x" + Py.text
 		} else if Kind == 5 {
-			Done = cby_screens_mac_set(Index, -1, Px, Py) is not 0
+			Done = cby_screens_mac_set(Index, -1, Px, Py) != 0
 		}
 		if Done {
 			read_again
@@ -606,7 +606,7 @@ object screens.screen {
 	bool turn_off {
 		long Others = 0
 		for S in screens.all {
-			if S.on and S.name is not Name {
+			if S.on && S.name != Name {
 				Others++
 			}
 		}
@@ -656,12 +656,12 @@ object screens.screen {
 // ("x,y"), "on" or "off".
 static bool screens_gnome_change const str &Connector, const str &What, const str &Value {
 	json State = screens_gnome_state
-	if State.length < 4 or screens_gnome_monitor(State, Connector) < 0 {
+	if State.length < 4 || screens_gnome_monitor(State, Connector) < 0 {
 		return false
 	}
 	list screens.gnome_place Places = screens_gnome_places State
 	long At = screens_gnome_logical State, Connector
-	if What is "on" {
+	if What == "on" {
 		if At >= 0 {
 			return true
 		}
@@ -670,7 +670,7 @@ static bool screens_gnome_change const str &Connector, const str &What, const st
 			screens.screen S = screens.named Places[L].first
 			if S.found {
 				long Edge = S.x + (long)((double)S.width / S.scale)
-				if S.rotation == 90 or S.rotation == 270 {
+				if S.rotation == 90 || S.rotation == 270 {
 					Edge = S.x + (long)((double)S.height / S.scale)
 				}
 				if Edge > Right {
@@ -683,7 +683,7 @@ static bool screens_gnome_change const str &Connector, const str &What, const st
 		double Scale = 1.0
 		json Modes = Monitor.item_at 1
 		for long M = 0; M < Modes.length; M++ {
-			if Modes.item_at(M).item_at(0).str_or("") is Mode {
+			if Modes.item_at(M).item_at(0).str_or("") == Mode {
 				Scale = Modes.item_at(M).item_at(4).double_or 1.0
 			}
 		}
@@ -696,11 +696,11 @@ static bool screens_gnome_change const str &Connector, const str &What, const st
 	if At < 0 {
 		return false
 	}
-	if What is "off" {
+	if What == "off" {
 		Places.remove_at At
 		return screens_gnome_apply State, Places
 	}
-	if What is "mode" {
+	if What == "mode" {
 		// Mutter's ids are its own ("2560x1440@59.951"): the one nearest
 		json Modes = State[1].item_at(screens_gnome_monitor(State, Connector)).item_at 1
 		long X = Value.find "x"
@@ -713,14 +713,14 @@ static bool screens_gnome_change const str &Connector, const str &What, const st
 		double Gap = 1000.0
 		for long M = 0; M < Modes.length; M++ {
 			json Mode = Modes.item_at M
-			if Mode.item_at(1).long_or(0) == W and Mode.item_at(2).long_or(0) == H and
+			if Mode.item_at(1).long_or(0) == W && Mode.item_at(2).long_or(0) == H &&
 			abs(Mode.item_at(3).double_or(0) - Hz) < Gap {
 				Gap = abs Mode.item_at(3).double_or(0) - Hz
 				Best = Mode.item_at(0).str_or ""
 				BestAt = M
 			}
 		}
-		if Best is "" {
+		if Best == "" {
 			return false
 		}
 		Places[At].set_mode Connector, Best
@@ -735,9 +735,9 @@ static bool screens_gnome_change const str &Connector, const str &What, const st
 		if !Keeps {
 			Places[At].set_scale Modes.item_at(BestAt).item_at(4).double_or(1.0)
 		}
-	} else if What is "rotation" {
+	} else if What == "rotation" {
 		Places[At].set_turn Value.to_long
-	} else if What is "scale" {
+	} else if What == "scale" {
 		// only a scale the mode lists
 		double Want = Value.to_double
 		json Modes = State[1].item_at(screens_gnome_monitor(State, Connector)).item_at 1
@@ -745,7 +745,7 @@ static bool screens_gnome_change const str &Connector, const str &What, const st
 		bool Allowed = false
 		for long M = 0; M < Modes.length; M++ {
 			json Mode = Modes.item_at M
-			if Mode.item_at(0).str_or("") is Current {
+			if Mode.item_at(0).str_or("") == Current {
 				json Scales = Mode.item_at 5
 				for long K = 0; K < Scales.length; K++ {
 					if close_to Scales.item_at(K).double_or(0), Want, 0.01 {
@@ -759,7 +759,7 @@ static bool screens_gnome_change const str &Connector, const str &What, const st
 			return false
 		}
 		Places[At].set_scale Want
-	} else if What is "position" {
+	} else if What == "position" {
 		long Comma = Value.find ","
 		Places[At].set_place Value[to Comma - 1].to_long, Value[Comma + 1 to].to_long
 	}
@@ -781,10 +781,10 @@ static list screens.screen screens_sway {
 		screens.screen S
 		str Make = O["make"].str_or ""
 		str Model = O["model"].str_or ""
-		if Make is "Unknown" {
+		if Make == "Unknown" {
 			Make = ""
 		}
-		if Model is "Unknown" {
+		if Model == "Unknown" {
 			Model = ""
 		}
 		bool IsOn = O["active"].bool_or false
@@ -841,7 +841,7 @@ static list screens.screen screens_gnome {
 			long H = Mode.item_at(2).long_or 0
 			double Hz = Mode.item_at(3).double_or 0
 			S.add_mode W, H, Hz
-			if L >= 0 and Mode.item_at(6)["is-current"].bool_or(false) {
+			if L >= 0 && Mode.item_at(6)["is-current"].bool_or(false) {
 				json Place = Logical.item_at L
 				S.fill_now(W, H, Hz, Place.item_at(2).double_or(1.0), Place.item_at(0).long_or(0), Place.item_at(1).long_or(0),
 					(int)(Place.item_at(3).long_or(0) % 4 * 90))
@@ -886,7 +886,7 @@ static list screens.screen screens_kde {
 			long H = Mode["size"]["height"].long_or 0
 			double Hz = Mode["refreshRate"].double_or 0
 			S.add_mode W, H, Hz
-			if IsOn and Mode["id"].str_or("") is Current {
+			if IsOn && Mode["id"].str_or("") == Current {
 				S.fill_now W, H, Hz, O["scale"].double_or(1.0), O["pos"]["x"].long_or(0), O["pos"]["y"].long_or(0), Turn
 			}
 		}
@@ -901,7 +901,7 @@ static list screens.screen screens_kde {
 static list screens.screen screens_x11 {
 	list screens.screen Found
 	str Said = screens_run "xrandr\x1f--query"
-	if Said is "\x1e" {
+	if Said == "\x1e" {
 		return Found
 	}
 	// a block for each monitor: its line, then its modes'
@@ -929,7 +929,7 @@ static screens.screen screens_x11_one const str &Block {
 	screens.screen S
 	list str Lines = Block.split "\n"
 	list str Words = Lines[0].split " "
-	if Words.length < 2 or Words[1] is not "connected" {
+	if Words.length < 2 || Words[1] != "connected" {
 		return S
 	}
 	bool IsMain = false
@@ -942,20 +942,20 @@ static screens.screen screens_x11_one const str &Block {
 		if Word.starts_with "(" {
 			break
 		}
-		if Word is "primary" {
+		if Word == "primary" {
 			IsMain = true
-		} else if Word.contains("+") and Word.contains("x") {
+		} else if Word.contains("+") && Word.contains("x") {
 			IsOn = true
 			list str Parts = Word.replace("x", "+").split "+"
-			if Parts.length == 4 and Parts[2].is_long and Parts[3].is_long {
+			if Parts.length == 4 && Parts[2].is_long && Parts[3].is_long {
 				Px = Parts[2].to_long
 				Py = Parts[3].to_long
 			}
-		} else if Word is "right" {
+		} else if Word == "right" {
 			Turn = 90
-		} else if Word is "inverted" {
+		} else if Word == "inverted" {
 			Turn = 180
-		} else if Word is "left" {
+		} else if Word == "left" {
 			Turn = 270
 		}
 	}
@@ -964,11 +964,11 @@ static screens.screen screens_x11_one const str &Block {
 		// a mode: its size, then its refresh rates (* the one now)
 		list str Parts
 		for Word in Lines[L].trim.split " " {
-			if Word is not "" {
+			if Word != "" {
 				Parts.add Word.copy
 			}
 		}
-		if Parts.length < 2 or !Parts[0].contains("x") {
+		if Parts.length < 2 || !Parts[0].contains("x") {
 			continue
 		}
 		long X = Parts[0].find "x"
@@ -977,7 +977,7 @@ static screens.screen screens_x11_one const str &Block {
 		if High.ends_with "i" {
 			High = High[to High.length - 2]
 		}
-		if !Wide.is_long or !High.is_long {
+		if !Wide.is_long || !High.is_long {
 			continue
 		}
 		for long R = 1; R < Parts.length; R++ {
@@ -986,7 +986,7 @@ static screens.screen screens_x11_one const str &Block {
 				continue
 			}
 			S.add_mode Wide.to_long, High.to_long, Rate.to_double
-			if IsOn and Parts[R].contains("*") {
+			if IsOn && Parts[R].contains("*") {
 				S.fill_now Wide.to_long, High.to_long, Rate.to_double, 1.0, Px, Py, Turn
 			}
 		}
@@ -1001,10 +1001,10 @@ static list screens.screen screens_mac {
 	for long I = 0; I < Count; I++ {
 		screens.screen S
 		str Named = "display " + (I + 1).text
-		if cby_screens_mac_number(I, 8) is not 0 {
+		if cby_screens_mac_number(I, 8) != 0 {
 			Named = "built-in"
 		}
-		S.fill_basics Named, "", true, cby_screens_mac_number(I, 7) is not 0
+		S.fill_basics Named, "", true, cby_screens_mac_number(I, 7) != 0
 		S.set_index I
 		long W = cby_screens_mac_number I, 1
 		long Points = cby_screens_mac_number I, 9
@@ -1052,7 +1052,7 @@ screens.screen screens.named const str &Name {
 	list screens.screen All = screens.all
 	while All.length > 0 {
 		screens.screen S = All.take_last
-		if S.name is Name {
+		if S.name == Name {
 			return S
 		}
 	}
@@ -1092,5 +1092,5 @@ str screens.desktop {
 
 // true if there are screens here Cabby can change
 bool screens.can_change {
-	return cby_desktop_kind > 0 and screens.all.length > 0
+	return cby_desktop_kind > 0 && screens.all.length > 0
 }

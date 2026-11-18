@@ -142,7 +142,7 @@ void archives.compress_xz const str &Path {
 // a gzipped or xz file back as it was: "big.log.gz" (or "big.log.xz") as
 // "big.log"
 void archives.decompress const str &Path {
-	if !Path.ends_with(".gz") and !Path.ends_with(".xz") {
+	if !Path.ends_with(".gz") && !Path.ends_with(".xz") {
 		archives_not_gz Path
 	}
 	cby_archives_decompress Path, Path[0 to Path.length - 4]

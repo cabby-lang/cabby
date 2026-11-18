@@ -2969,7 +2969,7 @@ int main {
 // expect: warning: floating-point numbers are rounded, so two that look the same may not be exactly equal; use 'close_to A, B'
 int main {
 	double D = 0.25
-	println D is -0.3
+	println D == -0.3
 }
 
 ### quiet_float_equal_to_whole_numbers_and_variables
@@ -2995,7 +2995,7 @@ int main {
 ### ok_close_to_of_a_programs_own
 // expect: quiet
 bool close_to int A, int B {
-	return A - B < 2 and B - A < 2
+	return A - B < 2 && B - A < 2
 }
 int main {
 	println close_to(3, 4)

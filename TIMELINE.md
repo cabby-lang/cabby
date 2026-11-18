@@ -80,6 +80,7 @@ the patch number with fixes alone.
 | 0.34.0 | 19 November | `close_to`, and a warning for `==` on rounded floating-point numbers; chapter 6's comparisons and logic in two tables |
 | 0.35.0 | 19 November | `use screens`, `use mouse` and `use keyboard`: the monitors, the pointer and cursor, and the layouts, each desktop's way; chapter 107 |
 | 0.35.1 | 19 November | the interactive session: a comment after `{` no longer stops the next line's indent, and indentation messages count only the tabs typed |
+| 0.36.0 | 19 November | conditions in symbols only: `is`, `is not`, `and`, `or` and `not` are taken out, for `==`, `!=`, `&&`, `\|\|` and `!` |
 
 ---
 
@@ -1364,6 +1365,25 @@ the patch number with fixes alone.
   - "this line should be indented by 2 tabs, not 1" counted the tab the
     session puts in front of each statement (they're inside `main`):
     it counts only the tabs typed now ("by 1 tab, not 0").
+
+*Version 0.36.0:*
+
+- **Conditions in symbols only.** `is`, `is not`, `and`, `or` and `not`
+  (since the early versions, as words for `==`, `!=`, `&&`, `||` and `!`)
+  are taken out: two ways of writing each meant learning both to read
+  Cabby's own code, which used both about equally, and `==` is known at a
+  glance. Each is now an error saying what to write ("Cabby writes '==',
+  not 'is'"), and stays reserved; the session shows them in red as
+  they're typed.
+  - `tools/words-to-symbols.py` rewrote the libraries, tutorials, manual,
+    examples and tests (95 files), leaving strings and comments alone.
+    `not` took the whole comparison after it, so `not Tries is 0`
+    became `Tries != 0`, and `not files.exists P` became
+    `!(files.exists P)`.
+  - Chapter 6's "In words" became "`!` and a comparison"; the style
+    guide's rule for words became one for writing the opposite
+    comparison (`Tries != 0`, not `!(Tries == 0)`).
+  - `for X in L` stays: `in` isn't another way of writing an operator.
 
 ## Along the way (dates not recorded)
 

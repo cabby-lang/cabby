@@ -199,7 +199,7 @@ void os.catch_signal const str &Name {
 //         ...
 //     }
 bool os.got_signal const str &Name {
-	return cby_os_got_signal(Name) is not 0
+	return cby_os_got_signal(Name) != 0
 }
 
 // nothing done when it comes (not even ending)
@@ -216,7 +216,7 @@ void os.usual_signal const str &Name {
 // "terminate" asks it to stop, "kill" stops it whatever it says, "pause"
 // and "resume" stop it for a while and start it again.
 bool os.send_signal long Program, const str &Name {
-	return cby_os_send_signal(Program, Name) is not 0
+	return cby_os_send_signal(Program, Name) != 0
 }
 
 // this program's number (its process id), and the number of the program
@@ -440,7 +440,7 @@ object os.program {
 
 	// whether it's still running
 	bool running const {
-		return cby_os_running(Pid) is not 0
+		return cby_os_running(Pid) != 0
 	}
 }
 
@@ -470,5 +470,5 @@ list os.program os.programs_named const str &Name {
 
 // whether a program with that number is running
 bool os.running long Pid {
-	return cby_os_running(Pid) is not 0
+	return cby_os_running(Pid) != 0
 }

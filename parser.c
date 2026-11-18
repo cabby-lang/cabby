@@ -296,6 +296,15 @@ static void error_at(Parser *P, Token t, const char *fmt, ...)
 	diag_error(t.line, t.col, "%s", msg);
 }
 
+/* `is`, `and`, `or` and `not` were Cabby's words for ==, &&, || and ! until
+ * 0.36.0: each is an error saying what to write, and is read as before, so
+ * the rest of the line is checked too (and one slip doesn't bring more) */
+static void old_word(Parser *P, Token t, const char *word, const char *instead, const char *example)
+{
+	diag_set_file(P->file);
+	diag_error(t.line, t.col, "Cabby writes '%s', not '%s': %s", instead, word, example);
+}
+
 static void warn_at(Parser *P, SrcLoc l, const char *fmt, ...) __attribute__((format(printf, 3, 4)));
 static void warn_at(Parser *P, SrcLoc l, const char *fmt, ...)
 {
@@ -1374,8 +1383,9 @@ static Expr *parse_unary(Parser *P)
 		advance(P);
 		return parse_unary(P);
 	case TOK_KW_NOT: {
-		/* `not` takes the whole comparison after it, as in English:
-		 * `not Count is 0` is !(Count == 0); `and` and `or` end it */
+		/* (as it was read: the whole comparison after it, `not Count is 0`
+		 * being !(Count == 0), with `and` and `or` ending it) */
+		old_word(P, t, "not", "!", "'!Done', or '!(A == B)' around a comparison");
 		advance(P);
 		Expr *e = ast_expr(P->arena, EXPR_UNARY, loc_of(P, t));
 		e->as.unary.op = UN_NOT;
@@ -1534,8 +1544,16 @@ static Expr *parse_binary(Parser *P, int min_prec, Expr *lhs)
 			return lhs;
 		Token t = P->cur;
 		advance(P);
-		if (t.kind == TOK_KW_IS && match(P, TOK_KW_NOT))
+		if (t.kind == TOK_KW_IS && match(P, TOK_KW_NOT)) {
 			op = BIN_NE;   /* `is not` */
+			old_word(P, t, "is not", "!=", "'Name != \"Ada\"'");
+		} else if (t.kind == TOK_KW_IS) {
+			old_word(P, t, "is", "==", "'Name == \"Ada\"'");
+		} else if (t.kind == TOK_KW_AND) {
+			old_word(P, t, "and", "&&", "'Age >= 18 && Member'");
+		} else if (t.kind == TOK_KW_OR) {
+			old_word(P, t, "or", "||", "'Day == 6 || Day == 7'");
+		}
 		while (match(P, TOK_NEWLINE))   /* a line may end with a binary operator */
 			;
 		Expr *rhs = parse_binary(P, prec + 1, NULL);
@@ -1574,7 +1592,7 @@ static Expr *parse_cond(Parser *P, const char *what)
 	Expr *e = parse_expr(P);
 	P->no_init = saved;
 	if (!P->panic && check(P, TOK_EQ))
-		error_at(P, P->cur, "'=' is assignment; use '==' or 'is' to compare in %s", what);
+		error_at(P, P->cur, "'=' is assignment; use '==' to compare in %s", what);
 	return e;
 }
 

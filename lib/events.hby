@@ -37,7 +37,7 @@ extern void cby_events_step int wait_ms
 // its own, where events.run would wait for everything. It returns at once
 // when nothing is left to wait for.
 void events.step {
-	if cby_events_waiting() is not 0 {
+	if cby_events_waiting() != 0 {
 		cby_events_step -1
 	}
 }
@@ -45,7 +45,7 @@ void events.step {
 // true while there's something to wait for: a timer running, a process
 // or a connection with handlers, a server listening
 bool events.waiting {
-	return cby_events_waiting() is not 0
+	return cby_events_waiting() != 0
 }
 
 extern long cby_timer_new void
@@ -79,22 +79,22 @@ object timer {
 	}
 
 	void stop {
-		if Id is not 0 {
+		if Id != 0 {
 			cby_timer_stop Id
 		}
 	}
 
 	// true while it is waiting to go off
 	bool is_running const {
-		if Id is 0 {
+		if Id == 0 {
 			return false
 		}
-		return cby_timer_running(Id) is not 0
+		return cby_timer_running(Id) != 0
 	}
 
 	// (the timer is made when it is first needed)
 	inner void open {
-		if Id is 0 {
+		if Id == 0 {
 			Id = cby_timer_new
 			cby_timer_set Id, fire
 		}
@@ -105,7 +105,7 @@ object timer {
 	}
 
 	~timer {
-		if Id is not 0 {
+		if Id != 0 {
 			cby_timer_free Id
 		}
 	}

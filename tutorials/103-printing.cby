@@ -27,14 +27,14 @@ int main int Argc, str Argv[] {
 	println "Printers:", printing.printers
 	println "The default:", printing.default_printer
 	println "Waiting to print:", printing.jobs.length, "jobs"
-	if Argc > 1 and Argv[1] is "print" {
+	if Argc > 1 && Argv[1] == "print" {
 		str Sheet = "Practice, week 7\n\nC major, two octaves, hands together\nA minor, harmonic\n"
 		printing.settings Two
 		Two.set_copies 2
 		Two.set_two_sided
 		Two.set_title "Practice sheet"
 		str Job = printing.print_text_with Sheet, Two
-		if Job is "" {
+		if Job == "" {
 			println "It didn't print."
 			return 1
 		}

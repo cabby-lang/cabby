@@ -96,7 +96,7 @@ object greeter {
 
 	void one_less {
 		Heard++
-		if Heard is 2 {
+		if Heard == 2 {
 			println "heard the signal:", Signal
 			events.stop
 		}

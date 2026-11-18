@@ -224,11 +224,11 @@ object images.picture {
 	// true for a picture with nothing in it: one handed on with
 	// tell_picture, or never made
 	bool is_empty const {
-		return Id is 0
+		return Id == 0
 	}
 
 	~picture {
-		if Id is not 0 {
+		if Id != 0 {
 			cby_image_free Id
 		}
 	}

@@ -42,24 +42,24 @@ object recipe_site {
 
 	void answer {
 		str Path = Web.path.copy
-		if Path is "/" {
+		if Path == "/" {
 			Web.send_page "<h1>Recipes</h1><p>" + Recipes.keys.join(", ") + "</p>"
-		} else if Path is "/search" {
+		} else if Path == "/search" {
 			search Web.query_value("for")
-		} else if Path is "/add" and Web.method is "POST" {
+		} else if Path == "/add" && Web.method == "POST" {
 			Recipes[Web.form_value("name")] = Web.form_value "what"
 			Web.set_cookie "last_added", Web.form_value("name")
 			Web.redirect "/"                 // a browser goes back to the list
-		} else if Path is "/recipes.json" {
+		} else if Path == "/recipes.json" {
 			json All = json.lookup
 			for Name, What in Recipes {
 				All[Name] = What.copy
 			}
 			Web.add_header "Cache-Control", "no-store"
 			Web.send_json All
-		} else if Path is "/last" {
+		} else if Path == "/last" {
 			Web.send_text "you last added " + Web.cookie("last_added")
-		} else if Path is "/secret" {
+		} else if Path == "/secret" {
 			Web.send_status 403, "Not for you."
 		} else if Path.starts_with "/static/" {
 			Web.send_from_folder_at "cabby-public", "/static"
@@ -114,12 +114,12 @@ object visitor : threads.worker {
 
 	void ask const str &Url, const str &Cookie {
 		networks.request R = networks.request_to Url
-		if Cookie is not "" {
+		if Cookie != "" {
 			R.set_header "Cookie", Cookie      // as a browser sends back what it was given
 		}
 		R.send
 		str Answer = R.answer.copy
-		if not R.worked {
+		if !R.worked {
 			Answer = "(a page saying so)"
 		}
 		Said.add networks.read_url(Url).Path + ": " + R.status.text + " " + Answer

@@ -947,7 +947,7 @@ object sound.synthesizer {
 
 	// the channel to play on, from 1 to 16 (10 is the drums')
 	void set_channel int Number {
-		if Number < 1 or Number > 16 {
+		if Number < 1 || Number > 16 {
 			cby_sound_panic "a MIDI channel is from 1 to 16, not " + Number.text
 		}
 		Channel = Number - 1
@@ -956,7 +956,7 @@ object sound.synthesizer {
 	// how hard the notes after it are played, from 1 to 127 (100 to begin
 	// with)
 	void set_velocity int Amount {
-		if Amount < 1 or Amount > 127 {
+		if Amount < 1 || Amount > 127 {
 			cby_sound_panic "a velocity is from 1 to 127, not " + Amount.text
 		}
 		Velocity = Amount

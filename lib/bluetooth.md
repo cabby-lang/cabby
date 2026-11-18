@@ -141,7 +141,7 @@ int main {
 		println "not found: is it in pairing mode? (search first)"
 		return 1
 	}
-	if Keys.pair and Keys.connect {
+	if Keys.pair && Keys.connect {
 		println "ready to type"
 	} else {
 		println "it didn't work:", bluetooth.error

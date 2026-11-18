@@ -35,12 +35,12 @@ object countdown {
 	}
 
 	void tick {
-		if Left is 0 {
+		if Left == 0 {
 			return
 		}
 		Left--
 		Step.call                    // nothing happens if it isn't set
-		if Left is 0 {
+		if Left == 0 {
 			Done.call
 		}
 	}

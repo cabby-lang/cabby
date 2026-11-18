@@ -48,7 +48,7 @@ int main {
 	Head.set_method "HEAD"
 	println "head:", Head.send, "[" + Head.answer + "]"
 	networks.request Nowhere = networks.request_to "http://127.0.0.1:1/"
-	println "no answer:", Nowhere.send, Nowhere.error is not ""
+	println "no answer:", Nowhere.send, Nowhere.error != ""
 	networks.request Big = networks.request_to At + "/big?n=1000"
 	Big.send
 	bytes B = Big.answer_bytes

@@ -26,7 +26,7 @@ int main int Argc, str Argv[] {
 		return 0
 	}
 	println "Bluetooth is on:", bluetooth.is_on, "| others can see this computer:", bluetooth.visible
-	if Argc > 1 and Argv[1] is "search" {
+	if Argc > 1 && Argv[1] == "search" {
 		println "Searching for 10 seconds..."
 		bluetooth.search time.seconds(10) else Why {
 			println "It couldn't search:", Why

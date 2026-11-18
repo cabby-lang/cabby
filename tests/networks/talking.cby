@@ -72,13 +72,13 @@ object chat {
 
 	void hello {
 		str From = S.address_of S.from
-		println "server: hello, from this computer:", From is "127.0.0.1" or From is "::1"
+		println "server: hello, from this computer:", From == "127.0.0.1" || From == "::1"
 		S.reply "welcome"
 	}
 
 	void said {
 		println "server:", Names[S.from], "said '" + S.line + "'"
-		if S.line is not "bye" and not S.line.starts_with("last") {
+		if S.line != "bye" && !S.line.starts_with("last") {
 			S.reply "you said: " + S.line
 		}
 	}

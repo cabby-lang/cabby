@@ -181,8 +181,14 @@ err top_indent      '\tint f {\n\t}\n'                      'a top-level declara
 # --- errors: syntax --------------------------------------------------------------
 err semicolon       'int f {\n\tx = 1;\n}\n'                "unexpected ';' after the statement" 1
 err colon_after_if  'int f {\n\tif x: {\n\t}\n}\n'          "unexpected ':' after the 'if' condition" 1
-err assign_in_cond  'int f {\n\tif x = 1 {\n\t}\n}\n'       "use '==' or 'is' to compare" 1
+err assign_in_cond  'int f {\n\tif x = 1 {\n\t}\n}\n'       "use '==' to compare" 1
 err elif            'int f {\n\tif a {\n\t} elif b {\n\t}\n}\n' "write 'else if', not 'elif'" 1
+err word_is         'int f {\n\tif a is 1 {\n\t}\n}\n'           "Cabby writes '==', not 'is'" 1
+err word_is_not     'int f {\n\tif a is not 1 {\n\t}\n}\n'       "Cabby writes '!=', not 'is not'" 1
+err word_and        'int f {\n\tif a and b {\n\t}\n}\n'          "Cabby writes '&&', not 'and'" 1
+err word_or         'int f {\n\tif a or b {\n\t}\n}\n'           "Cabby writes '||', not 'or'" 1
+err word_not        'int f {\n\tif not a {\n\t}\n}\n'            "Cabby writes '!', not 'not'" 1
+err words_all_said  'int f {\n\tif not a is 1 and b {\n\t}\n}\n' "Cabby writes" 3
 err stray_else      'int f {\n\telse {\n\t}\n}\n'           "'else' without a matching 'if'" 1
 err case_outside    'int f {\n\tcase 1:\n}\n'               "'case' is only allowed directly inside a switch" 1
 err two_defaults    'int f {\n\tswitch n {\n\t\tdefault:\n\t\tdefault:\n\t}\n}\n' "only have one 'default'" 1

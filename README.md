@@ -15,7 +15,7 @@ cabby --check     prog.cby              type- and ownership-check only
 cabby --style     prog.cby              list names and calls that don't follow STYLE.md
 cabby --dump-ast  prog.cby              print the syntax tree
 cabby --dump-tokens prog.cby            print the token stream
-cabby --version                         which Cabby this is: "Cabby 0.35.1 (2026-11-19)"
+cabby --version                         which Cabby this is: "Cabby 0.36.0 (2026-11-19)"
 cabby --license                         Cabby's license (MIT)
 ```
 
@@ -141,8 +141,8 @@ write.
 * `in`, `to`, `down` and `by`, for counting loops: `for i in 1 to 10` (§10).
 * `list`, for growable lists: `list int Scores` (§4).
 * `lookup`, for values found by key: `lookup str int Ages` (§4).
-* `is`, `not`, `and` and `or`: conditions in words, `is` for `==` and
-  `is not` for `!=` (§10).
+* `is`, `not`, `and` and `or` are reserved, and a program that uses one
+  is told what to write: `==`, `!`, `&&` or `||` (§10).
 * `until`, a loop that runs until its condition is true: `until Done { }`,
   and `do { } until Done` (§10).
 * `inner`, for an object's fields and methods that only it (and objects
@@ -754,17 +754,12 @@ Conditions accept `bool` or any number; non-zero means true, as in C.
 `&&` and `||` short-circuit and give a `bool`. They are separate operators
 from the bitwise `&`, `|`, `^` and `~`.
 
-Conditions can also be written in words: `is` for `==`, `is not` for `!=`,
-`and` for `&&`, `or` for `||` and `not` for `!`:
-
-```
-until Answer is "quit" or Tries is 3 { }
-if Count is not 0 and not Done { }
-```
-
-They bind the same way as the symbols, except `not`, which takes the whole
-comparison after it, as in English: `not Count is 0` is `!(Count == 0)`.
-`and` and `or` end it. The symbols stay; use whichever reads better.
+There are no words for these, as there are in Python: `Answer is "quit"`
+or `Ready and not Done` is an error saying what to write (`==`, `&&`,
+`!`). `!` turns round only what's straight after it, so a comparison it
+turns round goes in parentheses: `!(Count == 0)`, or `Count != 0`.
+(They were Cabby's until 0.36.0; `tools/words-to-symbols.py` rewrites a
+program that has them.)
 
 Operator precedence is C's. As in C, `x & 1 == 0` means `x & (1 == 0)`.
 Cabby warns about it and suggests `(x & 1) == 0`.
@@ -940,7 +935,7 @@ a moment, two moments the duration between; a date steps by days.
 ```
 moment Start = time.now        duration D = time.since(Start)      time.sleep time.seconds(2)
 date Today = dates.today       Today + 14      Christmas - Today   Today.add_months(1)
-Today.format "d mmmm yyyy"     dates.read "25/12/2026", "dd/mm/yyyy"     Today.weekday is SATURDAY
+Today.format "d mmmm yyyy"     dates.read "25/12/2026", "dd/mm/yyyy"     Today.weekday == SATURDAY
 M.local    M.utc    DT.moment  (the computer's time zone, with daylight saving)
 ```
 
@@ -1158,7 +1153,7 @@ Run `cabby` with no file to type Cabby a piece at a time:
 
 ```
 $ cabby
-Cabby 0.35.1 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
+Cabby 0.36.0 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
 Cabby comes with ABSOLUTELY NO WARRANTY, under the MIT License; "cabby.license" for details.
 >>> int add int a, int b {
 ... 	return a + b

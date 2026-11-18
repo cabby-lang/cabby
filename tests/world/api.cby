@@ -78,7 +78,7 @@ object tester : world.window {
 	}
 
 	void clicked {
-		if mouse_on_shape and shape_at_mouse.same_as(Box) {
+		if mouse_on_shape && shape_at_mouse.same_as(Box) {
 			println "clicked: the box"
 		} else {
 			println "clicked: nothing"

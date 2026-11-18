@@ -27,7 +27,7 @@ int brightness.level {
 // sets how bright, from 0 to 100 (less than 0 is 0, more than 100 is
 // 100): true if it was set
 bool brightness.set int Level {
-	return cby_brightness_set(Level) is not 0
+	return cby_brightness_set(Level) != 0
 }
 
 // brighter by Amount (out of 100): true if it was set

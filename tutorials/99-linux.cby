@@ -20,14 +20,14 @@ use linux
 use system
 
 int main {
-	if system.kind is not "linux" {
+	if system.kind != "linux" {
 		println "This is", system.name + ": the linux library is for Linux"
 		return 0
 	}
 	println "Inside", system.hostname + ":"
 	for T in linux.temperatures {
 		str Hot = ""
-		if T.high > 0 and T.value >= T.high {
+		if T.high > 0 && T.value >= T.high {
 			Hot = "  (hot!)"
 		}
 		println "  " + T.chip, T.label + ":", T.value.text(1), T.unit + Hot
@@ -36,13 +36,13 @@ int main {
 		println "  a fan,", F.label + ":", F.value, F.unit
 	}
 	for D in linux.block_devices {
-		if D.kind is "disk" {
+		if D.kind == "disk" {
 			str Kind = "a hard disk"
 			if D.ssd {
 				Kind = "an SSD"
 			}
 			println "  " + D.name + ":", Kind + ",", D.model, D.size / 1000000000, "GB"
-		} else if D.mounted_at is not "" {
+		} else if D.mounted_at != "" {
 			println "    " + D.name, "is mounted at", D.mounted_at
 		}
 	}
@@ -55,7 +55,7 @@ int main {
 	}
 	int Failed = 0
 	for S in linux.services {
-		if S.active is "failed" {
+		if S.active == "failed" {
 			Failed++
 			println "  failed:", S.name
 		}

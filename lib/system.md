@@ -48,6 +48,6 @@ On Linux the name comes from `/etc/os-release`; on a Mac, from
 `sw_vers`.
 
 For the rare thing that has to be done differently on each,
-`system.kind is "macos"` says which (`desktop.on_a_mac` is the same). Most
+`system.kind == "macos"` says which (`desktop.on_a_mac` is the same). Most
 things don't: the `desktop`, `power`, `volume`, `brightness`, `printing`,
 `speech`, `media`, `users` and `mime` libraries do each system's own way themselves.

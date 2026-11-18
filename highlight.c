@@ -7,7 +7,7 @@
 #include <unistd.h>
 
 static const char *const keywords[] = {
-	"if", "else", "switch", "while", "until", "do", "for", "in", "to", "down", "by", "is", "not", "and", "or",
+	"if", "else", "switch", "while", "until", "do", "for", "in", "to", "down", "by",
 	"return", "break", "continue", "goto", "case", "default", "sizeof", NULL,
 };
 static const char *const types[] = {
@@ -341,7 +341,10 @@ static void hl_tokens(const char *s, int n, unsigned char *cls, bool *in_comment
 				k = HL_SPECIAL;
 			} else if ((len == 6 && memcmp(w, "cement", 6) == 0) || (len == 4 && memcmp(w, "auto", 4) == 0) ||
 				   (len == 8 && memcmp(w, "extended", 8) == 0) || (len == 9 && memcmp(w, "quadruple", 9) == 0) ||
-				   (len == 7 && memcmp(w, "typedef", 7) == 0)) {   /* (reserved: Cabby has aka) */
+				   (len == 7 && memcmp(w, "typedef", 7) == 0) ||   /* (reserved: Cabby has aka) */
+				   (len == 2 && memcmp(w, "is", 2) == 0) || (len == 3 && memcmp(w, "not", 3) == 0) ||
+				   (len == 3 && memcmp(w, "and", 3) == 0) || (len == 2 && memcmp(w, "or", 2) == 0)) {
+				/* (and the words Cabby had for ==, !, && and ||) */
 				k = HL_ERROR;
 			}
 			fill(cls, i, j, k);

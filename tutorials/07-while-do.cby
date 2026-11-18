@@ -57,8 +57,8 @@ int main {
 	int c = 6
 	int Steps = 0
 	print "6:"
-	until c is 1 {
-		if c % 2 is 0 {
+	until c == 1 {
+		if c % 2 == 0 {
 			c = c / 2
 		} else {
 			c = 3 * c + 1

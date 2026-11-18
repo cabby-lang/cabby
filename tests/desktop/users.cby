@@ -5,10 +5,10 @@ use users
 use shell
 
 int main {
-	println "name:", users.name is shell.get("WANT_NAME"), "id:", users.id is shell.get("WANT_ID").to_int
-	println "home:", users.home is shell.get("WANT_HOME"), "is root:", users.is_root is (users.id is 0)
+	println "name:", users.name == shell.get("WANT_NAME"), "id:", users.id == shell.get("WANT_ID").to_int
+	println "home:", users.home == shell.get("WANT_HOME"), "is root:", users.is_root == (users.id == 0)
 	println "groups:", users.groups.length >= 1, "in the first:", users.in_group(users.groups[0]), "in none:", users.in_group("no group like this")
-	println "root:", users.exists("root"), users.id_of("root"), users.home_of("root") is not ""
+	println "root:", users.exists("root"), users.id_of("root"), users.home_of("root") != ""
 	println "nobody like this:", users.exists("no_one_like_this"), users.id_of("no_one_like_this"), "[" + users.home_of("no_one_like_this") + "]", users.groups_of("no_one_like_this").length
 	println "nameless:", users.exists(""), users.id_of("")
 	return 0

@@ -27,7 +27,7 @@ int main {
 	while C.read_line {
 		println C.line
 	}
-	println "the server has gone:", not C.is_open
+	println "the server has gone:", !C.is_open
 	println "nothing listens there now:", networks.can_connect("localhost", Port)
 	return 0
 }

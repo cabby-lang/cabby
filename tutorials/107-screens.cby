@@ -24,7 +24,7 @@ use time
 
 int main int Argc, str Argv[] {
 	// ---- the monitors
-	if screens.desktop is "" {
+	if screens.desktop == "" {
 		println "No screens here Cabby knows how to ask about"
 	} else {
 		println "Screens (" + screens.desktop + "'s):", screens.count
@@ -35,7 +35,7 @@ int main int Argc, str Argv[] {
 			Main = " (the main one)"
 		}
 		println " ", S.text + Main
-		if S.on and S.modes.length > 0 {
+		if S.on && S.modes.length > 0 {
 			println "    it can show", S.modes.length, "modes, from", S.modes[0]
 		}
 	}
@@ -64,9 +64,9 @@ int main int Argc, str Argv[] {
 	}
 
 	// ---- a change, only when asked
-	if Argc > 1 and Argv[1] is "bigger" {
+	if Argc > 1 && Argv[1] == "bigger" {
 		long Was = mouse.cursor_size
-		if Was < 0 or !mouse.set_cursor_size(Was * 2) {
+		if Was < 0 || !mouse.set_cursor_size(Was * 2) {
 			println "This desktop's cursor can't be changed from here"
 			return 1
 		}

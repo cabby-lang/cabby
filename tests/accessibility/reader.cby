@@ -26,7 +26,7 @@ object reader {
 
 	// the program saying it's here
 	void answer {
-		if Bus.call_name is not "Embed" {
+		if Bus.call_name != "Embed" {
 			Bus.fail "org.a11y.atspi.Error", "not here"
 			return
 		}
@@ -60,16 +60,16 @@ object reader {
 	str states_of const str &Path {
 		long Bits = ask(Path, "org.a11y.atspi.Accessible", "GetState")[0][0].long
 		str S
-		if (Bits / 4096) % 2 is 1 {
+		if (Bits / 4096) % 2 == 1 {
 			S += " focused"
 		}
-		if (Bits / 16) % 2 is 1 {
+		if (Bits / 16) % 2 == 1 {
 			S += " checked"
 		}
-		if (Bits / 128) % 2 is 1 {
+		if (Bits / 128) % 2 == 1 {
 			S += " editable"
 		}
-		if (Bits / 8388608) % 2 is 1 {
+		if (Bits / 8388608) % 2 == 1 {
 			S += " selected"
 		}
 		return S
@@ -84,19 +84,19 @@ object reader {
 	void walk const str &Path, int Depth {
 		str Role = role_of(Path)
 		str Line = "  ".repeat(Depth) + Role + " '" + name_of(Path) + "'" + states_of(Path)
-		if Role is "entry" or Role is "label" or Role is "combo box" {
+		if Role == "entry" || Role == "label" || Role == "combo box" {
 			dbus.message M = dbus.method_call App, Path, "org.a11y.atspi.Text", "GetText"
 			M.add_int 0
 			M.add_int -1
 			Line += " text '" + Bus.call(M)[0].str + "'"
 		}
-		if Role is "push button" {
+		if Role == "push button" {
 			Line += " (" + ask(Path, "org.a11y.atspi.Action", "GetName")[0].str + ")"
-			if name_of(Path) is "Say hello" {
+			if name_of(Path) == "Say hello" {
 				Button = Path.copy
 			}
 		}
-		if Role is "list item" and name_of(Path) is "Salve" {
+		if Role == "list item" && name_of(Path) == "Salve" {
 			Salve = Path.copy
 		}
 		println Line
@@ -110,7 +110,7 @@ object reader {
 		Step++
 		println "reader: the tree"
 		walk "/org/a11y/atspi/accessible/root", 1
-		if Step is 2 {
+		if Step == 2 {
 			events.stop
 		}
 	}
@@ -119,13 +119,13 @@ object reader {
 		json V = Bus.signal
 		str What = Bus.signal_name
 		str Path = Bus.signal_path
-		if What is "StateChanged" {
+		if What == "StateChanged" {
 			str Detail = V[0].str
-			if Detail is not "focused" and Detail is not "checked" and Detail is not "selected" {
+			if Detail != "focused" && Detail != "checked" && Detail != "selected" {
 				return
 			}
 			println "reader: heard", Detail, V[1].long, "-", role_of(Path), "'" + name_of(Path) + "'"
-			if Detail is "checked" and V[1].long is 1 {
+			if Detail == "checked" && V[1].long == 1 {
 				// choosing Salve, and pressing the button, as a person using
 				// the reader would
 				str Option = Salve.copy
@@ -134,9 +134,9 @@ object reader {
 				println "reader: pressed the button:", act(Press)
 				Later.after time.milliseconds(300)
 			}
-		} else if What is "TextChanged" {
+		} else if What == "TextChanged" {
 			println "reader: heard text", V[0].str, V[1].long, V[2].long, "'" + V[3].str + "'"
-		} else if What is "TextCaretMoved" {
+		} else if What == "TextCaretMoved" {
 			println "reader: heard the caret move to", V[1].long
 		}
 	}

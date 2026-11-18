@@ -32,7 +32,7 @@ int main int Argc, str Argv[] {
 	println "text:", mime.is_text("cabby-notes.txt"), mime.is_text("cabby-data.json"), "| a picture:", mime.is_image("cabby-notes.txt")
 	println "a folder is:", mime.of_file("."), "| nothing at all:", "[" + mime.of_file("nowhere.txt") + "]"
 
-	if Argc > 1 and Argv[1] is "show" {
+	if Argc > 1 && Argv[1] == "show" {
 		long Number = desktop.notify_numbered "Copying", "0%"
 		for Done in 1 to 4 {
 			time.sleep time.milliseconds(500)

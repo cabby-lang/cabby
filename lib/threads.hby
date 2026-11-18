@@ -60,7 +60,7 @@ object threads.worker {
 
 	// Starts `work`, on a thread of its own; the program carries on.
 	void start {
-		if Id is 0 {
+		if Id == 0 {
 			Id = cby_thread_new
 		}
 		cby_thread_start Id, work, DoneHandler.is_set, say_done, MessageHandler.is_set, say_message
@@ -94,7 +94,7 @@ object threads.worker {
 	// result as it's found). It's copied, so it's no longer the worker's.
 	// With no handler, it isn't kept.
 	void tell const str &Text {
-		if Id is not 0 {
+		if Id != 0 {
 			cby_thread_tell Id, Text
 		}
 	}
@@ -104,7 +104,7 @@ object threads.worker {
 	// worker's picture is empty afterwards. A picture drawn as it's worked
 	// out (a fractal, a chart), shown by a window as it comes.
 	void tell_picture images.picture Picture {
-		if Id is not 0 {
+		if Id != 0 {
 			cby_thread_tell_picture Id, Picture.Id
 			Picture.Id = 0
 		}
@@ -112,14 +112,14 @@ object threads.worker {
 
 	// In the on_message handler: true if what was sent is a picture
 	bool has_picture {
-		return Id is not 0 && cby_thread_message_is_picture(Id) is not 0
+		return Id != 0 && cby_thread_message_is_picture(Id) != 0
 	}
 
 	// In the on_message handler: the picture just sent, now the main
 	// program's (empty if it wasn't a picture, or has been taken already)
 	images.picture picture {
 		long Taken = 0
-		if Id is not 0 {
+		if Id != 0 {
 			Taken = cby_thread_take_picture(Id)
 		}
 		return images.picture{.Id = Taken}
@@ -128,7 +128,7 @@ object threads.worker {
 	// In the on_message handler: the line just sent ("" for a picture).
 	str message {
 		str Text
-		if Id is not 0 {
+		if Id != 0 {
 			Text = " ".repeat(cby_thread_message_length(Id))
 			if Text.length > 0 {
 				address char Room = addresses.of_text Text
@@ -141,30 +141,30 @@ object threads.worker {
 	// Asks it to stop: `work` sees `stopping`, and can finish early.
 	// (It isn't made to: what it's in the middle of, it finishes.)
 	void ask_to_stop {
-		if Id is not 0 {
+		if Id != 0 {
 			cby_thread_ask_to_stop Id
 		}
 	}
 
 	// Inside `work`: true once it's been asked to stop.
 	bool stopping {
-		return Id is not 0 && cby_thread_stopping(Id) is not 0
+		return Id != 0 && cby_thread_stopping(Id) != 0
 	}
 
 	// Waits until it's done.
 	void wait {
-		if Id is not 0 {
+		if Id != 0 {
 			cby_thread_wait Id
 		}
 	}
 
 	// true once it's done (or before it's started), without waiting
 	bool is_done {
-		return Id is 0 || cby_thread_is_done(Id) is not 0
+		return Id == 0 || cby_thread_is_done(Id) != 0
 	}
 
 	~threads.worker {
-		if Id is not 0 {
+		if Id != 0 {
 			cby_thread_free Id
 		}
 	}

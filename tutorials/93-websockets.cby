@@ -36,7 +36,7 @@ object scoreboard {
 	}
 
 	void answer {
-		if Web.path is "/live" and Web.wants_socket {
+		if Web.path == "/live" && Web.wants_socket {
 			long Who = Web.accept_socket       // a WebSocket from now on
 			Web.send_message Who, "welcome: " + score + ", " + Web.sockets.length.text + " watching"
 		} else {
@@ -50,9 +50,9 @@ object scoreboard {
 
 	// a fan with the scorer's job says who scored
 	void heard {
-		if Web.message is "goal home" {
+		if Web.message == "goal home" {
 			Home++
-		} else if Web.message is "goal away" {
+		} else if Web.message == "goal away" {
 			Away++
 		} else {
 			Web.reply "say 'goal home' or 'goal away'"

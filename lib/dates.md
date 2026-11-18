@@ -37,8 +37,8 @@ it; writing `use time` too is fine.
 | Write | Gives |
 |---|---|
 | `D.year`, `D.day` | numbers (`long`) |
-| `D.month` | the `month` (`D.month is DECEMBER`); `D.month_number` is 1 to 12 |
-| `D.weekday` | the `weekday` (`D.weekday is SATURDAY`) |
+| `D.month` | the `month` (`D.month == DECEMBER`); `D.month_number` is 1 to 12 |
+| `D.weekday` | the `weekday` (`D.weekday == SATURDAY`) |
 | `D.day_of_year` | 1 for 1 January, up to 365 or 366 |
 | `D.days_in_month`, `D.is_leap_year` | about its month and year |
 | `D + N`, `D - N` | `N` days later or earlier (also `D.add_days N`) |
@@ -81,7 +81,7 @@ int main {
 	println D, D.weekday, D.format("d mmmm yyyy")
 	date Christmas = dates.make D.year, 12, 25
 	println Christmas - D, "days to go"
-	println D + 14, D.add_months(3), D.weekday is TUESDAY
+	println D + 14, D.add_months(3), D.weekday == TUESDAY
 	time_of_day Alarm = dates.time 7, 30
 	println Alarm.format("h:mm am/pm"), Alarm + time.hours(6)
 	time_of_day Evening = dates.time 18, 30

@@ -49,20 +49,20 @@ static str media_mac_player {
 	str Paused = ""
 	str First = ""
 	for App in "Spotify,Music".split(",") {
-		if media_apple("application \"" + App + "\" is running") is "true" {
+		if media_apple("application \"" + App + "\" is running") == "true" {
 			str State = media_tell(App, "player state as text")
-			if State is "playing" {
+			if State == "playing" {
 				return App.copy
 			}
-			if State is "paused" and Paused is "" {
+			if State == "paused" && Paused == "" {
 				Paused = App.copy
 			}
-			if First is "" {
+			if First == "" {
 				First = App.copy
 			}
 		}
 	}
-	if Paused is not "" {
+	if Paused != "" {
 		return Paused
 	}
 	return First
@@ -79,7 +79,7 @@ static json media_property dbus.bus &Bus, const str &Service, const str &Interfa
 	M.add_str Interface
 	M.add_str Name
 	json Answer = Bus.try_call M
-	if Answer.length is 0 {
+	if Answer.length == 0 {
 		return json.read("\"\"")
 	}
 	return Answer[0]
@@ -89,13 +89,13 @@ static json media_property dbus.bus &Bus, const str &Service, const str &Interfa
 // playing, or else one that's paused, or else the first by name ("" for
 // none)
 static str media_linux_player dbus.bus &Bus {
-	if not Bus.is_open {
+	if !Bus.is_open {
 		return ""
 	}
 	dbus.message Names = dbus.method_call("org.freedesktop.DBus", "/org/freedesktop/DBus",
 		"org.freedesktop.DBus", "ListNames")
 	json All = Bus.try_call Names
-	if All.length is 0 {
+	if All.length == 0 {
 		return ""
 	}
 	str Paused = ""
@@ -104,18 +104,18 @@ static str media_linux_player dbus.bus &Bus {
 		str Service = Name.str
 		if Service.starts_with(MPRIS + ".") {
 			str Status = media_property(Bus, Service, MPRIS + ".Player", "PlaybackStatus").str_or("")
-			if Status is "Playing" {
+			if Status == "Playing" {
 				return Service
 			}
-			if Status is "Paused" and (Paused is "" or Service < Paused) {
+			if Status == "Paused" && (Paused == "" || Service < Paused) {
 				Paused = Service.copy
 			}
-			if First is "" or Service < First {
+			if First == "" || Service < First {
 				First = Service.copy
 			}
 		}
 	}
-	if Paused is not "" {
+	if Paused != "" {
 		return Paused
 	}
 	return First
@@ -125,11 +125,11 @@ static str media_linux_player dbus.bus &Bus {
 static str media_linux_about const str &Key {
 	dbus.bus Bus = dbus.try_session
 	str Service = media_linux_player(Bus)
-	if Service is "" {
+	if Service == "" {
 		return ""
 	}
 	json About = media_property(Bus, Service, MPRIS + ".Player", "Metadata")
-	if not About.is_lookup or not About.has(Key) {
+	if !About.is_lookup || !About.has(Key) {
 		return ""
 	}
 	json Value = About.item(Key)
@@ -137,7 +137,7 @@ static str media_linux_about const str &Key {
 		// (xesam:artist is a list: a song can have more than one)
 		str Joined = ""
 		for One in Value {
-			if Joined is not "" {
+			if Joined != "" {
 				Joined = Joined + ", "
 			}
 			Joined = Joined + One.str_or("")
@@ -152,18 +152,18 @@ static str media_linux_about const str &Key {
 static bool media_linux_press const str &Method {
 	dbus.bus Bus = dbus.try_session
 	str Service = media_linux_player(Bus)
-	if Service is "" {
+	if Service == "" {
 		return false
 	}
 	dbus.message M = dbus.method_call Service, MPRIS_PATH, MPRIS + ".Player", Method
 	Bus.try_call M
-	return Bus.error is ""
+	return Bus.error == ""
 }
 
 // on a Mac, tells the player Command ("playpause", "next track")
 static bool media_mac_press const str &Command {
 	str App = media_mac_player
-	if App is "" {
+	if App == "" {
 		return false
 	}
 	media_tell App, Command
@@ -172,7 +172,7 @@ static bool media_mac_press const str &Command {
 
 static str media_mac_about const str &What {
 	str App = media_mac_player
-	if App is "" {
+	if App == "" {
 		return ""
 	}
 	return media_tell(App, What + " of current track")
@@ -183,16 +183,16 @@ static str media_mac_about const str &What {
 // the player's name: "Spotify", "Firefox", "VLC media player", "Music"
 // ("" when there's none open)
 str media.player {
-	if cby_desktop_on_a_mac is not 0 {
+	if cby_desktop_on_a_mac != 0 {
 		return media_mac_player
 	}
 	dbus.bus Bus = dbus.try_session
 	str Service = media_linux_player(Bus)
-	if Service is "" {
+	if Service == "" {
 		return ""
 	}
 	str Name = media_property(Bus, Service, MPRIS, "Identity").str_or("")
-	if Name is "" {
+	if Name == "" {
 		// (its name on the bus: org.mpris.MediaPlayer2.vlc, or .firefox.instance_1_23)
 		Name = Service[MPRIS.length + 1 to Service.length - 1]
 		long Dot = Name.find "."
@@ -205,22 +205,22 @@ str media.player {
 
 // true while something's playing (not paused or stopped)
 bool media.playing {
-	if cby_desktop_on_a_mac is not 0 {
+	if cby_desktop_on_a_mac != 0 {
 		str App = media_mac_player
-		return App is not "" and media_tell(App, "player state as text") is "playing"
+		return App != "" && media_tell(App, "player state as text") == "playing"
 	}
 	dbus.bus Bus = dbus.try_session
 	str Service = media_linux_player(Bus)
-	if Service is "" {
+	if Service == "" {
 		return false
 	}
-	return media_property(Bus, Service, MPRIS + ".Player", "PlaybackStatus").str_or("") is "Playing"
+	return media_property(Bus, Service, MPRIS + ".Player", "PlaybackStatus").str_or("") == "Playing"
 }
 
 // the song's (or video's) title ("" when nothing's playing, or it
 // doesn't say)
 str media.title {
-	if cby_desktop_on_a_mac is not 0 {
+	if cby_desktop_on_a_mac != 0 {
 		return media_mac_about("name")
 	}
 	return media_linux_about("xesam:title")
@@ -228,7 +228,7 @@ str media.title {
 
 // who it's by (more than one: "Ana, Bruno")
 str media.artist {
-	if cby_desktop_on_a_mac is not 0 {
+	if cby_desktop_on_a_mac != 0 {
 		return media_mac_about("artist")
 	}
 	return media_linux_about("xesam:artist")
@@ -236,7 +236,7 @@ str media.artist {
 
 // the album it's from
 str media.album {
-	if cby_desktop_on_a_mac is not 0 {
+	if cby_desktop_on_a_mac != 0 {
 		return media_mac_about("album")
 	}
 	return media_linux_about("xesam:album")
@@ -245,21 +245,21 @@ str media.album {
 // play if it's paused, pause if it's playing: true if there was a player
 // to tell
 bool media.play_pause {
-	if cby_desktop_on_a_mac is not 0 {
+	if cby_desktop_on_a_mac != 0 {
 		return media_mac_press("playpause")
 	}
 	return media_linux_press("PlayPause")
 }
 
 bool media.play {
-	if cby_desktop_on_a_mac is not 0 {
+	if cby_desktop_on_a_mac != 0 {
 		return media_mac_press("play")
 	}
 	return media_linux_press("Play")
 }
 
 bool media.pause {
-	if cby_desktop_on_a_mac is not 0 {
+	if cby_desktop_on_a_mac != 0 {
 		return media_mac_press("pause")
 	}
 	return media_linux_press("Pause")
@@ -267,7 +267,7 @@ bool media.pause {
 
 // the next song
 bool media.next {
-	if cby_desktop_on_a_mac is not 0 {
+	if cby_desktop_on_a_mac != 0 {
 		return media_mac_press("next track")
 	}
 	return media_linux_press("Next")
@@ -276,7 +276,7 @@ bool media.next {
 // the one before (most players go back to the start of this one first,
 // if it's a few seconds in)
 bool media.previous {
-	if cby_desktop_on_a_mac is not 0 {
+	if cby_desktop_on_a_mac != 0 {
 		return media_mac_press("previous track")
 	}
 	return media_linux_press("Previous")
