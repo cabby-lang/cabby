@@ -1104,7 +1104,9 @@ int64_t cby_os_disks(void)
 			continue;
 		unescape(dev);
 		unescape(mnt);
-		int real = dev[0] == '/' || strstr(kind, "nfs") || strstr(kind, "cifs") || strstr(kind, "smb") ||
+		/* (a container's own "/" is an overlay, or the like: it's still the
+		 * disk its files are on) */
+		int real = dev[0] == '/' || strcmp(mnt, "/") == 0 || strstr(kind, "nfs") || strstr(kind, "cifs") || strstr(kind, "smb") ||
 			   (strncmp(kind, "fuse.", 5) == 0 && strcmp(kind, "fuse.portal") != 0 && strcmp(kind, "fuse.gvfsd-fuse") != 0);
 		if (!real || strcmp(kind, "squashfs") == 0 || strncmp(dev, "/dev/loop", 9) == 0)
 			continue;   /* (the system's own: /proc, tmpfs, snaps ...) */

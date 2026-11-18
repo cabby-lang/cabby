@@ -12,7 +12,9 @@ needs "$CLI"
 CASES=$ROOT/tests/sema_cases.cby
 TMP=$(mktemp -d)
 trap 'rm -rf "$TMP"' EXIT
-pass=0 fail=0
+pass=0 fail=0 skipped=0
+# (cases that use the gui library need it built: SDL 3 found)
+LIBDIR=${CABBY_LIB:-$(dirname "$CLI")/lib}
 
 awk -v dir="$TMP" '
 	/^### / { name = $2; file = dir "/" name ".cby"; print name > (dir "/names"); next }
@@ -21,6 +23,7 @@ awk -v dir="$TMP" '
 
 while read -r name; do
 	f="$TMP/$name.cby"
+	if grep -q '^use gui$' "$f" && [[ ! -f "$LIBDIR/libcabbygui.so" ]]; then skipped=$((skipped+1)); continue; fi
 	expect=$(sed -n "s/^\/\/ expect: //p" "$f" | head -1)
 	want_n=$(sed -n "s/^\/\/ errors: //p" "$f" | head -1)
 	out=$("$CLI" --check "$f" 2>&1); rc=$?
@@ -42,5 +45,9 @@ while read -r name; do
 	fi
 done < "$TMP/names"
 
-echo "sema tests: $pass passed, $fail failed"
+if [[ $skipped -gt 0 ]]; then
+	echo "sema tests: $pass passed, $fail failed ($skipped skipped: no gui library)"
+else
+	echo "sema tests: $pass passed, $fail failed"
+fi
 [[ $fail -eq 0 ]]

@@ -10,16 +10,19 @@ on:
 
 jobs:
   linux:
+    # Debian 13, as at home: it has SDL 3, so the windows, games and 3D
+    # are tested too
     runs-on: ubuntu-24.04
+    container: debian:trixie
     timeout-minutes: 60
     steps:
-      - uses: actions/checkout@v4
       - name: Install what Cabby builds with
         run: |
-          sudo apt-get update
-          sudo apt-get install -y build-essential clang pkg-config libffi-dev \
-            libgtk-4-dev libavformat-dev libavcodec-dev libswscale-dev libswresample-dev \
-            libsqlite3-dev libssl-dev libcurl4-openssl-dev xvfb dbus valgrind
+          apt-get update
+          apt-get install -y build-essential clang pkg-config libffi-dev git python3 procps \
+            libsdl3-dev libgtk-4-dev libavformat-dev libavcodec-dev libswscale-dev libswresample-dev \
+            libsqlite3-dev libssl-dev libcurl4-openssl-dev xvfb xauth dbus valgrind
+      - uses: actions/checkout@v4
       - name: Build
         run: make -j"$(nproc)"
       - name: Test
