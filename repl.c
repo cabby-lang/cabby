@@ -401,6 +401,7 @@ typedef struct Toks {
 	Token *t;
 	int n;
 	int nesting;             /* unclosed ( [ { at the end */
+	bool open_comment;       /* a block comment not yet closed */
 	Arena arena;
 } Toks;
 
@@ -427,6 +428,7 @@ static void lex_all(Toks *T, const char *text)
 		T->t[T->n++] = t;
 	}
 	T->nesting = depth;
+	T->open_comment = L.open_comment;
 }
 
 static void toks_free(Toks *T)
@@ -564,7 +566,9 @@ static Completeness completeness(const char *text)
 	lex_all(&T, text);
 	Completeness r = IN_COMPLETE;
 	int first = first_tok(&T);
-	if (first >= T.n) {
+	if (T.open_comment) {
+		r = IN_MORE;
+	} else if (first >= T.n) {
 		r = IN_COMPLETE;
 	} else if (T.nesting > 0) {
 		r = IN_MORE;
@@ -1128,11 +1132,13 @@ static void on_sigint(int sig)
  * text without a newline in its buffer), and, at a keyboard, forget what
  * it was typed but didn't read (getchar takes one character; the rest of
  * that line, and its Enter, belong to that input, not to the next one). */
-/* The session's colors: each line on its own (a block comment is colored
- * on the line that opens it). */
+/* The session's colors: each line on its own, except that a line typed
+ * inside a block comment the input opened starts colored as a comment. */
+static bool line_in_comment;
+
 static void color_line(const char *line, int len, unsigned char *cls)
 {
-	bool in_comment = false;
+	bool in_comment = line_in_comment;
 	hl_classify(line, len, cls, &in_comment);
 }
 
@@ -1645,7 +1651,9 @@ static char *read_input(void)
 				memset(indent, '\t', (size_t)n);
 				indent[n] = '\0';
 			}
+			line_in_comment = hl_comment_open_at(text, text + strlen(text));
 			ReadStatus st = read_line("... ", indent, &line);
+			line_in_comment = false;
 			free(indent);
 			if (st == RD_EOF) {
 				free(text);

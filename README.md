@@ -1201,9 +1201,9 @@ code shown under any error. `NO_COLOR=1` turns color off; `CABBY_COLORS`
 changes it, e.g. `CABBY_COLORS="comment=36:keyword=1;33"`.
 
 **Several lines.** When an input is not finished — a `{` is still open, a
-parenthesis is unclosed, or a line is a header like `if x > 0` waiting for its
-`{` — the prompt changes to `...` and the next line is indented for you
-with tabs; typing `}` removes one tab. An `if` waits for one more line in
+parenthesis is unclosed, a `/*` comment has no `*/` yet, or a line is a
+header like `if x > 0` waiting for its `{` — the prompt changes to `...` and
+the next line is indented for you with tabs; typing `}` removes one tab. An `if` waits for one more line in
 case an `else` follows: press Enter on an empty line to run it (or simply
 type the next statement); after a final `else` block it runs at once.
 

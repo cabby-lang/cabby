@@ -193,6 +193,7 @@ typedef struct Lexer {
 	int nesting;         /* depth of open ( and [ — newlines suppressed when > 0 */
 	TokenKind last_kind;
 	bool quiet;          /* suppress diagnostics (used for look-ahead and pre-scans) */
+	bool open_comment;   /* the text ended inside a block comment */
 	/* Namespaces: `gui.window` is one identifier when `gui` is a namespace
 	 * (a library declared names like `object gui.window`). */
 	bool (*is_namespace)(void *ctx, const char *s, int len);
