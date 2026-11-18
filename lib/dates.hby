@@ -1,0 +1,472 @@
+// dates.hby — calendar days, clock times, and time zones.
+//
+//     use dates                                    (time comes with it)
+//
+//     date Today = dates.today
+//     println Today                                2026-11-03
+//     println Today.weekday                        Tuesday
+//     println Today.format "d mmmm yyyy"           3 November 2026
+//     date Christmas = dates.make Today.year, 12, 25
+//     println Christmas - Today                    52 (days)
+//     date Due = Today + 14                        two weeks on
+//     date Paid = Today.add_months 1               2026-12-03
+//     date Read = dates.read "25/12/2026", "dd/mm/yyyy"
+//
+//     time_of_day Alarm = dates.time 7, 30         07:30:00
+//     date_time Now = dates.now                    2026-11-03 08:27:41, here
+//     println Now.format "ddd d mmm, h:mm am/pm"   Tue 3 Nov, 8:27 am
+//
+// Patterns are written as in a spreadsheet: d dd (day), ddd dddd
+// (weekday), m mm mmm mmmm (month), yy yyyy (year), h hh (hour), mm
+// (minutes, after an hour), ss (seconds), am/pm. Anything else is written
+// as it is.
+//
+// The full reference is dates.md, next to this file.
+
+use time
+use addresses
+
+// ---- the C side (in Cabby's runtime)
+
+extern long cby_days_from_civil long y, long m, long d
+extern int cby_date_valid long y, long m, long d
+extern void cby_date_check long y, long m, long d
+extern void cby_time_check long h, long m, long s
+extern long cby_date_part long days, long which
+extern long cby_date_add_months long days, long months
+extern long cby_local_offset long at
+extern long cby_local_to_moment long wall
+extern long cby_name_text long which, long i
+extern long cby_dates_format long wall, str pattern
+extern int cby_dates_can_read str text, str pattern, long what
+extern long cby_dates_read str text, str pattern, long what
+extern char cby_dates_char long i
+extern long cby_zone_offset str zone, long at
+extern long cby_zone_to_moment str zone, long wall
+extern long cby_zone_abbreviation str zone, long at
+extern int cby_zone_exists str zone
+extern long cby_zone_here void
+extern long cby_zone_list void
+extern void cby_zone_take_text address char dst
+extern long cby_dates_format_in long wall, str pattern, str language
+extern int cby_dates_can_read_in str text, str pattern, long what, str language
+extern long cby_dates_read_in str text, str pattern, long what, str language
+extern long cby_name_text_in long which, long i, str language
+extern int cby_dates_language_known str language
+extern long cby_dates_languages void
+extern int cby_dates_can_read_loosely str text, long now, long what
+extern long cby_dates_read_loosely str text, long now, long what
+
+// ---- the kinds
+
+long kind date, steps long                    // days apart
+long kind time_of_day, steps duration
+long kind date_time, steps duration
+
+enum weekday { SUNDAY, MONDAY, TUESDAY, WEDNESDAY, THURSDAY, FRIDAY, SATURDAY }
+enum month {
+	JANUARY = 1, FEBRUARY, MARCH, APRIL, MAY, JUNE
+	JULY, AUGUST, SEPTEMBER, OCTOBER, NOVEMBER, DECEMBER
+}
+
+static str dates_text_from_c long Length {
+	str Text
+	for i in Length {
+		Text += cby_dates_char(i)
+	}
+	return Text
+}
+
+// a day's nanoseconds
+static long dates_day {
+	return 86400000000000
+}
+
+// ---- making them
+
+// today, here
+date dates.today {
+	return dates.now.date
+}
+
+// a date from its year, month (1 to 12) and day; one that doesn't exist
+// (31 February) is a panic
+date dates.make long Year, long Month, long Day {
+	cby_date_check Year, Month, Day
+	return (date)cby_days_from_civil(Year, Month, Day)
+}
+
+// a time of day, from its hour (0 to 23) and minute
+time_of_day dates.time long Hour, long Minute {
+	cby_time_check Hour, Minute, 0
+	return (time_of_day)((Hour * 60 + Minute) * 60000000000)
+}
+
+// the date and time now, here
+date_time dates.now {
+	return time.now.local
+}
+
+// the time of day now, here
+time_of_day dates.time_now {
+	return dates.now.time_of_day
+}
+
+// reading text with a pattern ("dd/mm/yyyy"); text that doesn't fit is a
+// panic, so check with dates.can_read first when it might not
+date dates.read str Text, str Pattern {
+	return (date)cby_dates_read(Text, Pattern, 0)
+}
+
+time_of_day dates.read_time str Text, str Pattern {
+	return (time_of_day)cby_dates_read(Text, Pattern, 1)
+}
+
+date_time dates.read_date_time str Text, str Pattern {
+	return (date_time)cby_dates_read(Text, Pattern, 2)
+}
+
+bool dates.can_read str Text, str Pattern {
+	return cby_dates_can_read(Text, Pattern, 0) != 0
+}
+
+// ---- looser text, as people write it (in English): "tomorrow", "next
+// tuesday", "in 3 days", "2 weeks ago", "25 Dec", "friday at 5pm"
+
+date dates.read_loosely const str &Text {
+	return (date)cby_dates_read_loosely(Text, (long)dates.now, 0)
+}
+
+date_time dates.read_date_time_loosely const str &Text {
+	return (date_time)cby_dates_read_loosely(Text, (long)dates.now, 2)
+}
+
+bool dates.can_read_loosely const str &Text {
+	return cby_dates_can_read_loosely(Text, (long)dates.now, 2) != 0
+}
+
+// the same, as if it were From (for "tomorrow" as seen from another day)
+date dates.read_loosely_from const str &Text, date_time From {
+	return (date)cby_dates_read_loosely(Text, (long)From, 0)
+}
+
+date_time dates.read_date_time_loosely_from const str &Text, date_time From {
+	return (date_time)cby_dates_read_loosely(Text, (long)From, 2)
+}
+
+// ---- other languages: the month and weekday names in a pattern (mmmm,
+// dddd...) in another language, by its code or its name in English: "de"
+// or "German". dates.languages lists them.
+
+date dates.read_in const str &Text, const str &Pattern, const str &Language {
+	return (date)cby_dates_read_in(Text, Pattern, 0, Language)
+}
+
+date_time dates.read_date_time_in const str &Text, const str &Pattern, const str &Language {
+	return (date_time)cby_dates_read_in(Text, Pattern, 2, Language)
+}
+
+bool dates.can_read_in const str &Text, const str &Pattern, const str &Language {
+	return cby_dates_can_read_in(Text, Pattern, 0, Language) != 0
+}
+
+// true if the dates library knows a language ("la", "Latin")
+bool dates.knows_language const str &Language {
+	return cby_dates_language_known(Language) != 0
+}
+
+// the languages it knows, as "code Name": "de German", "la Latin"
+list str dates.languages {
+	return dates_text_from_c(cby_dates_languages()).split "\n"
+}
+
+// ---- moments and time zones
+
+// a moment as the date and time here (the computer's time zone)
+date_time moment.local moment M {
+	long Ns = (long)M
+	return (date_time)(Ns + cby_local_offset(Ns) * 1000000000)
+}
+
+// a moment as the date and time in UTC
+date_time moment.utc moment M {
+	return (date_time)(long)M
+}
+
+// "2026-11-03 08:27:41 +11:00": the date and time here, and how far that is from UTC
+str moment.text moment M {
+	long Ns = (long)M
+	long Offset = cby_local_offset(Ns)
+	str Sign = "+"
+	if Offset < 0 {
+		Sign = "-"
+		Offset = -Offset
+	}
+	date_time Here = M.local
+	return Here.text + " " + Sign + dates_two(Offset / 3600) + ":" + dates_two(Offset / 60 % 60)
+}
+
+// ---- named time zones ("Europe/Berlin"), as the system's zone files say
+
+static str dates_zone_text long Length {
+	str Text = " ".repeat(Length)
+	if Length > 0 {
+		address char Room = addresses.of_text Text
+		cby_zone_take_text Room
+	}
+	return Text
+}
+
+// "+01:00" for a number of seconds east of UTC
+static str dates_offset_text long Offset {
+	str Sign = "+"
+	if Offset < 0 {
+		Sign = "-"
+		Offset = -Offset
+	}
+	return Sign + dates_two(Offset / 3600) + ":" + dates_two(Offset / 60 % 60)
+}
+
+// a moment as the date and time in a time zone: "Europe/Berlin",
+// "America/New_York", "Australia/Sydney" (daylight saving and all)
+date_time moment.in_zone moment M, const str &Zone {
+	long Ns = (long)M
+	return (date_time)(Ns + cby_zone_offset(Zone, Ns) * 1000000000)
+}
+
+// "2026-11-03 22:27:41 +01:00": the date and time in a time zone, and how
+// far that is from UTC
+str moment.text_in moment M, const str &Zone {
+	date_time There = M.in_zone Zone
+	return There.text + " " + dates_offset_text(cby_zone_offset(Zone, (long)M))
+}
+
+// how far ahead of UTC a time zone is at that moment (behind: negative)
+duration moment.offset_in moment M, const str &Zone {
+	return time.seconds cby_zone_offset(Zone, (long)M)
+}
+
+// the zone's short name then: "CET" or "CEST", "AEDT"
+str moment.abbreviation_in moment M, const str &Zone {
+	return dates_zone_text(cby_zone_abbreviation(Zone, (long)M))
+}
+
+// the moment a date and time in a time zone is. A time the clocks skipped
+// (going forward an hour) is the time an hour on; one they showed twice
+// (going back), the first.
+moment date_time.moment_in date_time DT, const str &Zone {
+	return (moment)cby_zone_to_moment(Zone, (long)DT)
+}
+
+// true if there's a time zone called Name
+bool dates.is_zone const str &Name {
+	return cby_zone_exists(Name) is not 0
+}
+
+// this computer's time zone's name: "Australia/Sydney" ("" if it can't
+// be told)
+str dates.zone_here {
+	return dates_zone_text(cby_zone_here())
+}
+
+// every time zone there is, by name: "Africa/Abidjan" ... "Pacific/Wallis"
+list str dates.zones {
+	str All = dates_zone_text(cby_zone_list())
+	list str Names
+	if All is not "" {
+		Names = All.split "\n"
+	}
+	return Names
+}
+
+static str dates_two long N {
+	if N < 10 {
+		return "0" + N.text
+	}
+	return N.text
+}
+
+// the moment a date and time here is
+moment date_time.moment date_time DT {
+	return (moment)cby_local_to_moment((long)DT)
+}
+
+// the moment a date and time in UTC is
+moment date_time.utc_moment date_time DT {
+	return (moment)(long)DT
+}
+
+// ---- dates
+
+long date.year date D {
+	return cby_date_part((long)D, 0)
+}
+
+month date.month date D {
+	return (month)cby_date_part((long)D, 1)
+}
+
+long date.month_number date D {
+	return cby_date_part((long)D, 1)
+}
+
+long date.day date D {
+	return cby_date_part((long)D, 2)
+}
+
+weekday date.weekday date D {
+	return (weekday)cby_date_part((long)D, 3)
+}
+
+// 1 for 1 January, up to 365 (or 366)
+long date.day_of_year date D {
+	return cby_date_part((long)D, 4)
+}
+
+long date.days_in_month date D {
+	return cby_date_part((long)D, 5)
+}
+
+bool date.is_leap_year date D {
+	return cby_date_part((long)D, 6) != 0
+}
+
+date date.add_days date D, long Days {
+	return D + Days
+}
+
+// months later (or earlier, if Months is negative); a day past the new
+// month's end becomes its last day (31 January and a month is 28 February)
+date date.add_months date D, long Months {
+	return (date)cby_date_add_months((long)D, Months)
+}
+
+date date.add_years date D, long Years {
+	return (date)cby_date_add_months((long)D, Years * 12)
+}
+
+// the date at a time of day
+date_time date.at date D, time_of_day T {
+	return (date_time)((long)D * dates_day() + (long)T)
+}
+
+// "2026-11-03"
+str date.text date D {
+	return D.format "yyyy-mm-dd"
+}
+
+str date.format date D, str Pattern {
+	long Wall = (long)D * dates_day()
+	return dates_text_from_c(cby_dates_format(Wall, Pattern))
+}
+
+// the same, with the names in another language: "3 novembre 2026"
+str date.format_in date D, const str &Pattern, const str &Language {
+	long Wall = (long)D * dates_day()
+	return dates_text_from_c(cby_dates_format_in(Wall, Pattern, Language))
+}
+
+// ---- times of day
+
+long time_of_day.hour time_of_day T {
+	return (long)T / 3600000000000 % 24
+}
+
+long time_of_day.minute time_of_day T {
+	return (long)T / 60000000000 % 60
+}
+
+long time_of_day.second time_of_day T {
+	return (long)T / 1000000000 % 60
+}
+
+// "07:30:00"
+str time_of_day.text time_of_day T {
+	return T.format "hh:mm:ss"
+}
+
+str time_of_day.format time_of_day T, str Pattern {
+	long Wall = (long)T % dates_day()
+	return dates_text_from_c(cby_dates_format(Wall, Pattern))
+}
+
+// ---- dates and times
+
+date date_time.date date_time DT {
+	long Ns = (long)DT
+	long Days = Ns / dates_day()
+	if Ns < 0 and Ns % dates_day() != 0 {
+		Days = Days - 1
+	}
+	return (date)Days
+}
+
+time_of_day date_time.time_of_day date_time DT {
+	long Ns = (long)DT % dates_day()
+	if Ns < 0 {
+		Ns = Ns + dates_day()
+	}
+	return (time_of_day)Ns
+}
+
+long date_time.year date_time DT {
+	return DT.date.year
+}
+
+month date_time.month date_time DT {
+	return DT.date.month
+}
+
+long date_time.day date_time DT {
+	return DT.date.day
+}
+
+weekday date_time.weekday date_time DT {
+	return DT.date.weekday
+}
+
+long date_time.hour date_time DT {
+	return DT.time_of_day.hour
+}
+
+long date_time.minute date_time DT {
+	return DT.time_of_day.minute
+}
+
+long date_time.second date_time DT {
+	return DT.time_of_day.second
+}
+
+// "2026-11-03 08:27:41"
+str date_time.text date_time DT {
+	return DT.format "yyyy-mm-dd hh:mm:ss"
+}
+
+str date_time.format date_time DT, str Pattern {
+	return dates_text_from_c(cby_dates_format((long)DT, Pattern))
+}
+
+str date_time.format_in date_time DT, const str &Pattern, const str &Language {
+	return dates_text_from_c(cby_dates_format_in((long)DT, Pattern, Language))
+}
+
+// ---- names
+
+// "Tuesday"
+str weekday.text weekday W {
+	return dates_text_from_c(cby_name_text(1, (long)W))
+}
+
+// "November"
+str month.text month M {
+	return dates_text_from_c(cby_name_text(0, (long)M))
+}
+
+// the name in another language: "novembre", "Νοέμβριος"
+str month.text_in month M, const str &Language {
+	return dates_text_from_c(cby_name_text_in(0, (long)M, Language))
+}
+
+str weekday.text_in weekday W, const str &Language {
+	return dates_text_from_c(cby_name_text_in(1, (long)W, Language))
+}

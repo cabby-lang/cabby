@@ -1,0 +1,52 @@
+// A model, for run_world_tests.sh: robot.glb (made by
+// tools/make-test-model.py), its animations played, and what's drawn of
+// it (model.pixels): its picture, its skinned arm waving, and its head.
+//> animations: [Wave, Nod, Hop]
+//> top 1.4, bottom 0.0
+//> waving: Wave 0.5
+//> hopping once: Hop, then ""
+//> backwards: Nod 0.5
+// panic: the model has no animation 'Dance': it has "Wave", "Nod", "Hop"
+// script: frames 30; pixel 160 150; pixel 210 115; pixel 200 70; pixel 160 85; close; frames 30; close; frames 40; close; frames 30; close
+use world
+
+object show : world.window {
+	world.shape Robot
+
+	void build {
+		set_size 320, 240
+		add_plane 10, 10, "forestgreen", 0, 0, 0
+		Robot = add_model "robot.glb", 0, 0, 2
+		Robot.set_angle 180
+		move_camera_to 0, 1, 4.5
+		point_camera_at 0, 0.8, 2
+		println "animations:", Robot.animations
+		println "top " + tenths(Robot.top) + ", bottom " + tenths(Robot.bottom)
+		Robot.play "Wave"
+		on_frame step
+	}
+
+	str tenths double D const {
+		return ((double)(long)(D * 10 + 0.5) / 10).text
+	}
+
+	void step {
+	}
+}
+
+int main {
+	show S
+	S.run
+	println "waving:", S.Robot.playing, S.tenths(S.Robot.animation_time)
+	world.shape R = world.shape{.Id = S.Robot.Id}
+	R.play_once "Hop"
+	S.run
+	str Was = R.playing
+	S.run
+	println "hopping once: " + Was + ", then \"" + R.playing + "\""
+	R.set_animation_speed -1
+	R.play "Nod"
+	S.run
+	println "backwards:", R.playing, S.tenths(R.animation_time)
+	R.play "Dance"
+}

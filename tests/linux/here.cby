@@ -1,0 +1,16 @@
+// the linux library on this computer (run_linux_tests.sh): whatever it has,
+// read without a panic, and what's always true of it
+use linux
+
+int main {
+	long Sensors = linux.sensors.length
+	long Disks = linux.disks.length
+	long Usb = linux.usb_devices.length
+	long Modules = linux.modules.length
+	println "read:", Sensors >= 0, Disks >= 0, Usb >= 0, Modules >= 0
+	println "a setting:", linux.has_setting("kernel.ostype"), linux.setting("kernel.ostype")
+	return 0
+}
+
+//> read: true true true true
+//> a setting: true Linux

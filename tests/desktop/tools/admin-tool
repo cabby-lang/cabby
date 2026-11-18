@@ -1,0 +1,18 @@
+#!/bin/sh
+# a stand-in (run_desktop_tests.sh) for the programs that make users and
+# groups (useradd, chpasswd, userdel, groupadd, groupdel, gpasswd; a Mac's
+# sysadminctl and dseditgroup), each a link to this: there only when
+# CABBY_HAVE names it, and saying what it was asked (and, for chpasswd,
+# what it read) into the test's state. CABBY_ADMIN_FAILS names one that
+# refuses, as the real one would.
+me=$(basename "$0")
+case ",$CABBY_HAVE," in *",$me,"*) ;; *) exit 127 ;; esac
+{ printf '%s' "$me"; for a in "$@"; do printf ' [%s]' "$a"; done; echo; } >> "$CABBY_TEST_STATE/admin.log"
+if [ "$me" = chpasswd ]; then
+	printf '  read: %s\n' "$(cat)" >> "$CABBY_TEST_STATE/admin.log"
+fi
+if [ "$CABBY_ADMIN_FAILS" = "$me" ]; then
+	echo "$me: user 'someone' already exists"
+	exit 9
+fi
+exit 0

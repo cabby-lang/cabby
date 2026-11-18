@@ -1,0 +1,66 @@
+// Against a bus alone (dbus-daemon, started by run_dbus_tests.sh): calls,
+// a property, a call that doesn't work, and a signal.
+//> my name starts with a colon: true
+//> the bus is there: true
+//> its owner: org.freedesktop.DBus
+//> the bus's id is 32 characters: true
+//> interfaces it has: true
+//> asking no one: org.freedesktop.DBus.Error.ServiceUnknown
+//> a new connection was announced: true
+//> done
+use dbus
+use events
+
+object watcher {
+	dbus.bus Bus
+	dbus.bus Other
+
+	void begin {
+		Bus = dbus.session
+		println "my name starts with a colon:", Bus.name.starts_with(":")
+		dbus.message Names = dbus.method_call("org.freedesktop.DBus", "/org/freedesktop/DBus",
+			"org.freedesktop.DBus", "ListNames")
+		json All = Bus.call Names
+		bool There = false
+		for Name in All[0] {
+			if Name.str == "org.freedesktop.DBus" {
+				There = true
+			}
+		}
+		println "the bus is there:", There
+		dbus.message Owner = dbus.method_call("org.freedesktop.DBus", "/org/freedesktop/DBus",
+			"org.freedesktop.DBus", "GetNameOwner")
+		Owner.add_str "org.freedesktop.DBus"
+		println "its owner:", Bus.call(Owner)[0].str
+		dbus.message Id = dbus.method_call("org.freedesktop.DBus", "/org/freedesktop/DBus",
+			"org.freedesktop.DBus", "GetId")
+		println "the bus's id is 32 characters:", Bus.call(Id)[0].str.length is 32
+		dbus.message Look = dbus.method_call("org.freedesktop.DBus", "/org/freedesktop/DBus",
+			"org.freedesktop.DBus.Introspectable", "Introspect")
+		println "interfaces it has:", Bus.call(Look)[0].str.contains("org.freedesktop.DBus")
+		dbus.message Nobody = dbus.method_call("org.example.Nobody", "/org/example/Nobody",
+			"org.example.Nobody", "Hello")
+		Bus.try_call Nobody
+		str Why = Bus.error
+		println "asking no one:", Why[to Why.find(':') - 1]
+		Bus.listen "org.freedesktop.DBus", "NameOwnerChanged"
+		Bus.on_signal changed
+		Other = dbus.session              // announced to everyone listening
+	}
+
+	void changed {
+		json Values = Bus.signal
+		if Values[0].str == Other.name {
+			println "a new connection was announced:", Values[2].str == Other.name
+			events.stop
+		}
+	}
+}
+
+int main {
+	watcher W
+	W.begin
+	events.run
+	println "done"
+	return 0
+}

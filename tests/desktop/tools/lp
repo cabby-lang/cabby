@@ -1,0 +1,34 @@
+#!/bin/sh
+# a stand-in for CUPS's lp, lpstat and cancel (run_desktop_tests.sh), each
+# a link to this: there only when CABBY_HAVE names it. Printers and jobs
+# are the test's state: printers (one per line), default, jobs.
+me=$(basename "$0")
+case ",$CABBY_HAVE," in *",$me,"*) ;; *) exit 127 ;; esac
+S=$CABBY_TEST_STATE
+{ printf '%s' "$me"; for a in "$@"; do printf ' [%s]' "$a"; done; echo; } >> "$S/admin.log"
+case "$me" in
+lp)
+	dest=$(cat "$S/default" 2>/dev/null); file=
+	while [ $# -gt 0 ]; do
+		case "$1" in -d) dest=$2; shift ;; -n|-t|-o) shift ;; --) ;; *) file=$1 ;; esac
+		shift
+	done
+	[ -n "$dest" ] && grep -qx "$dest" "$S/printers" 2>/dev/null || { echo "lp: The printer or class does not exist." >&2; exit 1; }
+	if [ -z "$file" ]; then printf '  read: %s\n' "$(cat)" >> "$S/admin.log"
+	elif [ ! -f "$file" ]; then echo "lp: Error - unable to access \"$file\"" >&2; exit 1; fi
+	n=$(( $(cat "$S/next" 2>/dev/null || echo 12) )); echo $((n + 1)) > "$S/next"
+	echo "$dest-$n tom 1024 Mon 16 Nov 2026 10:00:00 AEDT" >> "$S/jobs"
+	echo "request id is $dest-$n (1 file(s))" ;;
+lpstat)
+	case "$1" in
+	-e) [ -n "$CABBY_OLD_CUPS" ] && { echo "lpstat: invalid option" >&2; exit 1; }; cat "$S/printers" 2>/dev/null ;;
+	-p) [ -s "$S/printers" ] || { echo "lpstat: No destinations added." >&2; exit 1; }
+	    while read -r p; do echo "printer $p is idle.  enabled since Mon 16 Nov 2026"; done < "$S/printers" ;;
+	-d) if [ -s "$S/default" ]; then echo "system default destination: $(cat "$S/default")"; else echo "no system default destination"; fi ;;
+	-o) cat "$S/jobs" 2>/dev/null ;;
+	esac ;;
+cancel)
+	if [ "$1" = -a ]; then : > "$S/jobs"; exit 0; fi
+	grep -q "^$1 " "$S/jobs" 2>/dev/null || { echo "cancel: Job ID $1 does not exist" >&2; exit 1; }
+	grep -v "^$1 " "$S/jobs" > "$S/jobs.new"; mv "$S/jobs.new" "$S/jobs" ;;
+esac

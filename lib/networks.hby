@@ -1,0 +1,1342 @@
+// networks.hby — downloading from the internet (and, later, talking to
+// other programs).
+//
+//     use networks
+//
+//     str Page = networks.download "https://example.com"     the page, as text
+//     networks.download_to "https://example.com", "example.html"  straight to a file
+//     bytes Data = networks.download_bytes "https://example.com"   as bytes (for pictures, zip files...)
+//     json Answer = json.read networks.download "https://api.open-meteo.com/v1/forecast?latitude=-33.87&longitude=151.21&current_weather=true"
+//     if networks.can_reach "https://example.com" { ... }      there, and answering?
+//     int Code = networks.status "https://example.com/missing"  404
+//     str Said = networks.post "https://example.com/notes", "Hello", "text/plain"
+//     json Made = networks.post_json "https://api.example.com/items", Item
+//     networks.request R = networks.request_to "https://api.example.com/items/7"
+//     R.set_method "DELETE"                                   any method, headers,
+//     R.set_header "Authorization", "Bearer " + Key           and a status to look at
+//     if R.send is 204 { ... }
+//     if networks.connected { ... }                           on a network at all?
+//     println networks.local_address, networks.wifi_name      192.168.1.20 Home
+//
+// A download that fails (no connection, a name that doesn't exist, 404
+// Not Found...) is a panic that says why, at your line; check first with
+// networks.can_reach when it might not work. https, redirects and proxies
+// all work: it uses libcurl, which comes with the curl command.
+//
+// The full reference is networks.md, next to this file.
+
+use addresses
+use bytes
+use json
+
+// ---- the C side (in Cabby's runtime)
+
+extern long cby_networks_download str url
+extern void cby_networks_take address char dst
+extern void cby_networks_download_to str url, str path
+extern long cby_networks_status str url
+extern long cby_networks_download_bytes str url
+
+// what's at an address on the internet, as text (or any bytes: a str
+// holds them)
+str networks.download const str &Url {
+	long Length = cby_networks_download Url
+	str Text = " ".repeat Length
+	address char Room = addresses.of_text Text
+	cby_networks_take Room
+	return Text
+}
+
+// what's at an address, as bytes: for pictures, sounds, zip files...
+bytes networks.download_bytes const str &Url {
+	bytes B
+	B.adopt cby_networks_download_bytes(Url)
+	return B
+}
+
+// what's at an address, saved as a file (a big file never has to fit in
+// memory; nothing is left behind if it fails)
+void networks.download_to const str &Url, const str &Path {
+	cby_networks_download_to Url, Path
+}
+
+// the HTTP status the address answers with: 200 fine, 404 not found...;
+// 0 if nothing answered at all
+int networks.status const str &Url {
+	return (int)cby_networks_status(Url)
+}
+
+// true if something is there and answering
+bool networks.can_reach const str &Url {
+	int Code = networks.status Url
+	return Code >= 200 and Code < 400
+}
+
+// ---- web addresses (URLs), in their parts
+//
+//     networks.url Page = networks.read_url "https://example.com/search?q=fish+%26+chips#top"
+//     println Page.Host, Page.Path, Page.Query["q"]    example.com /search fish & chips
+//     Page.Query["page"] = "2"
+//     println Page.text                               the address again, with page=2
+//     str Safe = networks.encode "fish & chips"       fish%20%26%20chips
+//
+// (Written in Cabby: it's all text, so nothing on the C side is needed.)
+
+extern void cby_networks_bad_url str why
+
+// https://ada@example.com:8080/search?q=cabby#top, in its parts. Path and
+// the rest are as they read: "%20" is a space, " " in Path. A Port of 0 is
+// the scheme's own (443 for https), and isn't written.
+object networks.url {
+	str Scheme                      // "https"
+	str User                        // "ada" ("" for none, as nearly always)
+	str Host                        // "example.com"
+	int Port                        // 8080
+	str Path                        // "/search"
+	lookup str str Query            // {"q": "cabby"}, in the order they came
+	str Fragment                    // "top": the part of the page to show
+
+	// the address again, from its parts, with whatever needs it encoded
+	str text const {
+		str Address = Scheme + "://"
+		if User != "" {
+			Address += networks.encode(User) + "@"
+		}
+		Address += Host
+		if Port != 0 {
+			Address += ":" + Port.text
+		}
+		Address += networks_path_encoded Path
+		if Query.length > 0 {
+			Address += "?" + networks.query_text(Query)
+		}
+		if Fragment != "" {
+			Address += "#" + networks.encode(Fragment)
+		}
+		return Address
+	}
+}
+
+// what comes after place I in the text ("" if nothing does)
+static str networks_after const str &Text, long I {
+	if I >= Text.length {
+		return ""
+	}
+	return Text[I to Text.length - 1]
+}
+
+// and what comes before it
+static str networks_before const str &Text, long I {
+	if I <= 0 {
+		return ""
+	}
+	return Text[0 to I - 1]
+}
+
+// a path, each part between its /s encoded
+static str networks_path_encoded const str &Path {
+	list str Parts = Path.split "/"
+	list str Encoded
+	for Part in Parts {
+		Encoded.add networks.encode(Part)
+	}
+	return Encoded.join "/"
+}
+
+// an address read into its parts; one without its kind first (https://)
+// is a panic
+networks.url networks.read_url const str &Address {
+	networks.url Url
+	long At = Address.find "://"
+	if At <= 0 {
+		cby_networks_bad_url "'" + Address + "' isn't a web address: it needs its kind first, like https://"
+	}
+	Url.Scheme = networks_before(Address, At).lower
+	str Rest = networks_after Address, At + 3
+	long Hash = Rest.find "#"
+	if Hash >= 0 {
+		Url.Fragment = networks.decode networks_after(Rest, Hash + 1)
+		Rest = networks_before Rest, Hash
+	}
+	long Ask = Rest.find "?"
+	if Ask >= 0 {
+		Url.Query = networks.read_query networks_after(Rest, Ask + 1)
+		Rest = networks_before Rest, Ask
+	}
+	long Slash = Rest.find "/"
+	str Place = Rest.copy
+	if Slash >= 0 {
+		Url.Path = networks.decode networks_after(Rest, Slash)
+		Place = networks_before Rest, Slash
+	}
+	long Who = Place.find "@"
+	if Who >= 0 {
+		Url.User = networks.decode networks_before(Place, Who)
+		Place = networks_after Place, Who + 1
+	}
+	long Colon = Place.find ":"
+	if Colon >= 0 && networks_after(Place, Colon + 1).is_int {
+		Url.Port = networks_after(Place, Colon + 1).to_int
+		Place = networks_before Place, Colon
+	}
+	Url.Host = Place.lower
+	return Url
+}
+
+// "q=fish+%26+chips&page=2": its names and values, decoded, in order (+
+// is a space, as forms send it)
+lookup str str networks.read_query const str &Text {
+	lookup str str Query
+	for Pair in Text.split "&" {
+		if Pair == "" {
+			continue
+		}
+		long Equals = Pair.find "="
+		if Equals < 0 {
+			Query[networks_decoded(Pair, true)] = ""
+		} else {
+			Query[networks_decoded(networks_before(Pair, Equals), true)] = networks_decoded networks_after(Pair, Equals + 1), true
+		}
+	}
+	return Query
+}
+
+// names and values, encoded, as an address's query: "q=fish%20%26%20chips&page=2"
+str networks.query_text const lookup str str &Query {
+	list str Pairs
+	for Name in Query.keys {
+		Pairs.add networks.encode(Name) + "=" + networks.encode(Query[Name])
+	}
+	return Pairs.join "&"
+}
+
+// text made safe to put in an address: every letter but A to Z, a to z,
+// 0 to 9 and - _ . ~ written as % and two hexadecimal digits, a byte at a
+// time ("é" is %C3%A9)
+str networks.encode const str &Text {
+	str Digits = "0123456789ABCDEF"
+	str Safe
+	for I in Text.length {
+		char C = Text[I]
+		if (C >= 'A' && C <= 'Z') || (C >= 'a' && C <= 'z') || (C >= '0' && C <= '9') || C == '-' || C == '_' || C == '.' || C == '~' {
+			Safe += C
+		} else {
+			int Byte = (int)C
+			if Byte < 0 {
+				Byte += 256
+			}
+			Safe += '%'
+			Safe += Digits[Byte / 16]
+			Safe += Digits[Byte % 16]
+		}
+	}
+	return Safe
+}
+
+// the other way: %20 back to a space, and so on
+str networks.decode const str &Text {
+	return networks_decoded Text, false
+}
+
+// (a hexadecimal digit's value: -1 if it isn't one)
+static int networks_hex_value char C {
+	if C >= '0' && C <= '9' {
+		return (int)C - (int)'0'
+	} else if C >= 'a' && C <= 'f' {
+		return (int)C - (int)'a' + 10
+	} else if C >= 'A' && C <= 'F' {
+		return (int)C - (int)'A' + 10
+	}
+	return -1
+}
+
+static str networks_decoded const str &Text, bool PlusIsSpace {
+	str Plain
+	long I = 0
+	while I < Text.length {
+		char C = Text[I]
+		if C == '%' && I + 2 < Text.length && networks_hex_value(Text[I + 1]) >= 0 && networks_hex_value(Text[I + 2]) >= 0 {
+			Plain += (char)(networks_hex_value(Text[I + 1]) * 16 + networks_hex_value(Text[I + 2]))
+			I += 3
+		} else {
+			if C == '+' && PlusIsSpace {
+				Plain += ' '
+			} else {
+				Plain += C
+			}
+			I++
+		}
+	}
+	return Plain
+}
+
+// ---- this computer, on the network (runtime/desktop.c)
+
+extern long cby_networks_here long what
+extern void cby_desktop_take_text address char dst
+
+static str networks_here long What {
+	long Length = cby_networks_here What
+	str Text = " ".repeat Length
+	address char Room = addresses.of_text Text
+	cby_desktop_take_text Room
+	return Text
+}
+
+// this computer's address on its network: "192.168.1.20" (IPv6 when it
+// has no IPv4 one; "" when it isn't on a network)
+str networks.local_address {
+	return networks_here 0
+}
+
+// true when it's on a network (Wi-Fi, a cable): whether the internet
+// answers is networks.can_reach's to say
+bool networks.connected {
+	return networks.local_address is not ""
+}
+
+// the Wi-Fi network's name ("" when it isn't on Wi-Fi). Linux: iwgetid or
+// NetworkManager's nmcli. macOS 14 and later only says it to a program
+// that's been allowed Location Services (Terminal, say, in System
+// Settings, Privacy & Security); "" otherwise.
+str networks.wifi_name {
+	return networks_here 1
+}
+
+// ---- requests of every kind: POST, PUT, DELETE..., with headers, and
+// progress for big transfers (runtime/networks.c)
+
+extern long cby_net_request_new str url
+extern void cby_net_request_free long id
+extern void cby_net_request_method long id, str method
+extern void cby_net_request_header long id, str name, str value
+extern void cby_net_request_body long id, str data, long length
+extern void cby_net_request_body_bytes long id, long data
+extern void cby_net_request_timeout long id, long seconds
+extern void cby_net_request_on_progress long id, handler h
+extern long cby_net_request_send long id
+extern long cby_net_request_save_to long id, str path
+extern long cby_net_request_progress long id, long what
+extern long cby_net_request_text long id, long what
+extern long cby_net_request_answer_bytes long id
+extern long cby_net_request_answer_header long id, str name
+extern void cby_net_request_check long id, str what
+extern long cby_net_request_send_status long id
+extern void cby_net_take address char dst
+
+static str networks_given long Length {
+	str Text = " ".repeat Length
+	if Length > 0 {
+		address char Room = addresses.of_text Text
+		cby_net_take Room
+	}
+	return Text
+}
+
+// A request to a web address: a method (GET unless it's set), headers,
+// something to send, and then its answer: the status (200 fine, 404 not
+// found...), what came back, and its headers. An answer of 404 or 500
+// isn't a panic here: look at status. No answer at all (no connection, a
+// name that isn't there) is status 0, and error says why.
+object networks.request {
+	long Id
+	handler ProgressHandler
+
+	// GET, POST, PUT, PATCH, DELETE, HEAD...
+	void set_method const str &Method {
+		cby_net_request_method Id, Method
+	}
+
+	// a header to send: "Authorization", "Bearer abc123"
+	void set_header const str &Name, const str &Value {
+		cby_net_request_header Id, Name, Value
+	}
+
+	// text to send, and its kind ("text/plain"); POST, unless the method's
+	// been set to another
+	void set_body const str &Body, const str &Kind {
+		cby_net_request_body Id, Body, Body.length
+		cby_net_request_header Id, "Content-Type", Kind
+	}
+
+	// JSON to send (application/json)
+	void set_json const json &Data {
+		str Text = Data.text
+		cby_net_request_body Id, Text, Text.length
+		cby_net_request_header Id, "Content-Type", "application/json"
+	}
+
+	// a form's fields to send, as a web page's form sends them
+	// (application/x-www-form-urlencoded)
+	void set_form const lookup str str &Fields {
+		str Text = networks.query_text Fields
+		cby_net_request_body Id, Text, Text.length
+		cby_net_request_header Id, "Content-Type", "application/x-www-form-urlencoded"
+	}
+
+	// bytes to send (a picture...), and their kind ("image/png")
+	void set_bytes const bytes &Data, const str &Kind {
+		cby_net_request_body_bytes Id, Data.handle
+		cby_net_request_header Id, "Content-Type", Kind
+	}
+
+	// how long it may take in all, in seconds, before it gives up (0: as
+	// long as it takes)
+	void set_timeout long Seconds {
+		cby_net_request_timeout Id, Seconds
+	}
+
+	// Calls h as a big transfer goes, ten times a second at most, and once
+	// at the end: received, total and fraction say how far it's got.
+	void on_progress handler h {
+		ProgressHandler = h
+		cby_net_request_on_progress Id, say_progress
+	}
+
+	// (what the C side calls, as it goes)
+	void say_progress {
+		ProgressHandler.call
+	}
+
+	// sends it, and waits for the answer: its status (0: no answer)
+	int send {
+		return (int)cby_net_request_send(Id)
+	}
+
+	// sends it, saving what comes back to a file as it comes (none of it
+	// is left if there was no answer, or an error's): its status
+	int save_to const str &Path {
+		return (int)cby_net_request_save_to(Id, Path)
+	}
+
+	// ---- the answer
+
+	// its status: 200 fine, 201 made, 204 done with nothing to say, 404
+	// not found, 500 a problem at the site... (0: no answer)
+	int status const {
+		return (int)cby_net_request_send_status(Id)
+	}
+
+	// true for a status from 200 to 299: it worked
+	bool worked const {
+		int S = status
+		return S >= 200 and S < 300
+	}
+
+	// what came back, as text
+	str answer const {
+		return networks_given cby_net_request_text(Id, 0)
+	}
+
+	// what came back, read as JSON
+	json answer_json const {
+		return json.read answer
+	}
+
+	// what came back, as bytes
+	bytes answer_bytes const {
+		bytes B
+		B.adopt cby_net_request_answer_bytes(Id)
+		return B
+	}
+
+	// one of the answer's headers ("Content-Type"), or "" if it hasn't one
+	str answer_header const str &Name const {
+		return networks_given cby_net_request_answer_header(Id, Name)
+	}
+
+	// why there was no answer ("" if there was one)
+	str error const {
+		return networks_given cby_net_request_text(Id, 1)
+	}
+
+	// ---- how far it's got (in on_progress's handler)
+
+	// bytes received so far, and how many there'll be in all (0 while it
+	// isn't known)
+	long received const {
+		return cby_net_request_progress Id, 0
+	}
+
+	long total const {
+		return cby_net_request_progress Id, 1
+	}
+
+	// bytes sent so far, and how many there are to send
+	long sent const {
+		return cby_net_request_progress Id, 2
+	}
+
+	long to_send const {
+		return cby_net_request_progress Id, 3
+	}
+
+	// how far it's got, from 0.0 to 1.0 (0.0 while the total isn't known)
+	double fraction const {
+		long T = total
+		if T <= 0 {
+			return 0.0
+		}
+		return (double)received / (double)T
+	}
+
+	~request {
+		cby_net_request_free Id
+	}
+}
+
+// a request to an address, to set up and send
+networks.request networks.request_to const str &Url {
+	return networks.request{.Id = cby_net_request_new(Url)}
+}
+
+// Text sent to an address (POST), and what it answers, as text. No answer,
+// or an error's (400 and over), is a panic that says why, as for download.
+str networks.post const str &Url, const str &Body, const str &Kind {
+	networks.request R = networks.request_to Url
+	R.set_body Body, Kind
+	R.send
+	cby_net_request_check R.Id, "send to"
+	return R.answer
+}
+
+// JSON sent to an address (POST), and its answer read as JSON
+json networks.post_json const str &Url, const json &Data {
+	networks.request R = networks.request_to Url
+	R.set_json Data
+	R.set_header "Accept", "application/json"
+	R.send
+	cby_net_request_check R.Id, "send to"
+	return R.answer_json
+}
+
+// a form's fields sent to an address (POST), as a web page's form sends
+// them, and what it answers
+str networks.post_form const str &Url, const lookup str str &Fields {
+	networks.request R = networks.request_to Url
+	R.set_form Fields
+	R.send
+	cby_net_request_check R.Id, "send to"
+	return R.answer
+}
+
+// ---- programs talking to each other: connections and servers
+// (runtime/connections.c)
+
+extern long cby_conn_open str host, long port
+extern long cby_conn_error void
+extern void cby_conn_panic void
+extern int cby_conn_send long id, str data, long length
+extern long cby_conn_read_line long id
+extern long cby_conn_line long id
+extern int cby_conn_is_open long id
+extern long cby_conn_peer long id
+extern void cby_conn_on_line long id, handler h
+extern void cby_conn_on_close long id, handler h
+extern void cby_conn_close long id
+extern void cby_conn_free long id
+extern void cby_conn_take address char dst
+extern long cby_server_listen long port, int here_only
+extern void cby_server_set_certificate long id, str cert, str key
+extern int cby_server_encrypted long id
+extern long cby_conn_open_encrypted str host, long port
+extern int cby_conn_encrypted long id
+extern void cby_conn_trust_certificate str path
+extern void cby_conn_make_certificate str name, str cert, str key
+extern void cby_networks_trust str path
+extern long cby_server_port long id
+extern long cby_server_from long id
+extern long cby_server_count long id
+extern long cby_server_connection long id, long i
+extern void cby_server_on long id, long which, handler h
+extern void cby_server_close long id
+extern long cby_web_listen long port, int here_only
+extern void cby_web_on_request long id, handler h
+extern long cby_web_text long id, long what, str name
+extern int cby_web_has long id, long what, str name
+extern void cby_web_add_header long id, str name, str value
+extern void cby_web_send long id, long status, str type, str data, long len
+extern void cby_web_send_status long id, long status, str words
+extern void cby_web_redirect long id, str where, long status
+extern int cby_web_send_file long id, str path
+extern int cby_web_send_from_folder long id, str folder, str prefix
+extern int cby_web_answered long id
+extern int cby_web_wants_socket long id
+extern long cby_web_accept_socket long id
+extern void cby_web_on_socket long id, long which, handler h
+extern long cby_web_socket_count long id
+extern long cby_web_socket long id, long which
+extern long cby_ws_message long id
+extern int cby_ws_binary long id
+extern int cby_ws_send long id, str data, long len, int binary
+extern void cby_ws_close long id
+extern long cby_ws_open str url
+extern long cby_ws_read long id
+
+static str connections_given long Length {
+	str Text = " ".repeat Length
+	if Length > 0 {
+		address char Room = addresses.of_text Text
+		cby_conn_take Room
+	}
+	return Text
+}
+
+// A connection to another program (made with networks.connect): text
+// goes both ways, most easily a line at a time. Wait for the next line
+// with read_line, or have on_line call a handler for each as it comes,
+// from the event loop (events.run, or a window's run).
+object networks.connection {
+	long Id
+	inner str Line
+	inner handler LineHandler
+	inner handler CloseHandler
+
+	// whether it's encrypted (networks.connect_encrypted, or to a server
+	// with a certificate)
+	bool encrypted const {
+		return cby_conn_encrypted(Id) is not 0
+	}
+
+	// sends text as it is (false if the other end has gone)
+	bool send const str &Text {
+		return cby_conn_send(Id, Text, Text.length) is not 0
+	}
+
+	// sends a line: the text, and a line end
+	bool send_line const str &Text {
+		str Whole = Text + "\n"
+		return cby_conn_send(Id, Whole, Whole.length) is not 0
+	}
+
+	// Waits for the next line, for `line` to give: false when the other
+	// end has closed the connection, and every line has been read.
+	//     while C.read_line {
+	//         println C.line
+	//     }
+	bool read_line {
+		long Length = cby_conn_read_line Id
+		if Length < 0 {
+			Line = ""
+			return false
+		}
+		Line = connections_given Length
+		return true
+	}
+
+	// the line read_line waited for, or the one on_line's handler is told of
+	str line const {
+		return Line.copy
+	}
+
+	// calls h for each line as it comes (read it with `line`), from the
+	// event loop
+	void on_line handler h {
+		LineHandler = h
+		cby_conn_on_line Id, say_line
+	}
+
+	// calls h when the other end closes the connection
+	void on_close handler h {
+		CloseHandler = h
+		cby_conn_on_close Id, say_closed
+	}
+
+	// (what the C side calls)
+	void say_line {
+		Line = connections_given cby_conn_line(Id)
+		if LineHandler.is_set {
+			LineHandler.call
+		}
+	}
+
+	void say_closed {
+		if CloseHandler.is_set {
+			CloseHandler.call
+		}
+	}
+
+	// true until either end closes it
+	bool is_open const {
+		return cby_conn_is_open(Id) is not 0
+	}
+
+	// where it's connected to: the computer's name, as given to connect
+	str address const {
+		return connections_given cby_conn_peer(Id)
+	}
+
+	// closes it (on_close isn't called for a close from this end)
+	void close {
+		cby_conn_close Id
+	}
+
+	~connection {
+		if Id is not 0 {
+			cby_conn_free Id
+		}
+	}
+}
+
+// A connection to a program listening on a port of a computer
+// ("localhost" for this one, a name, or an address: "192.168.1.20"). No
+// answer (nothing listening, a computer that isn't there) is a panic that
+// says why; networks.can_connect looks first.
+networks.connection networks.connect const str &Host, long Port {
+	long Id = cby_conn_open Host, Port
+	if Id is 0 {
+		cby_conn_panic
+	}
+	return networks.connection{.Id = Id}
+}
+
+// The same, encrypted (TLS), to a server with a certificate: its
+// certificate is checked, as a browser checks a site's (by the system's
+// trusted certificates, and any networks.trust_certificate adds). One
+// that isn't trusted is a panic that says why.
+networks.connection networks.connect_encrypted const str &Host, long Port {
+	long Id = cby_conn_open_encrypted Host, Port
+	if Id is 0 {
+		cby_conn_panic
+	}
+	return networks.connection{.Id = Id}
+}
+
+// true if it would connect, encrypted: a program's listening there with
+// a certificate that's trusted
+bool networks.can_connect_encrypted const str &Host, long Port {
+	long Id = cby_conn_open_encrypted Host, Port
+	if Id is 0 {
+		return false
+	}
+	cby_conn_free Id
+	return true
+}
+
+// true if a program is listening on that port, there
+bool networks.can_connect const str &Host, long Port {
+	long Id = cby_conn_open Host, Port
+	if Id is 0 {
+		return false
+	}
+	cby_conn_free Id
+	return true
+}
+
+// A server: listens on a port for other programs to connect, each of
+// which is a connection of its own, known by its number. Its handlers are
+// called from the event loop (events.run, or a window's run): when a
+// program connects, for each line one sends, and when one goes. In them,
+// `from` is the connection's number, and `line` the line.
+//
+//     networks.server S
+//     S.on_line said
+//     S.listen 5000
+//     ...
+//     void said {
+//         S.reply "you said: " + S.line
+//     }
+object networks.server {
+	inner long Id
+	inner handler ConnectHandler
+	inner handler LineHandler
+	inner handler CloseHandler
+	inner str CertificateFile
+	inner str KeyFile
+
+	// Listens on a port, for any computer that can reach this one (0: any
+	// free port, which `port` then says). A port that's in use is a panic.
+	void listen long Port {
+		start Port, 0
+	}
+
+	// listens on a port for programs on this computer alone
+	void listen_here long Port {
+		start Port, 1
+	}
+
+	inner void start long Port, int HereOnly {
+		if Id is not 0 {
+			cby_server_close Id
+		}
+		Id = cby_server_listen Port, HereOnly
+		if Id is 0 {
+			cby_conn_panic
+		}
+		cby_server_on Id, 0, say_connected
+		cby_server_on Id, 1, say_line
+		cby_server_on Id, 2, say_closed
+		if CertificateFile is not "" {
+			cby_server_set_certificate Id, CertificateFile, KeyFile
+		}
+	}
+
+	// Encrypted (TLS) from now on, with the server's certificate (and the
+	// chain to it, as Let's Encrypt's fullchain.pem has) and its key
+	// (privkey.pem); or one made by networks.make_certificate, for trying
+	// it. Said before listen, or after (for connections from then on).
+	void set_certificate const str &Certificate, const str &Key {
+		CertificateFile = Certificate.copy
+		KeyFile = Key.copy
+		if Id is not 0 {
+			cby_server_set_certificate Id, CertificateFile, KeyFile
+		}
+	}
+
+	// whether it's encrypted (it has a certificate)
+	bool encrypted const {
+		return CertificateFile is not ""
+	}
+
+	// the port it listens on (0 before listen)
+	long port const {
+		if Id is 0 {
+			return 0
+		}
+		return cby_server_port Id
+	}
+
+	// calls h when a program connects (from: its number)
+	void on_connect handler h {
+		ConnectHandler = h
+	}
+
+	// calls h for each line a connection sends (from, and line)
+	void on_line handler h {
+		LineHandler = h
+	}
+
+	// calls h when a connection closes (from: the one that's gone)
+	void on_close handler h {
+		CloseHandler = h
+	}
+
+	// (what the C side calls)
+	void say_connected {
+		if ConnectHandler.is_set {
+			ConnectHandler.call
+		}
+	}
+
+	void say_line {
+		if LineHandler.is_set {
+			LineHandler.call
+		}
+	}
+
+	void say_closed {
+		if CloseHandler.is_set {
+			CloseHandler.call
+		}
+	}
+
+	// In a handler: the connection it's about, and the line it sent
+	long from const {
+		return cby_server_from Id
+	}
+
+	str line const {
+		return connections_given cby_conn_line(from)
+	}
+
+	// where a connection is from: its computer's address ("127.0.0.1")
+	str address_of long Who const {
+		return connections_given cby_conn_peer(Who)
+	}
+
+	// text to a connection, as it is; a line to it; and (in a handler) a
+	// line back to the one it's about. False if it has gone.
+	bool send_to long Who, const str &Text {
+		return cby_conn_send(Who, Text, Text.length) is not 0
+	}
+
+	bool send_line_to long Who, const str &Text {
+		str Whole = Text + "\n"
+		return cby_conn_send(Who, Whole, Whole.length) is not 0
+	}
+
+	bool reply const str &Text {
+		return send_line_to from, Text
+	}
+
+	// a line to every connection open
+	void send_line_to_all const str &Text {
+		for Who in connections {
+			send_line_to Who, Text
+		}
+	}
+
+	// the connections open, by number
+	list long connections const {
+		list long Open
+		if Id is 0 {
+			return Open
+		}
+		long Count = cby_server_count Id
+		for I in Count {
+			Open.add cby_server_connection(Id, I)
+		}
+		return Open
+	}
+
+	// closes one (on_close isn't called for it)
+	void close_connection long Who {
+		cby_conn_free Who
+	}
+
+	// stops listening, and closes every connection
+	void close {
+		if Id is not 0 {
+			cby_server_close Id
+			Id = 0
+		}
+	}
+
+	~server {
+		close
+	}
+}
+
+// A web server: browsers (and programs fetching pages) ask it for pages,
+// files and JSON, and it answers. Each request is told to the handler
+// given to on_request, from the event loop (events.run, or a window's
+// run); in it, `path` is what's asked for, and one of the send methods
+// answers. A request the handler doesn't answer is answered "404 Not
+// Found".
+//
+//     networks.web_server Web
+//     Web.on_request answer
+//     Web.listen 8080
+//     events.run
+//     ...
+//     void answer {
+//         if Web.path == "/" {
+//             Web.send_page "<h1>Hello!</h1>"
+//         } else {
+//             Web.send_from_folder "public"
+//         }
+//     }
+object networks.web_server {
+	inner long Id
+	inner handler RequestHandler
+	inner handler MessageHandler
+	inner handler SocketCloseHandler
+	inner str CertificateFile
+	inner str KeyFile
+
+	// Listens on a port, for any computer that can reach this one (0: any
+	// free port, which `port` then says). A port that's in use is a panic.
+	void listen long Port {
+		start Port, 0
+	}
+
+	// listens for browsers on this computer alone (http://localhost:Port)
+	void listen_here long Port {
+		start Port, 1
+	}
+
+	inner void start long Port, int HereOnly {
+		if Id is not 0 {
+			cby_server_close Id
+		}
+		Id = cby_web_listen Port, HereOnly
+		if Id is 0 {
+			cby_conn_panic
+		}
+		cby_web_on_request Id, say_request
+		cby_web_on_socket Id, 0, say_message
+		cby_web_on_socket Id, 1, say_socket_closed
+		if CertificateFile is not "" {
+			cby_server_set_certificate Id, CertificateFile, KeyFile
+		}
+	}
+
+	// HTTPS (and wss://) from now on, with the server's certificate (and the
+	// chain to it, as Let's Encrypt's fullchain.pem has) and its key
+	// (privkey.pem); or one made by networks.make_certificate, for trying
+	// it. Said before listen, or after (for connections from then on).
+	void set_certificate const str &Certificate, const str &Key {
+		CertificateFile = Certificate.copy
+		KeyFile = Key.copy
+		if Id is not 0 {
+			cby_server_set_certificate Id, CertificateFile, KeyFile
+		}
+	}
+
+	// whether it's encrypted (it has a certificate)
+	bool encrypted const {
+		return CertificateFile is not ""
+	}
+
+	long port const {
+		if Id is 0 {
+			return 0
+		}
+		return cby_server_port Id
+	}
+
+	// calls h for each request
+	void on_request handler h {
+		RequestHandler = h
+	}
+
+	// (what the C side calls)
+	void say_request {
+		if RequestHandler.is_set {
+			RequestHandler.call
+		}
+	}
+
+	// stops listening, and closes every connection
+	void close {
+		if Id is not 0 {
+			cby_server_close Id
+			Id = 0
+		}
+	}
+
+	~web_server {
+		close
+	}
+
+	// ---- the request (in on_request's handler)
+
+	// "GET" (a page asked for), "POST" (a form sent), "PUT", "DELETE" ...
+	str method const {
+		return connections_given cby_web_text(Id, 0, "")
+	}
+
+	// what's asked for, decoded: "/", "/about", "/pictures/cat.png"
+	str path const {
+		return connections_given cby_web_text(Id, 1, "")
+	}
+
+	// the part after "?", as it was sent: "q=cabby&page=2"
+	str query const {
+		return connections_given cby_web_text(Id, 2, "")
+	}
+
+	// one value from the query: query_value "q" is "cabby" ("" if it isn't
+	// there; has_query_value says whether it is)
+	str query_value const str &Name const {
+		return connections_given cby_web_text(Id, 5, Name)
+	}
+
+	bool has_query_value const str &Name const {
+		return cby_web_has(Id, 5, Name) != 0
+	}
+
+	// what was sent with it (a POST's or PUT's body), as it came
+	str body const {
+		return connections_given cby_web_text(Id, 3, "")
+	}
+
+	// one value from a form a page sent (method="post"): form_value "name"
+	str form_value const str &Name const {
+		return connections_given cby_web_text(Id, 6, Name)
+	}
+
+	bool has_form_value const str &Name const {
+		return cby_web_has(Id, 6, Name) != 0
+	}
+
+	// the body as JSON (a program sending some): a panic if it isn't JSON
+	json body_json const {
+		return json.read body
+	}
+
+	// one of the request's headers: header "User-Agent" ("" if not there)
+	str header const str &Name const {
+		return connections_given cby_web_text(Id, 4, Name)
+	}
+
+	// one of the browser's cookies (set with set_cookie): "" if not there
+	str cookie const str &Name const {
+		return connections_given cby_web_text(Id, 7, Name)
+	}
+
+	// where the request's from: its computer's address ("192.168.1.20")
+	str address const {
+		return connections_given cby_conn_peer(cby_server_from(Id))
+	}
+
+	// ---- answering: one answer to each request
+
+	// a header of the answer's own, before it's sent:
+	// add_header "Cache-Control", "no-store"
+	void add_header const str &Name, const str &Value {
+		cby_web_add_header Id, Name, Value
+	}
+
+	// a cookie for the browser to keep, and send back with each request
+	void set_cookie const str &Name, const str &Value {
+		cby_web_add_header Id, "Set-Cookie", Name + "=" + Value + "; Path=/; SameSite=Lax"
+	}
+
+	// a page: HTML
+	void send_page const str &Html {
+		cby_web_send Id, 200, "text/html; charset=utf-8", Html, Html.length
+	}
+
+	// plain text
+	void send_text const str &Text {
+		cby_web_send Id, 200, "text/plain; charset=utf-8", Text, Text.length
+	}
+
+	// JSON, for a program (or a page's script) asking
+	void send_json const json &Value {
+		str Text = Value.text
+		cby_web_send Id, 200, "application/json", Text, Text.length
+	}
+
+	// anything: its status (200: all's well), its type ("text/css"), and it
+	void send long Status, const str &Type, const str &Content {
+		cby_web_send Id, Status, Type, Content, Content.length
+	}
+
+	// a short page saying a status and why: send_status 403, "Not for you."
+	void send_status long Status, const str &Why {
+		cby_web_send_status Id, Status, Why
+	}
+
+	// "404 Not Found", as a page
+	void send_not_found {
+		cby_web_send_status Id, 404, "There's nothing here."
+	}
+
+	// sends the browser somewhere else: redirect "/login"
+	void redirect const str &To {
+		cby_web_redirect Id, To, 303
+	}
+
+	// a file, its type from its name (".png": a picture); false if it isn't
+	// there (the request still waits for an answer)
+	bool send_file const str &Path {
+		return cby_web_send_file(Id, Path) != 0
+	}
+
+	// The file in a folder that the path names ("/css/site.css" is
+	// Folder/css/site.css; a folder's index.html for a folder); "404 Not
+	// Found" if there's none. Nothing outside the folder is ever sent.
+	void send_from_folder const str &Folder {
+		if cby_web_send_from_folder(Id, Folder, "") == 0 {
+			send_not_found
+		}
+	}
+
+	// the same, for paths beginning with Prefix, which is left off:
+	// send_from_folder_at "public", "/static" sends public/site.css for
+	// "/static/site.css"
+	void send_from_folder_at const str &Folder, const str &Prefix {
+		if cby_web_send_from_folder(Id, Folder, Prefix) == 0 {
+			send_not_found
+		}
+	}
+
+	// whether this request has been answered yet
+	bool answered const {
+		return cby_web_answered(Id) != 0
+	}
+
+	// ---- WebSockets: a page (or a program) and the server, talking both
+	// ways while it's open (a page's script: new WebSocket(...))
+
+	// in on_request: whether the request asks to become a WebSocket
+	bool wants_socket const {
+		return cby_web_wants_socket(Id) != 0
+	}
+
+	// In on_request: accepts it. It's a WebSocket from now on, known by the
+	// number this gives (0 if it wasn't asking: it's answered "400 Bad
+	// Request"). Its messages go to on_message's handler.
+	long accept_socket {
+		return cby_web_accept_socket Id
+	}
+
+	// calls h for each message a WebSocket sends (from: which, message: it)
+	void on_message handler h {
+		MessageHandler = h
+	}
+
+	// calls h when a WebSocket closes (from: the one that's gone)
+	void on_socket_close handler h {
+		SocketCloseHandler = h
+	}
+
+	// (what the C side calls)
+	void say_message {
+		if MessageHandler.is_set {
+			MessageHandler.call
+		}
+	}
+
+	void say_socket_closed {
+		if SocketCloseHandler.is_set {
+			SocketCloseHandler.call
+		}
+	}
+
+	// in on_message and on_socket_close: the WebSocket it's about
+	long from const {
+		return cby_server_from Id
+	}
+
+	// in on_message: the message, and whether it was sent as bytes rather
+	// than text (a page's Blob or ArrayBuffer)
+	str message const {
+		return connections_given cby_ws_message(from)
+	}
+
+	bool message_is_binary const {
+		return cby_ws_binary(from) != 0
+	}
+
+	// a message to a WebSocket (false if it's gone); in on_message, one back
+	bool send_message long Who, const str &Text {
+		return cby_ws_send(Who, Text, Text.length, 0) != 0
+	}
+
+	bool reply const str &Text {
+		return cby_ws_send(from, Text, Text.length, 0) != 0
+	}
+
+	// a message to every WebSocket open
+	void send_message_to_all const str &Text {
+		for Who in sockets {
+			cby_ws_send Who, Text, Text.length, 0
+		}
+	}
+
+	// the WebSockets open, by number
+	list long sockets const {
+		list long Open
+		if Id is 0 {
+			return Open
+		}
+		long Count = cby_web_socket_count Id
+		for I in Count {
+			Open.add cby_web_socket(Id, I)
+		}
+		return Open
+	}
+
+	// closes one, saying so to the other end (on_socket_close isn't called
+	// for it)
+	void close_socket long Who {
+		cby_ws_close Who
+	}
+}
+
+// A WebSocket to a server (networks.open_socket): messages go both ways,
+// whenever either end likes. Wait for the next with read_message, or have
+// on_message call a handler for each as it comes, from the event loop.
+object networks.socket {
+	long Id
+	inner str Message
+	inner handler MessageHandler
+	inner handler CloseHandler
+
+	// sends a message (false if the other end has gone)
+	bool send const str &Text {
+		return cby_ws_send(Id, Text, Text.length, 0) != 0
+	}
+
+	// Waits for the next message, for `message` to give: false when the
+	// connection has closed.
+	//     while S.read_message {
+	//         println S.message
+	//     }
+	bool read_message {
+		long Length = cby_ws_read Id
+		if Length < 0 {
+			Message = ""
+			return false
+		}
+		Message = connections_given Length
+		return true
+	}
+
+	// the message read_message waited for, or the one on_message's handler
+	// is told of
+	str message const {
+		return Message.copy
+	}
+
+	// whether it was sent as bytes, rather than text
+	bool message_is_binary const {
+		return cby_ws_binary(Id) != 0
+	}
+
+	// calls h for each message as it comes, from the event loop
+	void on_message handler h {
+		MessageHandler = h
+		cby_conn_on_line Id, say_message
+	}
+
+	// calls h when the server closes it
+	void on_close handler h {
+		CloseHandler = h
+		cby_conn_on_close Id, say_closed
+	}
+
+	// (what the C side calls)
+	void say_message {
+		Message = connections_given cby_ws_message(Id)
+		if MessageHandler.is_set {
+			MessageHandler.call
+		}
+	}
+
+	void say_closed {
+		if CloseHandler.is_set {
+			CloseHandler.call
+		}
+	}
+
+	// true until either end closes it
+	bool is_open const {
+		return cby_conn_is_open(Id) is not 0
+	}
+
+	// closes it, saying so to the server (on_close isn't called for it)
+	void close {
+		cby_ws_close Id
+	}
+
+	~socket {
+		if Id is not 0 {
+			cby_ws_close Id
+			cby_conn_free Id
+		}
+	}
+}
+
+// A WebSocket to a server: "ws://localhost:8080/chat". One that can't be
+// made (nothing there, a server that won't take it) is a panic that says
+// why. (ws:// only, for now: not wss://.)
+networks.socket networks.open_socket const str &Address {
+	long Id = cby_ws_open Address
+	if Id is 0 {
+		cby_conn_panic
+	}
+	return networks.socket{.Id = Id}
+}
+
+// ---- certificates, for encrypted connections (HTTPS, wss://, TLS)
+
+// Trusts a certificate, as well as the system's: one networks.
+// make_certificate made, for a server of the program's own (downloads,
+// WebSockets and connections all trust it from then on)
+void networks.trust_certificate const str &Path {
+	cby_conn_trust_certificate Path
+	cby_networks_trust Path
+}
+
+// A certificate of its own (self-signed) for a computer's name, and its
+// key: for trying HTTPS on this computer, or a home network. It's for the
+// name (and localhost); it lasts 825 days. Browsers warn of it until
+// they're told to trust it; a Cabby program trusts it with
+// networks.trust_certificate.
+void networks.make_certificate const str &Name, const str &Certificate, const str &Key {
+	cby_conn_make_certificate Name, Certificate, Key
+}

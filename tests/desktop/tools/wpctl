@@ -1,0 +1,11 @@
+#!/bin/sh
+# a stand-in (run_desktop_tests.sh): there only when CABBY_HAVE names it
+case ",$CABBY_HAVE," in *",$(basename "$0"),"*) ;; *) exit 127 ;; esac
+S=$CABBY_TEST_STATE
+# PipeWire's: "Volume: 0.45", and " [MUTED]" after it when it is
+case "$1" in
+get-volume) l=$(cat "$S/level"); if [ "$l" -ge 100 ]; then printf 'Volume: 1.00'; else printf 'Volume: 0.%02d' "$l"; fi; [ "$(cat "$S/muted")" = 1 ] && printf ' [MUTED]'; echo ;;
+set-volume) echo "$3" | sed 's/^0\.//; s/^1\.00$/100/; s/^0*\([0-9]\)/\1/' > "$S/level" ;;
+set-mute) echo "$3" > "$S/muted" ;;
+*) exit 1 ;;
+esac

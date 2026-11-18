@@ -1,0 +1,73 @@
+// PostgreSQL, through the same databases.database a file's database is
+// (run_postgres_tests.sh starts a server, and says where in
+// CABBY_TEST_POSTGRES): tables, values through ?s (quotes in them, and ?s
+// in quotes and comments left alone), rows, records, bytes, statements
+// made once, last_id, changes, and a transaction undone.
+//> 1 1
+//> O'Brien's jam 3.25 f
+//> bread 4.5 t
+//> 2 O'Brien's jam
+//> ?x
+//> 3 255
+//> 1 bread 4.5 true
+//> 2 O'Brien's jam 3.25 false
+//> 3 milk 2.1 true
+//> made once: 4 5
+//> deleted: 5, and back: 5
+//> nothing: true
+//> panic next
+// panic: the database 'postgres' can't do "select nothing from nowhere": relation "nowhere" does not exist
+use databases
+use bytes
+use shell
+
+struct item {
+	str Name
+	double Price
+	long Id
+	bool Fresh
+}
+
+int main {
+	databases.database Shop = databases.connect shell.get("CABBY_TEST_POSTGRES")
+	Shop.run "drop table if exists items; create table if not exists items (id serial primary key, name text, price real, fresh boolean default true, picture bytea)"
+	Shop.run_with "insert into items (name, price) values (?, ?)", {"bread", "4.50"}
+	println Shop.last_id, Shop.changes
+	Shop.run_with "insert into items (name, price, fresh) values (?, ?, false)", {"O'Brien's jam", "3.25"}
+	for Row in Shop.rows "select name, price, fresh from items order by price" {
+		println Row["name"], Row["price"], Row["fresh"]
+	}
+	println Shop.value("select count(*) from items"), Shop.value_with("select name from items where name like ?", {"%jam%"})
+	println Shop.value "select '?' || 'x' -- is it?"
+	databases.statement Add = Shop.prepare "insert into items (name, price, picture) values (?, ?, ?)"
+	Add.add_text "milk"
+	Add.add_number 2.1
+	bytes Picture
+	Picture.add 0
+	Picture.add 255
+	Picture.add 10
+	Add.add_bytes Picture
+	Add.run
+	bytes Got = Shop.bytes_value "select picture from items where name = 'milk'"
+	println Got.length, Got[1]
+	for Row in Shop.records "select id, name, price, fresh from items order by id" {
+		item I
+		Row.fill I
+		println I.Id, I.Name, I.Price, I.Fresh
+	}
+	databases.statement Again = Shop.prepare "insert into items (name, price) values (?, ?) returning id"
+	str Fourth = Again.rows_with({"tea", "1.5"})[0]["id"].copy
+	Again.add_text "cake"
+	Again.add_whole 3
+	str Fifth = Again.value
+	println "made once:", Fourth, Fifth
+	Shop.begin
+	Shop.run "delete from items"
+	long Deleted = Shop.changes
+	Shop.rollback
+	println "deleted: " + Deleted.text + ", and back:", Shop.value("select count(*) from items")
+	println "nothing:", Shop.value("select picture from items where name = 'tea'") == ""
+	println "panic next"
+	Shop.run "select nothing from nowhere"
+	return 0
+}

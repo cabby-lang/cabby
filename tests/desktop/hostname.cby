@@ -1,0 +1,8 @@
+// setting the computer's name, with stand-ins for hostnamectl and a Mac's
+// scutil (tools/: run_desktop_tests.sh says which are there)
+use system
+
+int main {
+	println "set:", system.set_hostname("music-room")
+	return 0
+}

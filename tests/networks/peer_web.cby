@@ -1,0 +1,51 @@
+// (not a test of its own: the web server tests/networks/web.cby asks,
+// started first by run_networks_tests.sh, from tests/networks) Pages, JSON,
+// a form, a cookie, a redirect, files from a folder, and /stop to end.
+use networks
+use events
+
+object site {
+	networks.web_server Web
+	int Visits
+
+	void begin {
+		Web.on_request answer
+		Web.listen_here 0
+		println Web.port                // (the port, for the tests to find)
+		events.run
+	}
+
+	void answer {
+		Visits++
+		if Web.path == "/" {
+			Web.set_cookie "seen", "yes"
+			Web.send_page "<h1>Hello, " + Web.query_value("name") + "!</h1>"
+		} else if Web.path == "/count" {
+			json J = json.lookup
+			J["visits"] = json.read Visits.text
+			J["method"] = json.read "\"" + Web.method + "\""
+			J["has name"] = json.read Web.has_query_value("name").text
+			Web.send_json J
+		} else if Web.path == "/form" and Web.method == "POST" {
+			Web.send_text "got " + Web.form_value("who") + ", cookie " + Web.cookie("seen")
+		} else if Web.path == "/echo" {
+			json Sent = Web.body_json
+			Web.add_header "X-Cabby", "yes"
+			Web.send 201, "application/json", Sent.text
+		} else if Web.path == "/old" {
+			Web.redirect "/"
+		} else if Web.path == "/secret" {
+			Web.send_status 403, "Not for you."
+		} else if Web.path == "/stop" {
+			Web.send_text "bye"
+			Web.close
+		} else {
+			Web.send_from_folder_at "public", "/files"
+		}
+	}
+}
+
+int main {
+	site S
+	S.begin
+}

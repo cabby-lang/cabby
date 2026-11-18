@@ -1,0 +1,477 @@
+// Tutorial 78: Cabby Quest, part 2 — walking, and reading signs
+//
+// Run it:      cabby 78-quest-walking.cby
+// Or compile:  cabby -c 78-quest-walking.cby && ./78-quest-walking
+// Library:     use game, use files
+// Topics:      an object for anyone who walks, tile by tile; the arrow keys;
+//              what's in the way; the lines after the map; a box of words
+//
+// Part 1 (tutorial 77) drew the woods. Now the hero walks in them: an arrow
+// key starts a step to the next tile, and a step always ends on a tile.
+// Walking into a tree is a step on the spot. The lines after the map in
+// quest/woods.txt say what else is there; for now, a sign, read with Space.
+//
+// The hero is a `walker`, an object of its own (78.4 to 78.9): its sprite,
+// the tile it's on, which way it faces, and its step. Part 5 makes the
+// townspeople walkers too, so they walk the same way.
+//
+// New sections are numbered 63; those from part 1 keep their 62, and the
+// ones this part changes say (changed in 78). Chapter 78 of the manual goes
+// through what's new.
+
+use game
+use files
+
+// ==== 77.1  Sizes ========================================================
+
+const int TILE = 48                 // each tile's size, in pixels
+const int SHOWN_COLUMNS = 13        // how much of the world the stage shows
+const int SHOWN_ROWS = 9
+const int GROUND = 0                // the layers: the ground, under everything,
+const int STANDING = 1              // and what stands on it, lower in front
+
+// ==== 78.1  Walking speed ================================================
+
+const int SPEED = 3                 // pixels a frame: a step is 48 / 3 = 16 frames
+const int LEG_TIME = 67             // ms for each picture of a step: four to a tile
+const int TURN_TIME = 100           // ms: a tap of an arrow shorter than this only turns
+const str BLOCKING = "TSH~D"        // tiles that can't be walked onto
+
+// ==== 78.2  Which way is across ==========================================
+
+// a step that way goes this far across: -1 (left), 1 (right) or 0
+int across_of const str &Way {
+	if Way == "left" {
+		return -1
+	} else if Way == "right" {
+		return 1
+	}
+	return 0
+}
+
+// ==== 78.3  Which way is down ============================================
+
+// and this far down: -1 (up), 1 (down) or 0
+int down_of const str &Way {
+	if Way == "up" {
+		return -1
+	} else if Way == "down" {
+		return 1
+	}
+	return 0
+}
+
+// ==== 78.4  Someone who walks ============================================
+
+object walker {
+	game.sprite Sprite
+	str Picture                     // "hero": pictures/hero-down-1.png ...
+	int Col                         // the tile it's on
+	int Row
+	str Facing                      // "down", "up", "left" or "right"
+	int Dx                          // the way it's stepping: -1, 0 or 1
+	int Dy
+	int StepsLeft                   // frames left of this step (0: on a tile)
+	int Steps                       // steps taken
+
+	// ==== 78.5  Its pictures =============================================
+
+	// Leg 1 is standing; 2 and 3, one foot forward or the other
+	str picture_of int Leg const {
+		return "pictures/" + Picture + "-" + Facing + "-" + Leg.text + ".png"
+	}
+
+	bool stepping const {
+		return StepsLeft > 0
+	}
+
+	void face const str &Way {
+		Facing = Way.copy
+		Sprite.set_picture picture_of(1)
+	}
+
+	// ==== 78.6  A step ===================================================
+
+	// to the next tile that way, or (Moves false) a step on the spot
+	void step const str &Way, bool Moves {
+		Facing = Way.copy
+		Dx = 0
+		Dy = 0
+		if Moves {
+			Dx = across_of Way
+			Dy = down_of Way
+		}
+		move_legs
+	}
+
+	// ==== 78.7  Its legs =================================================
+
+	// a whole stride to each tile: a foot forward, standing, the other foot
+	void move_legs {
+		StepsLeft = TILE / SPEED
+		Steps++
+		Sprite.animate {picture_of(2), picture_of(1), picture_of(3), picture_of(1)}, LEG_TIME
+	}
+
+	// ==== 78.8  Each frame of a step =====================================
+
+	// moves a little: true in the frame the step ends
+	bool keep_stepping {
+		Sprite.move Dx * SPEED, Dy * SPEED
+		StepsLeft--
+		if StepsLeft == 0 {
+			arrive
+		}
+		return StepsLeft == 0
+	}
+
+	// ==== 78.9  A step's end =============================================
+
+	void arrive {
+		Col += Dx
+		Row += Dy
+		Sprite.set_picture picture_of(1)   // standing (set_picture stops animate)
+	}
+}
+
+// ==== 78.10  What's happening ============================================
+
+enum mode {
+	PLAYING                         // walking about
+	READING                         // words showing: Space goes on
+}
+
+// ==== 77.2  The world  (changed in 78) ===================================
+
+object world : game.window {
+	list str Map                    // the area's tiles, a character each
+	list str Things                 // the lines after the map: signs ...
+	lookup char str Grounds         // the picture for each kind of ground
+	walker Hero
+
+	// ==== 78.11  The words showing =======================================
+
+	mode Mode                       // PLAYING to begin with (it's 0)
+	str Message                     // the words being read
+
+	// ==== 77.3  Building the world  (changed in 78) ======================
+
+	void build {
+		set_title "Cabby Quest"
+		set_size SHOWN_COLUMNS * TILE, SHOWN_ROWS * TILE
+		set_background "black"
+		sort_by_depth STANDING          // the hero, trees and houses
+		Grounds = {'~': "water", 'f': "flowers", '=': "path", 'S': "sign"}
+		go_to "woods", 5, 3
+		on_frame step
+		stage.on_draw draw_over
+	}
+
+	// ==== 77.4  Going to an area  (changed in 78) ========================
+
+	void go_to const str &Area, int C, int R {
+		read_area Area
+		set_world_size (int)Map[0].length * TILE, (int)Map.length * TILE
+		add_tiles
+		Hero = new_walker "hero", C, R, "down"
+		follow Hero.Sprite              // the camera keeps the hero in the middle
+		println "in the", Area, "at", C, R
+	}
+
+	// ==== 78.12  A new walker ============================================
+
+	// on their tile, feet at its bottom, as in FireRed; a tree on the tile
+	// below them is lower, so it's in front, and its leaves hide their feet
+	walker new_walker const str &Picture, int C, int R, const str &Facing {
+		walker Someone
+		Someone.Picture = Picture.copy
+		Someone.Facing = Facing.copy
+		Someone.Col = C
+		Someone.Row = R
+		Someone.Sprite = add_sprite Someone.picture_of(1), middle_of(C), middle_of(R)
+		Someone.Sprite.set_layer STANDING
+		return Someone
+	}
+
+	// ==== 77.5  Reading an area's map  (changed in 78) ===================
+
+	// quest/woods.txt: notes (//) first, then the map, a line a row; then,
+	// after ---, a line for each thing in the area
+	void read_area const str &Area {
+		bool InMap = true
+		for Line in files.lines "quest/" + Area + ".txt" {
+			if Line == "---" {
+				InMap = false
+			} else if !Line.starts_with("//") && Line.trim != "" {
+				keep_line Line, InMap
+			}
+		}
+	}
+
+	// ==== 78.13  Keeping a line ==========================================
+
+	void keep_line const str &Line, bool InMap {
+		if InMap {
+			Map.add Line.copy
+		} else {
+			Things.add Line.copy
+		}
+	}
+
+	// ==== 77.6  A sprite for every tile ==================================
+
+	void add_tiles {
+		for R in Map.length {
+			for C in Map[R].length {
+				add_ground Map[R][C], middle_of(C), middle_of(R)
+				add_standing Map[R][C], middle_of(C), middle_of(R)
+			}
+		}
+	}
+
+	// ==== 77.7  Which ground =============================================
+
+	// grass, unless Grounds says otherwise
+	str ground_of char Tile const {
+		if Grounds.contains Tile {
+			return Grounds[Tile].copy
+		}
+		return "grass"
+	}
+
+	// ==== 77.8  The ground ===============================================
+
+	// water and flowers move a little: two pictures, in turn
+	void add_ground char Tile, long X, long Y {
+		str Name = ground_of Tile
+		str Picture = "pictures/tile-" + Name
+		if Name == "water" || Name == "flowers" {
+			game.sprite Moving = add_sprite Picture + "-1.png", X, Y
+			Moving.animate {Picture + "-1.png", Picture + "-2.png"}, 700
+		} else {
+			add_sprite Picture + ".png", X, Y
+		}
+	}
+
+	// ==== 77.9  What stands on the ground ================================
+
+	// taller than their tile: placed so their bottom is on it
+	void add_standing char Tile, long X, long Y {
+		if Tile == 'T' {
+			game.sprite Tree = add_sprite "pictures/tall-tree.png", X, Y - TILE / 4
+			Tree.set_layer STANDING
+		} else if Tile == 'D' {
+			game.sprite House = add_sprite "pictures/house.png", X, Y - TILE
+			House.set_layer STANDING
+		}
+	}
+
+	// ==== 77.10  Where a tile is =========================================
+
+	// the middle of a tile, in pixels, from its column (or row)
+	long middle_of long Tile const {
+		return Tile * TILE + TILE / 2
+	}
+
+	// ==== 78.14  Every frame =============================================
+
+	// what happens depends on what's happening
+	void step {
+		if Mode == READING {
+			read_on
+		} else {
+			play_step
+		}
+	}
+
+	// ==== 78.15  Walking about ===========================================
+
+	// part way through a step, or on a tile
+	void play_step {
+		if Hero.stepping {
+			keep_walking
+		} else {
+			walk_or_look
+		}
+	}
+
+	// ==== 78.16  Part way through a step =================================
+
+	void keep_walking {
+		if Hero.keep_stepping {
+			arrived
+		}
+	}
+
+	// ==== 78.17  On the next tile ========================================
+
+	void arrived {
+		println "at", Hero.Col, Hero.Row
+	}
+
+	// ==== 78.18  On a tile: walk, or look ================================
+
+	// an arrow key held down starts the next step; Space looks ahead
+	void walk_or_look {
+		str Way = held_way
+		if Way != "" {
+			arrow_held Way
+		} else if key_press "space" {
+			look_ahead
+		}
+	}
+
+	// ==== 78.19  Turning, or walking =====================================
+
+	str Turned                      // the arrow key that turned the hero
+
+	// a new way only turns the hero; held a moment longer, they walk. The
+	// way they face walks at once.
+	void arrow_held const str &Way {
+		if Way != Hero.Facing {
+			Hero.face Way
+			Turned = Way.copy
+		} else if Way != Turned || key_press(Way) || key_held_for(Way) >= TURN_TIME {
+			walk Way
+		}
+	}
+
+	// ==== 78.20  The arrow keys ==========================================
+
+	// the way an arrow key held down points ("": none)
+	str held_way const {
+		list str Ways = {"up", "down", "left", "right"}
+		for Way in Ways {
+			if key_hold Way {
+				return Way.copy
+			}
+		}
+		return ""
+	}
+
+	// ==== 78.21  Walking =================================================
+
+	// a step that way: onto the next tile if it's free, else on the spot
+	void walk const str &Way {
+		bool Free = is_free Hero.Col + across_of(Way), Hero.Row + down_of(Way)
+		Hero.step Way, Free
+		if !Free {
+			bumped Way
+		}
+	}
+
+	// ==== 78.22  Bumping into something ==================================
+
+	void bumped const str &Way {
+		println "bump", Way
+	}
+
+	// ==== 78.23  What's in the way =======================================
+
+	// a tile on the map that isn't a tree, a sign, a house or water
+	bool is_free int C, int R const {
+		if R < 0 || R >= Map.length || C < 0 || C >= Map[R].length {
+			return false
+		}
+		return !BLOCKING.contains(Map[R][C])
+	}
+
+	// ==== 78.24  The lines after the map =================================
+
+	// what a line says about a tile: for "sign 3,2 The woods.", asked for
+	// ("sign", 3, 2), it's "The woods."; "" if there's no such line
+	str thing_at const str &Kind, int C, int R const {
+		str Start = Kind + " " + C.text + "," + R.text + " "
+		for Line in Things {
+			if Line.starts_with Start {
+				return Line[Start.length to Line.length - 1]
+			}
+		}
+		return ""
+	}
+
+	// ==== 78.25  Looking ahead ===========================================
+
+	// Space: what's on the tile the hero faces (a sign, for now)
+	void look_ahead {
+		int C = Hero.Col + across_of(Hero.Facing)
+		int R = Hero.Row + down_of(Hero.Facing)
+		str Sign = thing_at "sign", C, R
+		if Sign != "" {
+			say Sign
+		}
+	}
+
+	// ==== 78.26  Words, and reading them =================================
+
+	void say const str &Words {
+		Message = Words.copy
+		Mode = READING
+		println "said:", Words
+	}
+
+	// ==== 78.27  Reading on ==============================================
+
+	void read_on {
+		if key_press "space" {
+			Mode = PLAYING
+		}
+	}
+
+	// ==== 78.28  Drawing the words =======================================
+
+	// over everything (the stage's on_draw), in a box at the bottom
+	void draw_over const {
+		if Mode == READING {
+			draw_words Message
+		}
+	}
+
+	// ==== 78.29  Words in a box ==========================================
+
+	// the box as tall as the words need, wrapped to its width
+	void draw_words const str &Words const {
+		stage.set_font_size 18
+		double Height = stage.lines_for(width - 64, Words) * stage.line_height + 32
+		draw_box_at height - Height - 12, Height
+		stage.write_wrapped 32, height - Height + 4, width - 64, Words
+	}
+
+	// ==== 78.30  A box ===================================================
+
+	// white, with a dark edge; the pen is left dark, for the words
+	void draw_box_at double Top, double Height const {
+		stage.set_color "white"
+		stage.fill_rectangle 12, Top, width - 24, Height
+		stage.set_color "#2b2b38"
+		stage.set_line_width 3
+		stage.rectangle 12, Top, width - 24, Height
+	}
+}
+
+// ==== 77.11  Starting ====================================================
+
+int main {
+	world w
+	w.run
+}
+
+// (Cabby's tests walk to the sign, bump into it, and read it:)
+// script: frames 5; tap left; frames 2; tap left; frames 20; tap left; frames 20; tap up; frames 2; tap up; frames 20; tap space; frames 5; tap space; tap right; frames 2; hold right; frames 50; release right; frames 20; close
+//
+// Try this:
+//  - Make the hero quicker: SPEED 4 (a step is 12 frames).
+//  - Put a second sign in quest/woods.txt: an S in the map, and a
+//    "sign <col>,<row> ..." line after the ---.
+//  - Let the water be walked on: take ~ out of BLOCKING.
+
+// ---------------------------------------------------------------- output
+//> in the woods at 5 3
+//> at 4 3
+//> at 3 3
+//> bump up
+//> at 3 3
+//> said: The woods. Cabby Town is to the south, down the path.
+//> at 4 3
+//> at 5 3
+//> at 6 3

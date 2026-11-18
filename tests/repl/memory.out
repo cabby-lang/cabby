@@ -1,0 +1,7 @@
+note: memory allocated in 'address int A = addresses.allocate 8' (32 bytes) was lost in 'A = addresses.allocate 8': nothing holds its address any more, and it was never given back
+  (each line is noted once; the end of the program lists every block never given back)
+panic at <input>:1:2: this memory was given back by addresses.free in 'addresses.free A' (allocated in 'A = addresses.allocate 8')
+    A[0]
+     ^
+note: 1 block from addresses.allocate never given back (32 bytes):
+  32 bytes allocated in 'address int A = addresses.allocate 8'

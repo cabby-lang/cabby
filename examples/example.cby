@@ -1,0 +1,32 @@
+use standard
+
+use local util
+
+object window {
+	int width
+	int height
+	str title_bar
+	void print_width {
+		println width
+	}
+}
+
+char give_char char input
+
+int main int argc, str arg[] {
+	give_char 'f'
+
+	window new_win
+	new_win.width = 5
+	new_win.print_width
+
+	return 0
+}
+
+char give_char char input {
+	print "The char you chose is...\n"
+	print input
+	print '\n'
+
+	return input
+}

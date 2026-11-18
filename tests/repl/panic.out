@@ -1,0 +1,11 @@
+panic at <input>:1:2: index 7 is out of bounds for an array of length 3
+    a[i]
+     ^
+3
+panic at <function boom>:3:12: division by zero
+    	println 1 / z
+    	          ^
+note: 's' was moved before the panic, so it has been reset to its zero value
+
+back
+1

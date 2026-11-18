@@ -1,0 +1,94 @@
+// Tutorial 58: Tables — the planets
+//
+// Run it:      cabby 58-tables.cby
+// Or compile:  cabby -c 58-tables.cby && ./58-tables
+// Library:     use gui (or use tui: change gui to tui)
+// Topics:      add_table, add_row, cell, set_cell, selected, on_select,
+//              remove_row, sorting by a heading
+//
+// A table shows rows and columns of text, with a heading over each
+// column. Clicking a heading sorts the rows by that column (numbers as
+// numbers, so 9 comes before 10); clicking it again sorts the other way.
+//
+// Rows count from 0 in the order they were added, whatever order they're
+// shown in, so `cell Row, Column` and `selected` always mean the same row,
+// sorted or not.
+
+use gui
+
+object planets : gui.window {
+	gui.table Table
+	gui.label About
+	gui.button Moon
+
+	void build {
+		set_title "Planets"
+		set_size 420, 360
+		Table = add_table {"Planet", "From the sun (million km)", "Moons"}
+		Table.add_row {"Mercury", "58", "0"}
+		Table.add_row {"Venus", "108", "0"}
+		Table.add_row {"Earth", "150", "1"}
+		Table.add_row {"Mars", "228", "2"}
+		Table.add_row {"Jupiter", "778", "95"}
+		Table.add_row {"Saturn", "1434", "146"}
+		Table.add_row {"Uranus", "2871", "28"}
+		Table.add_row {"Neptune", "4495", "16"}
+		Table.add_row {"Pluto", "5906", "5"}
+		Table.on_select picked
+
+		About = add_label "Choose a planet."
+		gui.row Buttons = add_row
+		Moon = Buttons.add_button "Found a moon"
+		Moon.on_click found_moon
+		gui.button Remove = Buttons.add_button "Not a planet"
+		Remove.on_click remove
+		Moon.set_enabled false
+	}
+
+	void picked {
+		int Row = Table.selected
+		Moon.set_enabled Row >= 0
+		if Row < 0 {
+			About.set_text "Choose a planet."
+			return
+		}
+		str Name = Table.cell Row, 0
+		str Text = Name + " is " + Table.cell(Row, 1) + " million km from the sun, with "
+		Text += Table.cell(Row, 2) + " moons."
+		About.set_text Text
+		println About.text
+	}
+
+	void found_moon {
+		int Row = Table.selected
+		int Moons = Table.cell(Row, 2).to_int + 1
+		Table.set_cell Row, 2, Moons.text
+		println Table.text, "now has", Moons, "moons"
+	}
+
+	void remove {
+		if Table.selected >= 0 {
+			println Table.text, "taken out;", Table.count - 1, "left"
+			Table.remove_row Table.selected
+		}
+	}
+}
+
+int main {
+	planets p
+	p.run
+}
+
+// (Cabby's tests run it in a virtual display:)
+// script: sort 1 Moons; row 1 Mars; click Found a moon; row 1 Pluto; click Not a planet; close
+//
+// Try this:
+//  - Add two text boxes and an "Add" button that adds a planet of your own.
+//  - Add a column for each planet's year, in Earth days.
+//  - Change gui to tui: Up and Down choose a row, and Left and Right sort.
+
+// ---------------------------------------------------------------- output
+//> Mars is 228 million km from the sun, with 2 moons.
+//> Mars now has 3 moons
+//> Pluto is 5906 million km from the sun, with 5 moons.
+//> Pluto taken out; 8 left

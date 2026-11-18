@@ -1,0 +1,474 @@
+// os.hby — what every system has, the same way on Linux and macOS: files
+// and folders watched for changes, signals (Ctrl+C, and being asked to
+// stop), the disks and the space on them, how busy the processors and
+// memory are, and the programs running.
+//
+//     use os
+//
+//     os.watcher W
+//     W.watch "notes"                  a folder (or a file)
+//     W.on_change changed              changed runs for each change: W.change, W.path
+//
+//     os.signals Signals
+//     Signals.on_signal stop
+//     Signals.catch "interrupt"        Ctrl+C: stop runs, from the event loop
+//
+//     for D in os.disks {
+//         println D.name, D.free / 1000000000, "GB free"
+//     }
+//     println "processors:", os.cpu_use, "% busy"
+//
+// The full reference is os.md, next to this file. What only Linux has
+// (temperatures, services ...) is in the linux library.
+
+use addresses
+
+// ---- the C side (runtime/os.c); use what's below instead
+
+extern void cby_os_take address char dst
+extern long cby_os_watcher_new void
+extern void cby_os_watch long id, str path, int all
+extern void cby_os_watcher_on_change long id, handler h
+extern long cby_os_watcher_text long id, long what
+extern void cby_os_watcher_stop long id
+extern long cby_os_signals_new void
+extern void cby_os_on_signal long owner, str name, handler h
+extern void cby_os_signals_drop long owner
+extern void cby_os_catch_signal str name
+extern int cby_os_got_signal str name
+extern void cby_os_ignore_signal str name
+extern void cby_os_usual_signal str name
+extern long cby_os_signal_name void
+extern int cby_os_send_signal long pid, str name
+extern long cby_os_pid long which
+extern long cby_os_disks void
+extern long cby_os_disk_text long i, long what
+extern long cby_os_disk_number long i, long what
+extern long cby_os_space str path, long what
+extern double cby_os_cpu_use void
+extern long cby_os_memory long what
+extern double cby_os_load long which
+extern long cby_os_programs void
+extern long cby_os_program_number long i, long what
+extern double cby_os_program_cpu long i
+extern long cby_os_program_text long i, long what
+extern int cby_os_running long pid
+
+static str os_text long Length {
+	str Text = " ".repeat Length
+	address char Room = addresses.of_text Text
+	cby_os_take Room
+	return Text
+}
+
+// ---- watching files and folders
+
+// Watches files and folders, calling a handler for each change, from the
+// event loop (events.run, or a window's run): `change` says what happened
+// ("created", "changed", "deleted" or "renamed"), and `path` to which file.
+//
+//     os.watcher W
+//     W.watch "notes"
+//     W.on_change changed
+//     ...
+//     void changed {
+//         println W.change, W.path         "changed notes/todo.txt"
+//     }
+object os.watcher {
+	inner long Id
+	inner handler ChangeHandler
+
+	os.watcher {
+		Id = cby_os_watcher_new
+		cby_os_watcher_on_change Id, say_change
+	}
+
+	~os.watcher {
+		cby_os_watcher_stop Id
+	}
+
+	// a file, or a folder and what's in it (not the folders inside it)
+	void watch const str &Path const {
+		cby_os_watch Id, Path, 0
+	}
+
+	// a folder, what's in it, and everything in the folders inside it
+	void watch_all const str &Path const {
+		cby_os_watch Id, Path, 1
+	}
+
+	// calls h for each change
+	void on_change handler h {
+		ChangeHandler = h
+	}
+
+	// (what the C side calls)
+	void say_change {
+		if ChangeHandler.is_set {
+			ChangeHandler.call
+		}
+	}
+
+	// in on_change: what happened, "created", "changed", "deleted" or
+	// "renamed"
+	str change const {
+		return os_text cby_os_watcher_text(Id, 0)
+	}
+
+	// in on_change: the file (or folder) it happened to, as the path given
+	// to watch begins: "notes/todo.txt"
+	str path const {
+		return os_text cby_os_watcher_text(Id, 1)
+	}
+
+	// in on_change, for "renamed": what it was called before
+	str old_path const {
+		return os_text cby_os_watcher_text(Id, 2)
+	}
+
+	// stops watching (on_change isn't called again)
+	void stop {
+		cby_os_watcher_stop Id
+		Id = cby_os_watcher_new
+		cby_os_watcher_on_change Id, say_change
+	}
+}
+
+// ---- signals: what the system (or another program) tells a program
+
+// Signals caught, each told to a handler from the event loop (events.run,
+// or a window's run), rather than the program ending as it would:
+// "interrupt" (Ctrl+C), "terminate" (asked to stop: by the system shutting
+// down, or kill), "hangup" (its terminal closed), "quit" (Ctrl+\),
+// "user1", "user2", "resize" (its terminal's size), "child" (a program it
+// started ended), "alarm", "resume". Kept as a field of the object whose
+// method the handler is, it lets go of its signals when that's dropped.
+//
+//     os.signals Signals
+//     Signals.on_signal stopping
+//     Signals.catch "interrupt"
+//     Signals.catch "terminate"
+//     ...
+//     void stopping {
+//         println "stopping, for", Signals.signal
+//     }
+object os.signals {
+	inner long Id
+	inner handler SignalHandler
+
+	os.signals {
+		Id = cby_os_signals_new
+	}
+
+	~os.signals {
+		cby_os_signals_drop Id
+	}
+
+	// calls h for each signal it catches
+	void on_signal handler h {
+		SignalHandler = h
+	}
+
+	// caught from now on, and told to on_signal's handler
+	void catch const str &Name {
+		cby_os_on_signal Id, Name, say_signal
+	}
+
+	// (what the C side calls)
+	void say_signal {
+		if SignalHandler.is_set {
+			SignalHandler.call
+		}
+	}
+
+	// in on_signal's handler: the signal that came
+	str signal const {
+		return os_text cby_os_signal_name
+	}
+}
+
+// caught from now on, for got_signal to say (the program doesn't end)
+void os.catch_signal const str &Name {
+	cby_os_catch_signal Name
+}
+
+// Whether the signal's come since last asked (caught from then on, if it
+// wasn't already): for a program that works in a loop, without handlers.
+//     os.catch_signal "interrupt"
+//     while !os.got_signal("interrupt") {
+//         ...
+//     }
+bool os.got_signal const str &Name {
+	return cby_os_got_signal(Name) is not 0
+}
+
+// nothing done when it comes (not even ending)
+void os.ignore_signal const str &Name {
+	cby_os_ignore_signal Name
+}
+
+// as it was to begin with: "interrupt" ends the program again
+void os.usual_signal const str &Name {
+	cby_os_usual_signal Name
+}
+
+// Sends a signal to a program, by its number: true if it was sent.
+// "terminate" asks it to stop, "kill" stops it whatever it says, "pause"
+// and "resume" stop it for a while and start it again.
+bool os.send_signal long Program, const str &Name {
+	return cby_os_send_signal(Program, Name) is not 0
+}
+
+// this program's number (its process id), and the number of the program
+// that started it
+long os.pid {
+	return cby_os_pid 0
+}
+
+long os.parent_pid {
+	return cby_os_pid 1
+}
+
+// ---- disks
+
+// A disk (or a part of one) as the system has it: where it is, how big,
+// and how much is free. What it says is as it was when it was found.
+object os.disk {
+	inner str Path
+	inner str Device
+	inner str Kind
+	inner str Name
+	inner long Size
+	inner long Free
+	inner long Used
+	inner bool ReadOnly
+	inner bool Removable
+
+	// (made by os.disks)
+	void fill long I {
+		Path = os_text cby_os_disk_text(I, 0)
+		Device = os_text cby_os_disk_text(I, 1)
+		Kind = os_text cby_os_disk_text(I, 2)
+		Name = os_text cby_os_disk_text(I, 3)
+		Size = cby_os_disk_number I, 0
+		Free = cby_os_disk_number I, 1
+		Used = cby_os_disk_number I, 2
+		ReadOnly = cby_os_disk_number(I, 3) != 0
+		Removable = cby_os_disk_number(I, 4) != 0
+	}
+
+	// where it is: "/", "/home", "/media/tom/USB", "/Volumes/Backup"
+	str path const {
+		return Path.copy
+	}
+
+	// the device it's on: "/dev/nvme0n1p2", "/dev/sdb1", "/dev/disk3s1"
+	str device const {
+		return Device.copy
+	}
+
+	// how its files are kept: "ext4", "btrfs", "vfat", "apfs", "nfs"
+	str kind const {
+		return Kind.copy
+	}
+
+	// its name (its label), or the last part of where it is: "Backup"
+	str name const {
+		return Name.copy
+	}
+
+	// in bytes: its size, what's free (for this person to use), what's used
+	long size const {
+		return Size
+	}
+
+	long free const {
+		return Free
+	}
+
+	long used const {
+		return Used
+	}
+
+	// whether it can only be read, and whether it can be taken out (a USB
+	// stick, an SD card)
+	bool read_only const {
+		return ReadOnly
+	}
+
+	bool removable const {
+		return Removable
+	}
+}
+
+// the disks: the computer's own, and any plugged in or shared over the
+// network
+list os.disk os.disks {
+	list os.disk Found
+	for I in cby_os_disks {
+		os.disk D
+		D.fill I
+		Found.add D
+	}
+	return Found
+}
+
+// in bytes: the space on the disk a file or folder is on, what's free (for
+// this person to use), and what's used
+long os.disk_size const str &Path {
+	return cby_os_space Path, 0
+}
+
+long os.free_space const str &Path {
+	return cby_os_space Path, 1
+}
+
+long os.used_space const str &Path {
+	return cby_os_space Path, 2
+}
+
+// ---- processors and memory
+
+// how busy the processors are, all together, from 0 to 100: since it was
+// last asked (the first time, over a tenth of a second)
+double os.cpu_use {
+	return cby_os_cpu_use
+}
+
+// in bytes: the memory in all, in use, and available to programs
+long os.memory_total {
+	return cby_os_memory 0
+}
+
+long os.memory_used {
+	return cby_os_memory 1
+}
+
+long os.memory_available {
+	return cby_os_memory 2
+}
+
+// in bytes: swap (memory kept on the disk, when there's too little), in
+// all and in use
+long os.swap_total {
+	return cby_os_memory 3
+}
+
+long os.swap_used {
+	return cby_os_memory 4
+}
+
+// how many programs are waiting for a processor, on average, over the last
+// minute, five minutes and fifteen: the load
+list double os.load {
+	list double Load
+	for I in 3 {
+		Load.add cby_os_load(I)
+	}
+	return Load
+}
+
+// ---- the programs running
+
+// A program running on the computer, as it was when it was found.
+object os.program {
+	inner long Pid
+	inner long Parent
+	inner long Uid
+	inner long Memory
+	inner double Cpu
+	inner str Name
+	inner str Command
+	inner str User
+
+	// (made by os.programs)
+	void fill long I {
+		Pid = cby_os_program_number I, 0
+		Parent = cby_os_program_number I, 1
+		Uid = cby_os_program_number I, 2
+		Memory = cby_os_program_number I, 3
+		Cpu = cby_os_program_cpu I
+		Name = os_text cby_os_program_text(I, 0)
+		Command = os_text cby_os_program_text(I, 1)
+		User = os_text cby_os_program_text(I, 2)
+	}
+
+	// its number (process id), for os.send_signal, and the number of the
+	// program that started it
+	long pid const {
+		return Pid
+	}
+
+	long parent_pid const {
+		return Parent
+	}
+
+	// its name ("firefox"), and how it was started ("/usr/bin/firefox
+	// --new-window"; on a Mac, the program's file)
+	str name const {
+		return Name.copy
+	}
+
+	str command const {
+		return Command.copy
+	}
+
+	// whose it is: "tom", "root"
+	str user const {
+		return User.copy
+	}
+
+	// the memory it's using, in bytes
+	long memory const {
+		return Memory
+	}
+
+	// the processor time it's had, in seconds
+	double cpu_seconds const {
+		return Cpu
+	}
+
+	// asks it to stop ("terminate"): true if it was asked
+	bool stop const {
+		return os.send_signal Pid, "terminate"
+	}
+
+	// stops it, whatever it says ("kill")
+	bool kill const {
+		return os.send_signal Pid, "kill"
+	}
+
+	// whether it's still running
+	bool running const {
+		return cby_os_running(Pid) is not 0
+	}
+}
+
+// the programs running (those of the system's own kernel left out)
+list os.program os.programs {
+	list os.program Found
+	for I in cby_os_programs {
+		os.program P
+		P.fill I
+		Found.add P
+	}
+	return Found
+}
+
+// the programs running with that name: "firefox"
+list os.program os.programs_named const str &Name {
+	list os.program Found
+	for I in cby_os_programs {
+		if os_text(cby_os_program_text(I, 0)) == Name {
+			os.program P
+			P.fill I
+			Found.add P
+		}
+	}
+	return Found
+}
+
+// whether a program with that number is running
+bool os.running long Pid {
+	return cby_os_running(Pid) is not 0
+}

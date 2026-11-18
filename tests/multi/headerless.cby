@@ -1,0 +1,8 @@
+#!/usr/bin/env cabby
+// runs as ./headerless.cby too
+
+use local plain/numbers
+
+int main {
+	println triple(14)
+}

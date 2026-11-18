@@ -1,0 +1,65 @@
+// mime.hby — what kind of file a file is, as a MIME type: "image/png",
+// "text/plain", "application/pdf". The same on Linux and macOS.
+//
+//     use mime
+//
+//     println mime.of_file("photo")          image/jpeg (by what's in it)
+//     println mime.of_name("notes.md")       text/markdown (by the name alone)
+//     if mime.is_image("photo") { ... }
+//
+// mime.of_file looks at how the file starts (a PNG starts "\x89PNG", a
+// PDF "%PDF-", and so on), so a file with a wrong ending, or none, is
+// still told right; for kinds of text, and zip files (which .docx and
+// .epub files are too), the ending then says which kind.
+//
+// The full reference is mime.md, next to this file.
+
+use addresses
+
+// ---- the C side (runtime/desktop.c)
+
+extern long cby_mime_of_file str path
+extern long cby_mime_of_name str name
+extern void cby_desktop_take_text address char dst
+
+static str mime_text long Length {
+	str Text = " ".repeat(Length)
+	address char Room = addresses.of_text Text
+	cby_desktop_take_text Room
+	return Text
+}
+
+// Path's kind, by what's in it: "image/png"; "application/octet-stream"
+// for bytes it doesn't know, "inode/directory" for a folder, and "" if
+// there's nothing there
+str mime.of_file const str &Path {
+	return mime_text(cby_mime_of_file(Path))
+}
+
+// the usual kind for a name's ending, without looking inside: "" for an
+// ending it doesn't know (or none)
+str mime.of_name const str &Name {
+	return mime_text(cby_mime_of_name(Name))
+}
+
+// true for a picture (image/...)
+bool mime.is_image const str &Path {
+	return mime.of_file(Path).starts_with("image/")
+}
+
+// true for text: anything that can be read as text (text/..., and JSON,
+// XML, YAML and TOML)
+bool mime.is_text const str &Path {
+	str Kind = mime.of_file(Path)
+	return Kind.starts_with("text/") or Kind is "application/json" or Kind is "application/xml" or Kind is "image/svg+xml" or Kind is "application/yaml" or Kind is "application/toml"
+}
+
+// true for sound (audio/...)
+bool mime.is_audio const str &Path {
+	return mime.of_file(Path).starts_with("audio/")
+}
+
+// true for video (video/...)
+bool mime.is_video const str &Path {
+	return mime.of_file(Path).starts_with("video/")
+}

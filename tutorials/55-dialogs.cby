@@ -1,0 +1,92 @@
+// Tutorial 55: Dialogs — a picture viewer
+//
+// Run it:      cabby 55-dialogs.cby
+// Library:     use gui
+// Topics:      ask_open_file, chosen_file, ask, show_message, images
+//
+// A dialog is a small window that asks something and then gets out of the
+// way. Like everything else in `gui`, it doesn't stop the program to wait:
+// you give it a handler, and the handler is called with the answer.
+//
+//   show_message "Saved."                  a message with an OK button
+//   ask "Delete it?", delete_it            calls delete_it only if the answer is yes
+//   ask_open_file opened                   calls opened once a file is chosen;
+//                                          chosen_file is its full path
+//   ask_save_file "notes.txt", saved       the same, for where to save
+//
+// If the person cancels, the handler isn't called at all, so a handler
+// never has to check whether there really was an answer.
+//
+// add_image shows a picture from a file (PNG, JPEG, SVG and more), scaled
+// to fit; set_file changes it, and an empty name ("") clears it.
+
+use gui
+
+object viewer : gui.window {
+	gui.image Picture
+	gui.label Where
+	gui.button ClearButton
+
+	void build {
+		set_title "Picture viewer"
+		set_size 480, 360
+
+		gui.row Buttons = add_row
+		gui.button OpenButton = Buttons.add_button "Open..."
+		ClearButton = Buttons.add_button "Clear"
+		gui.button About = Buttons.add_button "About"
+		OpenButton.on_click choose
+		ClearButton.on_click confirm_clear
+		About.on_click show_about
+		ClearButton.set_enabled false
+
+		Where = add_label "No picture yet: click Open..."
+		Picture = add_image ""
+		Picture.set_min_size 200, 150
+	}
+
+	void choose {
+		ask_open_file opened
+	}
+
+	void opened {
+		Picture.set_file chosen_file
+		Where.set_text chosen_file
+		ClearButton.set_enabled true
+		println "showing", chosen_file
+	}
+
+	void confirm_clear {
+		ask "Clear the picture?", clear
+	}
+
+	void clear {
+		Picture.set_file ""
+		Where.set_text "No picture yet: click Open..."
+		ClearButton.set_enabled false
+		println "cleared"
+	}
+
+	void show_about {
+		show_message "A tiny picture viewer, written in Cabby."
+	}
+}
+
+int main {
+	viewer v
+	v.run
+}
+
+// (For Cabby's test suite: in a test the dialogs aren't shown; `pick`
+// chooses a file, and `answer` answers a question.)
+// script: click About; click Open...; pick pictures/cabby.png; click Clear; answer no; click Clear; answer yes; close
+//
+// Try this:
+//  - Ask "Quit?" before closing: add a Quit button whose handler asks, and
+//    whose yes-handler calls close.
+//  - Keep a list (add_list) of the pictures opened so far, and show one
+//    again when it is selected.
+
+// ---------------------------------------------------------------- output
+//> showing pictures/cabby.png
+//> cleared

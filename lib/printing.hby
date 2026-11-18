@@ -1,0 +1,253 @@
+// printing.hby — printing files and text, the same way on Linux and
+// macOS: both print through CUPS, and its lp, lpstat and cancel.
+//
+//     use printing
+//
+//     println printing.printers              ["Brother_HL_L2350DW", "Office"]
+//     str Job = printing.print "scales.pdf"    "Brother_HL_L2350DW-12" ("" if it didn't go)
+//
+//     printing.settings Two
+//     Two.set_copies 2
+//     Two.set_two_sided
+//     printing.print_with "scales.pdf", Two
+//
+// The full reference is printing.md, next to this file.
+
+use addresses
+
+// ---- the C side (runtime/desktop.c)
+
+extern long cby_desktop_capture str line, str input, int has_input
+extern void cby_desktop_take_text address char dst
+
+// What a program prints, run with its arguments (each after a "\x1f"),
+// and given Input if Has is true: "\x1e" (which nothing prints) if it
+// couldn't be run or didn't work.
+static str printing_run const str &Line, const str &Input, bool Has {
+	int Given = 0
+	if Has {
+		Given = 1
+	}
+	long Length = cby_desktop_capture Line, Input, Given
+	if Length < 0 {
+		return "\x1e"
+	}
+	str Text = " ".repeat Length
+	address char Room = addresses.of_text Text
+	cby_desktop_take_text Room
+	return Text
+}
+
+static list str printing_lines const str &Text {
+	list str Lines
+	if Text is not "" and Text is not "\x1e" {
+		for Line in Text.split "\n" {
+			if Line.trim is not "" {
+				Lines.add Line.trim
+			}
+		}
+	}
+	return Lines
+}
+
+// the first word of each line
+static list str printing_first_words const str &Text {
+	list str Words
+	for Line in printing_lines Text {
+		long Space = Line.find " "
+		if Space < 0 {
+			Words.add Line.copy
+		} else {
+			str Word = Line[to Space - 1]
+			Words.add Word
+		}
+	}
+	return Words
+}
+
+// ---- printers
+
+// the printers this computer knows, by name: ["Brother_HL_L2350DW"]
+list str printing.printers {
+	str Said = printing_run "lpstat\x1f-e", "", false
+	if Said is not "\x1e" {
+		return printing_lines Said
+	}
+	// (an older CUPS's: "printer Office is idle.  enabled since ...")
+	list str Names
+	for Line in printing_lines printing_run("lpstat\x1f-p", "", false) {
+		if Line.starts_with "printer " {
+			str Rest = Line[8 to]
+			long Space = Rest.find " "
+			if Space > 0 {
+				str Name = Rest[to Space - 1]
+				Names.add Name
+			}
+		}
+	}
+	return Names
+}
+
+// the one printed to when none is named ("" if there's none)
+str printing.default_printer {
+	str Said = printing_run "lpstat\x1f-d", "", false
+	long Colon = Said.find ": "
+	if Said.starts_with("no ") or Colon < 0 {
+		return ""
+	}
+	str Name = Said[Colon + 2 to]
+	return Name.trim
+}
+
+// true if there's a printer to print to
+bool printing.can_print {
+	return printing.printers.length > 0
+}
+
+// ---- how to print it
+
+// Which printer, how many copies, on both sides of the paper or not, which
+// pages: for print_with (a printer's own settings for all else)
+object printing.settings {
+	inner str Printer
+	inner long Copies
+	inner str Sides
+	inner str Pages
+	inner bool Landscape
+	inner bool Gray
+	inner str Title
+
+	printing.settings {
+		Copies = 1
+	}
+
+	// to this printer, not the default one
+	void set_printer const str &Name {
+		Printer = Name.copy
+	}
+
+	void set_copies long Count {
+		Copies = Count
+	}
+
+	// on both sides of the paper, turned over as a book's pages are
+	void set_two_sided {
+		Sides = "two-sided-long-edge"
+	}
+
+	// on both sides, turned over as a notepad's (for landscape pages)
+	void set_two_sided_short_edge {
+		Sides = "two-sided-short-edge"
+	}
+
+	// only these pages: "1-3", "2,5,8-10"
+	void set_pages const str &Which {
+		Pages = Which.copy
+	}
+
+	// sideways on the page
+	void set_landscape {
+		Landscape = true
+	}
+
+	// in black and white (gray) on a color printer
+	void set_black_and_white {
+		Gray = true
+	}
+
+	// its name in the printer's list of jobs
+	void set_title const str &Name {
+		Title = Name.copy
+	}
+
+	// (lp's arguments, each after a "\x1f")
+	str arguments const {
+		str Line
+		if Printer is not "" {
+			Line += "\x1f-d\x1f" + Printer
+		}
+		if Copies > 1 {
+			Line += "\x1f-n\x1f" + Copies.text
+		}
+		if Title is not "" {
+			Line += "\x1f-t\x1f" + Title
+		}
+		if Sides is not "" {
+			Line += "\x1f-o\x1fsides=" + Sides
+		}
+		if Pages is not "" {
+			Line += "\x1f-o\x1fpage-ranges=" + Pages
+		}
+		if Landscape {
+			Line += "\x1f-o\x1flandscape"
+		}
+		if Gray {
+			Line += "\x1f-o\x1fprint-color-mode=monochrome"
+		}
+		return Line
+	}
+}
+
+// ---- printing
+
+// the job's name from what lp says: "request id is Office-12 (1 file(s))"
+static str printing_job const str &Said {
+	long At = Said.find "request id is "
+	if At < 0 {
+		return ""
+	}
+	str Rest = Said[At + 14 to]
+	long Space = Rest.find " "
+	if Space < 0 {
+		return Rest.trim
+	}
+	str Job = Rest[to Space - 1]
+	return Job
+}
+
+// Prints a file (a PDF, a picture, text) to the default printer: its job's
+// name, "Office-12", or "" if it didn't go
+str printing.print const str &Path {
+	return printing_job printing_run("lp\x1f--\x1f" + Path, "", false)
+}
+
+// the same, as Settings say
+str printing.print_with const str &Path, const printing.settings &Settings {
+	return printing_job printing_run("lp" + Settings.arguments + "\x1f--\x1f" + Path, "", false)
+}
+
+// prints text, as it is ("\n" between lines)
+str printing.print_text const str &Text {
+	return printing_job printing_run("lp", Text, true)
+}
+
+str printing.print_text_with const str &Text, const printing.settings &Settings {
+	return printing_job printing_run("lp" + Settings.arguments, Text, true)
+}
+
+// ---- jobs: what's waiting to be printed
+
+// the jobs not printed yet: ["Office-12", "Office-13"]
+list str printing.jobs {
+	return printing_first_words printing_run("lpstat\x1f-o", "", false)
+}
+
+// true once a job's printed (or canceled): it's no longer waiting
+bool printing.done const str &Job {
+	for Waiting in printing.jobs {
+		if Waiting is Job {
+			return false
+		}
+	}
+	return true
+}
+
+// stops a job: true if it was stopped
+bool printing.cancel const str &Job {
+	return printing_run("cancel\x1f" + Job, "", false) is not "\x1e"
+}
+
+// stops every job of this person's
+bool printing.cancel_all {
+	return printing_run("cancel\x1f-a", "", false) is not "\x1e"
+}

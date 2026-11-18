@@ -1,0 +1,63 @@
+// Cabby Town: the woods are joined on to the north, the meadow to the
+// east, and the hills to the south.
+//
+// The map comes first, a character for each tile:
+//   T  a tree        ~  water       S  a sign        =  the path
+//   f  flowers       .  grass       H  a house's wall
+//   D  a house's door (the house is drawn there; it can be walked into
+//      if a way out starts there)
+//   #  a wall        ,  the floor   O  an oven       b  a table
+//   M  a doormat
+// Then, after a line of ---, what else is here, a line each:
+//   music <name>                             music/<name>.mid, round and round
+//   sign <col>,<row> <what it says>
+//   way <col>,<row> <area> <col>,<row>       step there, and you're in that
+//                                            area, on that tile
+//   person <col>,<row> <name> <facing> [wanders]
+//                                            pictures/<name>-down.png and so
+//                                            on; "wanders": walks about
+//   item <col>,<row> <name>                  pictures/item-<name>.png, to pick up
+//   join <side> <area> <along>               that area is beyond this one's
+//                                            edge (north, south, east or
+//                                            west), its first tile <along>
+//                                            tiles along this one's edge
+//   name <words>                             the area's name, shown on arriving
+//   watch <col>,<row> <who>                  stepping there makes <who>
+//                                            notice the hero (once)
+//   sees <who> <tiles>                       <who> sees the hero that many
+//                                            tiles in front of them (once)
+//   rival <col>,<row> <facing>               Rufus, there until he's met the hero
+// An area joined on to the north or south should be as wide as this one,
+// and one to the east or west as tall: an area at a corner, next door to
+// two areas next door, is placed beside each, and they should agree (the
+// game says so, if they don't).
+// Columns and rows count from 0, at the top left.
+TTTTTTTT=TTTTTTTTTTTTTTT
+T.......=..............T
+T.f.....=.....f.....f..T
+T.......=..............T
+T..HHH..=......HHH.....T
+T..HDH..=......HDH.....T
+T...=...=........=.....T
+T...====================
+T.......=.......S.......
+T..f....=.........~~~..T
+T.......=....f....~~~..T
+T...T...=.........~~~..T
+T.......=..............T
+T..f....=.....T.....f..T
+T.......=..............T
+TTTTTTTT=TTTTTTTTTTTTTTT
+---
+name Cabby Town
+music town
+join north woods 0
+join east meadow 0
+join south hills 0
+watch 8,1 elder
+sign 16,8 Cabby Town. The bakery is the house to the west.
+sign 16,5 The door is locked.
+way 4,5 bakery 6,7
+person 11,3 elder down wanders
+person 6,9 baker right
+sees baker 3

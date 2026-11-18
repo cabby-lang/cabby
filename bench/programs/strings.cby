@@ -1,0 +1,15 @@
+int main {
+	int n = @N@
+	str s
+	for i in n {
+		s += i.text
+		s += ' '
+	}
+	long Sevens = 0
+	for i in s.length {
+		if s[i] == '7' {
+			Sevens++
+		}
+	}
+	println s.length, Sevens
+}

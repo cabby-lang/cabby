@@ -1,0 +1,27 @@
+#!/bin/sh
+# a stand-in for whisper.cpp's whisper-cli (run_desktop_tests.sh): there
+# only when CABBY_HAVE names it. It checks it was given what Whisper hears
+# (a WAV file, 16000 samples a second, one channel), says what it was
+# asked into the test's state, and "hears" two parts, as Whisper prints
+# them (a space before each).
+me=$(basename "$0")
+case ",$CABBY_HAVE," in *",$me,"*) ;; *) exit 127 ;; esac
+[ "$1" = --help ] && exit 0
+model= file= lang=
+while [ $# -gt 0 ]; do
+	case "$1" in -m) model=$2; shift ;; -f) file=$2; shift ;; -l) lang=$2; shift ;; esac
+	shift
+done
+[ -f "$model" ] || { echo "error: failed to open '$model'" >&2; exit 3; }
+head=$(od -An -tx1 -N36 "$file" | tr -d ' \n')
+case "$head" in 52494646*57415645*) ;; *) echo "error: not a WAV file" >&2; exit 2 ;; esac
+rate=$(od -An -tu4 -j24 -N4 "$file" | tr -d ' ')
+chans=$(od -An -tu2 -j22 -N2 "$file" | tr -d ' ')
+echo "$me model=$(basename "$model") lang=$lang rate=$rate channels=$chans" >> "$CABBY_TEST_STATE/admin.log"
+if [ "$lang" = la ]; then
+	echo " Gallia est omnis divisa"
+	echo " in partes tres."
+else
+	echo " Hello there."
+	echo " The lesson is at four."
+fi

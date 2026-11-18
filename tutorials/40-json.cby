@@ -1,0 +1,117 @@
+// Tutorial 40: JSON
+//
+// Run it:      cabby 40-json.cby
+// Or compile:  cabby -c 40-json.cby && ./41-json
+// Library:     use json
+// Topics:      json.read, J["name"], J[i], .str .double .long .bool, the _or
+//              forms, for Item in J, building JSON, .text and .pretty, and
+//              structs to and from JSON (json.from, .fill)
+//
+// JSON is how most programs pass data to each other as text: web services
+// answer in it, and programs keep their settings in it. This one reads a
+// small music library, works something out from it, and writes some JSON
+// of its own.
+
+use json
+use files
+
+// A song as the program keeps it. json.from and .fill go between it and
+// JSON by the fields' names: Title is "title" in JSON.
+struct song {
+	str Title
+	int Seconds
+	int Stars
+}
+
+int main {
+	// What a file or a web service might hold. Inside a Cabby string, each "
+	// is written \"; usually the text comes from files.read instead.
+	str Text = "{\"owner\": \"Sam\", \"songs\": ["
+	Text += "{\"title\": \"Blue Moon\", \"seconds\": 214, \"stars\": 5}, "
+	Text += "{\"title\": \"Night Train\", \"seconds\": 187}, "
+	Text += "{\"title\": \"Rain\", \"seconds\": 241, \"stars\": 3}]}"
+	files.write "library.json", Text
+
+	json Library = json.read files.read "library.json"
+	println Library["owner"].str + "'s library has", Library["songs"].length, "songs"
+
+	// ---- going through a list
+	long Total = 0
+	for Song in Library["songs"] {
+		long Stars = Song["stars"].long_or 0      // not every song has stars
+		println " ", Song["title"].str, "-", Song["seconds"].long, "seconds,", Stars, "stars"
+		Total += Song["seconds"].long
+	}
+	println "Altogether:", Total / 60, "minutes", Total % 60, "seconds"
+
+	// ---- checking before reading
+	json First = Library["songs"][0]
+	if First.has "stars" {
+		println First["title"].str, "is rated"
+	}
+	println "Is there an album?", Library.has("album")
+
+	// ---- changing it
+	Library["songs"][1]["stars"] = 4                 // a value inside, changed where it is
+	Library["checked"] = true
+
+	// ---- making JSON of our own
+	json Summary = json.lookup
+	Summary["owner"] = Library["owner"].str
+	Summary["minutes"] = Total / 60.0
+	json Titles = json.list
+	for Song in Library["songs"] {
+		Titles.add Song["title"].str
+	}
+	Summary["titles"] = Titles
+	println Summary                                   // on one line, for sending
+	files.write "summary.json", Summary.pretty         // indented, for people
+	println files.read "summary.json"
+
+	// ---- structs: the songs, filled in from the JSON
+	list song Songs
+	for Item in Library["songs"] {
+		song S
+		S.Stars = 1                         // what a song without stars gets
+		Item.fill S                         // each field by its name
+		Songs.add S
+	}
+	Songs[2].Title = "Rain (live)"
+	for S in Songs {
+		println S.Title, S.Seconds, S.Stars
+	}
+	println json.from Songs[2]                // and back to JSON
+	files.delete "library.json"
+	files.delete "summary.json"
+	return 0
+}
+
+// Try this:
+//  - Add a song with no title, and make the program show
+//    "(no title)" for it instead of panicking.
+//  - Save some settings of your own to a file, with a struct and
+//    `json.from(...).pretty`, and read them back with `.fill` the next time
+//    the program runs.
+
+// ---------------------------------------------------------------- output
+//> Sam's library has 3 songs
+//>   Blue Moon - 214 seconds, 5 stars
+//>   Night Train - 187 seconds, 0 stars
+//>   Rain - 241 seconds, 3 stars
+//> Altogether: 10 minutes 42 seconds
+//> Blue Moon is rated
+//> Is there an album? false
+//> {"owner":"Sam","minutes":10.7,"titles":["Blue Moon","Night Train","Rain"]}
+//> {
+//>   "owner": "Sam",
+//>   "minutes": 10.7,
+//>   "titles": [
+//>     "Blue Moon",
+//>     "Night Train",
+//>     "Rain"
+//>   ]
+//> }
+//> Blue Moon 214 5
+//> Night Train 187 4
+//> Rain (live) 241 3
+//> {"title":"Rain (live)","seconds":241,"stars":3}

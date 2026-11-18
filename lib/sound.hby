@@ -1,0 +1,1048 @@
+// sound.hby — sound files, notes and MIDI files.
+//
+//     use sound
+//
+//     sound.play "boom.wav"                   plays a sound file, once
+//     sound.play_music "theme.mp3"            music, round and round
+//     sound.play_note "A4", 500               a note, for half a second
+//     sound.play_notes "C4 D4 E4 F4 G4", 300  a tune, a note at a time
+//     sound.play_midi "song.mid"              a MIDI file
+//     sound.wait                              until they've all finished
+//
+//     sound.part Tune                         a song, written as MIDI:
+//     Tune.notes "E4 D4 C4:2", 1              parts of notes, in beats,
+//     sound.song Song                         put together in a song
+//     Song.add Tune
+//     Song.save "tune.mid"
+//
+//     sound.recording Take = sound.record     records from the microphone,
+//     Take.stop                               or an audio interface,
+//     Take.save "take.wav"                    until stop
+//     sound.set_monitoring true               (and heard as it's recorded)
+//
+//     sound.keyboard K = sound.open_keyboard  a MIDI keyboard: its notes
+//     K.play_through "piano"                  heard at once, and told to
+//     K.on_note played                        a handler (K.note, K.velocity)
+//     sound.synthesizer S = sound.open_synthesizer   and a synthesizer,
+//     S.play_note "C4", 500                   sent notes to play
+//
+// Everything plays at once, mixed together, and the program goes straight
+// on: playing doesn't wait. A program that only plays sounds should end
+// with sound.wait, or it ends before they're heard.
+//
+// Sound files can be WAV, MP3 or FLAC. Notes and MIDI files are played with
+// a SoundFont's instruments: the one installed on the computer (FluidR3,
+// "soundfont-fluid" on Arch, "fluid-soundfont-gm" on Debian), or any .sf2
+// given to sound.set_soundfont. Without one, a simple synthesizer of
+// Cabby's own plays them.
+//
+// The full reference is sound.md, next to this file.
+
+// ---- the C side (runtime/sound.c); use the functions below instead
+
+extern void cby_sound_play str path
+extern long cby_sound_load str path
+extern void cby_sound_track_play long track
+extern void cby_sound_track_pause long track
+extern void cby_sound_track_stop long track
+extern void cby_sound_track_set_looping long track, int on
+extern void cby_sound_track_set_volume long track, double volume
+extern int cby_sound_track_playing long track
+extern double cby_sound_track_seconds long track
+extern double cby_sound_track_position long track
+extern void cby_sound_track_move_to long track, double seconds
+extern void cby_sound_track_close long track
+extern void cby_sound_play_music str path
+extern void cby_sound_stop_music void
+extern void cby_sound_set_music_volume double volume
+extern double cby_sound_music_volume void
+extern void cby_sound_fade_out_music long ms
+extern void cby_sound_change_music str path, long ms
+extern void cby_sound_crossfade_music str path, long ms
+extern void cby_sound_set_effects_volume double volume
+extern double cby_sound_effects_volume void
+extern void cby_sound_set_instrument str name
+extern void cby_sound_set_note_volume double volume
+extern void cby_sound_play_note str name, int ms
+extern void cby_sound_start_note str name
+extern void cby_sound_stop_note str name
+extern void cby_sound_chord_note str name, int ms
+extern void cby_sound_chord_end void
+extern void cby_sound_play_notes str tune, int ms
+extern void cby_sound_play_midi str path
+extern void cby_sound_stop_midi void
+extern void cby_sound_set_soundfont str path
+extern long cby_sound_soundfont_length void
+extern char cby_sound_soundfont_char long i
+extern void cby_sound_set_volume double volume
+extern void cby_sound_stop void
+extern int cby_sound_busy void
+extern void cby_sound_wait void
+extern double cby_sound_time void
+extern void cby_sound_song_start double tempo, long top, long bottom, double beats
+extern void cby_sound_song_part str instrument
+extern void cby_sound_song_note long key, double beat, double beats, double volume
+extern void cby_sound_song_save str path
+extern void cby_sound_song_play void
+extern long cby_sound_song_read str path
+extern double cby_sound_read_tempo void
+extern long cby_sound_read_top void
+extern long cby_sound_read_bottom void
+extern double cby_sound_read_beats void
+extern long cby_sound_read_instrument long part
+extern char cby_sound_read_text_char long i
+extern long cby_sound_read_notes long part
+extern long cby_sound_read_key long part, long i
+extern double cby_sound_read_beat long part, long i
+extern double cby_sound_read_length long part, long i
+extern double cby_sound_read_volume long part, long i
+extern long cby_sound_note_key str name
+extern void cby_sound_check_instrument str name
+extern void cby_sound_panic str message
+extern long cby_sound_record void
+extern long cby_sound_record_from str name
+extern void cby_sound_recording_stop long id
+extern void cby_sound_recording_pause long id
+extern void cby_sound_recording_resume long id
+extern int cby_sound_recording_going long id
+extern double cby_sound_recording_seconds long id
+extern double cby_sound_recording_level long id
+extern void cby_sound_recording_save long id, str path
+extern void cby_sound_to_wav str from, str into, long rate, long channels
+extern void cby_sound_recording_play long id
+extern void cby_sound_recording_trim long id
+extern void cby_sound_recording_close long id
+extern void cby_sound_set_recording_channels long n
+extern void cby_sound_set_recording_bits long n
+extern void cby_sound_set_recording_delay long ms
+extern long cby_sound_inputs void
+extern char cby_sound_inputs_char long i
+
+// ---- sound files
+
+// plays a sound file (WAV, MP3 or FLAC) once; as often as it's called,
+// even over itself
+// A sound file (WAV, MP3, FLAC, Ogg Vorbis) saved again as a WAV file, of
+// 16-bit samples, so many a second in so many channels: 44100 and 2 as a
+// CD has it; 16000 and 1, as speech recognition hears it.
+void sound.convert_to_wav const str &From, const str &To, int Rate, int Channels {
+	cby_sound_to_wav From, To, Rate, Channels
+}
+
+void sound.play const str &Path {
+	cby_sound_play Path
+}
+
+// plays music: a sound file or a MIDI file, round and round, until
+// stop_music (another play_music changes the music)
+void sound.play_music const str &Path {
+	cby_sound_play_music Path
+}
+
+void sound.stop_music {
+	cby_sound_stop_music
+}
+
+// how loud the music is, from 0 to 1 (effects and notes stay as they are)
+void sound.set_music_volume double Volume {
+	cby_sound_set_music_volume Volume
+}
+
+double sound.music_volume {
+	return cby_sound_music_volume()
+}
+
+// how loud sound.play's sounds are, from 0 to 1 (music and notes stay as
+// they are): with set_music_volume, a game's two volume sliders
+void sound.set_effects_volume double Volume {
+	cby_sound_set_effects_volume Volume
+}
+
+double sound.effects_volume {
+	return cby_sound_effects_volume()
+}
+
+// the music gets quieter, over that many milliseconds, and stops
+void sound.fade_out_music int Ms {
+	cby_sound_fade_out_music Ms
+}
+
+// other music: the music playing fades out over that many milliseconds,
+// then the new music starts. If that music is playing already, it goes
+// on; with no music playing, the new music starts at once.
+void sound.change_music const str &Path, int Ms {
+	cby_sound_change_music Path, Ms
+}
+
+// other music, the two together for a moment: the new music gets louder
+// over that many milliseconds while the old gets quieter
+void sound.crossfade_music const str &Path, int Ms {
+	cby_sound_crossfade_music Path, Ms
+}
+
+// A sound file to control: play, pause, loop, its volume, where it's up to.
+object sound.track {
+	long Id
+
+	void play const {
+		cby_sound_track_play Id
+	}
+
+	// stops where it is: play goes on from there
+	void pause const {
+		cby_sound_track_pause Id
+	}
+
+	// stops, and goes back to the start
+	void stop const {
+		cby_sound_track_stop Id
+	}
+
+	// round and round (true), or once (false: the start)
+	void set_looping bool On const {
+		cby_sound_track_set_looping Id, On
+	}
+
+	// 1 as it is, 0.5 half as loud, 0 silent
+	void set_volume double Volume const {
+		cby_sound_track_set_volume Id, Volume
+	}
+
+	bool playing const {
+		return cby_sound_track_playing(Id) != 0
+	}
+
+	// how long it is, in seconds
+	double seconds const {
+		return cby_sound_track_seconds Id
+	}
+
+	// where it's up to, in seconds from the start
+	double position const {
+		return cby_sound_track_position Id
+	}
+
+	void move_to double Seconds const {
+		cby_sound_track_move_to Id, Seconds
+	}
+
+	~track {
+		cby_sound_track_close Id
+	}
+}
+
+// a sound file, ready to play: sound.track Song = sound.load "song.mp3"
+sound.track sound.load const str &Path {
+	return sound.track{.Id = cby_sound_load(Path)}
+}
+
+// ---- notes: "C4" is middle C, "A4" the A above it (440 Hz); sharps with #,
+// flats with b: "F#3", "Bb5"
+
+// what the notes are played with: "piano" to begin with; "guitar",
+// "violin", "flute", "drums" ... (sound.md has the list), or a General MIDI
+// instrument's number, from 1 to 128
+void sound.set_instrument const str &Instrument {
+	cby_sound_set_instrument Instrument
+}
+
+// how loud the notes are, from 0 to 1 (0.8 to begin with)
+void sound.set_note_volume double Volume {
+	cby_sound_set_note_volume Volume
+}
+
+// plays a note for Ms milliseconds
+void sound.play_note const str &Note, int Ms {
+	cby_sound_play_note Note, Ms
+}
+
+// starts a note, which goes on until stop_note: for a key held down
+void sound.start_note const str &Note {
+	cby_sound_start_note Note
+}
+
+// ends a note start_note started (on the instrument it started with)
+void sound.stop_note const str &Note {
+	cby_sound_stop_note Note
+}
+
+// plays the notes together: sound.play_chord {"C4", "E4", "G4"}, 1000
+void sound.play_chord const list str &Notes, int Ms {
+	for Note in Notes {
+		cby_sound_chord_note Note, Ms
+	}
+	cby_sound_chord_end
+}
+
+// plays the notes one after another, each Ms milliseconds; "-" is a rest:
+// sound.play_notes "E4 D4 C4 - E4 D4 C4", 400. A tune played straight
+// after another follows on after it.
+void sound.play_notes const str &Tune, int Ms {
+	cby_sound_play_notes Tune, Ms
+}
+
+// ---- MIDI files
+
+void sound.play_midi const str &Path {
+	cby_sound_play_midi Path
+}
+
+void sound.stop_midi {
+	cby_sound_stop_midi
+}
+
+// the SoundFont (.sf2) to play notes and MIDI files with
+void sound.set_soundfont const str &Path {
+	cby_sound_set_soundfont Path
+}
+
+// the SoundFont being used ("" if there's none: Cabby's own synthesizer
+// plays the notes)
+str sound.soundfont {
+	str s
+	for i in cby_sound_soundfont_length {
+		s += cby_sound_soundfont_char i
+	}
+	return s
+}
+
+// ---- all of it
+
+// how loud everything is: 1 as it is, 0.5 half as loud, 0 silent
+void sound.set_volume double Volume {
+	cby_sound_set_volume Volume
+}
+
+// stops everything playing
+void sound.stop {
+	cby_sound_stop
+}
+
+// whether anything is playing that will end (music that loops doesn't count)
+bool sound.busy {
+	return cby_sound_busy() != 0
+}
+
+// waits until everything playing has finished (music that loops goes on)
+void sound.wait {
+	cby_sound_wait
+}
+
+// how long sound has been playing, in seconds, since the first sound
+double sound.time {
+	return cby_sound_time
+}
+
+// ---- songs: written as MIDI files, a part at a time
+//
+//     sound.part Tune
+//     Tune.set_instrument "flute"
+//     Tune.notes "E4 D4 C4:2 - E4 D4 C4:2", 1    a beat each, but C4:2 two
+//     sound.song Song
+//     Song.set_tempo 100                          beats a minute
+//     Song.add Tune
+//     Song.save "tune.mid"
+
+// one note of a part: when it starts, and how long it lasts, in beats
+object sound.note {
+	long Key                        // its MIDI number: 60 is middle C ("C4")
+	double Beat                     // when it starts, in beats from the start
+	double Beats                    // how long it's held
+	double Volume                   // from 0 to 1
+
+	// its name: "C4", "F#3"
+	str name const {
+		list str Letters = {"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"}
+		return Letters[Key % 12] + (Key / 12 - 1).text
+	}
+}
+
+// one instrument's notes, one after another, or wherever they're put
+object sound.part {
+	list sound.note Notes
+	inner str Instrument
+	inner double Next               // the beat the next note goes on
+	inner double Loudness
+	inner bool LoudnessSet
+	inner double Gap                // how much of each note's time is silent
+
+	// what the part is played with: "piano" to begin with (sound.md has
+	// the names), or "drums", where each note is a drum
+	void set_instrument const str &Name {
+		cby_sound_check_instrument Name
+		Instrument = Name.copy
+	}
+
+	str instrument const {
+		if Instrument == "" {
+			return "piano"
+		}
+		return Instrument.copy
+	}
+
+	// how loud the notes after this are, from 0 to 1 (0.8 to begin with)
+	void set_volume double Volume {
+		Loudness = Volume
+		if Volume < 0 {
+			Loudness = 0
+		} else if Volume > 1 {
+			Loudness = 1
+		}
+		LoudnessSet = true
+	}
+
+	double volume const {
+		if LoudnessSet {
+			return Loudness
+		}
+		return 0.8
+	}
+
+	// how much of its time each note after this is held: 1 to the next
+	// note (to begin with), 0.9 a little apart, 0.5 short
+	void set_held double Part {
+		Gap = 1 - Part
+		if Part < 0.05 {
+			Gap = 0.95
+		} else if Part > 1 {
+			Gap = 0
+		}
+	}
+
+	// a note, Beats long, after the last one
+	void note const str &Note, double Beats {
+		note_at Note, Next, Beats
+		Next += Beats
+	}
+
+	// notes one after another, each Beats long: "E4 D4 C4"; one with
+	// its own length after a colon: "C4:2"; - is a rest: "- -:0.5"
+	void notes const str &Tune, double Beats {
+		for Word in Tune.replace("\n", " ").replace("\t", " ").split " " {
+			if Word == "" {
+				continue
+			}
+			list str Pieces = Word.split ":"
+			double Length = Beats
+			if Pieces.length > 1 {
+				Length = Pieces[1].to_double
+			}
+			if Pieces[0] == "-" {
+				rest Length
+			} else {
+				note Pieces[0], Length
+			}
+		}
+	}
+
+	// notes together, Beats long, after the last one
+	void chord const list str &Chord, double Beats {
+		for Note in Chord {
+			note_at Note, Next, Beats
+		}
+		Next += Beats
+	}
+
+	// silence, Beats long
+	void rest double Beats {
+		Next += Beats
+	}
+
+	// a note at that beat (0 is the start), Beats long; the next note
+	// still goes after the last
+	void note_at const str &Note, double Beat, double Beats {
+		double Held = Beats * (1 - Gap)
+		double Volume = volume()
+		Notes.add sound.note{.Key = cby_sound_note_key(Note), .Beat = Beat, .Beats = Held, .Volume = Volume}
+	}
+
+	// the beat the next note goes on
+	double beat const {
+		return Next
+	}
+
+	// where the next note goes from now on
+	void move_to double Beat {
+		Next = Beat
+	}
+
+	// how long the part is, in beats: to where the next note would go,
+	// or the end of its last note, whichever is later
+	double beats const {
+		double Longest = Next
+		for Each in Notes {
+			if Each.Beat + Each.Beats > Longest {
+				Longest = Each.Beat + Each.Beats
+			}
+		}
+		return Longest
+	}
+
+	// every note higher (or, below 0, lower) by that many half steps
+	void transpose int Steps {
+		if Instrument == "drums" {
+			return                      // (a drum's a drum, whatever its note)
+		}
+		for I in Notes.length {
+			Notes[I].Key += Steps
+			if Notes[I].Key < 0 || Notes[I].Key > 127 {
+				cby_sound_panic "transposed by " + Steps.text + ", a note would be too high or too low to play"
+			}
+		}
+	}
+}
+
+// parts played together, at a tempo: saved as a MIDI file, or played
+object sound.song {
+	list sound.part Parts
+	inner double Tempo
+	inner long Top
+	inner long Bottom
+
+	// beats a minute (120 to begin with)
+	void set_tempo double Beats {
+		if Beats <= 0 {
+			cby_sound_panic "a tempo is beats a minute, more than 0"
+		}
+		Tempo = Beats
+	}
+
+	double tempo const {
+		if Tempo == 0 {
+			return 120
+		}
+		return Tempo
+	}
+
+	// the time signature: 3, 4 is three beats a bar, each a crotchet (4/4
+	// to begin with). It's written into the file, for programs that show
+	// bars; the beats are still beats.
+	void set_time_signature int Beats, int Note {
+		if Beats < 1 || (Note != 1 && Note != 2 && Note != 4 && Note != 8 && Note != 16 && Note != 32) {
+			cby_sound_panic "a time signature is beats in a bar, and a note of 1, 2, 4, 8, 16 or 32: 3, 4"
+		}
+		Top = Beats
+		Bottom = Note
+	}
+
+	// "3/4"
+	str time_signature const {
+		if Top == 0 {
+			return "4/4"
+		}
+		return Top.text + "/" + Bottom.text
+	}
+
+	// a part, moved into the song: Song.Parts[0] is the first
+	void add sound.part Part {
+		Parts.add Part
+	}
+
+	// how long it is, in beats: its longest part
+	double beats const {
+		double Longest = 0
+		for Part in Parts {
+			if Part.beats > Longest {
+				Longest = Part.beats
+			}
+		}
+		return Longest
+	}
+
+	// how long it is, in seconds, at its tempo
+	double seconds const {
+		return beats() * 60 / tempo()
+	}
+
+	// every part (but the drums) higher, or lower, by that many half steps
+	void transpose int Steps {
+		for I in Parts.length {
+			Parts[I].transpose Steps
+		}
+	}
+
+	// saves it as a MIDI file (.mid)
+	void save const str &Path const {
+		send
+		cby_sound_song_save Path
+	}
+
+	// plays it, as play_midi plays a file (stop_midi stops it)
+	void play const {
+		send
+		cby_sound_song_play
+	}
+
+	// (the song, to sound's C side)
+	inner void send const {
+		cby_sound_song_start tempo(), Top, Bottom, beats()
+		for Part in Parts {
+			cby_sound_song_part Part.instrument
+			for Each in Part.Notes {
+				cby_sound_song_note Each.Key, Each.Beat, Each.Beats, Each.Volume
+			}
+		}
+	}
+}
+
+// plays a song, as play_midi plays a file (stop_midi stops it)
+void sound.play_song const sound.song &Song {
+	Song.play
+}
+
+// a MIDI file, read into a song: a part for each instrument in it, to
+// change and save again, or play
+sound.song sound.read_song const str &Path {
+	sound.song Song
+	long Count = cby_sound_song_read Path
+	Song.set_tempo cby_sound_read_tempo()
+	Song.set_time_signature (int)cby_sound_read_top(), (int)cby_sound_read_bottom()
+	for P in Count {
+		sound.part Part
+		str Instrument
+		for I in cby_sound_read_instrument P {
+			Instrument += cby_sound_read_text_char I
+		}
+		Part.set_instrument Instrument
+		for I in cby_sound_read_notes P {
+			Part.Notes.add sound.note{.Key = cby_sound_read_key(P, I), .Beat = cby_sound_read_beat(P, I), .Beats = cby_sound_read_length(P, I), .Volume = cby_sound_read_volume(P, I)}
+		}
+		Part.move_to cby_sound_read_beats()
+		Song.add Part
+	}
+	return Song
+}
+
+// ---- recording, from a microphone or an audio interface
+//
+//     sound.recording Take = sound.record
+//     ...
+//     Take.stop
+//     Take.save "take-1.wav"
+
+// what's being recorded, or was: kept in memory until it's saved
+object sound.recording {
+	long Id
+
+	// stops recording (it can't go on afterwards: record again for more)
+	void stop const {
+		cby_sound_recording_stop Id
+	}
+
+	// stops for a while, and goes on with resume
+	void pause const {
+		cby_sound_recording_pause Id
+	}
+
+	void resume const {
+		cby_sound_recording_resume Id
+	}
+
+	// whether it's recording now (not stopped, or paused)
+	bool recording const {
+		return cby_sound_recording_going(Id) != 0
+	}
+
+	// how long it is, in seconds
+	double seconds const {
+		return cby_sound_recording_seconds Id
+	}
+
+	// how loud it's coming in now, from 0 to 1: for a meter
+	double level const {
+		return cby_sound_recording_level Id
+	}
+
+	// saves it as a WAV file: 24 bits (or 16: sound.set_recording_bits)
+	void save const str &Path const {
+		cby_sound_recording_save Id, Path
+	}
+
+	// plays it, as sound.play plays a file
+	void play const {
+		cby_sound_recording_play Id
+	}
+
+	// cuts off the quiet before the first sound and after the last
+	void trim_silence const {
+		cby_sound_recording_trim Id
+	}
+
+	~recording {
+		cby_sound_recording_close Id
+	}
+}
+
+// starts recording, from the computer's usual input
+sound.recording sound.record {
+	return sound.recording{.Id = cby_sound_record()}
+}
+
+// starts recording from the input with that name (or part of it):
+// sound.record_from "Scarlett"
+sound.recording sound.record_from const str &Input {
+	return sound.recording{.Id = cby_sound_record_from(Input)}
+}
+
+// the inputs there are to record from, by name
+list str sound.inputs {
+	str Text
+	for I in cby_sound_inputs {
+		Text += cby_sound_inputs_char I
+	}
+	list str Names
+	if Text != "" {
+		Names = Text.split "\n"
+	}
+	return Names
+}
+
+// 1 (mono, to begin with) or 2 (stereo): for the recordings after it
+void sound.set_recording_channels int Channels {
+	cby_sound_set_recording_channels Channels
+}
+
+// recordings are saved with 24 bits (to begin with), or 16, as a CD is
+void sound.set_recording_bits int Bits {
+	cby_sound_set_recording_bits Bits
+}
+
+// how far a recording is moved earlier, to be in time with what was
+// playing while it was made, in milliseconds. To begin with, it's worked
+// out from the devices; set it if a recording is early or late.
+void sound.set_recording_delay int Ms {
+	cby_sound_set_recording_delay Ms
+}
+
+// ---- hearing the input as it's recorded (monitoring)
+
+extern void cby_sound_set_monitoring int on
+extern int cby_sound_monitoring void
+extern void cby_sound_set_monitor_volume double volume
+extern double cby_sound_monitor_volume void
+
+// Hears what's being recorded as it comes in, through the speakers or
+// headphones, mixed with what's playing: for a computer without an audio
+// interface that does it. Turn it on before sound.record for the shortest
+// wait (a few milliseconds and the system's own). Headphones, not
+// speakers, with a microphone: or the microphone hears itself.
+void sound.set_monitoring bool On {
+	int Flag = 0
+	if On {
+		Flag = 1
+	}
+	cby_sound_set_monitoring Flag
+}
+
+bool sound.monitoring {
+	return cby_sound_monitoring() != 0
+}
+
+// how loud the input is heard, from 0 to 1 (1 to begin with)
+void sound.set_monitor_volume double Volume {
+	cby_sound_set_monitor_volume Volume
+}
+
+double sound.monitor_volume {
+	return cby_sound_monitor_volume()
+}
+
+// ---- MIDI keyboards and synthesizers (runtime/midi.c)
+
+extern long cby_midi_names int outputs
+extern char cby_midi_given_char long i
+extern long cby_midi_open_input str name
+extern long cby_midi_input_name long id
+extern void cby_midi_on long id, long which, handler h
+extern long cby_midi_current long id, long what
+extern void cby_midi_play_through long id, str instrument
+extern void cby_midi_send_to long id, long out
+extern void cby_midi_input_close long id
+extern long cby_midi_open_output str name
+extern long cby_midi_output_name long id
+extern void cby_midi_send long id, long status, long a, long b
+extern void cby_midi_send_later long id, long ms, long status, long a, long b
+extern void cby_midi_output_close long id
+extern long cby_midi_program_of str instrument
+
+static str sound_midi_given long Length {
+	str Text
+	for I in Length {
+		Text += cby_midi_given_char I
+	}
+	return Text
+}
+
+static list str sound_midi_list int Outputs {
+	str Text = sound_midi_given(cby_midi_names(Outputs))
+	list str Names
+	if Text != "" {
+		Names = Text.split "\n"
+	}
+	return Names
+}
+
+// the MIDI keyboards (and drum pads, and controllers) connected, by name
+list str sound.midi_inputs {
+	return sound_midi_list(0)
+}
+
+// the MIDI synthesizers connected (and programs that play MIDI, as
+// FluidSynth does), by name
+list str sound.midi_outputs {
+	return sound_midi_list(1)
+}
+
+// a MIDI note number as a note's name: 60 is "C4" (middle C), 61 "C#4"
+str sound.note_name long Key {
+	str Names = "C C#D D#E F F#G G#A A#B "
+	int At = (int)(Key % 12) * 2
+	return Names[At to At + 1].trim + (Key / 12 - 1).text
+}
+
+// A MIDI keyboard, or anything else that sends MIDI: what's played on it
+// is told to the program's handlers, from the event loop (events.run, a
+// window's run), and can be heard at once through one of sound's
+// instruments.
+object sound.keyboard {
+	long Id
+	handler NoteHandler
+	handler ControlHandler
+	handler BendHandler
+
+	// its name, as sound.midi_inputs has it
+	str name const {
+		return sound_midi_given(cby_midi_input_name(Id))
+	}
+
+	// Calls h for each key pressed or let go: pressed, key, note and
+	// velocity say which, and how hard.
+	void on_note handler h {
+		NoteHandler = h
+		cby_midi_on Id, 0, say_note
+	}
+
+	// calls h when a pedal, knob, slider or wheel moves: control and value
+	// say which, and where it is (the sustain pedal is control 64)
+	void on_control handler h {
+		ControlHandler = h
+		cby_midi_on Id, 1, say_control
+	}
+
+	// calls h when the pitch-bend wheel moves: bend says where it is
+	void on_bend handler h {
+		BendHandler = h
+		cby_midi_on Id, 2, say_bend
+	}
+
+	// (what the C side calls)
+	void say_note {
+		NoteHandler.call
+	}
+
+	void say_control {
+		ControlHandler.call
+	}
+
+	void say_bend {
+		BendHandler.call
+	}
+
+	// ---- in the handlers
+
+	// true for a key pressed, false for one let go
+	bool pressed const {
+		return cby_midi_current(Id, 0) != 0
+	}
+
+	// which key, as a MIDI note number: 60 for middle C
+	int key const {
+		return (int)cby_midi_current(Id, 1)
+	}
+
+	// which key, as a note's name: "C4" for middle C
+	str note const {
+		return sound.note_name(key)
+	}
+
+	// how hard it was pressed, from 1 to 127 (0 for a key let go)
+	int velocity const {
+		return (int)cby_midi_current(Id, 2)
+	}
+
+	// the MIDI channel it came on, from 1 to 16 (most keyboards send on 1)
+	int channel const {
+		return (int)cby_midi_current(Id, 3)
+	}
+
+	// the control that moved (1 the modulation wheel, 7 volume, 64 the
+	// sustain pedal...), and where it is now, from 0 to 127
+	int control const {
+		return (int)cby_midi_current(Id, 4)
+	}
+
+	int value const {
+		return (int)cby_midi_current(Id, 5)
+	}
+
+	// where the pitch-bend wheel is, from -8192 (all the way down) to 8191
+	// (0: the middle)
+	int bend const {
+		return (int)cby_midi_current(Id, 6)
+	}
+
+	// ---- playing
+
+	// Plays what's played on it through one of sound's instruments
+	// ("piano", "strings"...), heard at once, whatever the program is
+	// doing: the pedal and the bend wheel too.
+	void play_through const str &Instrument const {
+		cby_midi_play_through Id, Instrument
+	}
+
+	void stop_playing_through const {
+		cby_midi_play_through Id, ""
+	}
+
+	// sends what's played straight on to a synthesizer, as it's played
+	void send_to const sound.synthesizer &Synthesizer const {
+		cby_midi_send_to Id, Synthesizer.Id
+	}
+
+	void stop_sending const {
+		cby_midi_send_to Id, 0
+	}
+
+	// stops listening to it (as dropping it does)
+	void close const {
+		cby_midi_input_close Id
+	}
+
+	~keyboard {
+		cby_midi_input_close Id
+	}
+}
+
+// the first MIDI keyboard connected; none is a panic that says so
+sound.keyboard sound.open_keyboard {
+	return sound.keyboard{.Id = cby_midi_open_input("")}
+}
+
+// the keyboard with that name (or part of it): "Keystation"
+sound.keyboard sound.open_keyboard_named const str &Name {
+	return sound.keyboard{.Id = cby_midi_open_input(Name)}
+}
+
+// A MIDI synthesizer, or anything else that plays MIDI (a keyboard's own
+// sounds, FluidSynth): sent notes to play, on a channel (1 to begin with).
+object sound.synthesizer {
+	long Id
+	int Channel
+	int Velocity
+
+	// its name, as sound.midi_outputs has it
+	str name const {
+		return sound_midi_given(cby_midi_output_name(Id))
+	}
+
+	// the channel to play on, from 1 to 16 (10 is the drums')
+	void set_channel int Number {
+		if Number < 1 or Number > 16 {
+			cby_sound_panic "a MIDI channel is from 1 to 16, not " + Number.text
+		}
+		Channel = Number - 1
+	}
+
+	// how hard the notes after it are played, from 1 to 127 (100 to begin
+	// with)
+	void set_velocity int Amount {
+		if Amount < 1 or Amount > 127 {
+			cby_sound_panic "a velocity is from 1 to 127, not " + Amount.text
+		}
+		Velocity = Amount
+	}
+
+	// Its sound, by the same names as sound.set_instrument's ("piano",
+	// "strings", a General MIDI number from 1 to 128): sent as a program
+	// change. "drums" plays on channel 10, as MIDI's drums are.
+	void set_instrument const str &Instrument {
+		long Program = cby_midi_program_of(Instrument)
+		if Program == -2 {
+			Channel = 9
+			return
+		}
+		if Channel == 9 {
+			Channel = 0
+		}
+		cby_midi_send Id, 192 + Channel, Program, 0
+	}
+
+	// a note held until stop_note: "C4", "F#3"
+	void start_note const str &Note const {
+		start_key (int)cby_sound_note_key(Note)
+	}
+
+	void stop_note const str &Note const {
+		stop_key (int)cby_sound_note_key(Note)
+	}
+
+	// a note for a while, in milliseconds (the program goes straight on)
+	void play_note const str &Note, int Ms const {
+		int Key = (int)cby_sound_note_key(Note)
+		start_key Key
+		cby_midi_send_later Id, Ms, 128 + Channel, Key, 0
+	}
+
+	// the same by MIDI note number (60 is middle C): for a keyboard's
+	// key, say, played an octave up
+	void start_key int Key const {
+		cby_midi_send Id, 144 + Channel, Key, Velocity
+	}
+
+	void stop_key int Key const {
+		cby_midi_send Id, 128 + Channel, Key, 0
+	}
+
+	// a control: 7 volume, 10 pan, 64 the sustain pedal (127 down, 0 up)...
+	void set_control int Number, int Value const {
+		cby_midi_send Id, 176 + Channel, Number, Value
+	}
+
+	// the pitch bend, from -8192 to 8191 (0: none)
+	void bend int Amount const {
+		int V = Amount + 8192
+		if V < 0 {
+			V = 0
+		} else if V > 16383 {
+			V = 16383
+		}
+		cby_midi_send Id, 224 + Channel, V % 128, V / 128
+	}
+
+	// every note let go, on every channel
+	void stop const {
+		for C in 16 {
+			cby_midi_send Id, 176 + C, 64, 0
+			cby_midi_send Id, 176 + C, 123, 0
+		}
+	}
+
+	// notes still to be let go are let go, and it's closed (as dropping it does)
+	void close const {
+		cby_midi_output_close Id
+	}
+
+	~synthesizer {
+		cby_midi_output_close Id
+	}
+}
+
+// the first MIDI synthesizer connected; none is a panic that says so
+sound.synthesizer sound.open_synthesizer {
+	return sound.synthesizer{.Id = cby_midi_open_output(""), .Velocity = 100}
+}
+
+// the synthesizer with that name (or part of it): "FluidSynth"
+sound.synthesizer sound.open_synthesizer_named const str &Name {
+	return sound.synthesizer{.Id = cby_midi_open_output(Name), .Velocity = 100}
+}

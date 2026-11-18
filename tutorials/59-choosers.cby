@@ -1,0 +1,96 @@
+// Tutorial 59: Number boxes, colors and fonts — a name badge
+//
+// Run it:      cabby 59-choosers.cby
+// Or compile:  cabby -c 59-choosers.cby && ./59-choosers
+// Library:     use gui (or use tui: change gui to tui)
+// Topics:      add_number, add_color_button, add_font_button, value,
+//              color, font, on_change, a canvas's set_font
+//
+// Some choices are easier to make than to type. A number box holds a whole
+// number between two limits, with buttons for one more or one less. A
+// color button shows a color and opens a color chooser when clicked; a
+// font button does the same for fonts. Each has an on_change handler, like
+// a slider, and gives its choice as text a canvas understands: a color as
+// "#4682b4", a font as "Serif Bold 16".
+//
+// This program draws a name badge from the choices, and draws it again
+// each time one changes.
+
+use gui
+
+const int WIDTH = 320
+const int HEIGHT = 140
+
+object badge_maker : gui.window {
+	gui.entry Name
+	gui.number Border
+	gui.color_button Color
+	gui.font_button Font
+	gui.canvas Badge
+
+	void build {
+		set_title "Name badge"
+		gui.row Top = add_row
+		Top.add_label "Name:"
+		Name = Top.add_entry
+		Name.set_text "Ada"
+		Name.on_change changed
+
+		gui.row Choices = add_row
+		Choices.add_label "Border:"
+		Border = Choices.add_number 0, 12
+		Border.set_value 4
+		Border.on_change changed
+		Color = Choices.add_color_button
+		Color.set_color "steelblue"
+		Color.on_change changed
+		Font = Choices.add_font_button
+		Font.set_font "Serif Bold 28"
+		Font.on_change changed
+
+		Badge = add_canvas WIDTH, HEIGHT
+		Badge.on_draw draw_badge
+	}
+
+	void draw_badge {
+		Badge.fill_with "white"
+		int Edge = Border.value
+		if Edge > 0 {
+			// a thick line is centered on its path, so move in by half of it
+			Badge.set_color Color.color
+			Badge.set_line_width Edge
+			Badge.rectangle Edge / 2.0, Edge / 2.0, WIDTH - Edge, HEIGHT - Edge
+		}
+		Badge.set_color "black"
+		Badge.set_font_size 14
+		Badge.write 24, 24, "HELLO, MY NAME IS"
+		Badge.set_color Color.color
+		Badge.set_font Font.font
+		Badge.write 24, 60, Name.text
+	}
+
+	void changed {
+		println Name.text, "|", Border.value, "|", Color.color, "|", Font.font
+		Badge.redraw
+	}
+}
+
+int main {
+	badge_maker b
+	b.run
+}
+
+// (Cabby's tests run it in a virtual display:)
+// script: number 1 8; color 1 crimson; font 1 Sans 24; close
+//
+// Try this:
+//  - Add a second color button for the badge's background.
+//  - Add a number box for how many badges to draw, side by side, with a
+//    wider canvas.
+//  - Change gui to tui: Enter on a color or font button opens a list to
+//    choose from, and Left and Right change the number.
+
+// ---------------------------------------------------------------- output
+//> Ada | 8 | #4682b4 | Serif Bold 28
+//> Ada | 8 | #dc143c | Serif Bold 28
+//> Ada | 8 | #dc143c | Sans 24

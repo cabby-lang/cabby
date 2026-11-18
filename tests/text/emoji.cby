@@ -1,0 +1,26 @@
+// (for run_text_tests.sh) an emoji, big, from the color emoji font
+// CABBY_EMOJI_FONT names: its middle is red, as the font's picture is,
+// not the black text is written in
+use gui
+
+object hearts : gui.window {
+	gui.canvas C
+
+	void build {
+		set_title "Emoji"
+		C = add_canvas 120, 120
+		C.on_draw draw
+	}
+
+	void draw {
+		C.fill_with "white"
+		C.set_color "black"
+		C.set_font_size 60
+		C.write 0, 0, "❤️"
+	}
+}
+
+int main {
+	hearts H
+	H.run
+}

@@ -1,0 +1,5 @@
+// A library of plain functions: no header needed
+
+int triple int N {
+	return N * 3
+}

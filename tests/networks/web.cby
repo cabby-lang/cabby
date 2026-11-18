@@ -1,0 +1,54 @@
+// networks.web_server (tests/networks/peer_web.cby), asked by this
+// program as a browser would
+// peer: peer_web.cby
+//> page: <h1>Hello, Ada L!</h1>
+//> json: {"visits":2,"method":"GET","has name":false}
+//> form: got Grace H, cookie yes
+//> echo: 201 {"a":1} yes
+//> redirect: 200 <h1>Hello, !</h1>
+//> file: body { color: green }
+//> index: <h1>Index</h1>
+//> type: text/css; charset=utf-8
+//> missing: 404
+//> forbidden: 403
+//> head: 200 []
+//> stop: bye
+use networks
+use shell
+
+int main {
+	str At = "http://127.0.0.1:" + shell.get("CABBY_TEST_PEER")
+	println "page:", networks.download(At + "/?name=Ada%20L")
+	println "json:", networks.download(At + "/count")
+	networks.request Form = networks.request_to At + "/form"
+	Form.set_method "POST"
+	Form.set_header "Cookie", "seen=yes; other=1"
+	Form.set_body "who=Grace+H", "application/x-www-form-urlencoded"
+	Form.send
+	println "form:", Form.answer
+	networks.request Echo = networks.request_to At + "/echo"
+	Echo.set_method "POST"
+	Echo.set_body "{\"a\": 1}", "application/json"
+	Echo.send
+	println "echo:", Echo.status, Echo.answer, Echo.answer_header("x-cabby")
+	networks.request Moved = networks.request_to At + "/old"
+	Moved.send
+	println "redirect:", Moved.status, Moved.answer
+	println "file:", networks.download(At + "/files/css/site.css").trim
+	println "index:", networks.download(At + "/files/").trim
+	networks.request Css = networks.request_to At + "/files/css/site.css"
+	Css.send
+	println "type:", Css.answer_header("content-type")
+	networks.request Missing = networks.request_to At + "/files/../web.cby"
+	Missing.send
+	println "missing:", Missing.status
+	networks.request Secret = networks.request_to At + "/secret"
+	Secret.send
+	println "forbidden:", Secret.status
+	networks.request Head = networks.request_to At + "/files/index.html"
+	Head.set_method "HEAD"
+	Head.send
+	println "head:", Head.status, "[" + Head.answer + "]"
+	println "stop:", networks.download(At + "/stop")
+	return 0
+}

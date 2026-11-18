@@ -1,0 +1,10 @@
+#!/bin/sh
+# a stand-in (run_desktop_tests.sh): there only when CABBY_HAVE names it.
+# A monitor's brightness, out of 100, down its cable (DDC/CI feature 10)
+case ",$CABBY_HAVE," in *",$(basename "$0"),"*) ;; *) exit 127 ;; esac
+S=$CABBY_TEST_STATE
+case "$1 $2 $3" in
+"--brief getvcp 10") echo "VCP 10 C $(cat "$S/monitor") 100" ;;
+"setvcp 10 "*) echo "$3" > "$S/monitor" ;;
+*) exit 1 ;;
+esac

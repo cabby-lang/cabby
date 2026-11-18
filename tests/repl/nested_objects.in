@@ -1,0 +1,35 @@
+// objects held in lists keep working as the session is re-checked (and are dropped cleanly at the end)
+object node {
+	str Name
+	list node Next
+}
+void print_all node &N {
+	println N.Name
+	if N.Next.length > 0 {
+		print_all N.Next[0]
+	}
+}
+node C
+C.Name = "Cherry"
+node Head
+Head.Name = "Apple"
+Head.Next.add C
+print_all Head
+struct nodes {
+	str Name
+	list nodes Next
+}
+void print_alls nodes &N {
+	println N.Name
+	if N.Next.length > 0 {
+		print_alls N.Next[0]
+	}
+}
+nodes Cs
+Cs.Name = "Cherry"
+nodes Heads
+Heads.Name = "Apple"
+Heads.Next.add C
+Heads.Next.add Cs
+print_alls Heads
+exit

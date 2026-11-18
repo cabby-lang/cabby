@@ -1,0 +1,7 @@
+#!/bin/sh
+# a stand-in (run_desktop_tests.sh): there only when CABBY_HAVE names it.
+# logind's Session.SetBrightness "backlight" <name> <value>
+case ",$CABBY_HAVE," in *",$(basename "$0"),"*) ;; *) exit 127 ;; esac
+[ "$5" = SetBrightness ] && [ "$7" = backlight ] || exit 1
+echo "$9" > "$CABBY_BACKLIGHT/$8/brightness"
+echo "logind $8" >> "$CABBY_TEST_STATE/told"

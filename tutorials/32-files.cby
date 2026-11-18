@@ -1,0 +1,125 @@
+// Tutorial 32: Files and directories
+//
+// Run it:      cabby 32-files.cby
+// Libraries:   files, directories
+// Topics:      writing and reading files, lines, checking first, copying,
+//              renaming, deleting, making and listing directories, open
+//              files: printing into one, reading one a line at a time
+//
+// A program's variables last only while it runs; files keep things for next
+// time. `use files` and `use directories` turn on Cabby's built-in
+// functions for them:
+//
+//   files.read Path           the whole file, as a str
+//   files.lines Path          its lines, as a list str, without line ends
+//   files.write Path, Text    the file becomes Text (made if it's new)
+//   files.append Path, Text   Text goes on the end
+//   files.exists Path         true if a file is there
+//   files.size Path           its size in bytes
+//   files.copy From, To       files.rename From, To      files.delete Path
+//
+//   file Log = files.open_to_write Path   (or open_to_add: onto the end)
+//   Log println "..."         a file in front of a call: its printing goes in
+//   file In = files.open Path    then In.read_line and In.at_end
+//   An open file is closed when it's dropped, at the end of its block.
+//
+//   directories.make Path     (and any missing directories above it)
+//   directories.list Path     the names in it, sorted
+//   directories.all_files Path   every file below it, as paths from it
+//   directories.exists Path   directories.remove Path (it must be empty)
+//   directories.current       directories.change_to Path   directories.home
+//
+// Anything that goes wrong is a panic that says why. When a file or
+// directory might not be there, check first with .exists.
+//
+// This program works in a directory of its own, "tutorial-31", and
+// removes it at the end.
+
+use files
+use directories
+
+// The best score for each name, from lines like "Ada 9".
+lookup str int best_scores const str &Path {
+	lookup str int Best
+	for Line in files.lines Path {
+		list str Parts = Line.split " "
+		int Score = Parts[1].to_int
+		if !Best.contains(Parts[0]) || Score > Best[Parts[0]] {
+			Best[Parts[0]] = Score
+		}
+	}
+	return Best
+}
+
+// Prints a report; whoever calls it chooses where the printing goes.
+long report const lookup str int &Best {
+	for Name, Score in Best {
+		println Name, Score
+	}
+	return Best.length
+}
+
+int main {
+	directories.make "tutorial-31/old"
+
+	// Writing, adding, reading back.
+	files.write "tutorial-31/scores.txt", "Ada 9\nAlan 7\n"
+	files.append "tutorial-31/scores.txt", "Ada 6\nGrace 10\nAlan 8\n"
+	println files.lines("tutorial-31/scores.txt").length, "lines,", files.size("tutorial-31/scores.txt"), "bytes"
+	println best_scores "tutorial-31/scores.txt"
+
+	// An open file: report's printing goes into it, a line at a time.
+	lookup str int Best = best_scores "tutorial-31/scores.txt"
+	file Out = files.open_to_write "tutorial-31/report.txt"
+	Out println "Best scores"
+	long Count = Out report Best       // report's println goes into Out
+	println Count, "names reported"
+	Out = files.open_to_add "tutorial-31/report.txt"   // the first closes here
+	Out println "(the end)"
+	file In = files.open "tutorial-31/report.txt"      // anything open is written out first
+	while !In.at_end {
+		println "  report:", In.read_line
+	}
+
+	// Checking first: no panic when the file isn't there.
+	str Greeting = "hello"
+	if files.exists "tutorial-31/greeting.txt" {
+		Greeting = files.read "tutorial-31/greeting.txt"
+	}
+	println Greeting
+
+	// Copying and renaming; what's in the directory now.
+	files.copy "tutorial-31/scores.txt", "tutorial-31/backup.txt"
+	files.rename "tutorial-31/backup.txt", "tutorial-31/old/scores.txt"
+	println directories.list "tutorial-31"
+	println directories.all_files "tutorial-31"
+
+	// Tidying up: files first, then the (now empty) directories.
+	for Name in directories.all_files "tutorial-31" {
+		files.delete "tutorial-31/" + Name
+	}
+	directories.remove "tutorial-31/old"
+	directories.remove "tutorial-31"
+	println directories.exists "tutorial-31"
+}
+
+// Try this:
+//  - Keep a to-do list in a file: read it if it exists, add a line typed
+//    with `input`, and save it again.
+//  - Count the words of a text file with a lookup.
+//  - List every .txt file below your home directory, with its size.
+//  - Read a file that isn't there, and read the panic.
+
+// ---------------------------------------------------------------- output
+//> 5 lines, 35 bytes
+//> {Ada: 9, Alan: 8, Grace: 10}
+//> 3 names reported
+//>   report: Best scores
+//>   report: Ada 9
+//>   report: Alan 8
+//>   report: Grace 10
+//>   report: (the end)
+//> hello
+//> [old, report.txt, scores.txt]
+//> [old/scores.txt, report.txt, scores.txt]
+//> false

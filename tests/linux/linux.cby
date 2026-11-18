@@ -1,0 +1,96 @@
+// the linux library (run_linux_tests.sh): a pretend /sys, /proc and /dev
+// (CABBY_SYSFS, CABBY_PROCFS, CABBY_DEVFS: tests/linux/), and stand-ins
+// for systemctl and modprobe (tests/linux/tools)
+use linux
+
+int main {
+	println "-- sensors"
+	for S in linux.sensors {
+		println S.chip, "|", S.label, "|", S.kind, S.value, S.unit, S.high, S.critical
+	}
+	println "temperatures:", linux.temperatures.length, "fans:", linux.fans.length
+
+	println "-- disks"
+	for B in linux.block_devices {
+		println B.path, B.kind, B.size, "[" + B.model + "]", "[" + B.disk + "]", "[" + B.mounted_at + "]", "[" + B.label + "]", B.removable, B.ssd, B.read_only
+	}
+	println "disks:", linux.disks.length, "partitions of sda:", linux.partitions_of("sda").length
+
+	println "-- USB"
+	for U in linux.usb_devices {
+		println U.vendor_id + ":" + U.product_id, U.maker, "|", U.name, "|", U.serial, U.bus, U.number, U.speed
+	}
+
+	println "-- modules"
+	for M in linux.modules {
+		println M.name, M.size, M.used, M.used_by
+	}
+	println "loaded:", linux.module_loaded("snd-hda-intel"), linux.module_loaded("i915")
+	println "load:", linux.load_module("i915"), linux.load_module("nonexistent")
+	println "unload:", linux.unload_module("bluetooth")
+
+	println "-- settings"
+	println linux.setting("net.ipv4.ip_forward"), linux.setting("kernel.hostname"), "[" + linux.setting("net.ipv4.ip_local_port_range") + "]"
+	println "has:", linux.has_setting("net.ipv4.ip_forward"), linux.has_setting("net.ipv4.nonsense")
+
+	println "-- services"
+	for V in linux.services {
+		println V.name, V.active, V.running, V.enabled, "|", V.description
+	}
+	linux.service Cups = linux.service_named "cups"
+	println "cups:", Cups.active, Cups.enabled
+	println "start:", Cups.start, Cups.active, Cups.running
+	println "enable:", Cups.enable, Cups.enabled
+	println "stop:", Cups.stop, Cups.active
+	println "has:", linux.has_service("ssh"), linux.has_service("nothing")
+	for V in linux.user_services {
+		println "mine:", V.name, V.active, V.users_own
+	}
+	linux.service Missing = linux.service_named "nothing"
+	println "not reached", Missing.active
+	return 0
+}
+
+// panic: there's no service called 'nothing'
+//> -- sensors
+//> coretemp | Package id 0 | temperature 48.0 °C 84.0 100.0
+//> coretemp | Core 0 | temperature 45.5 °C 0.0 0.0
+//> nvme | Composite | temperature 38.85 °C 0.0 0.0
+//> thinkpad | fan1 | fan 2450.0 RPM 0.0 0.0
+//> thinkpad | 12V | voltage 12.034 V 0.0 0.0
+//> thinkpad | power1 | power 15.5 W 0.0 0.0
+//> it8728 | temp1 | temperature 40.0 °C 0.0 0.0
+//> it8728 | fan2 | fan 980.0 RPM 0.0 0.0
+//> temperatures: 4 fans: 2
+//> -- disks
+//> /dev/nvme0n1 disk 512110190592 [WD Blue SN570 1TB] [] [] [] false true false
+//> /dev/nvme0n1p1 partition 512108789760 [] [nvme0n1] [/home] [] false true false
+//> /dev/sda disk 1000204886016 [ATA WDC WD10EZEX] [] [] [] false false false
+//> /dev/sda1 partition 536870912 [] [sda] [] [] false false false
+//> /dev/sda2 partition 999667080704 [] [sda] [/] [system] false false false
+//> /dev/sdb disk 30943995904 [SanDisk Ultra] [] [] [] true false false
+//> /dev/sdb1 partition 30942953472 [] [sdb] [/media/tom/MY STICK] [MY STICK] true false false
+//> disks: 3 partitions of sda: 2
+//> -- USB
+//> 046d:c52b Logitech | USB Receiver |  1 3 12
+//> 1235:8210 Focusrite | Scarlett 2i2 USB | Y8XYZ123 2 4 480
+//> -- modules
+//> bluetooth 1024000 12 [btusb, btrtl]
+//> snd_hda_codec 196608 2 [snd_hda_intel, snd_hda_codec_hdmi]
+//> snd_hda_intel 61440 3 []
+//> loaded: true false
+//> load: true false
+//> unload: true
+//> -- settings
+//> 0 testbox [32768 60999]
+//> has: true false
+//> -- services
+//> bluetooth.service failed false enabled | Bluetooth service
+//> cups.service inactive false disabled | CUPS Scheduler
+//> ssh.service active true enabled | OpenBSD Secure Shell server
+//> cups: inactive disabled
+//> start: true active true
+//> enable: true enabled
+//> stop: true inactive
+//> has: true false
+//> mine: pipewire.service active true

@@ -1,0 +1,7 @@
+// strings.hby — C string functions that only read their arguments.
+//
+// The full reference is strings.md, next to this file.
+
+extern unsigned long strlen str s
+extern int strcmp str a, str b
+extern int strncmp str a, str b, unsigned long n

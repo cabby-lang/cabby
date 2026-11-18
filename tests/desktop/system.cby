@@ -1,0 +1,11 @@
+// the system library: what's the same everywhere is checked (a name, a
+// number of processors), and, from stand-ins, a Debian's name and a Mac's
+use system
+
+int main {
+	println system.kind, "|", system.name, "|", system.version
+	println "hostname:", system.hostname is not "" and not system.hostname.contains(".local")
+	println "kernel:", system.kernel is not "", "machine:", system.machine is not ""
+	println "processors:", system.processors >= 1, "memory:", system.memory > 1000000, "uptime:", system.uptime >= 0
+	return 0
+}

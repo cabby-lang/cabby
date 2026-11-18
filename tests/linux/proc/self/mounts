@@ -1,0 +1,4 @@
+/dev/sda2 / ext4 rw,relatime 0 0
+/dev/nvme0n1p1 /home btrfs rw 0 0
+/dev/sdb1 /media/tom/MY\040STICK vfat rw 0 0
+proc /proc proc rw 0 0

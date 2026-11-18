@@ -1,0 +1,28 @@
+// the printing library, with stand-ins for CUPS's lp, lpstat and cancel
+// (tools/: run_desktop_tests.sh says what printers there are)
+use printing
+
+int main {
+	println "printers:", printing.printers, "default:", printing.default_printer, "can print:", printing.can_print
+	str First = printing.print "printing.cby"
+	println "printed:", First
+	println "no such file:", printing.print("nothing.pdf")
+
+	printing.settings Two
+	Two.set_printer "Office"
+	Two.set_copies 2
+	Two.set_two_sided
+	Two.set_pages "1-3"
+	Two.set_black_and_white
+	Two.set_title "Scales"
+	str Second = printing.print_with "printing.cby", Two
+	println "printed:", Second
+
+	str Third = printing.print_text "Lesson at four.\nBring the scales."
+	println "printed text:", Third
+	println "jobs:", printing.jobs
+	println "cancel:", printing.cancel(Second), printing.done(Second), printing.done(Third)
+	println "cancel again:", printing.cancel(Second)
+	println "cancel all:", printing.cancel_all, printing.jobs
+	return 0
+}

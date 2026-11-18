@@ -1,0 +1,12 @@
+use standard
+use math
+use strings
+use local shapes
+
+int main {
+	circle c = {2.0}
+	println twice(21), c.area() > 12.5, (int)floor(c.area())
+	println strlen("hello"), clamp(15, 0, 10)
+	printf("%s %d\n", "printf", 7)
+	return 0
+}

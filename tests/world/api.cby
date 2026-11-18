@@ -1,0 +1,115 @@
+// The world library's numbers, for run_world_tests.sh: moving and turning,
+// touching, groups, the camera, the mouse, keys and timers.
+//> moved: 1.0 2.0 -3.0
+//> forward at 90: -2.0 0.0
+//> sideways at 0: 1.0 0.0
+//> turned: 350.0
+//> touches: true false
+//> top and bottom: 1.0 0.0
+//> distance: 5.0
+//> coins: 3, touching the walker: 1
+//> camera: 0.0 1.6 6.0, angle 0.0, tilt 0.0
+//> looking at 6, 1.6, 0: angle 315.0
+//> clicked: the box
+//> key: true, then false; held 500 ms
+//> timer: 5 ticks, after: true
+//> text: Score: 7
+//> followed: 0.0 3.5 9.0
+// script: press 100 80; hold up; frames 30; release up; frames 1; close; frames 1; close
+use world
+
+object tester : world.window {
+	world.shape Box
+	world.shape Walker
+	world.text Score
+	int Ticks
+	bool After
+	bool PressedUp
+
+	void build {
+		set_size 200, 150
+		Box = add_box 1, 1, 1, "red", 0, 0.5, 0
+		Walker = add_cylinder 0.3, 1, "blue", 1, 2, -3
+		Walker.move_to 0, 0, 0
+		Walker.move 1, 2, -3
+		println "moved:", Walker.x, Walker.y, Walker.z
+		world.shape S = add_ball 0.5, "white", 0, 0, 0
+		S.set_angle 90
+		S.move_forward 2
+		println "forward at 90:", round(S.x), round(S.z)
+		S.move_to 0, 0, 0
+		S.set_angle 0
+		S.move_sideways 1
+		println "sideways at 0:", round(S.x), round(S.z)
+		S.set_angle 10
+		S.turn -20
+		println "turned:", S.angle
+		world.shape Near = add_box 1, 1, 1, "green", 0.9, 0.5, 0
+		world.shape Far = add_box 1, 1, 1, "green", 3, 0.5, 0
+		println "touches:", Box.touches(Near), Box.touches(Far)
+		println "top and bottom:", Box.top, Box.bottom
+		Far.move_to 3, 0.5, 4
+		println "distance:", Box.distance_to(Far)
+		Near.remove
+		Far.remove
+		S.remove
+		for I in 3 {
+			world.shape C = add_cylinder 0.3, 0.1, "gold", 1 + I * 2, 2, -3
+			C.set_group "coins"
+		}
+		println "coins: " + shapes_in("coins").length.text + ", touching the walker: " + touching(Walker, "coins").length.text
+		println "camera: " + camera_x.text + " " + camera_y.text + " " + camera_z.text + ", angle " + camera_angle.text + ", tilt " + camera_tilt.text
+		point_camera_at 6, 1.6, 0
+		println "looking at 6, 1.6, 0: angle", round(camera_angle)
+		point_camera_at 0, 0.5, 0
+		Score = add_text "Score: 0", 4, 4
+		on_click clicked
+		every time.milliseconds(100), tick
+		after time.milliseconds(250), later
+		on_frame step
+	}
+
+	double round double D const {
+		double Half = 0.5
+		if D < 0 {
+			Half = -0.5
+		}
+		return (double)(long)(D * 10 + Half) / 10
+	}
+
+	void clicked {
+		if mouse_on_shape and shape_at_mouse.same_as(Box) {
+			println "clicked: the box"
+		} else {
+			println "clicked: nothing"
+		}
+	}
+
+	void tick {
+		Ticks++
+	}
+
+	void later {
+		After = true
+	}
+
+	void step {
+		if key_press "up" {
+			PressedUp = true
+		}
+		if key_release "up" {
+			println "key: " + PressedUp.text + ", then " + key_hold("up").text + "; held", key_held_for("up"), "ms"
+		}
+	}
+}
+
+int main {
+	tester T
+	T.run
+	println "timer: " + T.Ticks.text + " ticks, after: " + T.After.text
+	T.Score.set_text "Score: 7"
+	println "text:", T.Score.text
+	T.follow T.Box, 9, 3
+	T.run
+	println "followed:", T.camera_x, T.camera_y, T.camera_z
+}

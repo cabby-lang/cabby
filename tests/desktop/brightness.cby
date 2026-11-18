@@ -1,0 +1,13 @@
+// the brightness library, with a stand-in for /sys/class/backlight and
+// for brightnessctl, logind (busctl) and ddcutil (tools/:
+// run_desktop_tests.sh says which are there)
+use brightness
+
+int main {
+	println "level:", brightness.level, "can set:", brightness.can_set
+	println "set:", brightness.set(40), brightness.level
+	println "up:", brightness.up(15), brightness.level
+	println "down past 0:", brightness.down(80), brightness.level
+	println "past 100:", brightness.set(130), brightness.level
+	return 0
+}

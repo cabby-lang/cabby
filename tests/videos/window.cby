@@ -1,0 +1,46 @@
+// a video in a window, following a test script: what it shows at each
+// moment, its controls, and on_end (run_videos_tests.sh)
+use gui
+use time
+use videos
+
+// seconds, as whole milliseconds
+long ms double Seconds {
+	return (long)(Seconds * 1000 + 0.5)
+}
+
+object player : gui.window {
+	videos.video Film
+	gui.video Screen
+	int Ends
+
+	void build {
+		set_title "Colors"
+		set_size 400, 240
+		Film = videos.open "colors.mkv"
+		Screen = add_video Film.source
+		Screen.show_controls
+		Screen.on_end finished
+		every time.seconds(1), tick
+	}
+
+	void tick {
+		println "tick:", ms(Film.position), Film.playing
+	}
+
+	// the first time, it plays again, looping
+	void finished {
+		Ends += 1
+		println "ended", Ends, "at", ms(Film.position), "playing:", Film.playing
+		if Ends == 1 {
+			Film.set_looping true
+			Film.play
+		}
+	}
+}
+
+int main {
+	player P
+	P.run
+	return 0
+}

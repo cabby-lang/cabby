@@ -1,0 +1,22 @@
+// making users and groups, by Linux's programs or a Mac's: stand-ins for
+// them (tests/desktop/tools) say what they were asked, into admin.log in
+// the test's state (CABBY_TEST_USERS=1 lets it go on without root)
+use users
+use files
+use shell
+
+int main {
+	users.make "ada", "Ada Lovelace", "analytical engine"
+	users.make_admin "grace", "Grace Hopper", "cobol"
+	users.set_password "ada", "difference engine"
+	users.make_group "band"
+	users.add_to_group "ada", "band"
+	users.remove_from_group "ada", "band"
+	users.remove_group "band"
+	users.remove_keeping_home "grace"
+	users.remove "ada"
+	str Log = files.read shell.get("CABBY_TEST_STATE") + "/admin.log"
+	// (the group that may use sudo is Debian's sudo or Arch's wheel)
+	print Log.replace("[-G] [sudo]", "[-G] [sudo or wheel]").replace("[-G] [wheel]", "[-G] [sudo or wheel]").replace("[/bin/sh]", "[/bin/bash]")
+	return 0
+}

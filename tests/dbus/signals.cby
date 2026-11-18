@@ -1,0 +1,55 @@
+// Against service.py (run_dbus_tests.sh starts it): signals.
+//> Rang org.cabby.Test /org/cabby/Test bell 3
+//> Other 5
+//> done
+use dbus
+use events
+
+object listener {
+	dbus.bus Bus
+	int Heard
+
+	void begin {
+		Bus = dbus.session
+		Bus.listen "org.cabby.Test", "Rang"
+		Bus.listen "org.cabby.Other", ""
+		Bus.on_signal heard_one
+		dbus.message M = dbus.method_call "org.cabby.Test", "/org/cabby/Test", "org.cabby.Test", "Ring"
+		M.add_str "bell"
+		Bus.call M
+	}
+
+	void heard_one {
+		if Bus.signal_name == "Rang" {
+			rang
+		} else {
+			other
+		}
+	}
+
+	void rang {
+		json Values = Bus.signal
+		println Bus.signal_name, Bus.signal_interface, Bus.signal_path, Values[0].str, Values[1]["n"].long
+		heard
+	}
+
+	void other {
+		println Bus.signal_name, Bus.signal[0].long
+		heard
+	}
+
+	void heard {
+		Heard++
+		if Heard is 2 {
+			events.stop
+		}
+	}
+}
+
+int main {
+	listener L
+	L.begin
+	events.run
+	println "done"
+	return 0
+}

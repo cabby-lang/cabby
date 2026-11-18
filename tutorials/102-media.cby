@@ -1,0 +1,54 @@
+// Tutorial 102: What's playing — a music player's controls
+//
+// Run it:      cabby 102-media.cby
+// Or compile:  cabby -c 102-media.cby && ./102-media
+// Library:     use media
+// Topics:      media.player, playing, title, artist, album; play_pause,
+//              play, pause, next, previous
+//
+// Whatever's playing music (Spotify, a browser's tab, VLC, the Mac's
+// Music) can be asked what it's playing, and told to pause, play, or go on
+// to the next song, as a keyboard's media keys do. On Linux it's asked
+// through D-Bus (MPRIS, which every player speaks); on a Mac, Music and
+// Spotify are asked themselves.
+//
+// It only changes what's playing when asked: `cabby 102-media.cby next`
+// goes on to the next song, and `cabby 102-media.cby pause` pauses.
+
+use media
+
+int main int Argc, str Argv[] {
+	if media.player is "" {
+		println "Nothing is playing music just now."
+		return 0
+	}
+	str State = "paused"
+	if media.playing {
+		State = "playing"
+	}
+	println media.player, "is", State + ":", media.title, "by", media.artist, "from", media.album
+	if Argc > 1 {
+		str Asked = Argv[1].copy
+		if Asked is "next" {
+			media.next
+		} else if Asked is "back" {
+			media.previous
+		} else if Asked is "pause" {
+			media.pause
+		} else if Asked is "play" {
+			media.play
+		} else {
+			media.play_pause
+		}
+		println "now:", media.title, "by", media.artist
+	}
+}
+
+// Try this:
+//  - Print what's playing every few seconds (with a timer), but only
+//    when it changes.
+//  - Make a window with ⏮ ⏯ ⏭ buttons.
+
+// ---------------------------------------------------------------- output
+// output varies: what one computer said (nothing was playing)
+//> Nothing is playing music just now.

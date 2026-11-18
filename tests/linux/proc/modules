@@ -1,0 +1,3 @@
+snd_hda_intel 61440 3 - Live 0x0000000000000000
+snd_hda_codec 196608 2 snd_hda_intel,snd_hda_codec_hdmi, Live 0x0000000000000000
+bluetooth 1024000 12 btusb,btrtl, Live 0x0000000000000000

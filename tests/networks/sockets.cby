@@ -1,0 +1,67 @@
+// WebSockets: networks.web_server's (tests/networks/peer_sockets.cby), and
+// networks.socket talking to them
+// peer: peer_sockets.cby
+//> page: <p>a page, as usual</p>
+//> not a socket: 400
+//> ada: welcome, 1 here
+//> grace: welcome, 2 here
+//> ada: HELLO
+//> big: 70000 true
+//> ada: from grace
+//> grace: from grace
+//> ada: goodbye
+//> ada closed: false false
+//> brief: welcome, 2 here
+//> grace: stopping, after 1 closed
+//> grace closed: false
+use networks
+use shell
+use time
+
+int main {
+	str At = "127.0.0.1:" + shell.get("CABBY_TEST_PEER")
+	println "page:", networks.download("http://" + At + "/")
+	println "not a socket:", networks.status("http://" + At + "/chat")
+
+	networks.socket Ada = networks.open_socket "ws://" + At + "/chat"
+	Ada.read_message
+	println "ada:", Ada.message
+	networks.socket Grace = networks.open_socket "ws://" + At + "/chat"
+	Grace.read_message
+	println "grace:", Grace.message
+
+	Ada.send "hello"
+	Ada.read_message
+	println "ada:", Ada.message
+
+	// big enough for a frame's 64-bit length
+	str Big = "x".repeat 70000
+	Ada.send Big
+	Ada.read_message
+	println "big:", Ada.message.length, Ada.message == Big.upper
+
+	Grace.send "all: from grace"
+	Ada.read_message
+	println "ada:", Ada.message
+	Grace.read_message
+	println "grace:", Grace.message
+
+	Ada.send "bye"
+	Ada.read_message
+	println "ada:", Ada.message
+	bool More = Ada.read_message
+	println "ada closed:", More, Ada.is_open
+
+	// closed from this end: the server's on_socket_close hears of it
+	networks.socket Brief = networks.open_socket "ws://" + At + "/chat"
+	Brief.read_message
+	println "brief:", Brief.message
+	Brief.close
+	time.sleep time.milliseconds(300)
+
+	Grace.send "stop"
+	Grace.read_message
+	println "grace:", Grace.message
+	println "grace closed:", Grace.read_message
+	return 0
+}

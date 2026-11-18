@@ -1,0 +1,9 @@
+// networks.local_address and wifi_name, with stand-ins for iwgetid,
+// nmcli, networksetup and ipconfig
+use networks
+
+int main {
+	println "connected:", networks.connected, "address:", networks.local_address
+	println "wifi: [" + networks.wifi_name + "]"
+	return 0
+}

@@ -1,0 +1,17 @@
+// a panic abandons the input; the session carries on
+int a[3] = {1, 2, 3}
+int i = 7
+a[i]
+i = 2
+a[i]
+str s = "kept"
+void boom str x {
+	int z = 0
+	println 1 / z
+}
+boom s
+s
+s = "back"
+s
+int after = 1
+after

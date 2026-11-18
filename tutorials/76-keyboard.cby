@@ -1,0 +1,133 @@
+// Tutorial 76: Keyboards — playing a MIDI keyboard through Cabby
+//
+// Run it:      cabby 76-keyboard.cby
+// Or compile:  cabby -c 76-keyboard.cby && ./76-keyboard
+// Library:     use sound, use events
+// Topics:      sound.midi_inputs, sound.open_keyboard, play_through,
+//              on_note and on_control, a keyboard's notes written down as
+//              they're played, and saved as a MIDI file
+//
+// Plug in a MIDI keyboard (by USB, or through an audio interface's MIDI
+// socket) and run it. The keyboard plays a piano through the computer,
+// heard at once, and each note is written down as it's played: when it
+// started, and how long it was held. Stop playing for three seconds, and
+// what was played is saved as played.mid, which any music program opens
+// as a score.
+//
+// The keyboard is heard through play_through, which plays what comes in
+// straight away, from a thread of the sound library's own: however busy
+// the program is, the notes aren't late. The handlers hear of each note
+// too, from the event loop (events.run), to do as they like with: here,
+// to write it down.
+
+use sound
+use events
+use time
+
+object player {
+	sound.keyboard Keys
+	list sound.note Written        // the notes played, as they were let go
+	timer Quiet
+	moment Started
+	bool Begun
+	lookup int double Pressed     // the keys held down: the beat each was pressed on
+	int Notes
+
+	void begin {
+		if sound.midi_inputs.length == 0 {
+			println "No MIDI keyboard is connected: plug one in, and run it again."
+			return
+		}
+		Keys = sound.open_keyboard
+		Keys.play_through "piano"
+		Keys.on_note played
+		Keys.on_control moved
+		Quiet.on_tick finish
+		Quiet.after time.seconds(3)
+		println "Play! (Stop for three seconds, and it's saved.)"
+		events.run
+	}
+
+	// the beat it is now, at 120 beats a minute (two a second), counted
+	// from the first note
+	double beat {
+		if not Begun {
+			Started = time.now
+			Begun = true
+		}
+		return time.since(Started).seconds * 2.0
+	}
+
+	void played {
+		double Now = beat
+		int Key = Keys.key
+		if Keys.pressed {
+			Pressed[Key] = Now
+			println "  " + Keys.note, "(velocity " + Keys.velocity.text + ")"
+		} else if Pressed.contains Key {
+			// let go: written down, from when it was pressed
+			double Start = Pressed[Key]
+			double Held = Now - Start
+			if Held < 0.1 {
+				Held = 0.1
+			}
+			Written.add sound.note{.Key = Key, .Beat = Start, .Beats = Held, .Volume = 0.8}
+			Pressed.remove Key
+			Notes += 1
+		}
+		Quiet.after time.seconds(3)   // three seconds from the latest note
+	}
+
+	// the sustain pedal is control 64: down at 64 and over
+	void moved {
+		if Keys.control == 64 {
+			if Keys.value >= 64 {
+				println "  (pedal down)"
+			} else {
+				println "  (pedal up)"
+			}
+		}
+	}
+
+	void finish {
+		Keys.close            // (nothing is left to wait for: events.run ends)
+		sound.part Played
+		Played.set_instrument "piano"
+		for N in Written {
+			Played.note_at sound.note_name(N.Key), N.Beat, N.Beats
+		}
+		sound.song Song
+		Song.add Played
+		Song.save "played.mid"
+		println Notes, "notes, saved as played.mid"
+		sound.song Back = sound.read_song "played.mid"
+		println "read back:", Back.Parts[0].instrument, "with", Back.Parts[0].Notes.length, "notes"
+	}
+}
+
+int main {
+	player P
+	P.begin
+	return 0
+}
+
+// Try this:
+//  - Play it through another instrument: "strings", "organ", "electric
+//    piano", or the drums, whose keys are each a drum.
+//  - Print Keys.channel too: a keyboard split in two may send each half
+//    on a channel of its own.
+//  - Play every note an octave up, or as a chord: with a
+//    sound.synthesizer (sound.md), S.start_key Keys.key + 12.
+//  - Show the notes on a gui window's canvas, as a piano roll.
+//
+// (In the tests, CABBY_MIDI_IN is a MIDI file that plays as the keyboard:
+// four notes, as fast as they can be read.)
+
+// ---------------------------------------------------------------- output
+//> Play! (Stop for three seconds, and it's saved.)
+//>   C4 (velocity 102)
+//>   E4 (velocity 102)
+//>   G4 (velocity 102)
+//>   C5 (velocity 102)
+//> 4 notes, saved as played.mid
+//> read back: piano with 4 notes

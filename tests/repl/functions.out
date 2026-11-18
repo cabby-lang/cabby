@@ -1,0 +1,28 @@
+5
+18
+hello, Ada
+105
+<earlier input>:1:1: error: 'add' takes 1 argument but 2 were given
+    add 2, 3
+    ^
+<input>:1:5: note: 'add' is declared here
+    int add int a {
+        ^
+<earlier input>:1:1: error: 'add' takes 1 argument but 2 were given
+    add(4, 5) * 2
+    ^
+<input>:1:5: note: 'add' is declared here
+    int add int a {
+        ^
+<earlier input>:1:1: error: 'add' takes 1 argument but 2 were given
+    add 2, 3
+    ^
+<input>:1:5: note: 'add' is declared here
+    int add int a {
+        ^
+note: the earlier definition of 'add' is kept
+105
+allman
+1
+2
+error: the session is already the body of main; type its statements directly

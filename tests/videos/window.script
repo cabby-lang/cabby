@@ -1,0 +1,1 @@
+pixel 60 100; mouse 200 100; wait 350; pixel 60 100; pixel 300 100; wait 1000; pixel 60 100; pixel 300 100; mouse 56 210; wait 250; pixel 60 100; pixel 300 100; mouse 200 100; wait 1000; pixel 60 100; press-key space; wait 3000; pixel 60 100; pixel 300 100; wait 3500; pixel 60 100; press-key Home; pixel 60 100; close

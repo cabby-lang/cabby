@@ -1,0 +1,5 @@
+// reverse.hby — the header for tutorial 36: what other files may use.
+
+// Returns `Text` backwards. It borrows Text (const str &), so the caller
+// keeps its string, and returns a new one.
+str reverse_str const str &Text

@@ -1,0 +1,53 @@
+# Maintainer: Thomas Paul Whalan
+#
+# Cabby, for Arch: put this file next to a cabby-X.Y.Z.tar.gz (or run
+# packaging/arch/build.sh, which does), then:
+#     makepkg -si
+# The version is read from the tarball's name.
+
+pkgname=cabby
+pkgver=@VERSION@
+pkgrel=1
+pkgdesc="A natively compiled, C-like programming language: tab-indented, with objects and ownership"
+arch=('x86_64' 'aarch64')
+license=('MIT')
+# the interpreter and compiler themselves, and clang for `cabby -c`
+depends=('glibc' 'libffi' 'clang')
+makedepends=('gcc' 'make' 'pkgconf')
+# what libraries load when a program uses them (each says what to install
+# if it's missing); and what's built in when it's here at build time
+optdepends=(
+	'sdl3: windows (use gui), games (use game, tgame) and 3D (use world)'
+	'gtk4: windows that look like the desktop'"'"'s own (use gtk)'
+	'ffmpeg: videos (use videos)'
+	'sqlite: databases (use databases)'
+	'postgresql-libs: PostgreSQL databases (databases.connect)'
+	'openssl: secrets, HTTPS and encrypted connections'
+	'curl: downloads and email (use networks, use emails)'
+	'dbus: the desktop, Bluetooth and notifications (use dbus)'
+	'bluez: Bluetooth (use bluetooth)'
+	'cups: printing (use printing)'
+	'espeak-ng: speaking (use speech)'
+	'whisper.cpp: hearing speech (use speech)'
+	'xorg-server-xvfb: the window tests (make test)'
+)
+source=("cabby-$pkgver.tar.gz")
+sha256sums=('SKIP')
+
+build() {
+	cd "$srcdir/cabby"
+	make PREFIX=/usr
+}
+
+check() {
+	cd "$srcdir/cabby"
+	# the quick part of the tests (the whole of `make test` takes a while)
+	tests/run_program_tests.sh ./cabby run
+	tests/run_tutorial_tests.sh ./cabby run
+}
+
+package() {
+	cd "$srcdir/cabby"
+	make install install-extras PREFIX=/usr DESTDIR="$pkgdir"
+	install -Dm644 LICENSE "$pkgdir/usr/share/licenses/cabby/LICENSE"
+}

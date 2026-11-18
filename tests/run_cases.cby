@@ -1,0 +1,5206 @@
+### hello
+//> hello, world
+int main {
+	println "hello, world"
+	return 0
+}
+
+### arithmetic_and_formatting
+//> 3 1 -3 -1
+//> 2.5 1.0 0.30000000000000004 1e+20 0.3333333333333333
+//> true false x str
+//> 63 1024 -4 -1 6
+//> -2147483648 -9223372036854775808
+//> 2.5 3 -3 65 B 1
+//> a 1b
+//> NaN inf -inf -0.0
+int main {
+	println 7 / 2, 7 % 3, -7 / 2, -7 % 3
+	println 2.5, 1.0, 0.1 + 0.2, 1e20, 1.0 / 3.0
+	println true, false, 'x', "str"
+	println 0xFF & 0x0F | 0x30, 1 << 10, -16 >> 2, ~0, 5 ^ 3
+	println 2147483647 + 1, 9223372036854775807 + 1
+	println (double)10 / 4.0, (int)3.99, (int)-3.99, (int)'A', (char)66, (int)true
+	print "a", 1
+	print "b"
+	println
+	println 0.0 / 0.0, 1.0 / 0.0, -1.0 / 0.0, -0.0
+	return 0
+}
+
+### c_integer_types
+//> 0 -128 -32768 4294967295 18446744073709551615 5000000000
+//> false true
+//> 0.1 0.10000000149011612 0.3 4 8
+//> 300 44 7
+int main {
+	unsigned char uc = 255
+	uc++
+	char c = 127
+	c++
+	short s = 32767
+	s += 1
+	unsigned u = 0
+	u--
+	unsigned long big = 18446744073709551615u
+	long l = 5000000000
+	println (int)uc, (int)c, s, u, big, l
+	int i = -1
+	unsigned v = 1
+	println i < v, (long)i < (long)v
+	float f = 0.1f
+	double d = f
+	println f, d, f * 3.0f, sizeof(f), sizeof d
+	char x = 'd'
+	int wide = x + 200
+	char narrow = (char)wide
+	println wide, (int)narrow, 'a' / 'b' + 7
+	return 0
+}
+
+### short_circuit
+//> eval 1
+//> eval 3
+//> eval 5
+//> eval 6
+//> false true false
+bool noisy const str &tag, bool v {
+	println "eval", tag
+	return v
+}
+int main {
+	bool a = noisy("1", false) && noisy("2", true)
+	bool b = noisy("3", true) || noisy("4", true)
+	bool c = noisy("5", true) && noisy("6", false)
+	println a, b, c
+	return 0
+}
+
+### control_flow
+//> 16
+//> 111
+//> 21
+//> 4
+//> 5
+//> 2
+int main {
+	int total = 0
+	for int i = 0; i < 10; i++ {
+		if i % 2 == 0 {
+			continue
+		}
+		if i > 7 {
+			break
+		}
+		total += i
+	}
+	println total
+	int n = 27
+	int steps = 0
+	while n != 1 {
+		if n % 2 == 0 {
+			n = n / 2
+		} else {
+			n = 3 * n + 1
+		}
+		steps++
+	}
+	println steps
+	int grid[2][3] = {{1, 2, 3}, {4, 5, 6}}
+	int s = 0
+	for int r = 0; r < 2; r++ {
+		for int c = 0; c < 3; c++ {
+			s += grid[r][c]
+		}
+	}
+	println s
+	int found = 0
+	for int i = 0; i < 10; i++ {
+		for int j = 0; j < 10; j++ {
+			if i * j == 6 {
+				found++
+				break
+			}
+		}
+	}
+	println found
+	int k = 0
+	do {
+		k += 5
+	} while k < 3
+	println k
+	for ;; {
+		k--
+		if k == 2 {
+			break
+		}
+	}
+	println k
+	return 0
+}
+
+### switch_fallthrough
+//> red
+//> green
+//> green or blue
+//> green or blue
+//> unknown 9
+//> b
+//> c
+enum color {
+	RED
+	GREEN = 5
+	BLUE
+}
+void name int c {
+	switch c {
+		case RED:
+			println "red"
+			break
+		case GREEN:
+			println "green"
+		case BLUE:
+			println "green or blue"
+			break
+		default:
+			println "unknown", c
+	}
+}
+int main {
+	name(RED)
+	name(GREEN)
+	name(BLUE)
+	name(9)
+	char ch = 'b'
+	switch ch {
+		case 'a':
+			println "a"
+		case 'b':
+			println "b"
+		case 'c':
+			println "c"
+	}
+	return 0
+}
+
+### goto_cleanup_drops
+//> worked
+//> cleanup
+//> release a
+//> 0
+//> release b
+//> cleanup
+//> release a
+//> 1
+object res {
+	str name
+	~res {
+		println "release", name
+	}
+}
+int work int fail {
+	res a = {"a"}
+	if fail {
+		res b = {"b"}
+		goto cleanup
+	}
+	println "worked"
+	cleanup:
+	println "cleanup"
+	return fail
+}
+int main {
+	println work(0)
+	println work(1)
+	return 0
+}
+
+### recursion
+//> 6765 2432902008176640000
+long fib long n {
+	if n < 2 {
+		return n
+	}
+	return fib(n - 1) + fib(n - 2)
+}
+long fact long n {
+	if n <= 1 {
+		return 1
+	}
+	return n * fact(n - 1)
+}
+int main {
+	println fib(20), fact(20)
+	return 0
+}
+
+### drop_scopes_and_moves
+//> inner
+//> drop c
+//> consuming b
+//> drop b
+//> end
+//> drop d
+//> drop a
+object noisy {
+	str name
+	~noisy {
+		println "drop", name
+	}
+}
+void consume noisy n {
+	println "consuming", n.name
+}
+int main {
+	noisy a = {"a"}
+	noisy b = {"b"}
+	if true {
+		noisy c = {"c"}
+		println "inner"
+	}
+	consume(b)
+	noisy d = {"d"}
+	noisy e = d
+	println "end"
+	return 0
+}
+
+### drop_order_inheritance
+//> made
+//> whole.drop w 7
+//> left.drop
+//> base.drop w
+//> part.drop 7
+object base {
+	str tag
+	~base {
+		println "base.drop", tag
+	}
+}
+object part {
+	int id
+	~part {
+		println "part.drop", id
+	}
+}
+object left : base {
+	~left {
+		println "left.drop"
+	}
+}
+object right : base {
+}
+object whole : left, right {
+	part p
+	~whole {
+		println "whole.drop", tag, p.id
+	}
+}
+int main {
+	whole w = {"w", part{7}}
+	println "made"
+	return 0
+}
+
+### temporaries
+//> value 1
+//> drop t 1
+//> drop t 2
+//> drop t 4
+//> drop t 3
+//> x 7
+object t {
+	int n
+	int get const {
+		return n
+	}
+	~t {
+		println "drop t", n
+	}
+}
+t make int n {
+	return t{n}
+}
+int main {
+	println "value", make(1).get()
+	make(2)
+	int x = make(3).get() + make(4).get()
+	println "x", x
+	return 0
+}
+
+### virtual_dispatch_diamond
+//> Tom has 4 legs
+//> Tom purrs for Ann
+//> Tom purrs for Ann
+//> 1
+//> Bob makes a sound
+//> 0
+//> mouser Tom
+//> Ann 4
+object animal {
+	str name
+	int legs
+	int speak const {
+		println name, "makes a sound"
+		return 0
+	}
+	void describe const {
+		println name, "has", legs, "legs"
+		speak()
+	}
+}
+object pet : animal {
+	str owner
+	int speak const {
+		println name, "purrs for", owner
+		return 1
+	}
+}
+object worker : animal {
+	str job
+}
+object catbot : pet, worker {
+	int model
+}
+int talk const animal &a {
+	return a.speak()
+}
+int main {
+	catbot c = {"Tom", 4, "Ann", "mouser", 9}
+	c.describe
+	println talk(c)
+	worker w = {"Bob", 2, "builder"}
+	println talk(w)
+	const worker &r = c
+	println r.job, r.name
+	const pet &pr = c
+	println pr.owner, pr.legs
+	return 0
+}
+
+### mutation_through_refs
+//> 8
+//> 0 10 20
+//> 21
+//> 0 99
+//> 2
+object counter {
+	int n
+	void bump int amount {
+		n += amount
+	}
+	int get const {
+		return n
+	}
+	void set int v {
+		n = v
+	}
+}
+void inc int &x {
+	x++
+}
+void fill int a[], int n, int v {
+	for int i = 0; i < n; i++ {
+		a[i] = v * i
+	}
+}
+int main {
+	counter c
+	c.bump 5
+	counter &r = c
+	r.bump 2
+	inc(c.n)
+	println c.n
+	int arr[3]
+	fill(arr, 3, 10)
+	println arr[0], arr[1], arr[2]
+	inc(arr[2])
+	println arr[2]
+	int b[3] = arr
+	b[0] = 99
+	println arr[0], b[0]
+	counter k = {1}
+	k.set(k.get() + 1)
+	println k.get()
+	return 0
+}
+
+### reassignment_drops
+//> drop one
+//> three
+//> y true true
+//> drop three
+object doc {
+	str title
+	~doc {
+		println "drop", title
+	}
+}
+int main {
+	doc d = {"one"}
+	d = doc{"two"}
+	d.title = "three"
+	println d.title
+	str s = "x"
+	s = "y"
+	println s, s == "y", s != "x"
+	return 0
+}
+
+### loop_moves_and_drops
+//> loop 1
+//> drop 10
+//> drop 0
+//> loop 3
+//> drop 30
+//> after 20
+//> drop 20
+object b {
+	int n
+	~b {
+		println "drop", n
+	}
+}
+int main {
+	b keep
+	for int i = 1; i < 4; i++ {
+		b tmp = {i * 10}
+		if i == 2 {
+			keep = tmp
+			continue
+		}
+		println "loop", i
+	}
+	println "after", keep.n
+	return 0
+}
+
+### early_return_drops
+//> drop 100
+//> drop 101
+//> drop 1
+//> got 1
+object r {
+	int n
+	~r {
+		println "drop", n
+	}
+}
+int find int limit {
+	r a = {1}
+	int i = 0
+	while true {
+		r b = {100 + i}
+		if i == limit {
+			return i
+		}
+		i++
+	}
+}
+int main {
+	println "got", find(1)
+	return 0
+}
+
+### array_of_objects
+//> 6
+//> drop 1
+//> drop 2
+//> drop 3
+object p {
+	int n
+	~p {
+		println "drop", n
+	}
+}
+int total const p ps[], int count {
+	int sum = 0
+	for int i = 0; i < count; i++ {
+		sum += ps[i].n
+	}
+	return sum
+}
+int main {
+	p ps[3] = {p{1}, p{2}, p{3}}
+	println total(ps, 3)
+	return 0
+}
+
+### structs_and_static_methods
+//> 1 10 11 4 8
+//> 4
+struct vec {
+	int x
+	int y
+}
+vec add vec a, vec b {
+	return vec{a.x + b.x, a.y + b.y}
+}
+object shape {
+	int sides
+	static shape square {
+		return shape{4}
+	}
+}
+int main {
+	vec a = {1, 2}
+	vec b = a
+	b.x = 10
+	vec c = add(a, b)
+	println a.x, b.x, c.x, c.y, sizeof(vec)
+	shape s = shape.square()
+	println s.sides
+	return 0
+}
+
+### unions
+//> 1065353216
+//> 3.1415927
+//> 64 219
+//> 3.1415927 0.0
+union bits {
+	float f
+	unsigned int u
+	unsigned char b[4]
+}
+int main {
+	bits x
+	x.f = 1.0f
+	println x.u
+	x.u = 0x40490fdb
+	println x.f
+	println (int)x.b[3], (int)x.b[0]
+	bits y = x
+	y.u = 0
+	println x.f, y.f
+	return 0
+}
+
+### globals_and_statics
+//> hello 3 3 3 6
+//> 7 6
+const int LIMIT = 3
+const str GREETING = "hello"
+int counter
+int table[LIMIT] = {1, 2, 3}
+int bump {
+	static int calls
+	calls++
+	counter += calls
+	return calls
+}
+int main {
+	bump
+	bump
+	println GREETING, counter, table[2], bump(), counter
+	table[0] = 7
+	println table[0], LIMIT * 2
+	return 0
+}
+
+### auto_and_sizeof
+//> 5 2.5 text 5000000000 4 8 8 16
+struct pair {
+	char c
+	int i
+}
+int main {
+	int a = 5
+	double b = 2.5
+	str s = "text"
+	long big = 5000000000
+	println a, b, s, big, sizeof a, sizeof big, sizeof(pair), sizeof(str)
+	return 0
+}
+
+### implicit_members
+//> 15
+//> 15 owner
+object acct {
+	int balance
+	str owner
+	void deposit int balance {
+		self.balance += balance
+	}
+	int total const {
+		return balance
+	}
+	void show const {
+		println total(), owner
+	}
+}
+int main {
+	acct a = {.owner = "owner"}
+	a.deposit 5
+	a.deposit 10
+	println a.total()
+	a.show
+	return 0
+}
+
+### extern_c_functions
+//> v=42 1.41
+//> [owned]
+//> 124
+extern int printf str fmt, ...
+extern long labs long x
+extern double sqrt double x
+// (a C function that fills in a variable: modf, which gives back the
+// fraction and puts the whole part in its second; sscanf would do, but
+// it takes `...`, and declared without, its value goes astray on ARM64)
+extern double modf double x, double &whole
+int main {
+	printf("%s=%ld %.2f\n", "v", labs(-42), sqrt(2.0))
+	str s = "owned"
+	printf("[%s]\n", s)
+	double w
+	modf(123.75, w)
+	println (long)w + 1
+	return 0
+}
+
+### main_arguments
+// args: alpha beta
+//> 3
+//> alpha
+//> beta
+int main int argc, str argv[] {
+	println argc
+	for int i = 1; i < argc; i++ {
+		println argv[i]
+	}
+	return 0
+}
+
+### exit_code
+//> bye
+// exit: 3
+int main {
+	println "bye"
+	return 3
+}
+
+### main_falls_off_end
+//> done
+int main {
+	println "done"
+}
+
+### panic_index
+//> 1
+//> 2
+//> 3
+// panic: index 3 is out of bounds for an array of length 3
+int main {
+	int a[3] = {1, 2, 3}
+	int i = 0
+	while true {
+		println a[i]
+		i++
+	}
+}
+
+### panic_div_zero
+//> before
+// panic: division by zero
+int main {
+	int z = 0
+	println "before"
+	println 10 / z
+	return 0
+}
+
+### panic_int_min_div
+// panic: overflow: -2147483648 / -1 does not fit in 32 bits
+int main {
+	int m = -2147483648
+	int d = -1
+	println m / d
+	return 0
+}
+
+### panic_shift
+// panic: shift amount 32 is out of range 0..31
+int main {
+	int s = 32
+	println 1 << s
+	return 0
+}
+
+### panic_stack_overflow
+// panic: stack overflow
+int f int n, const int &above {
+	int here = n + above
+	return f(n + 1, here) + here
+}
+int main {
+	println f(0, 0)
+	return 0
+}
+
+### panic_no_drops
+//> start
+// panic: remainder by zero
+object l {
+	~l {
+		println "should not print"
+	}
+}
+int main {
+	l x
+	println "start"
+	int z = 0
+	println 1 % z
+	return 0
+}
+
+### for_in_ranges
+//>  0 1 2 3 4
+//>  1 2 3 4 5
+//>  5 4 3 2 1
+//>  0 5 10 15 20
+//>  10 7 4 1
+//>  3 2 1 0
+//>  250 251 252 253 254 255
+//> abcde
+//> vwxyz
+//>  0 8 1 8 2 8 3 8
+//>  0 1 3 4
+//>  0 8 1 8 2 8
+//>  2147483645 2147483646 2147483647
+//>  10 20 21
+int main {
+	for i in 5 {
+		print "", i
+	}
+	println
+	for i in 1 to 5 {
+		print "", i
+	}
+	println
+	for i in 5 down to 1 {
+		print "", i
+	}
+	println
+	for i in 0 to 20 by 5 {
+		print "", i
+	}
+	println
+	for i in 10 down to 0 by 3 {
+		print "", i
+	}
+	println
+	for unsigned i in 3 down to 0 {
+		print "", i
+	}
+	println
+	for unsigned char b in 250 to 255 {
+		print "", (int)b
+	}
+	println
+	for char c in 'a' to 'e' {
+		print c
+	}
+	println
+	for c in 'v' to 'z' {
+		print c
+	}
+	println
+	unsigned long n = 4
+	for i in n {
+		print "", i, sizeof i
+	}
+	println
+	for i in 5 to 1 {
+		println "never"
+	}
+	for i in 10 {
+		if i == 2 {
+			continue
+		}
+		if i == 5 {
+			break
+		}
+		print "", i
+	}
+	println
+	int lim = 3
+	for long i in lim {
+		print "", i, sizeof i
+	}
+	println
+	for i in 2147483645 to 2147483647 {
+		print "", i
+	}
+	println
+	for i in 3 {
+		for j in i {
+			print "", i * 10 + j
+		}
+	}
+	println
+}
+
+### call_rules
+// exit: 3
+//> 5
+//> 6
+//> 6
+//> 3
+//> 1 2
+//> 1 2
+//> 6
+//> 5 5 10
+//> 6 9
+//> 8 7
+//> 56 112 56
+//> 224 224
+//> 16
+//> 4
+//> 4
+//> 0123
+use strings
+object win {
+	int w
+	int h
+	int area const {
+		return w * h
+	}
+	void resize int nw, int nh {
+		w = nw
+		h = nh
+	}
+	win twice const {
+		return win{w * 2, h * 2}
+	}
+}
+int add int a, int b {
+	return a + b
+}
+int tick {
+	return 7
+}
+int sq int x {
+	return x * x
+}
+int main {
+	int a = 1
+	int b = 2
+	print a + b * 2
+	println
+	print (a + b) * 2
+	println
+	print(a + b) * 2
+	println
+	println(a + b)
+	println (a), b
+	println(a), b
+	int n = (add a, b) * 2
+	println n
+	str s = "hello"
+	int len = (int)strlen(s)
+	unsigned long l2 = strlen s
+	unsigned long l3 = (strlen s) + 5
+	println len, l2, l3
+	println add(a, b) * 2, sq 3
+	println tick + 1, tick
+	win w = {3, 4}
+	w.resize 5, 6
+	w.resize(7, 8)
+	println w.area, w.area * 2, w.area()
+	println w.twice.area, w.twice().area()
+	int m = sq a + 3
+	println m
+	int k = sq(a) + 3
+	println k
+	println sq (a) + 3
+	if sq 2 == 4 {
+		println "four"
+	}
+	for i in sq 2 {
+		print i
+	}
+	println
+	return add a, b
+	// (exit status 3)
+}
+
+### string_tools
+// panic: index 20 is out of bounds for a string of length 9
+//> John Joan 4 4
+//> desserts  a
+//> >abcdefg! 9 > !
+//> jello hello
+//> f
+//> jfllo
+//> 4 10
+//> 24 6
+//> [] 0
+//> John Joan
+//> false true
+str reverse_str const str &text {
+	str out = text.copy
+	long n = text.length
+	for i in n / 2 {
+		char c = out[i]
+		out[i] = out[n - 1 - i]
+		out[n - 1 - i] = c
+	}
+	return out
+}
+int total const int xs[] {
+	int t = 0
+	for i in xs.length {
+		t += xs[i]
+	}
+	return t
+}
+object box {
+	int w
+	int h
+	int area const {
+		return w * h
+	}
+}
+int five {
+	return 5
+}
+const str HELLO = "hello"
+int main {
+	str name = "John"
+	str name_cpy = name.copy
+	name_cpy[2] = 'a'
+	name_cpy[3] = 'n'
+	println name, name_cpy, name.length, name.copy().length
+	println reverse_str("stressed"), reverse_str(""), reverse_str("a")
+	str s = "ab" + "cd"
+	s += "ef"
+	s += 'g'
+	s = s + '!'
+	s = '>' + s
+	println s, s.length, s[0], s[s.length - 1]
+	str h = HELLO.copy
+	h[0] = 'j'
+	println h, HELLO
+	char c = h[1]
+	c++
+	println c
+	h[1] += 1
+	println h
+	int nums[4] = {1, 2, 3, 4}
+	println nums.length, total(nums)
+	box b = {3, 4}
+	println b.area * 2, five + 1
+	str empty
+	println "[" + empty + "]", empty.length
+	str x = name + " " + name_cpy
+	println x
+	println x == "John Jaan", x != name
+	println x[20]
+}
+
+### string_append_growth
+//> 1288890 3 abcdabcdefgh 12
+//> cat dog
+//> [] 0 [x] 1
+//> 0123456789012345678901234567890123456789 40
+int main {
+	// many small appends (the buffer grows in place)
+	str s
+	for i in 200000 {
+		s += i.text
+		s += ' '
+	}
+	long sevens = 0
+	for i in 100 {
+		if s[i] == '7' {
+			sevens++
+		}
+	}
+	// appending to a literal, to itself, and a char
+	str lit = "ab"
+	lit += "cd"
+	lit += lit
+	lit += 'e'
+	lit += "fgh"
+	println s.length, sevens, lit, lit.length
+	// the original is untouched when a copy grows
+	str a = "cat"
+	str b = a.copy
+	b += " and more text to make it grow"
+	b = "dog"
+	println a, b
+	// empty appends
+	str e
+	e += ""
+	str x = "x"
+	x += ""
+	println "[" + e + "]", e.length, "[" + x + "]", x.length
+	// growing past the first buffer, then reading back
+	str d
+	for i in 40 {
+		d += (char)('0' + i % 10)
+	}
+	println d, d.length
+}
+
+### minus_starts_an_argument
+//> 7 7 4 6
+//> 4 -1 9 5
+//> -8 -6
+//> 2 2 2
+//> 9 4
+//> said -5
+use standard
+
+int twice int x {
+	return x * 2
+}
+
+int tick {
+	return 10
+}
+
+void say int n {
+	println "said", n
+}
+
+object box {
+	int Size
+
+	int grow int n {
+		return Size + n
+	}
+
+	int less const {
+		return Size -1
+	}
+}
+
+int main {
+	int A = abs -7
+	long L = labs -7
+	println A, L, (abs -7 + 3), (abs -2 * 3)
+	int n = 5
+	println n -1, n - 2 * 3, tick -1, tick - 2 * 3 + 1
+	int Twice = twice -4
+	println Twice, twice -4 + 1
+	box B = {.Size = 3}
+	println (B.grow -1), B.Size -1, B.less
+	int twice = 10
+	println twice -1, twice - 2 * 3
+	say -5
+	return 0
+}
+
+### reading_input
+// stdin: Ada\n  41 \nforty\n2.5e1\r\n\nlast
+//> Name? Hello, Ada!
+//> 42
+//> false true
+//> 50.0
+//> [] false
+//> [last] false
+//> [] true
+//> 42 true false true 1000.0 false false true 0.5 -2147483648
+int main {
+	str Name = input "Name? "
+	println "Hello,", Name + "!"
+	str Age = read_line
+	println Age.to_int + 1
+	str Word = read_line
+	println Word.is_int, Word.is_number == false
+	println read_line.to_double * 2
+	str Empty = read_line
+	println "[" + Empty + "]", end_of_input
+	str Last = read_line
+	println "[" + Last + "]", end_of_input
+	str Nothing = read_line
+	println "[" + Nothing + "]", end_of_input
+	println " 42 ".to_int, "-7".is_int, "2147483648".is_int, "2147483648".is_long, "1e3".to_double, "abc".is_number, "".is_int, "3.".is_number, ".5".to_double, "-2147483648".to_int
+	return 0
+}
+
+### text_that_is_not_a_number
+// panic: "12abc" is not a whole number (check first with .is_int)
+int main {
+	str T = "12abc"
+	int n = T.to_int
+	return n
+}
+
+### printing_to_stderr
+//> start
+//> problem: just testing (code 0)
+//> Result: 3
+//> n is 7
+//> 6
+//> back on stdout
+//> end
+void report const str &What, int Code {
+	println "problem:", What, "(code " + Code.text + ")"
+}
+
+int count_things {
+	println "counting..."
+	return 3
+}
+
+str describe int n {
+	print "describing "
+	println n
+	return "n is " + n.text
+}
+
+int main {
+	println "start"
+	stderr report "disk full", 28
+	report "just testing", 0
+	stderr println "Error:", 5
+	int Result = stderr count_things
+	println "Result:", Result
+	str Text = stderr describe 7
+	println Text
+	println (stderr describe 8).length
+	stderr stdout println "back on stdout"
+	println "end"
+	return 0
+}
+
+### string_find_replace_slice
+//> true false false
+//> 4 -1 0 0
+//> true true false
+//> [hi there] []
+//> HELLO, WORLD 42 hello, world 42
+//> the dog sat on the dog mat
+//> bb abc a--b--c
+//> -------------------- []
+//> true true true true true true
+//> ADA 3
+//> 8 true
+//> cab age abbag
+//> age cab [] []
+//> cabbage Xbbag
+//> [] c
+//> CAB ge!
+int main {
+	str Line = "the cat sat on the cat mat"
+	println Line.contains("cat"), Line.contains("dog"), Line.contains(',')
+	println Line.find("cat"), Line.find("dog"), Line.find(""), Line.find('t')
+	println Line.starts_with("the"), Line.ends_with("mat"), Line.ends_with("cat")
+	println "[" + "  hi there \t\n".trim + "]", "[" + "   ".trim + "]"
+	println "Hello, World 42".upper, "Hello, World 42".lower
+	println Line.replace("cat", "dog")
+	println "aaaa".replace("aa", "b"), "abc".replace("", "x"), "a.b.c".replace('.', "--")
+	println "-".repeat(20), "[" + "ab".repeat(0) + "]"
+	println "apple" < "banana", "pear" > "peach", "Zebra" < "apple", "abc" <= "abc", "ab" < "abc", "" < "a"
+	str Name = "ada"
+	Name = Name.upper
+	println Name, Name.length
+	long Where = Line.find "sat"
+	bool Has = Line.contains "mat"
+	println Where, Has
+
+	str Word = "cabbage"
+	println Word[0 to 2], Word[4 to Word.length - 1], Word[1 to 5]
+	println Word[4 to], Word[to 2], "[" + Word[3 to 2] + "]", "[" + Word[7 to] + "]"
+	str Middle = Word[1 to 5]
+	Middle[0] = 'X'
+	println Word, Middle
+	int i = 0
+	println "[" + Word[0 to i - 1] + "]", Word[i to i]
+	println Word.upper[to 2], (Word + "!")[5 to]
+	return 0
+}
+
+### slice_past_the_end
+// panic: slice end 9 is outside a string of length 7
+int main {
+	str Word = "cabbage"
+	println Word[5 to 9]
+	return 0
+}
+
+### repeat_below_zero
+// panic: cannot repeat text -2 times
+int main {
+	int n = -2
+	println "ab".repeat(n)
+	return 0
+}
+
+### lists_basics
+//> 3 true 1 60
+//> 100
+//> 85
+//> 77
+//> Ada 3
+//> Grace 5
+//> a - b - c
+//> 262 30 2
+//> hey
+int total const list int &Values {
+	int Sum = 0
+	for v in Values {
+		Sum += v
+	}
+	return Sum
+}
+
+int main {
+	list int Scores = {90, 85, 77}
+	Scores.add 60
+	Scores.insert 0, 100
+	Scores.remove_at 1
+	int Last = Scores.take_last
+	println Scores.length, Scores.contains(77), Scores.find(85), Last
+	for Score in Scores {
+		println Score
+	}
+	list str Names
+	Names.add "Ada"
+	str Grace = "Grace"
+	Names.add Grace
+	for Name in Names {
+		println Name, Name.length
+	}
+	list str Parts = "a,b,c".split ","
+	println Parts.join " - "
+	list list int Grid = {{1, 2}, {3, 4}}
+	Grid[1][0] = 30
+	list int Middle = Scores[1 to 2]
+	println total(Scores), Grid[1][0], Middle.length
+	for c in "hey" {
+		print c
+	}
+	println
+}
+
+### lists_of_objects_and_strings
+//> Rex 3
+//> Tom 5
+//> Rex 4
+//> Tom 5
+//> 1
+//> 4 brown true -1
+//> a b 
+//> 3 1 1
+//> x = 1
+//> y = 2
+//> x changed
+//> 0 false
+//> 7 8 9 
+object pet {
+	str Name
+	int Age
+
+	void show const {
+		println Name, Age
+	}
+}
+
+list str words const str &Text {
+	return Text.split " "
+}
+
+int main {
+	list pet Pets
+	Pets.add pet{.Name = "Rex", .Age = 3}
+	Pets.add pet{.Name = "Tom", .Age = 5}
+	for P in Pets {
+		P.show
+	}
+	Pets[0].Age = 4
+	Pets[0].show
+	pet Last = Pets.take_last
+	Last.show
+	println Pets.length
+
+	list str W = words("the quick brown fox")
+	println W.length, W[2], W.contains("fox"), W.find("cat")
+	for Word in words("a b") {
+		print Word, ""
+	}
+	println
+	println "a,,b".split(",").length, "".split(",").length, "abc".split("").length
+	list list str Table
+	Table.add "x:1".split(":")
+	Table.add "y:2".split(":")
+	for Row in Table {
+		println Row[0], "=", Row[1]
+	}
+	list list str Copy = Table.copy
+	Copy[0][0] = "changed"
+	println Table[0][0], Copy[0][0]
+	list int Empty
+	println Empty.length, Empty.contains(3)
+	int Arr[3] = {7, 8, 9}
+	for a in Arr {
+		print a, ""
+	}
+	println
+}
+
+### lists_in_objects_and_functions
+//> tea, milk 3.75 true
+//> 5 16 2
+//> a 2
+//> b 2
+//> zero|one|three|four five
+//> 0 one+three
+//> abx
+//> c
+//> def
+//> 1 true
+//> 2 c
+//> 1 true
+object shop {
+	list str Items
+	list double Prices
+
+	void add const str &Name, double Price {
+		Items.add Name.copy
+		Prices.add Price
+	}
+
+	double total const {
+		double Sum = 0.0
+		for p in Prices {
+			Sum += p
+		}
+		return Sum
+	}
+}
+
+struct row {
+	str Label
+	list int Cells
+}
+
+list int evens int n {
+	list int Out
+	for i in n {
+		if i % 2 == 0 {
+			Out.add i
+		}
+	}
+	return Out
+}
+
+void double_all list int &Values {
+	for i in Values.length {
+		Values[i] *= 2
+	}
+}
+
+int main {
+	shop Corner
+	Corner.add "tea", 2.5
+	Corner.add "milk", 1.25
+	println Corner.Items.join(", "), Corner.total, Corner.Items.contains("milk")
+
+	list int E = evens(10)
+	double_all E
+	println E.length, E[4], E.find(8)
+
+	list row Rows
+	Rows.add row{.Label = "a", .Cells = {1, 2}}
+	Rows.add row{.Label = "b", .Cells = {3}}
+	Rows[1].Cells.add 4
+	for R in Rows {
+		println R.Label, R.Cells.length
+	}
+
+	list str Words = "one two three four five".split(" ")
+	Words.remove_at 1
+	str Last = Words.take_last
+	Words.insert 0, "zero"
+	println Words.join("|"), Last
+	list str Few = Words[1 to 2]
+	Words.clear
+	println Words.length, Few.join("+")
+
+	list list str Grid = {{"a", "b"}, {"c"}}
+	Grid[0].add "x"
+	Grid.add {"d", "e", "f"}
+	for Line in Grid {
+		println Line.join("")
+	}
+	list bool Flags = {true, false, true}
+	println Flags.find(false), Flags.contains(true)
+	list char Letters = {'c', 'a', 'b'}
+	println Letters.find('b'), Letters[0]
+	list double D = {0.5, -0.0}
+	println D.find(0.0), D.contains(0.5)
+}
+
+### lists_print_sort_reverse
+//> [90, 85, 77, -3] []
+//> [-3, 77, 85, 90]
+//> [90, 85, 77, -3]
+//> [apple, banana, fig, pear] [pear, apple, fig, banana]
+//> [-1.0, 2.5] [a, m, z] [false, true]
+//> [[1, 2], [3], []]
+//> [[], [3], [1, 2]]
+//> [] [7]
+list str make_words {
+	return "pear apple fig banana".split " "
+}
+
+int main {
+	list int Scores = {90, 85, 77, -3}
+	list str Names
+	println Scores, Names
+	Scores.sort
+	println Scores
+	Scores.reverse
+	print Scores
+	println
+	list str Words = make_words
+	Words.sort
+	println Words, make_words
+	list double D = {2.5, -1.0}
+	list char C = {'z', 'a', 'm'}
+	list bool B = {true, false}
+	D.sort
+	C.sort
+	B.sort
+	println D, C, B
+	list list int Grid = {{1, 2}, {3}, {}}
+	println Grid
+	Grid.reverse
+	println Grid
+	list str Empty
+	Empty.sort
+	Empty.reverse
+	list long One = {7}
+	One.reverse
+	println Empty, One
+	return 0
+}
+
+### lookups_basics
+//> {Ada: 36, Alan: 41} 2
+//> 38 false true
+//> Ada 38
+//> Alan 41
+//> Grace 85
+//> Ada Alan Grace
+//> {Ada: 38, Grace: 85} [Ada, Grace] [38, 85]
+//> 2 {Ada: 38, Grace: 85, Zed: 1}
+//> minus one {3: three, -1: minus one} {a: true}
+//> {true: YES, false: no}
+//> {Ada: [9, 7, 10]}
+//> bye Rex
+//> {} 0
+//> 10 999
+//> bye Tom
+object pet {
+	str Name
+	~pet {
+		println "bye", Name
+	}
+}
+
+int main {
+	lookup str int Ages = {"Ada": 36, "Alan": 41}
+	println Ages, Ages.length
+	Ages["Grace"] = 85
+	Ages["Ada"] = 37
+	Ages["Ada"] += 1
+	println Ages["Ada"], Ages.contains("Bob"), Ages.contains("Alan")
+	for Name, Age in Ages {
+		println Name, Age
+	}
+	str Line
+	for Name in Ages {
+		Line += Name + " "
+	}
+	println Line.trim
+	Ages.remove "Alan"
+	println Ages, Ages.keys, Ages.values
+	lookup str int Second = Ages.copy
+	Second["Zed"] = 1
+	println Ages.length, Second
+	lookup int str Names = {3: "three", -1: "minus one"}
+	lookup char bool Seen
+	Seen['a'] = true
+	println Names[-1], Names, Seen
+	lookup bool str Yes = {true: "yes", false: "no", true: "YES"}
+	println Yes
+	lookup str list int Marks
+	Marks["Ada"] = {9, 7}
+	Marks["Ada"].add 10
+	println Marks
+	lookup str pet Pets
+	pet P
+	P.Name = "Rex"
+	Pets["dog"] = P
+	pet Q
+	Q.Name = "Tom"
+	Pets["dog"] = Q
+	Ages.clear
+	println Ages, Ages.length
+	for i in 1000 {
+		Ages[i.text] = i
+	}
+	for i in 990 {
+		Ages.remove i.text
+	}
+	println Ages.length, Ages["999"]
+	return 0
+}
+
+### lookups_in_objects_and_functions
+//> {Ada: [9, 7], Alan: [8]} {101: Lab}
+//> {the: 3, cat: 1, and: 2, hat: 1, bat: 1}
+//> 11
+//> [{the: 3, cat: 11, and: 2, hat: 1, bat: 1}, {x: 1}] [{the: 3, cat: 11, and: 2, hat: 1, bat: 1}, {x: 1, y: 2}]
+//> {a: {b: 1, c: 2}} {a: {c: 2}}
+//> a b 1
+//> a c 2
+//> [] [] {}
+//> {cat: 11, and: 2, hat: 1, bat: 1, the: 2}
+object school {
+	lookup str list int Marks
+	lookup int str Rooms
+
+	void mark const str &Name, int Score {
+		if !Marks.contains(Name) {
+			Marks[Name] = {}
+		}
+		Marks[Name].add Score
+	}
+}
+
+lookup str int count_words const str &Text {
+	lookup str int Counts
+	for Word in Text.split(" ") {
+		if Counts.contains(Word) {
+			Counts[Word] += 1
+		} else {
+			Counts[Word] = 1
+		}
+	}
+	return Counts
+}
+
+void bump lookup str int &Counts, const str &Word {
+	Counts[Word] += 10
+}
+
+int main {
+	school S
+	S.mark "Ada", 9
+	S.mark "Ada", 7
+	S.mark "Alan", 8
+	S.Rooms[101] = "Lab"
+	println S.Marks, S.Rooms
+	lookup str int W = count_words("the cat and the hat and the bat")
+	println W
+	bump W, "cat"
+	println W["cat"]
+	list lookup str int Many
+	Many.add W.copy
+	Many.add {"x": 1}
+	list lookup str int Again = Many.copy
+	Again[1]["y"] = 2
+	println Many, Again
+	lookup str lookup str int Nested
+	Nested["a"] = {"b": 1}
+	Nested["a"]["c"] = 2
+	lookup str lookup str int N2 = Nested.copy
+	N2["a"].remove "b"
+	println Nested, N2
+	for K, V in Nested {
+		for K2, V2 in V {
+			println K, K2, V2
+		}
+	}
+	lookup str str Empty
+	println Empty.keys, Empty.values, Empty.copy
+	for K in Empty {
+		println "never"
+	}
+	for i in 3 {
+		W.remove "the"
+		W["the"] = i
+	}
+	println W
+	return 0
+}
+
+### loops_over_member_results
+//> {Fruit: [apples, pears, bags], Dairy: [milk, bags]}
+//> c a b
+//> [3, 1, 2, 3, 1, 2] {x: 1, y: 1}
+list str make_words {
+	return "c a b".split " "
+}
+
+int main {
+	lookup str list str ShoppingList = {"Fruit": {"pears", "apples"}, "Dairy": {"milk"}}
+	for Aisle in ShoppingList.keys {
+		ShoppingList[Aisle].sort
+		ShoppingList[Aisle].add "bags"
+	}
+	println ShoppingList
+	str Line
+	for W in make_words {
+		Line += W + " "
+	}
+	println Line.trim
+	list int Scores = {3, 1, 2}
+	for X in Scores.copy {
+		Scores.add X
+	}
+	lookup str int A = {"x": 1}
+	for V in A.values {
+		A["y"] = V
+	}
+	println Scores, A
+	return 0
+}
+
+### files_and_directories
+//> 36 36
+//> 3 [first line, second line, third, no end]
+//> - first line
+//> - second line
+//> - third, no end
+//> false true true false
+//> [2026, a.txt]
+//> [2026/nov/c.txt, a.txt]
+//> [2026, a.txt]
+//> [a.txt, old]
+//> 0 0 true
+//> false
+use files
+use directories
+
+int main {
+	str Top = directories.current
+	directories.make "cabby-files-test/notes/2026/nov"
+	directories.change_to "cabby-files-test"
+	files.write "notes/a.txt", "first line\nsecond line\n"
+	files.append "notes/a.txt", "third, no end"
+	println files.read("notes/a.txt").length, files.size "notes/a.txt"
+	list str Lines = files.lines "notes/a.txt"
+	println Lines.length, Lines
+	for Line in files.lines "notes/a.txt" {
+		println "-", Line
+	}
+	files.copy "notes/a.txt", "notes/2026/b.txt"
+	files.rename "notes/2026/b.txt", "notes/2026/nov/c.txt"
+	bool Moved = files.exists "notes/2026/nov/c.txt"
+	println files.exists("notes/2026/b.txt"), Moved, directories.exists("notes"), files.exists("notes")
+	println directories.list "notes"
+	println directories.all_files "notes"
+	directories.change_to "notes"
+	println directories.list "."
+	directories.change_to ".."
+	files.delete "notes/2026/nov/c.txt"
+	directories.remove "notes/2026/nov"
+	directories.rename "notes/2026", "notes/old"
+	println directories.list "notes"
+	files.write "empty.txt", ""
+	println files.lines("empty.txt").length, files.read("empty.txt").length, directories.home.length > 0
+	files.delete "empty.txt"
+	files.delete "notes/a.txt"
+	directories.remove "notes/old"
+	directories.remove "notes"
+	directories.change_to Top
+	directories.remove "cabby-files-test"
+	println directories.exists "cabby-files-test"
+	return 0
+}
+
+### file_streams
+//> doubled: 56
+//> 1 first line
+//> 2 no end 42 true
+//> 3 error 28 - disk full
+//> 4 note: from a function
+//> 5 after a move
+//> started
+//> from a method
+//> true
+//> false
+use files
+use directories
+
+int report const str &What, int Code {
+	println "error", Code, "-", What
+	return Code * 2
+}
+
+void note file &Log, const str &Text {
+	Log println "note:", Text
+}
+
+object logger {
+	file Out
+
+	void start const str &Path {
+		Out = files.open_to_write Path
+		Out println "started"
+	}
+
+	void say const str &Text {
+		Out println Text
+	}
+}
+
+void write_all {
+	file Log = files.open_to_write "log.txt"
+	Log println "first line"
+	Log print "no end "
+	Log println 42, true
+	int Doubled = Log report "disk full", 28
+	note Log, "from a function"
+	println "doubled:", Doubled
+	file Moved = Log
+	Moved println "after a move"
+	logger L
+	L.start "obj.txt"
+	L.say "from a method"
+}
+
+int main {
+	str Top = directories.current
+	directories.make "cabby-stream-test"
+	directories.change_to "cabby-stream-test"
+	write_all
+	file In = files.open "log.txt"
+	int Count = 0
+	while !In.at_end {
+		str Line = In.read_line
+		Count++
+		println Count, Line
+	}
+	for Line in files.lines "obj.txt" {
+		println Line
+	}
+	println In.at_end
+	files.write "empty.txt", ""
+	file E = files.open "empty.txt"
+	println !E.at_end
+	files.delete "log.txt"
+	files.delete "obj.txt"
+	files.delete "empty.txt"
+	directories.change_to Top
+	directories.remove "cabby-stream-test"
+	return 0
+}
+
+### file_write_to_reading
+// panic: can't write to 'tests/run_cases.cby': it was opened for reading (files.open; files.open_to_change opens a file to read and write)
+use files
+
+int main {
+	file F = files.open "tests/run_cases.cby"
+	F println "x"
+	return 0
+}
+
+### files_read_missing
+// panic: can't read 'no-such-file.txt': no such file or directory
+use files
+
+int main {
+	str Text = files.read "no-such-file.txt"
+	return 0
+}
+
+### borrow_disjoint_fields
+//> [1, 2, 3] 6
+//> Ada 3
+object tally {
+	list int Values
+	list int Seen
+	int Total
+	str Name
+
+	void add_all {
+		for V in Values {
+			Seen.add V              // another field: allowed
+			Total += V
+		}
+	}
+
+	void rename const str &New {
+		Name = New.copy
+	}
+}
+
+object person {
+	str Name
+	int Age
+}
+
+void set_age int &Age, const str &Name {
+	Age = (int)Name.length
+}
+
+int main {
+	tally T
+	T.Values = {1, 2, 3}
+	T.add_all
+	println T.Seen, T.Total
+	person P
+	P.Name = "Ada"
+	set_age P.Age, P.Name          // one field lent as mutable, another read
+	println P.Name, P.Age
+	return 0
+}
+
+### lookup_missing_key
+// panic: the key "Bob" isn't in the lookup (check with .contains first)
+int main {
+	lookup str int Ages = {"Ada": 36}
+	println Ages["Bob"]
+	return 0
+}
+
+### lookup_remove_missing
+// panic: the key -4 isn't in the lookup (check with .contains first)
+int main {
+	lookup int int A
+	A.remove -4
+	return 0
+}
+
+### list_index_past_the_end
+// panic: index 3 is outside a list of length 3 (positions 0 to 2)
+int main {
+	list int Scores = {1, 2, 3}
+	int i = 3
+	println Scores[i]
+	return 0
+}
+
+### list_take_last_when_empty
+// panic: take_last on an empty list
+int main {
+	list str Empty
+	str S = Empty.take_last
+	return 0
+}
+
+### list_insert_too_far
+// panic: index 5 is outside a list of length 1 (positions 0 to 1, for .insert)
+int main {
+	list int S = {1}
+	S.insert 5, 2
+	return 0
+}
+
+### read_line_past_the_end
+// stdin: hello\n
+// panic: read_line after the end of the input (stop when end_of_input is true)
+//> [hello]
+//> []
+int main {
+	while true {
+		str Line = read_line
+		println "[" + Line + "]"
+	}
+	return 0
+}
+
+### shell_commands
+//> words: 3
+//> [a, b]
+//> status: 3
+//> before
+//> from the command
+//> after
+//> false hello there
+//> hello there
+//> false 137
+//> 2
+use shell
+use files
+
+int main {
+	str Words = shell.run "echo one two three | wc -w"
+	println "words:", Words.trim
+	println shell.run("printf 'a\nb\n\n'").split("\n")
+	int Status = shell.status "exit 3"
+	println "status:", Status
+	println "before"
+	if shell.status("echo from the command") == 0 {
+		println "after"
+	}
+	bool Had = shell.has "CABBY_TEST_SHELL"
+	shell.set "CABBY_TEST_SHELL", "hello there"
+	println Had, shell.get "CABBY_TEST_SHELL"
+	println shell.run "echo $CABBY_TEST_SHELL"
+	shell.unset "CABBY_TEST_SHELL"
+	println shell.has("CABBY_TEST_SHELL"), shell.status "kill -9 $$"
+	files.write "cabby-shell-test.txt", "x\ny\n"   // written out before the command reads it
+	str Count = shell.run "wc -l < cabby-shell-test.txt"
+	files.delete "cabby-shell-test.txt"
+	println Count.trim
+	return 0
+}
+
+### directory_held
+// (a directory held open: entries one at a time, files in it by name, and
+// still the same directory once it's renamed and the program has moved)
+//> [a.txt, b.txt, inner] beta! 5 true false false
+//> 3
+//> true alpha
+//> [c.txt] gamma
+//> [b.txt, inner, z.txt] true
+//> panic next
+// panic: can't read '../etc': give just a name in the directory, not a path
+use directories
+use files
+
+int main {
+	directories.make "cabby-held/inner"
+	files.write "cabby-held/a.txt", "alpha"
+	directory D = directories.open "cabby-held"
+	D.write "b.txt", "beta"
+	D.add_to "b.txt", "!"
+	println D.names, D.read("b.txt"), D.size("a.txt"), D.is_directory("inner"), D.is_file("inner"), D.has("zzz")
+	list str Seen
+	while D.next {
+		Seen.add D.name
+	}
+	println Seen.length
+	directories.rename "cabby-held", "cabby-held-2"
+	directories.change_to "cabby-held-2/inner"
+	println D.path.ends_with("/cabby-held-2"), D.read("a.txt")
+	directory I = D.open_inside "inner"
+	I.write "c.txt", "gamma"
+	println I.names, files.read("c.txt")
+	I.remove "c.txt"
+	D.rename "a.txt", "z.txt"
+	println D.names, D.path_of("z.txt").ends_with("cabby-held-2/z.txt")
+	directories.change_to "../.."
+	D.remove "z.txt"
+	D.remove "b.txt"
+	D.remove "inner"
+	directories.remove "cabby-held-2"
+	println "panic next"
+	D.read "../etc"
+	return 0
+}
+
+### else_catches_panics
+// (a panic in a statement with an else is caught: in a library, deep in
+// the program's own calls, a list's position, text that isn't a number,
+// dividing by zero; else Value, else { }, else Why { } with break,
+// continue and return; nested, and an object made in the declaration)
+//> fallback
+//> -1 -1 0
+//> total 60
+//> 10 20 30 stopped at 3: index 3 is outside a list of length 3 (positions 0 to 2)
+//> nothing to delete
+//> skipped 2 skipped 4
+//> inner fallback
+//> db: can't open the database '/no/such/folder/x.db': unable to open database file
+//> still going
+//> done
+use files
+use databases
+
+int pick const list int &L, int I {
+	list str Made = {"a", "b"}
+	return L[I]
+}
+
+int deep const list int &L, int I {
+	return pick(L, I) * 1
+}
+
+int divide int A, int B {
+	return A / B
+}
+
+int main {
+	str Text = files.read "cabby-no-such-file.txt" else "fallback"
+	println Text
+	int A = "12x".to_int else -1
+	int B = divide(7, 0) else -1
+	lookup str int Ages = {"Ana": 30}
+	int C = Ages["Bo"] else 0
+	println A, B, C
+	list int L = {10, 20, 30}
+	int Total = 0
+	for I in 5 {
+		Total += deep(L, I) else 0
+	}
+	println "total", Total
+	for I in 5 {
+		int V = deep(L, I) else Why {
+			println "stopped at", I.text + ":", Why
+			break
+		}
+		print V, ""
+	}
+	files.delete "cabby-no-such-file.txt" else {
+		println "nothing to delete"
+	}
+	str Skipped = ""
+	for I in 1 to 4 {
+		if I % 2 == 1 {
+			continue
+		}
+		int W = divide(I, 0) else {
+			Skipped += " skipped " + I.text
+			continue
+		}
+		println W
+	}
+	println Skipped.trim
+	files.delete "cabby-no-such-file.txt" else Why {
+		str Inner = files.read "cabby-no-such-file-2.txt" else "inner fallback"
+		println Inner
+	}
+	databases.database D = databases.open "/no/such/folder/x.db" else Why {
+		println "db:", Why
+		println "still going"
+		println "done"
+		return 0
+	}
+	return 1
+}
+
+### else_drops_what_failed_calls_made
+// (what the calls a caught panic leaves had made is dropped, its
+// destructors run, the last made first, in both modes; an object being
+// made isn't, as it never was)
+//> made outer
+//> made inner
+//> inner gone
+//> outer gone
+//> caught: index 5 is outside a list of length 1 (positions 0 to 0)
+//> after
+use files
+
+object noisy {
+	str Name
+	~noisy {
+		println Name, "gone"
+	}
+}
+
+object held {
+	str Name
+	long Size
+	~held {
+		println Name, "gone"
+	}
+}
+
+long size_of_missing {
+	return files.size "cabby-no-such-file.txt"
+}
+
+int deeper {
+	noisy N
+	N.Name = "inner"
+	println "made", N.Name
+	list int L = {1}
+	return L[5]
+}
+
+int outer {
+	noisy N
+	N.Name = "outer"
+	println "made", N.Name
+	return deeper()
+}
+
+int main {
+	int X = outer() else Why {
+		println "caught:", Why
+		X = 0
+		held H = held{.Name = "held", .Size = size_of_missing()} else {
+			println "after"
+			return 0
+		}
+		return 1
+	}
+	return 2
+}
+
+### cabbys_own_abs_random_exit
+// (abs for every kind of number, in its own kind; random a to b, the same
+// after random_seed; .text places; exit from inside a function)
+//> 7 7 5000000000 2.5 3 -2147483648
+//> 4.50 0.667 7.00 0.00 1234568 3 -2.50
+//> true true true
+//> true true
+//> 7 is still 7
+//> leaving
+// exit: 4
+int abs_twice int N {
+	return abs(N) * 2
+}
+
+void leave {
+	println "leaving"
+	exit 4
+}
+
+int main {
+	println abs(-7), abs(7), abs(-5000000000), abs(-2.5), abs((char)-3), abs(-2147483647 - 1)
+	double Price = 4.5
+	println Price.text(2), (2.0 / 3).text(3), 7.text(2), (-0.001).text(2), 1234567.891.text(0), 3.text(0), (-2.5).text(2)
+	random_seed 42
+	int First = random 1 to 6
+	long Big = random 1 to 5000000000
+	random_seed 42
+	bool Same = First == random(1 to 6) and Big == random(1 to 5000000000)
+	bool InRange = true
+	lookup int int Seen
+	for I in 6000 {
+		int R = random 1 to 6
+		InRange = InRange and R >= 1 and R <= 6
+		Seen[R] = 1
+		double D = random 0.0 to 1.0
+		InRange = InRange and D >= 0 and D < 1
+	}
+	println Same, InRange, Seen.length == 6
+	str Bad = Price.text(-1) else "no"
+	println Bad == "no", random(3 to 3) == 3
+	println abs_twice(-7) / 2, "is still 7"
+	leave
+	return 0
+}
+
+### lists_of_a_base_hold_its_derived
+// (a list of shapes holds squares and circles, and one made from two
+// objects; each answers as itself, its fields found and its destructors
+// run as what it is, through the list, a variable, or taken out)
+//> sq: 4.00
+//> ci: 3.14
+//> fa: 6.28
+//> 4.0 fa
+//> renamed: 3.14
+//> took fa: 6.28
+//> t: 9.00
+//> square t gone, with 0 notes
+//> shape t gone
+//> shape fa gone
+//> square sq gone, with 1 notes
+//> shape sq gone
+//> shape renamed gone
+//> shape plain gone
+object shape {
+	str Name
+	double area const {
+		return 0
+	}
+	str describe const {
+		return Name + ": " + area.text(2)
+	}
+	~shape {
+		println "shape", Name, "gone"
+	}
+}
+
+object square : shape {
+	double Side
+	list str Notes
+	double area const {
+		return Side * Side
+	}
+	~square {
+		println "square", Name, "gone, with", Notes.length, "notes"
+	}
+}
+
+object circle : shape {
+	double R
+	double area const {
+		return 3.14159 * R * R
+	}
+}
+
+object labelled {
+	str Label
+}
+
+object fancy : circle, labelled {
+	double area const {
+		return 2 * 3.14159 * R * R
+	}
+}
+
+int main {
+	list shape Shapes
+	square S
+	S.Name = "sq"
+	S.Side = 2
+	S.Notes.add "red"
+	Shapes.add S
+	circle C
+	C.Name = "ci"
+	C.R = 1
+	Shapes.add C
+	fancy F
+	F.Name = "fa"
+	F.R = 1
+	F.Label = "shiny"
+	Shapes.add F
+	for X in Shapes {
+		println X.describe
+	}
+	println Shapes[0].area, Shapes[2].Name
+	Shapes[1].Name = "renamed"
+	println Shapes[1].describe
+	shape One = Shapes.take_last
+	println "took", One.describe
+	shape Plain
+	Plain.Name = "plain"
+	Shapes.add Plain
+	square T
+	T.Name = "t"
+	T.Side = 3
+	shape Held = T
+	println Held.describe
+	return 0
+}
+
+### shell_programs
+// (input for a command; a program's arguments as a list, quoted by no one)
+//> apple|fig|pear
+//> [it's a "file" $HOME]
+//> 3 1 127 0
+// panic: 'sh' failed: exit status 2 (shell.program_status gives the status instead)
+use shell
+
+int main {
+	println shell.run_with("sort", "pear\napple\nfig\n").replace("\n", "|")
+	println shell.run_program {"printf", "[%s]\n", "it's a \"file\" $HOME"}
+	str Words = shell.run_program_with {"wc", "-w"}, "one two three"
+	println Words.trim, shell.program_status({"grep", "-q", "x", "/dev/null"}), shell.program_status({"no-such-program-here"}), shell.program_status({"true"})
+	println shell.run_program {"sh", "-c", "exit 2"}
+	return 0
+}
+
+### shell_run_fails
+// panic: the command 'exit 4' failed: exit status 4 (shell.status gives the status instead)
+use shell
+
+int main {
+	str S = shell.run "exit 4"
+	return 0
+}
+
+### shell_command_not_found
+// panic: the command 'cabby-no-such-command-x 2>/dev/null' failed: exit status 127 (command not found)
+use shell
+
+int main {
+	str S = shell.run "cabby-no-such-command-x 2>/dev/null"
+	return 0
+}
+
+### shell_get_unset
+// panic: the environment variable 'CABBY_NOT_SET_X' isn't set (check first with shell.has "CABBY_NOT_SET_X")
+use shell
+
+int main {
+	str S = shell.get "CABBY_NOT_SET_X"
+	return 0
+}
+
+### words_for_conditions
+//> 3 2 1
+//> yes 2
+//> true false false true
+//> both
+//> true
+int main {
+	int Count = 3
+	until Count is 0 {
+		print Count
+		if Count is not 1 {
+			print " "
+		}
+		Count--
+	}
+	println
+	str Answer = "no"
+	int Tries = 0
+	do {
+		Tries++
+		if Tries is 2 {
+			Answer = "yes"
+		}
+	} until Answer is "yes" or Tries > 5
+	println Answer, Tries
+	bool Done = false
+	println not Done, not Count is 0, Count is not 0, not Done and Count is 0
+	if Tries > 1 and Answer is not "no" {
+		println "both"
+	}
+	while not Done {
+		Done = true
+	}
+	println Done
+	return 0
+}
+
+### handlers_on_any_object
+//> false
+//> true
+//> Big Ben tick 1
+//> Big Ben tick 2
+//> Big Ben tick 3
+//> 1
+//> chimes for Big Ben
+//> false
+object timer {
+	handler Tick
+	int Count
+
+	void on_tick handler h {
+		Tick = h
+	}
+
+	void step {
+		Count++
+		Tick.call
+	}
+}
+
+object bell {
+	timer T
+	handler Ring
+
+	// passed on to a part of it
+	void on_tick handler h {
+		T.on_tick h
+	}
+
+	void on_ring handler h {
+		Ring = h
+	}
+}
+
+object clock {
+	timer T
+	bell B
+	str Name
+
+	void start {
+		Name = "Big Ben"
+		T.on_tick show_time
+		B.on_tick show_time
+		B.on_ring chime
+	}
+
+	void show_time {
+		println Name, "tick", T.Count
+	}
+
+	void chime {
+		println "chimes for", Name
+	}
+
+	void stop {
+		B.Ring.clear
+	}
+}
+
+int main {
+	clock C
+	println C.T.Tick.is_set
+	C.start
+	println C.T.Tick.is_set
+	C.T.step
+	C.T.step
+	list clock L
+	L.add C                  // moved: the handler still finds it
+	L[0].T.step
+	clock D
+	D.T.step                 // no handler: nothing happens
+	println D.T.Count
+	L[0].B.Ring.call
+	L[0].stop
+	println L[0].B.Ring.is_set
+	return 0
+}
+
+### processes_talking
+//> got: apple
+//> got: fig
+//> got: pear
+//> status 0
+//> one
+//> status 3 3 false
+//> stopped: 143
+use processes
+
+int main {
+	process P
+	P.start "sort"
+	P.send "pear"
+	P.send "apple"
+	P.send "fig"
+	P.end_input
+	until P.at_end {
+		println "got:", P.read_line
+	}
+	println "status", P.wait
+	process Q
+	Q.start "echo one; echo two; exit 3"
+	println Q.read_line
+	println "status", Q.wait, Q.status, Q.is_running
+	process Slow
+	Slow.start "sleep 5"
+	Slow.stop
+	println "stopped:", Slow.status
+	return 0
+}
+
+### processes_handlers
+//> before
+//> waiting
+//> -> line 1
+//> -> line 2
+//> -> line 3
+//> ended with 2 after 3 lines
+//> wait gave 2
+//> dropped after waiting: done
+use processes
+use files
+
+object watcher {
+	process P
+	int Lines
+
+	void go {
+		P.on_line got_line
+		P.on_end finished
+		P.start "for i in 1 2 3; do echo line $i; done; exit 2"
+		println "waiting"
+		int S = P.wait
+		println "wait gave", S
+	}
+
+	void got_line {
+		Lines++
+		println "->", P.line
+	}
+
+	void finished {
+		println "ended with", P.status, "after", Lines, "lines"
+	}
+}
+
+void run_late {
+	process Late
+	Late.start "sleep 0.1; echo done > cabby-late.txt"
+}
+
+int main {
+	println "before"
+	watcher W
+	W.go
+	run_late                       // Late is dropped here: that waits for it
+	println "dropped after waiting:", files.read("cabby-late.txt").trim
+	files.delete "cabby-late.txt"
+	return 0
+}
+
+### processes_errors_apart
+// (stderr as lines of its own, read or handed to a handler, while its
+// stdout fills too; text sent without a line end)
+//> no line end, still none
+//> oops true true
+//> out: [out 1, out 2, out 3, , last]
+//> errors: [err 1, err 2, err 3, 70000 e's]
+//> status 3
+// panic: 'echo x' has no error lines of its own: call keep_errors_apart before starting it
+use processes
+
+object listener {
+	process P
+	list str Out
+	list str Errors
+
+	void begin {
+		P.keep_errors_apart
+		P.on_line out_line
+		P.on_error_line error_line
+		P.start "for i in 1 2 3; do echo out $i; echo err $i >&2; done; head -c 70000 /dev/zero | tr '\\0' e >&2; echo; echo last; exit 3"
+		int Status = P.wait
+		println "out:", Out
+		println "errors:", Errors
+		println "status", Status
+	}
+
+	void out_line {
+		str Line = P.line
+		Out.add Line
+	}
+
+	void error_line {
+		str Line = P.error_line
+		if Line.length > 20 {
+			Line = Line.length.text + " " + Line[0] + "'s"
+		}
+		Errors.add Line
+	}
+}
+
+int main {
+	process Q
+	Q.keep_errors_apart
+	Q.start "cat; echo oops >&2"
+	Q.write "no line end"
+	Q.write ", still none"
+	Q.end_input
+	println Q.read_line
+	println Q.read_error_line, Q.errors_at_end, Q.at_end
+	Q.wait
+	listener L
+	L.begin
+	process R
+	R.start "echo x"
+	println R.read_error_line
+	return 0
+}
+
+### process_detach_after_start
+// panic: can't detach 'true' now: detach a process before starting it
+use processes
+
+int main {
+	process P
+	P.start "true"
+	P.detach
+	return 0
+}
+
+### process_send_after_end_input
+// panic: can't send to 'cat': its input has been ended
+use processes
+
+int main {
+	process P
+	P.start "cat"
+	P.end_input
+	P.send "x"
+	return 0
+}
+
+### braces_on_the_next_line
+//> 2 4 1
+object countdown
+{
+	int Left
+
+	void tick
+	{
+		Left--
+	}
+}
+
+struct point
+{
+	int X
+}
+
+union bits
+{
+	int I
+}
+
+enum color
+{
+	RED
+	GREEN
+}
+
+object timer : countdown
+{
+}
+
+int main
+{
+	timer T
+	T.Left = 3
+	T.tick
+	point P = {4}
+	println T.Left, P.X, GREEN
+	return 0
+}
+
+### made_and_inner
+//> countdown made
+//> rocket made: Apollo 3
+//> Apollo lift off!
+//> countdown made
+//> rocket made:  3
+//> big rocket made
+//> countdown made
+//> rocket made: Gemini 3
+//> 1
+//> Gemini packed up
+//> Saturn packed up
+//> Apollo packed up
+object countdown {
+	int Left
+	inner handler Done
+
+	countdown {
+		Left = 3
+		println "countdown made"
+	}
+
+	void on_done handler h {
+		Done = h
+	}
+
+	void tick {
+		Left--
+		if Left is 0 {
+			Done.call
+		}
+	}
+}
+
+object rocket {
+	str Name
+	countdown Count
+	bool Launched
+
+	rocket {
+		Count.on_done launch
+		println "rocket made:", Name, Count.Left
+	}
+
+	inner void launch {
+		Launched = true
+		println Name, "lift off!"
+	}
+
+	~rocket {
+		println Name, "packed up"
+	}
+}
+
+object big_rocket : rocket {
+	big_rocket {
+		println "big rocket made"
+	}
+}
+
+int main {
+	rocket R = {.Name = "Apollo"}
+	until R.Launched {
+		R.Count.tick
+	}
+	big_rocket B
+	B.Name = "Saturn"
+	list rocket Fleet
+	Fleet.add rocket{.Name = "Gemini"}
+	println Fleet.length
+	return 0
+}
+
+### addresses_basics
+//> 5
+//> 6
+//> 12
+//> 10 20 30 40
+//> 3 true true
+//> 99
+//> 169
+//> 50
+//> 51
+//> true false true
+//> 5
+//> 2 l
+//> l
+use addresses
+
+struct point {
+	int X
+	int Y
+}
+
+extern address char strchr address char s, int c
+extern long strlen address char s
+
+void double_it address int A {
+	A.value = A.value * 2
+}
+
+int main {
+	int Count = 5
+	address int A = addresses.of Count
+	println A.value
+	A.value = 6
+	println Count
+	double_it A
+	println Count
+
+	int Scores[4] = {10, 20, 30, 40}
+	address int S = addresses.of Scores
+	println S.value, S[1], (S + 2).value, S[3]
+	address int Last = addresses.of Scores[3]
+	println Last - S, Last > S, Last is S + 3
+	S[2] = 99
+	println Scores[2]
+	int Total = 0
+	for address int P = S; P < S + 4; P = P + 1 {
+		Total += P.value
+	}
+	println Total
+
+	point Pt = {1, 2}
+	address point Q = addresses.of Pt
+	Q.value.Y = 50
+	println Pt.Y
+	address int PY = addresses.of Pt.Y
+	PY.value++
+	println Pt.Y
+
+	address int N = addresses.none
+	println N.is_none, A.is_none, N is addresses.none
+
+	char Text[6] = {'h', 'e', 'l', 'l', 'o', '\0'}
+	address char T = addresses.of Text
+	println strlen(T)
+	address char L = strchr(T, 'l')
+	println L - T, L.value
+	L.value = 'L'
+	println L[1]
+	return 0
+}
+
+### address_past_the_end
+// only: run
+// panic: this address is past the end of an array of 3 (at 3)
+use addresses
+
+int main {
+	int Xs[3] = {1, 2, 3}
+	address int A = addresses.of Xs
+	println A[3]
+	return 0
+}
+
+### address_none
+// only: run
+// panic: there is nothing at this address: it is addresses.none
+use addresses
+
+int main {
+	address int A = addresses.none
+	println A.value
+	return 0
+}
+
+### memory_by_hand
+//> 0 0
+//> 360
+//> 7 7
+use addresses
+
+struct pair
+{
+	int A
+	int B
+}
+
+int main {
+	address int Buffer = addresses.allocate 4
+	println Buffer[0], Buffer[3]
+	for i in 4 {
+		Buffer[i] = (i + 1) * 10
+	}
+	Buffer = addresses.reallocate Buffer, 8
+	for i in 4 to 7 {
+		Buffer[i] = (i + 1) * 10
+	}
+	int Total = 0
+	for i in 8 {
+		Total += Buffer[i]
+	}
+	println Total
+	addresses.free Buffer
+	address pair P = addresses.allocate 1
+	P.value.A = 7
+	P.value.B = P.value.A
+	println P.value.A, P[0].B
+	addresses.free P
+	address int Nothing = addresses.none
+	addresses.free Nothing
+	address int Grown = addresses.reallocate Nothing, 2
+	addresses.free Grown
+	return 0
+}
+
+### memory_past_the_end
+// only: run
+// panic: this address is past the end of the memory allocated at
+use addresses
+
+int main {
+	address int B = addresses.allocate 4
+	B[4] = 1
+	return 0
+}
+
+### memory_used_after_free
+// only: run
+// panic: this memory was given back by addresses.free at
+use addresses
+
+int main {
+	address int B = addresses.allocate 4
+	addresses.free B
+	println B[0]
+	return 0
+}
+
+### memory_freed_twice
+// only: run
+// panic: this memory was already given back by addresses.free at
+use addresses
+
+int main {
+	address int B = addresses.allocate 4
+	addresses.free B
+	addresses.free B
+	return 0
+}
+
+### memory_old_address_after_reallocate
+// only: run
+// panic: use the address reallocate gave instead
+use addresses
+
+int main {
+	address int B = addresses.allocate 4
+	address int C = addresses.reallocate B, 8
+	B[0] = 1
+	return 0
+}
+
+### memory_free_inside_a_block
+// only: run
+// panic: this address is inside a block, not at its start
+use addresses
+
+int main {
+	address int B = addresses.allocate 4
+	addresses.free B + 1
+	return 0
+}
+
+### memory_free_a_cabby_value
+// only: run
+// panic: this address is of one of Cabby's own values, not memory from addresses.allocate
+use addresses
+
+int main {
+	int X
+	address int A = addresses.of X
+	addresses.free A
+	return 0
+}
+
+### address_kept_after_return
+// only: run
+// panic: this address is of 'Count' in make_counter, which is gone: 'make_counter' returned
+use addresses
+
+address int make_counter {
+	int Count = 5
+	address int A = addresses.of Count
+	return A
+}
+
+int main {
+	address int A = make_counter
+	println A.value
+	return 0
+}
+
+### address_kept_after_block
+// only: run
+// panic: this address is of 'Inner' in main, which is gone: the block it was declared in ended
+use addresses
+
+int main {
+	address int A = addresses.none
+	if true {
+		int Inner = 3
+		A = addresses.of Inner
+	}
+	println A.value
+	return 0
+}
+
+### address_kept_after_list_grew
+// only: run
+// panic: this address is of an element of 'Xs' in main, which is gone: the list changed length (an item was added)
+use addresses
+
+int main {
+	list int Xs = {1, 2, 3}
+	address int A = addresses.of Xs[0]
+	Xs.add 4
+	Xs.add 5
+	println A.value
+	return 0
+}
+
+### address_kept_after_array_replaced_in_place
+//> 11
+//> 1 3
+use addresses
+
+struct point
+{
+	int X
+	int Y
+}
+
+void bump address int A {
+	A.value++
+}
+
+int main {
+	point P
+	address int Y = addresses.of P.Y
+	point Q
+	Q.Y = 10
+	P = Q
+	bump Y
+	println P.Y
+	int Scores[3] = {1, 2, 3}
+	address int S = addresses.of Scores
+	for i in 3 {
+		int Local = i
+		address int L = addresses.of Local
+		bump L
+		S[i] = L.value
+	}
+	println Scores[0], Scores[2]
+	return 0
+}
+
+### addresses_of_text_and_items
+//> 7
+//> Cabbage
+//> Cabbage
+//> true 0
+//> 100 40 30
+//> 25
+//> 2
+//> 9
+use addresses
+
+extern long strlen address char Text
+extern int puts address char Text
+extern int toupper int C
+
+struct point
+{
+	int X
+	int Y
+}
+
+int sum address int Xs, long N {
+	int Total = 0
+	for i in N {
+		Total += Xs[i]
+	}
+	return Total
+}
+
+int main {
+	str Name = "cabbage"
+	address char T = addresses.of_text Name
+	println strlen(T)
+	T[0] = (char)toupper(T[0])
+	puts T
+	println Name
+	str Empty
+	address char E = addresses.of_text Empty
+	println E[0] == '\0', strlen(E)
+
+	list int Scores = {10, 20, 30, 40}
+	address int S = addresses.of_items Scores
+	println sum(S, Scores.length), S[3], (S + 2).value
+	S[1] = 25
+	println Scores[1]
+	address int Third = addresses.of Scores[2]
+	println Third - S
+	list point Path = {{1, 2}, {3, 4}}
+	address point P = addresses.of_items Path
+	P[1].Y = 9
+	println Path[1].Y
+	return 0
+}
+
+### address_of_items_list_changed
+// only: run
+// panic: which is gone: the list changed length (an item was added)
+use addresses
+
+int main {
+	list int Xs = {1, 2, 3}
+	address int A = addresses.of_items Xs
+	Xs.add 4
+	Xs.take_last
+	println A[0]
+	return 0
+}
+
+### address_of_text_string_grew
+// only: run
+// panic: this address is of the text of 'S' in main, which is gone: the string grew, so its characters moved
+use addresses
+
+int main {
+	str S = "hi"
+	address char A = addresses.of_text S
+	S += " there, and a much longer string than before"
+	println A[0]
+	return 0
+}
+
+### address_of_text_past_the_end
+// only: run
+// panic: this address is past the end of the text: it has 2 characters
+//> 0
+use addresses
+
+int main {
+	str S = "hi"
+	address char A = addresses.of_text S
+	println (int)A[2]
+	println A[3]
+	return 0
+}
+
+### memory_free_a_strings_text
+// only: run
+// panic: this address is of one of Cabby's own values, not memory from addresses.allocate
+use addresses
+
+int main {
+	str Name = "John"
+	address char T = addresses.of_text Name
+	addresses.free T
+	return 0
+}
+
+### long_chain_drops
+//> 299999
+//> done
+object node {
+	int Value
+	list node Next
+}
+
+int main {
+	node Head
+	for i in 300000 {
+		node New
+		New.Value = i
+		New.Next.add Head
+		Head = New
+	}
+	println Head.Value
+	node Empty
+	Head = Empty          // the whole chain is dropped here
+	println "done"
+	return 0
+}
+
+### kinds_of_number
+//> 8 m 16 m 4 m 1.6
+//> 400 m
+//> true
+//> -9 m
+long kind meters
+long kind spot, steps meters
+
+str meters.text meters M {
+	long N = (long)M
+	return N.text + " m"
+}
+
+meters m long N {
+	return (meters)N
+}
+
+int main {
+	meters A = m(5)
+	meters B = A + m(3)
+	println B, B * 2, B / 2, B / A
+	spot Home
+	spot Shop = Home + m(400)
+	println Shop - Home
+	println Shop > Home
+	B += m(1)
+	println -B
+	return 0
+}
+
+### time_durations
+//> 5 minutes 30 seconds 330.0 5
+//> 1.25 seconds 2 hours 5 minutes 350 milliseconds 3 days
+//> 11 minutes 2 minutes 45 seconds 11.0
+//> 1 hour
+//> -3 seconds
+//> 0 seconds 5 nanoseconds 1.5 microseconds
+//> true
+use time
+
+int main {
+	duration Break = time.minutes(5) + time.seconds(30)
+	println Break, Break.seconds, Break.whole_minutes
+	println time.seconds(1.25), time.hours(2) + time.minutes(5), time.milliseconds(350), time.days(3)
+	println Break * 2, Break / 2, Break / time.seconds(30)
+	moment Start = time.now
+	moment Later = Start + time.hours(1)
+	println Later - Start
+	println -time.seconds(3)
+	duration Zero
+	println Zero, time.nanoseconds(5), time.nanoseconds(1500)
+	time.sleep time.milliseconds(5)
+	println time.since(Start) >= time.milliseconds(5)
+	return 0
+}
+
+### dates_calendar
+//> 2026-11-03 Tuesday November 2026 3 307
+//> 3 November 2026 Tuesday, 3 Nov 26 03/11/2026
+//> 52 days to go
+//> 2026-11-17 2027-02-03 2026-02-28
+//> true true
+//> 07:30:00 7:30 am 13:30:00
+//> 2026-11-03 07:30:00 Tue 3 Nov, 7:30 AM
+//> 2026-12-25 false
+//> 2026-11-03 16:05:00
+//> 2026-11-03 07:30:00
+//> 2024-02-29 true 29
+use dates
+
+int main {
+	date D = dates.make 2026, 11, 3
+	println D, D.weekday, D.month, D.year, D.day, D.day_of_year
+	println D.format("d mmmm yyyy"), D.format("dddd, d mmm yy"), D.format("dd/mm/yyyy")
+	date Christmas = dates.make D.year, 12, 25
+	println Christmas - D, "days to go"
+	println D + 14, D.add_months(3), (dates.make 2026, 1, 31).add_months(1)
+	println D.weekday is TUESDAY, D.month is NOVEMBER
+	time_of_day Alarm = dates.time 7, 30
+	println Alarm, Alarm.format("h:mm am/pm"), Alarm + time.hours(6)
+	date_time DT = D.at Alarm
+	println DT, DT.format "ddd d mmm, h:mm AM/PM"
+	date R = dates.read "25/12/2026", "dd/mm/yyyy"
+	println R, dates.can_read("31/02/2026", "dd/mm/yyyy")
+	println dates.read_date_time("3 Nov 2026 4:05 pm", "d mmm yyyy h:mm am/pm")
+	moment M = DT.utc_moment
+	println M.utc
+	date Leap = dates.make 2024, 2, 29
+	println Leap, Leap.is_leap_year, Leap.days_in_month
+	return 0
+}
+
+### dates_not_a_date
+// panic: 2026-02-31 isn't a date: that month has 28 days
+//> start
+use dates
+
+int main {
+	println "start"
+	date D = dates.make 2026, 2, 31
+	return 0
+}
+
+### kinds_take_written_numbers
+//> a long walk
+//> 450 425 850 -300 3600 251
+//> true true 575
+long kind meters
+long kind pence
+
+meters from_start {
+	return 100
+}
+
+int main {
+	meters Walk = 400
+	if Walk > 100 {
+		println "a long walk"
+	}
+	meters Further = Walk + 50
+	Walk += 50
+	Walk -= 25
+	meters Twice = Walk * 2
+	meters Back = -300
+	meters Hour = 60 * 60
+	pence Price = 250
+	pence Total = Price + 1
+	println (long)Further, (long)Walk, (long)Twice, (long)Back, (long)Hour, (long)Total
+	println 100 < Walk, Walk == 425, (long)(1000 - Walk)
+	return 0
+}
+
+### json_reading_and_writing
+//> Sydney
+//> 23.5 false
+//> Tuesday 26
+//> Wednesday 24
+//> no warnings
+//> 0 -1 2 true true
+//> [city, now, days, warning]
+//> {"name":"Ada","volume":7,"sounds":true,"recent":["notes.txt",2.5]}
+//> {
+//>   "name": "Ada",
+//>   "recent": [
+//>     "notes.txt"
+//>   ]
+//> }
+//> 27 true
+use json
+use files
+
+int main {
+	str Text = "{\"city\": \"Sydney\", \"now\": {\"temperature\": 23.5, \"raining\": false}, "
+	Text += "\"days\": [{\"day\": \"Tuesday\", \"high\": 26}, {\"day\": \"Wednesday\", \"high\": 24}], "
+	Text += "\"warning\": null}"
+	json Weather = json.read Text
+	println Weather["city"].str
+	println Weather["now"]["temperature"].double, Weather["now"]["raining"].bool
+	for Day in Weather["days"] {
+		println Day["day"].str, Day["high"].long
+	}
+	if Weather["warning"].is_null {
+		println "no warnings"
+	}
+	println Weather["wind"].long_or(0), Weather["city"].long_or(-1), Weather["days"].length, Weather["nothing"].is_missing, Weather.has("city")
+	println Weather.keys
+	json Settings = json.lookup
+	Settings["name"] = "Ada"
+	Settings["volume"] = 7
+	Settings["sounds"] = true
+	json Recent = json.list
+	Recent.add "notes.txt"
+	Recent.add 2.5
+	Settings["recent"] = Recent
+	println Settings
+	Settings.remove "volume"
+	Settings.remove "sounds"
+	json Short = json.list
+	Short.add "notes.txt"
+	Settings["recent"] = Short
+	println Settings.pretty
+	json Days = Weather["days"]
+	Days[0]["high"] = 27                       // part of Weather: changes it too
+	println Weather["days"][0]["high"].long, json.can_read(Weather.text)
+	return 0
+}
+
+### json_wrong_kind
+// panic: 'days[0].day' is text ("Tuesday"), not a number
+use json
+
+int main {
+	json W = json.read "{\"days\": [{\"day\": \"Tuesday\"}]}"
+	println W["days"][0]["day"].long
+	return 0
+}
+
+### json_missing_name
+// panic: the JSON has no "humidity"
+use json
+
+int main {
+	json W = json.read "{\"city\": \"Sydney\"}"
+	println W["humidity"].double
+	return 0
+}
+
+### json_not_json
+// panic: this isn't JSON: line 1, column 8: expected a value
+use json
+
+int main {
+	json J = json.read "[1, 2, ]"
+	return 0
+}
+
+### networks_download
+//> hello true
+//> false 0
+//> hello
+use networks
+use files
+use directories
+
+int main {
+	files.write "net_note.txt", "hello"
+	str Url = "file://" + directories.current + "/net_note.txt"
+	println networks.download(Url), networks.can_reach(Url)
+	println networks.can_reach(Url + "x"), networks.status(Url + "x")
+	networks.download_to Url, "net_copy.txt"
+	println files.read "net_copy.txt"
+	files.delete "net_note.txt"
+	files.delete "net_copy.txt"
+	return 0
+}
+
+### networks_download_fails
+// panic: can't download 'file:///no/such/file.txt': 
+use networks
+
+int main {
+	str Page = networks.download "file:///no/such/file.txt"
+	return 0
+}
+
+### html_reading
+//> Cabby Weekly
+//> Kinds are here | headline big
+//> full story https://cabby.dev/kinds
+//> tea 3.5
+//> cake 5.0
+//> 2 5 true none
+//> 2 2 3 2
+//> One Two a b 1 2 3 x y © ☺
+use html
+
+int main {
+	str Text = "<html><head><title>Cabby Weekly</title></head><body>"
+	Text += "<h1 class='headline big'>Kinds are here</h1>"
+	Text += "<p>Read the <a href=\"https://cabby.dev/kinds\">full story</a>.<p>Second &amp; last <br> line"
+	Text += "<ul id=prices><li class=price data-item=tea>3.50<li class=price data-item=cake>5.00</ul>"
+	Text += "<script>if (a < b) {}</script></body></html>"
+	html Page = html.read Text
+	println Page.find("title")
+	println Page.find("h1.headline").text, "|", Page.find("h1").attribute("class")
+	for Link in Page.find_all "a" {
+		println Link.text, Link.attribute "href"
+	}
+	for Price in Page.find_all "#prices > li.price" {
+		println Price.attribute("data-item"), Price.text.to_double
+	}
+	element Missing = Page.find "table"
+	println Page.find_all("p").length, Page.find("body").children.length, Missing.is_missing, Page.find("a").attribute_or("title", "none")
+	html P = html.read "<DIV ID=Main><P>One<P>Two<UL><LI>a<LI>b</UL><TABLE><TR><TD>1<TD>2<TR><TD>3</TABLE>x&nbsp;y &copy; &#x263A;</DIV>"
+	println P.find_all("p").length, P.find_all("li").length, P.find_all("td").length, P.find_all("tr").length
+	println P.find("div").text
+	return 0
+}
+
+### html_building
+//> <ul><li class="name">Tom &amp; &lt;Jerry&gt;</li><li>a!</li></ul>
+//> <ul>
+//>   <li class="name">Tom &amp; &lt;Jerry&gt;</li>
+//>   <li>a!</li>
+//> </ul>
+//> <ul><li>a!</li></ul>
+use html
+
+int main {
+	element L = html.element "ul"
+	element Item = html.element "li"
+	Item.add_text "Tom & <Jerry>"
+	Item.set_attribute "class", "name"
+	L.add Item
+	element Other = html.element "li"
+	Other.add_text "a!"
+	L.add Other
+	println L.markup
+	println L.pretty
+	element First = L.find "li"
+	First.remove
+	println L.markup
+	return 0
+}
+
+### text_padded_to_a_width
+//> [Tea      ][   3.50][  Menu   ]
+//> [Köln ][toolong][x]
+//> [ab]
+int main {
+	println "[" + "Tea".pad_right(9) + "][" + 3.5.text(2).pad_left(7) + "][" + "Menu".centered(9) + "]"
+	println "[" + "Köln".pad_right(5) + "][" + "toolong".pad_left(3) + "][" + "x".centered(-4) + "]"
+	str Short = "ab"
+	println "[" + Short.pad_left(Short.length) + "]"
+	return 0
+}
+
+### unsigned_long_literals_past_a_long
+//> 18000000000000000000 18446744073709551615 9000000000000000000
+int main {
+	unsigned long Huge = 18000000000000000000
+	unsigned long Most = 18446744073709551615
+	println Huge, Most, Huge / 2
+	return 0
+}
+
+### html_raw_text_is_as_it_is
+//> [Mind   the gap.] [x  y]
+//> Mind the gap.
+use html
+
+int main {
+	html Page = html.read "<div><p>Mind   the <strong>gap</strong>.</p><ul><li>x </li><li> y</li></ul></div>"
+	println "[" + Page.find("p").raw_text + "]", "[" + Page.find("ul").raw_text + "]"
+	println Page.find("p").text
+	return 0
+}
+
+### html_nothing_matches
+// panic: nothing in the page matches "table"
+use html
+
+int main {
+	html P = html.read "<p>hi</p>"
+	println P.find("table").text
+	return 0
+}
+
+### html_bad_selector
+// panic: can't understand the selector "li..x" at "..x": a '.' needs a class name after it
+use html
+
+int main {
+	html P = html.read "<p>hi</p>"
+	println P.find("li..x").text
+	return 0
+}
+
+### xml_reading_and_writing
+//> rss 2.0
+//> Cabby News
+//> Kinds https://cabby.dev/kinds
+//> JSON & more https://cabby.dev/json
+//> Ada
+//> <note id="7"><to>Ada</to><empty/></note>
+//> false true
+use xml
+
+int main {
+	str Text = "<?xml version=\"1.0\"?>\n<rss version=\"2.0\">\n <channel>\n  <title>Cabby News</title>\n"
+	Text += "  <item><title>Kinds</title><link>https://cabby.dev/kinds</link><dc:creator>Ada</dc:creator></item>\n"
+	Text += "  <item><title>JSON &amp; more</title><link>https://cabby.dev/json</link></item>\n"
+	Text += " </channel>\n</rss>\n"
+	xml Feed = xml.read Text
+	println Feed.tag, Feed.attribute "version"
+	println Feed.find("channel > title")
+	for Story in Feed.find_all "item" {
+		println Story.find("title").text, Story.find("link").text
+	}
+	println Feed.find("dc:creator").text
+	element Note = xml.element "note"
+	Note.set_attribute "id", "7"
+	element To = xml.element "to"
+	To.add_text "Ada"
+	Note.add To
+	Note.add xml.element("empty")
+	println Note.markup
+	println xml.can_read("<a><b></a>"), xml.can_read("<a/>")
+	return 0
+}
+
+### xml_mistake
+// panic: this isn't XML: line 3, column 12: expected </item> (opened at line 3), found </itm>
+use xml
+
+int main {
+	xml Bad = xml.read "<list>\n  <item>one</item>\n  <item>two</itm>\n</list>"
+	return 0
+}
+
+### events_timers
+//> tick 1
+//> tick 2
+//> once, running: true
+//> tick 3
+//> tick 4
+//> tick 5
+//> done: 5
+//> stopping the loop
+//> after stop, still running: true
+use events
+
+object clock {
+	timer Tick
+	timer Once
+	int Count
+
+	clock {
+		Tick.on_tick show
+		Tick.every time.milliseconds(100)
+		Once.on_tick half
+		Once.after time.milliseconds(250)
+	}
+
+	inner void show {
+		Count++
+		println "tick", Count
+		if Count is 5 {
+			Tick.stop
+		}
+	}
+
+	inner void half {
+		println "once, running:", Tick.is_running
+	}
+}
+
+object quitter {
+	timer T
+	quitter {
+		T.on_tick quit
+		T.every time.milliseconds(30)
+	}
+	inner void quit {
+		println "stopping the loop"
+		events.stop
+	}
+}
+
+int main {
+	clock C
+	events.run
+	println "done:", C.Count
+	quitter Q
+	events.run
+	println "after stop, still running:", Q.T.is_running
+	return 0
+}
+
+### events_with_a_process
+//> process says: line 1
+//> process says: line 2
+//> process says: line 3
+//> ended; the timer beat true times while waiting
+//> events.run is over
+use events
+use processes
+
+object watcher {
+	process Job
+	timer Beat
+	int Beats
+
+	watcher {
+		Job.on_line got_line
+		Job.on_end finished
+		Beat.on_tick beat
+	}
+
+	void go {
+		Job.start "for i in 1 2 3; do echo line $i; sleep 0.1; done"
+		Beat.every time.milliseconds(70)
+	}
+
+	inner void got_line {
+		println "process says:", Job.line
+	}
+
+	inner void beat {
+		Beats++
+	}
+
+	inner void finished {
+		Beat.stop
+		println "ended; the timer beat", Beats > 2, "times while waiting"
+	}
+}
+
+int main {
+	watcher W
+	W.go
+	events.run
+	println "events.run is over"
+	return 0
+}
+
+### bytes_basics
+//> 48 69 00 ff
+//> 4 72 255 H
+//> 72,105,0,255,
+//> true true false 1 -1
+//> Hi
+//> 69 00
+//> 00000000  48 69 00 ff                                       |Hi..|
+//> 07 07 07
+use bytes
+
+int main {
+	bytes B = "Hi"
+	B.add 0
+	B.add 255
+	println B
+	println B.length, B[0], B[3], (char)B[0]
+	for X in B {
+		print X.text + ","
+	}
+	println ""
+	str Text = "Hi"
+	bytes Same = Text                  // read, not moved: Text is still usable
+	bytes Hi = Text
+	println B.starts_with(Same), Same.same_as(Hi), Same.same_as(B), B.find(bytes.from_hex("69")), B.find("x")
+	println Text
+	println B.part(1, 2)
+	println B.dump
+	println bytes.filled(3, 7)
+	return 0
+}
+
+### bytes_numbers
+//> 80 02 00 00 00 00 02 80
+//> 640 640 -2147352576
+//> ff ff -1 65535
+//> 2.5 2.5 -7
+//> 4294967295 9000000000
+//> 01 00 00 00
+use bytes
+
+int main {
+	bytes B
+	B.add_int 640
+	B.add_int_big 640
+	println B
+	println B.int_at(0), B.int_at_big(4), B.int_at_big(0)
+	bytes S
+	S.add_short 65535
+	println S, S.short_at(0), S.unsigned_short_at(0)
+	bytes D
+	D.add_double 2.5
+	D.add_double_big 2.5
+	D.add_long -7
+	println D.double_at(0), D.double_at_big(8), D.long_at(16)
+	bytes U
+	U.add_int -1
+	U.add_long_big 9000000000
+	println U.unsigned_int_at(0), U.long_at_big(4)
+	bytes C = bytes.filled(4, 0)
+	C.set_int_at 0, 1
+	int First = C[0]
+	C[0] = First
+	println C
+	return 0
+}
+
+### bytes_files
+//> 10
+//> 00 01 02 03 04 05 06 07 08 09 aa bb
+//> 2 4 12
+//> 02 03 04 63 64 65
+//> 12 12
+//> line one
+//> two
+use files
+
+int main {
+	bytes B
+	for i in 10 {
+		B.add i
+	}
+	files.write_bytes "cabby-test.bin", B
+	println files.size("cabby-test.bin")
+	files.append_bytes "cabby-test.bin", bytes.from_hex("aa bb")
+	println files.read_bytes("cabby-test.bin")
+	file F = files.open_to_change "cabby-test.bin"
+	F.move_to 2
+	bytes Got = F.read_bytes 3
+	F.write_bytes "cde"
+	println Got[0], F.read_bytes(0).length + 4, F.size
+	F.move_to 2
+	println F.read_bytes(6)
+	F.move_to_end
+	println F.position, F.read_bytes(5).length + 12
+	file W = files.open_to_write "cabby-test.txt"
+	W println "line one"
+	W.write_bytes "two"
+	file R = files.open "cabby-test.txt"
+	println R.read_line
+	println R.read_bytes(10).str
+	files.delete "cabby-test.bin"
+	files.delete "cabby-test.txt"
+	return 0
+}
+
+### bytes_past_the_end
+// panic: there's no byte [3] to read: there are 3 (from [0] to [2])
+use bytes
+
+int main {
+	bytes B = "abc"
+	println B[3]
+	return 0
+}
+
+### bytes_not_a_byte
+// panic: a byte is a number from 0 to 255, not 256
+use bytes
+
+int main {
+	bytes B
+	B.add 256
+	return 0
+}
+
+### bytes_number_past_the_end
+// panic: an int (4 bytes) at byte [1] goes past the end: there are 4 bytes
+use bytes
+
+int main {
+	bytes B = "abcd"
+	println B.int_at(1)
+	return 0
+}
+
+### bytes_number_too_big
+// panic: 70000 doesn't fit in a short (2 bytes): it holds -32768 to 65535
+use bytes
+
+int main {
+	bytes B
+	B.add_short 70000
+	return 0
+}
+
+### bytes_bad_hex
+// panic: this isn't hexadecimal bytes: 'g' isn't a digit (0 to 9, and a to f)
+use bytes
+
+int main {
+	println bytes.from_hex("4g")
+	return 0
+}
+
+### bytes_move_outside
+// panic: can't move to byte 9 of 'cabby-move.bin': it has 3 bytes (0 is the start, 3 the end)
+use files
+
+int main {
+	files.write "cabby-move.bin", "abc"
+	file F = files.open_to_change "cabby-move.bin"
+	files.delete "cabby-move.bin"
+	F.move_to 9
+	return 0
+}
+
+### bytes_read_from_writing
+// panic: can't read from 'cabby-w.bin': it was opened for writing
+use files
+
+int main {
+	file F = files.open_to_write "cabby-w.bin"
+	files.delete "cabby-w.bin"
+	bytes B = F.read_bytes 1
+	return 0
+}
+
+### bytes_change_missing
+// panic: can't change 'cabby-not-there.bin': no such file or directory
+use files
+
+int main {
+	file F = files.open_to_change "cabby-not-there.bin"
+	return 0
+}
+
+### json_struct_round_trip
+//> {"name":"Ada","age":36,"grade":"A","height":1.7,"shirt":"GREEN","at":{"x":1,"y":2},"trail":[{"x":3,"y":4}],"tags":["fast"],"scores":{"math":99},"best":[0,7,0],"seen":["RED"],"extra":null,"html_page":"p"}
+//> Ada 36 A 1.7 true 1 2 1 fast 99 7 1 p
+//> Grace 36 3 9
+use json
+
+double kind meters
+
+enum color {
+	RED
+	GREEN
+}
+
+struct point {
+	int x
+	int y
+}
+
+struct player {
+	str Name
+	unsigned short Age
+	char Grade
+	meters Height
+	color Shirt
+	point At
+	list point Trail
+	list str Tags
+	lookup str int Scores
+	int Best[3]
+	list color Seen
+	json Extra
+	str HTMLPage
+}
+
+int main {
+	player P = {"Ada", 36, 'A', 1.7, GREEN, {1, 2}}
+	P.Trail.add {3, 4}
+	P.Tags.add "fast"
+	P.Scores["math"] = 99
+	P.Best[1] = 7
+	P.Seen.add RED
+	P.HTMLPage = "p"
+	json J = json.from P
+	println J
+	json Back = json.read(J.text)
+	player Q
+	Back.fill Q
+	println Q.Name, Q.Age, Q.Grade, Q.Height, Q.Shirt == GREEN, Q.At.x, Q.At.y, Q.Trail.length, Q.Tags[0], Q.Scores["math"], Q.Best[1], Q.Seen.length, Q.HTMLPage
+	json.read("{\"name\": \"Grace\", \"at\": {\"x\": 3}, \"trail\": null, \"bestScore\": 5, \"Best\": [9]}").fill Q
+	println Q.Name, Q.Age, Q.At.x, Q.Best[0]
+	return 0
+}
+
+### json_struct_wrong_kind
+// panic: 'at.x' is text ("one"), not a number
+use json
+
+struct point {
+	int x
+	int y
+}
+
+struct player {
+	point At
+}
+
+int main {
+	player P
+	json.read("{\"at\": {\"x\": \"one\"}}").fill P
+	return 0
+}
+
+### json_struct_too_big
+// panic: 'age' is 300, which doesn't fit: it must be from 0 to 255
+use json
+
+struct player {
+	unsigned char Age
+}
+
+int main {
+	player P
+	json.read("{\"age\": 300}").fill P
+	return 0
+}
+
+### json_struct_bad_enum
+// panic: 'shirt' is "PURPLE", not a color (RED or GREEN)
+use json
+
+enum color {
+	RED
+	GREEN
+}
+
+struct player {
+	color Shirt
+}
+
+int main {
+	player P
+	json.read("{\"shirt\": \"PURPLE\"}").fill P
+	return 0
+}
+
+### json_struct_not_a_lookup
+// panic: the JSON is a list, not a lookup to fill a 'player' from
+use json
+
+struct player {
+	str Name
+}
+
+int main {
+	player P
+	json.read("[1, 2]").fill P
+	return 0
+}
+
+### threads_workers
+//> before: true
+//> 4 workers: 0 1 2 3
+//> sums 1249975000 3749975000 6249975000 8749975000
+//> again: 1249975000
+//> dropped while working: 220
+use threads
+
+object summer : threads.worker {
+	long From
+	long Upto
+	long Total
+
+	void work {
+		Total = 0
+		for long I = From; I < Upto; I++ {
+			Total += I
+		}
+	}
+}
+
+object slow : threads.worker {
+	list str Words
+	long Letters
+
+	void work {
+		for int N = 0; N < 60; N++ {
+			Letters += Words[N % Words.length].length
+		}
+		println "dropped while working:", Letters
+	}
+}
+
+void drop_one {
+	slow S
+	S.Words = {"one", "three", "two"}
+	S.start
+}
+
+int main {
+	summer Sums[4]
+	println "before:", Sums[0].is_done
+	for I in 4 {
+		Sums[I].From = I * 50000
+		Sums[I].Upto = (I + 1) * 50000
+		Sums[I].start
+	}
+	print "4 workers:"
+	for I in 4 {
+		Sums[I].wait
+		print "", I
+	}
+	println
+	println "sums", Sums[0].Total, Sums[1].Total, Sums[2].Total, Sums[3].Total
+	Sums[0].start
+	Sums[0].wait
+	println "again:", Sums[0].Total
+	drop_one
+	return 0
+}
+
+### threads_busy_worker_panics
+// panic: that worker is still working
+use threads
+
+object spinner : threads.worker {
+	long Turns
+
+	void work {
+		for long I = 0; I < 2000000000; I++ {
+			Turns++
+		}
+	}
+}
+
+int main {
+	spinner S
+	S.start
+	println S.Turns
+	return 0
+}
+
+### threads_on_done
+//> started
+//> done: 499999500000
+//> told again: 4950
+//> after the loop
+use threads
+use events
+
+object summer : threads.worker {
+	long Upto
+	long Total
+
+	void work {
+		Total = 0
+		for long I = 0; I < Upto; I++ {
+			Total += I
+		}
+	}
+}
+
+object app {
+	summer Sum
+	int Told
+
+	void begin {
+		Sum.Upto = 1000000
+		Sum.on_done finished
+		Sum.start
+		println "started"
+	}
+
+	void finished {
+		Told++
+		if Told is 1 {
+			println "done:", Sum.Total
+			Sum.Upto = 100
+			Sum.start
+		} else {
+			println "told again:", Sum.Total
+		}
+	}
+}
+
+int main {
+	app A
+	A.begin
+	events.run
+	println "after the loop"
+	return 0
+}
+
+### threads_messages_and_stopping
+//> heard: ready
+//> heard: asked to stop
+//> done
+//> while waiting, heard 5000 the last: 4999
+use threads
+use events
+
+object waiter : threads.worker {
+	long Turns
+
+	void work {
+		tell "ready"
+		until stopping {
+			Turns++
+		}
+		tell "asked to stop"
+	}
+}
+
+object chatty : threads.worker {
+	void work {
+		for I in 5000 {
+			tell I.text
+		}
+	}
+}
+
+object app {
+	waiter W
+	chatty C
+	int Heard
+	str Last
+
+	void begin {
+		W.on_message heard
+		W.on_done finished
+		W.start
+	}
+
+	void heard {
+		println "heard:", W.message
+		if W.message == "ready" {
+			W.ask_to_stop
+		}
+	}
+
+	void finished {
+		println "done"
+	}
+
+	void chat {
+		C.on_message count_one
+		C.start
+		C.wait
+		println "while waiting, heard", Heard, "the last:", Last
+	}
+
+	void count_one {
+		Heard++
+		Last = C.message
+	}
+}
+
+int main {
+	app A
+	A.begin
+	events.run
+	A.chat
+	return 0
+}
+
+### bytecode_division
+//> -3 -1 -3074457345618258602 -1 1333333333 1
+//> -1073741824 -2 0
+//> 35 5
+//> 1844674407370955161
+int main {
+	int a = -7
+	int b = 2
+	long c = -9223372036854775807 - 1
+	unsigned u = 4000000000u
+	unsigned v = 3
+	int r1 = a / b
+	int r2 = a % b
+	long r3 = c / 3
+	long r4 = c % 7
+	unsigned r5 = u / v
+	unsigned r6 = u % v
+	println r1, r2, r3, r4, r5, r6
+	int m = -2147483648
+	int r7 = m / 2
+	int r8 = m % 3
+	int one = -1
+	int r9 = m % one
+	println r7, r8, r9
+	unsigned char x = 250
+	unsigned char y = 7
+	int q1 = x / y
+	int q2 = x % y
+	println (int)q1, (int)q2
+	unsigned long big = 18446744073709551615u
+	unsigned long w = 10
+	unsigned long q3 = big / w
+	println q3
+	return 0
+}
+
+### bytecode_lookups
+//> 25 true 2 5
+//> 3
+// panic: the key 9 isn't in the lookup
+int main {
+	lookup int int Counts
+	Counts[3] = 1
+	Counts[3] += 4
+	Counts[5] = 2
+	long Sum = 0
+	for K, V in Counts {
+		Sum += K * V
+	}
+	bool Has = Counts.contains(5)
+	long N = Counts.length
+	int Got = Counts[3]
+	println Sum, Has, N, Got
+	lookup str int Words
+	Words["a"] = 1
+	Words["b"] = 2
+	int T = 0
+	for W, C in Words {
+		T += C
+	}
+	println T
+	Counts[9] += 1
+	return 0
+}
+
+### bytecode_joins_and_adds
+//> fxy!42 84 2.5true
+//> [0, 3, 2, 1, 0]
+str note str &Seen {
+	Seen += "y"
+	return "f"
+}
+
+int main {
+	str Seen = "x"
+	int n = 42
+	char c = '!'
+	str a = note(Seen) + Seen + c + n.text + " " + (n * 2).text + " " + 2.5.text + true.text
+	println a
+	list int Values
+	for i in 5 {
+		Values.add i * 3 % 4
+	}
+	println Values
+	return 0
+}
+
+### bytecode_string_keys
+//> 7 4 5
+// panic: the key "zz" isn't in the lookup
+int main {
+	lookup str int Words
+	for i in 30 {
+		str W = "w" + (i % 7).text
+		if Words.contains(W) {
+			Words[W] += 1
+		} else {
+			Words[W] = 1
+		}
+	}
+	str Key = "w3"
+	int Got = Words[Key]
+	println Words.length, Got, Words["w0"]
+	str Missing = "zz"
+	Words[Missing] -= 1
+	return 0
+}
+
+### bytecode_lookup_remove
+//> 7 1 1
+// panic: the key 4 isn't in the lookup
+int main {
+	lookup int int Counts
+	for i in 10 {
+		Counts[i] = i * i
+	}
+	for i in 3 {
+		Counts.remove i * 2
+	}
+	lookup str int Words
+	Words["a"] = 1
+	Words["b"] = 2
+	str B = "b"
+	Words.remove B
+	println Counts.length, Counts[1], Words.length
+	Counts.remove 4
+	return 0
+}
+
+### bytecode_literals_carried
+//> 4 -2147483648 -5 2147483653 4 2.5
+int main {
+	unsigned char c = 250
+	c += 10
+	int big = 2147483647
+	big += 1
+	long n = 5
+	n *= 3
+	n -= 20
+	lookup int long Totals
+	Totals[1] = 7
+	Totals[1] += 2147483647
+	Totals[1] -= 1
+	lookup int unsigned char Small
+	Small[0] = 250
+	Small[0] += 10
+	lookup int double Halves
+	Halves[0] = 1.5
+	Halves[0] += 1
+	println (int)c, big, n, Totals[1], (int)Small[0], Halves[0]
+	return 0
+}
+
+### interpreter_replace
+//> the dog sat on the dog mat | the  sat on the  mat | the cat sat on the cat mat | the cat sat on the cat mat | bb | The caT saT on The caT maT |  |
+int main {
+	str a = "the cat sat on the cat mat"
+	str b = a.replace("cat", "dog")
+	str c = a.replace("cat", "")
+	str d = a.replace("", "x")
+	str e = a.replace("zzz", "y")
+	str f = "aaaa".replace("aa", "b")
+	str g = a.replace('t', 'T')
+	str h = "".replace("a", "b")
+	println b, "|", c, "|", d, "|", e, "|", f, "|", g, "|", h, "|"
+	return 0
+}
+
+### bytecode_slices
+//> hello | world | llo | world
+// panic: slice end 40 is outside a string of length 12
+int main {
+	str s = "hello, world"
+	long c = s.find ','
+	str a = s[to c - 1]
+	str b = s[c + 2 to]
+	str d = s[2 to 4]
+	str e = s[7 to]
+	println a, "|", b, "|", d, "|", e
+	long bad = 40
+	str f = s[3 to bad]
+	return 0
+}
+
+### compact_arrays
+// (arrays of numbers are kept as bytes; lending an element spreads one out)
+//> 3 7 1 -7 14
+//> 4 3 4
+//> 1.5 2.5 3.75
+//> a b z
+//> 9 1 0.25
+//> 3 100
+//> 100
+//> 11
+//> 200 14
+//> 55
+//> 14
+//> true false true false
+//> 6 5
+//> 9000000000 -3
+//> 1 3 3
+// panic: index 5 is out of bounds
+use addresses
+
+struct pt {
+	int X
+	unsigned char Small[3]
+	double D[2]
+}
+
+void bump int &N {
+	N += 10
+}
+
+void twice int &A, int &B {
+	A *= 2
+	B *= 2
+}
+
+int get int I {
+	return I
+}
+
+int Global[5]
+bool Flags[4]
+
+int main {
+	int A[5]
+	A[0] = 3
+	A[1] = A[0] + 4
+	A[2]++
+	A[3] -= 7
+	A[4] = A[get(1)] * 2
+	println A[0], A[1], A[2], A[3], A[4]
+	unsigned char B[3] = {250, 3, 4}
+	B[0] += 10
+	println (int)B[0], (int)B[1], (int)B[2]
+	double D[3] = {1.5, 2.5}
+	D[2] = D[0] * D[1]
+	println D[0], D[1], D[2]
+	char C[3] = {'a', 'b'}
+	C[2] = 'z'
+	println C[0], C[1], C[2]
+	pt P
+	P.Small[1] = 9
+	P.D[1] = 0.25
+	pt Q = P
+	Q.Small[1] = 1
+	println (int)P.Small[1], (int)Q.Small[1], Q.D[1]
+	int E[5] = A
+	E[0] = 100
+	println A[0], E[0]
+	A = E
+	println A[0]
+	bump A[2]
+	println A[2]
+	twice A[0], E[1]
+	println A[0], E[1]
+	address int Ad = addresses.of A[3]
+	Ad.value = 55
+	println A[3]
+	Global[2] = 7
+	Global[2] += Global[2]
+	println Global[2]
+	for I in 4 {
+		Flags[I] = I % 2 is 0
+	}
+	println Flags[0], Flags[1], Flags[2], Flags[3]
+	int G[2][3]
+	G[1][2] = 5
+	G[0][1] = G[1][2] + 1
+	println G[0][1], G[1][2]
+	long L[2] = {9000000000, -1}
+	L[1] *= 3
+	println L[0], L[1]
+	int S[3] = {1, 2, 3}
+	S[S[0]] = S[S[1]]
+	println S[0], S[1], S[2]
+	int K = 5
+	Flags[K] = true
+	return 0
+}
+
+### lookup_number_keys
+// (keys of each size: found in place when compiled)
+//> 3 2 8
+//> YES no true
+//> 11 2 3 4 false
+//> 7 8 false
+//> 1
+//> 1000 2000000 335 false
+//> 1417 again
+int main {
+	lookup char int Letters
+	for C in "hello world" {
+		if Letters.contains(C) {
+			Letters[C] += 1
+		} else {
+			Letters[C] = 1
+		}
+	}
+	println Letters['l'], Letters['o'], Letters.length
+	lookup bool str Names
+	Names[true] = "yes"
+	Names[false] = "no"
+	Names[true] = "YES"
+	println Names[true], Names[false], Names.contains(true)
+	lookup long int Big
+	Big[-5] = 1
+	Big[9000000000] = 2
+	Big[-9000000000] = 3
+	Big[0] = 4
+	Big[-5] += 10
+	println Big[-5], Big[9000000000], Big[-9000000000], Big[0], Big.contains(5)
+	lookup short int Small
+	Small[-1] = 7
+	Small[32767] = 8
+	println Small[-1], Small[32767], Small.contains(1)
+	lookup unsigned int int U
+	U[4000000000] = 1
+	println U[4000000000]
+	lookup int str Grow
+	for i in 2000 {
+		Grow[i * 3 - 1000] = i.text
+	}
+	for i in 1000 {
+		Grow.remove i * 6 - 1000
+	}
+	long Sum = 0
+	for K, V in Grow {
+		Sum += K
+	}
+	println Grow.length, Sum, Grow[5], Grow.contains(-1000)
+	for i in 500 {
+		Grow[i] = "again"
+	}
+	println Grow.length, Grow[3]
+	return 0
+}
+
+### bytecode_switch
+// (switch in bytecode: falling through, break, continue)
+//> a 11
+//>   -1
+//> y 10
+//> z 100
+//> 120
+//> red green other
+//> four x4
+//> 3
+//> 6
+enum colour {
+	RED
+	GREEN
+	BLUE
+}
+
+str name colour C {
+	switch C {
+		case RED:
+			return "red"
+		case GREEN:
+			return "green"
+		default:
+			return "other"
+	}
+}
+
+int score char C {
+	int S = 0
+	switch C {
+		case 'a':
+		case 'e':
+		case 'o':
+			S += 1
+		case 'y':
+			S += 10
+			break
+		case ' ':
+			S = -1
+			break
+		default:
+			S = 100
+	}
+	return S
+}
+
+int main {
+	int Total = 0
+	for C in "a yz" {
+		Total += score(C)
+		println C, score(C)
+	}
+	println Total
+	println name(RED), name(GREEN), name(BLUE)
+	int Odd = 0
+	for I in 10 {
+		switch I % 3 {
+			case 0:
+				continue
+			case 1:
+				Odd++
+		}
+		if I > 7 {
+			break
+		}
+		str Text = "x" + I.text
+		switch I {
+			case 4:
+				println "four", Text
+		}
+	}
+	println Odd
+	int N = 0
+	while true {
+		N++
+		switch N {
+			case 5:
+				break
+		}
+		if N >= 6 {
+			break
+		}
+	}
+	println N
+	return 0
+}
+
+### bytecode_object_init
+// (objects made with number fields, in bytecode)
+//> 0 1 w0 false
+//> gone w0
+//> 5 2 w5 false
+//> gone w5
+//> 10 3 w10 false
+//> gone w10
+//> 4.0 2.5 0
+//> 12 7
+//> gone w12
+object box {
+	int W
+	int H
+	str Label
+	bool Big
+
+	box {
+		Label = "w" + W.text
+		Big = W * H > 50
+	}
+
+	~box {
+		println "gone", Label
+	}
+}
+
+struct pt {
+	double X
+	double Y
+	int Tag
+}
+
+int counter = 0
+
+int next {
+	counter++
+	return counter
+}
+
+int main {
+	for I in 3 {
+		box B = {.W = I * 5, .H = next()}
+		println B.W, B.H, B.Label, B.Big
+	}
+	pt P = {.Y = 2.5, .X = (double)next()}
+	println P.X, P.Y, P.Tag
+	int K = 7
+	box C = {.H = K, .W = K + next()}
+	println C.W, C.H
+	return 0
+}
+
+### patterns_own_matcher
+// (patterns matches by itself: lazy repeats, \b, \1, looking ahead, and
+// the first alternative that works)
+//> [<a>, <b>] [<a><b>]
+//> [cat, cat]
+//> [ll, aa, bb, cc]
+//> [x, x] [x]
+//> abcd [a, bcd, ]
+//> cat
+//> [Ada, Lovelace, Σοφία]
+//> 3000 x
+//> [12, 34] [123, 45]
+//> true false true
+//> [Cabby, CABBY] true
+//> 1,234,567
+// panic: the pattern '\2(a)' has \2, but only 1 ( ) part
+use patterns
+
+int main {
+	println patterns.make("<.+?>").find_all("<a><b>"), patterns.make("<.+>").find_all("<a><b>")
+	println patterns.make("\\bcat\\b").find_all("cat concat cat's bobcat")
+	println patterns.make("(\\w)\\1").find_all("hello aabb cc")
+	println patterns.make("x(?=y)").find_all("xy xz xy"), patterns.make("x(?!y)").find_all("xy xz xy")
+	patterns.pattern Tricky = patterns.make "(a|ab)(c|bcd)(d*)"
+	println Tricky.find("abcd"), Tricky.parts("abcd")
+	println patterns.make("cat|category").find("category")
+	println patterns.make("[[:upper:]][[:lower:]]+").find_all("Ada Lovelace ΣΟΦΙΑ Σοφία")
+	patterns.pattern Each = patterns.make "(.)*"
+	println Each.find("x".repeat(3000)).length, Each.parts("x".repeat(3000))[0]
+	println patterns.make("\\d{2,3}?").find_all("12345"), patterns.make("\\d{2,3}").find_all("12345")
+	println patterns.make("colou?r").matches("colour"), patterns.make("a|ab").matches("abc"), patterns.make("a|ab").matches("ab")
+	patterns.pattern Name = patterns.make_ignoring_case "\\bcabby\\b"
+	println Name.find_all("Cabby cabbyish CABBY"), patterns.make_ignoring_case("(a)\\1").matches("aA")
+	println patterns.make("\\B(?=(\\d{3})+$)").replace_all("1234567", ",")
+	patterns.pattern Bad = patterns.make "\\2(a)"
+	return 0
+}
+
+### patterns_behind_and_named
+// (looking behind, a letter at a time; parts with names, in a pattern and
+// in what replaces it)
+//> [12, 7] [30, 8]
+//> [x, x] [a, c, e]
+//> 2026 11 [year, month, ] false true
+//> 16/11/2026 is is
+// panic: the pattern '(x)' has no part named y
+use patterns
+
+int main {
+	println patterns.make("(?<=\\$)\\d+").find_all("$12, €30, $7"), patterns.make("(?<!\\$)\\b\\d+").find_all("$12, 30, $7, 8")
+	println patterns.make("(?<=é)x").find_all("éx ax éx"), patterns.make("(?<=^|,)\\w").find_all("ab,cd,ef")
+	patterns.pattern Date = patterns.make "(?<year>\\d{4})-(?<month>\\d\\d)-(\\d\\d)"
+	println Date.part("year", "on 2026-11-16"), Date.part("month", "on 2026-11-16"), Date.part_names, Date.has_part("day"), Date.has_part("year")
+	println Date.replace_all("2026-11-16", "\\3/\\k<month>/\\k<year>"), patterns.make("(?<w>\\w+) \\k<w>").find("it is is so")
+	println patterns.make("(x)").part("y", "x")
+	return 0
+}
+
+### html_pseudo_classes
+// (pseudo-classes, + and ~, and attribute tests; dc:creator is still a name)
+//> tea bread tea
+//> [tea, jam] [cake, bread] [tea, cake, jam]
+//> [jam, bread] [cake]
+//> [tea, jam, bread] jam [jam, bread]
+//> 1 0 1 1
+//> [a1, a3] [a2] [a4] [a1] [a3]
+//> first last first only
+//> [x, y] 1 [z]
+//> 5 4
+//> Ada
+// panic: about a page being shown
+use html
+use xml
+
+list str texts const list element &Found {
+	list str Texts
+	for Each in Found {
+		Texts.add Each.text
+	}
+	return Texts
+}
+
+int main {
+	html Page = html.read "<ul><li>tea</li><li class='sale'>cake</li><li>jam</li><li>bread</li></ul>"
+	println Page.find("li:first-child").text, Page.find("li:last-child").text, Page.find("li:nth-child(1)").text
+	println texts(Page.find_all("li:nth-child(odd)")), texts(Page.find_all("li:nth-child(2n)")), texts(Page.find_all("li:nth-child(-n+3)"))
+	println texts(Page.find_all("li:nth-last-child(-n+2)")), texts(Page.find_all("li:is(.sale, .none)"))
+	println texts(Page.find_all("li:not(.sale)")), Page.find(".sale + li").text, texts(Page.find_all(".sale ~ li"))
+	html Doc = html.read "<div><p>one</p><img src='a.png'></div><div><span>two</span></div><h2>t</h2><p>after</p>"
+	println Doc.find_all("div:has(img)").length, Doc.find_all("div:has(> p > img)").length, Doc.find_all("div:has(> span)").length, Doc.find_all("h2:has(+ p)").length
+	html Links = html.read "<a href='https://x.org/a.pdf' id='a1'>1</a><a href='http://y.org' id='a2' lang='en-GB'>2</a><a href='https://z.org/b' id='a3' class='big red'>3</a><a href='ftp://w' id='a4' lang='fr'>4</a>"
+	list str Ids
+	for A in Links.find_all "a[href^=https]" {
+		Ids.add A.attribute("id")
+	}
+	list str Lang
+	for A in Links.find_all "[lang|=en]" {
+		Lang.add A.attribute("id")
+	}
+	list str Big
+	for A in Links.find_all "a[class~=red]" {
+		Big.add A.attribute("id")
+	}
+	list str Ftp
+	for A in Links.find_all "a[href$=w]" {
+		Ftp.add A.attribute("id")
+	}
+	list str Has
+	for A in Links.find_all "a[href*='.org/']:not([id=a3])" {
+		Has.add A.attribute("id")
+	}
+	println Ids, Lang, Ftp, Has, Big
+	html Kinds = html.read "<div><h1>h</h1><p>first</p><p>mid</p><p>last</p><em>only</em></div>"
+	println Kinds.find("p:first-of-type").text, Kinds.find("p:last-of-type").text, Kinds.find("p:nth-of-type(1)").text, Kinds.find("em:only-of-type").text
+	html Form = html.read "<input value='x' checked><input value='y' disabled><input value='z'><p></p><p> </p>"
+	list str Checked
+	for I in Form.find_all ":is(input:checked, input:disabled)" {
+		Checked.add I.attribute("value")
+	}
+	list str On
+	for I in Form.find_all "input:enabled:not(:checked)" {
+		On.add I.attribute("value")
+	}
+	println Checked, Form.find_all("p:empty").length, On
+	println Form.find_all(":root").length, Page.find_all(":root > *").length
+	xml Feed = xml.read "<rss><item><dc:creator>Ada</dc:creator></item></rss>"
+	println Feed.find("item > dc:creator:first-child").text
+	Page.find "a:hover"
+	return 0
+}
+
+### databases_statements_records_bytes
+// (statements made once, values of any kind, records into structs, bytes;
+// and a struct called item, which json.hby has a method called)
+//> rows: 2 last id: 2
+//> [{"name":"milk","price":2.1,"stock":3,"note":"cold","photo":null},{"name":"bread","price":4.5,"stock":12,"note":null,"photo":"89504e470001"}]
+//> milk 2.1 3
+//> bread 4.5 12
+//> 6 true 1
+//> 0
+//> milk
+//> 2
+// panic: it has 1 ?s, and 2 values were given
+use databases
+
+struct item {
+	str Name
+	double Price
+	int Stock
+}
+
+int main {
+	databases.database Shop = databases.open ":memory:"
+	Shop.run "create table items (name text, price real, stock integer, note text, photo blob)"
+	databases.statement Add = Shop.prepare "insert into items values (?, ?, ?, ?, ?)"
+	Add.add_text "bread"
+	Add.add_number 4.5
+	Add.add_whole 12
+	Add.add_nothing
+	Add.add_bytes bytes.from_hex("89 50 4e 47 00 01")
+	Add.run
+	Add.add_text "milk"
+	Add.add_number 2.1
+	Add.add_whole 3
+	Add.add_text "cold"
+	Add.add_nothing
+	Add.run
+	println "rows:", Shop.value("select count(*) from items"), "last id:", Shop.last_id
+	json All = Shop.records "select name, price, stock, note, photo from items order by price"
+	println All.text
+	for Row in All {
+		item I
+		Row.fill I
+		println I.Name, I.Price, I.Stock
+	}
+	bytes Photo = Shop.bytes_value_with("select photo from items where name = ?", {"bread"})
+	println Photo.length, Photo.starts_with(bytes.from_hex("89 50 4e 47")), Photo[5]
+	println Shop.bytes_value("select photo from items where name = 'none'").length
+	databases.statement Find = Shop.prepare "select name from items where price < ?"
+	Find.add_number 3
+	println Find.value
+	println Find.rows_with({"5"}).length
+	Find.add_text "x"
+	Find.add_text "y"
+	Find.run
+	return 0
+}
+
+### dates_zones_languages_loosely
+// (named time zones, names in other languages, and looser text)
+//> 2026-11-03 08:30:00 +01:00 CET 2026-11-03 18:30:00 +11:00 2026-11-03 13:00:00 +05:30
+//> 2026-07-01 08:00:00 -04:00 EDT 10
+//> 2026-03-29 03:30:00 +02:00
+//> 2026-10-25 00:30:00
+//> 2090-01-01 11:00:00 +11:00
+//> true false false
+//> mardi 3 novembre 2026 Di 3 Nov dies Martis, 3 November
+//> Τρίτη 3 Νοεμβρίου Tīwesdæġ 3 Blōtmōnaþ luglio domingo
+//> Νοέμβριος 2026 2026-11-03
+//> 2026-07-03 2026-11-03 false
+//> today: 2026-11-03
+//> tomorrow: 2026-11-04
+//> yesterday: 2026-11-02
+//> the day after tomorrow: 2026-11-05
+//> tuesday: 2026-11-03
+//> wednesday: 2026-11-04
+//> next tuesday: 2026-11-10
+//> last tuesday: 2026-10-27
+//> next friday: 2026-11-06
+//> last monday: 2026-11-02
+//> in 3 days: 2026-11-06
+//> in a week: 2026-11-10
+//> in two weeks: 2026-11-17
+//> in 1 month: 2026-12-03
+//> 3 days ago: 2026-10-31
+//> a year ago: 2025-11-03
+//> 2 weeks later: 2026-11-17
+//> next week: 2026-11-10
+//> last month: 2026-10-03
+//> next year: 2027-11-03
+//> 25 Dec: 2026-12-25
+//> Dec 25th: 2026-12-25
+//> December 25 2027: 2027-12-25
+//> the 3rd of January: 2027-01-03
+//> 2026-12-31: 2026-12-31
+//> 25/12/2026: 2026-12-25
+//> 3.4.2027: 2027-04-03
+//> 1 Nov: 2027-11-01
+//> Thurs: 2026-11-05
+//> in a fortnight: 2026-11-17
+//> tomorrow at 5pm: 2026-11-04 17:00:00
+//> friday 9:30am: 2026-11-06 09:30:00
+//> now: 2026-11-03 09:15:00
+//> in 2 hours: 2026-11-03 11:15:00
+//> in 90 minutes: 2026-11-03 10:45:00
+//> noon: 2026-11-03 12:00:00
+//> tomorrow midnight: 2026-11-04 00:00:00
+//> 3 hours ago: 2026-11-03 06:15:00
+//> 5 o'clock: 2026-11-03 05:00:00
+//> next monday 17:45: 2026-11-09 17:45:00
+//> 25 Dec at 6 pm: 2026-12-25 18:00:00
+//> false false true
+// panic: 'the 32nd of May' isn't a date
+use dates
+
+int main {
+	moment M = dates.make(2026, 11, 3).at(dates.time(7, 30)).utc_moment
+	println M.text_in("Europe/Berlin"), M.abbreviation_in("Europe/Berlin"), M.text_in("Australia/Sydney"), M.text_in("Asia/Kolkata")
+	moment Summer = dates.make(2026, 7, 1).at(dates.time(12, 0)).utc_moment
+	println Summer.text_in("America/New_York"), Summer.abbreviation_in("America/New_York"), (long)Summer.offset_in("Australia/Sydney") / 3600000000000
+	println dates.make(2026, 3, 29).at(dates.time(2, 30)).moment_in("Europe/Berlin").text_in("Europe/Berlin")
+	println dates.make(2026, 10, 25).at(dates.time(2, 30)).moment_in("Europe/Berlin").utc
+	println dates.make(2090, 1, 1).at(dates.time(0, 0)).utc_moment.text_in("Australia/Sydney")
+	println dates.is_zone("Europe/Berlin"), dates.is_zone("Mars/Olympus"), dates.is_zone("../etc/passwd")
+	date D = dates.make 2026, 11, 3
+	println D.format_in("dddd d mmmm yyyy", "fr"), D.format_in("ddd d mmm", "de"), D.format_in("dddd, d mmmm", "la")
+	println D.format_in("dddd d mmmm", "el"), D.format_in("dddd d mmmm", "Old English"), JULY.text_in("it"), SUNDAY.text_in("es")
+	println D.format_in("mmmm yyyy", "el"), dates.read_in("3 Νοεμβρίου 2026", "d mmmm yyyy", "el")
+	println dates.read_in("3 JUILLET 2026", "d mmmm yyyy", "fr"), dates.read_in("3 ΝΟΈΜΒΡΙΟΣ 2026", "d mmmm yyyy", "el"), dates.can_read_in("3 Brumaire 2026", "d mmmm yyyy", "fr")
+	// Tuesday 3 November 2026, 9:15 am
+	date_time From = dates.make(2026, 11, 3).at(dates.time(9, 15))
+	str Days = "today,tomorrow,yesterday,the day after tomorrow,tuesday,wednesday,next tuesday,last tuesday,next friday,last monday,"
+	Days += "in 3 days,in a week,in two weeks,in 1 month,3 days ago,a year ago,2 weeks later,next week,last month,next year,"
+	Days += "25 Dec,Dec 25th,December 25 2027,the 3rd of January,2026-12-31,25/12/2026,3.4.2027,1 Nov,Thurs,in a fortnight"
+	for Text in Days.split(",") {
+		println Text + ":", dates.read_loosely_from(Text, From)
+	}
+	str Times = "tomorrow at 5pm,friday 9:30am,now,in 2 hours,in 90 minutes,noon,tomorrow midnight,3 hours ago,5 o'clock,next monday 17:45,25 Dec at 6 pm"
+	for Text in Times.split(",") {
+		println Text + ":", dates.read_date_time_loosely_from(Text, From)
+	}
+	println dates.can_read_loosely("someday"), dates.can_read_loosely("31 Feb"), dates.can_read_loosely("next tuesday")
+	date Bad = dates.read_loosely "the 32nd of May"
+	return 0
+}
+
+### archives_xz_zip64
+// (.tar.xz and .xz files; a zip with zip64's records, as one over 4 GB
+// has, read back)
+//> [xzcase/, xzcase/a.txt, xzcase/sub/, xzcase/sub/b.txt]
+//> hello | world
+//> true
+//> [xzcase/, xzcase/a.txt, xzcase/sub/, xzcase/sub/b.txt] world
+//> back: hello
+// panic: isn't a gzipped (.gz) or xz (.xz) file
+use archives
+use files
+use directories
+use shell
+
+int main {
+	directories.make "xzcase/sub"
+	files.write "xzcase/a.txt", "hello"
+	files.write "xzcase/sub/b.txt", "world"
+	archives.make "xzcase.tar.xz", {"xzcase"}
+	println archives.list("xzcase.tar.xz")
+	println archives.read("xzcase.tar.xz", "xzcase/a.txt"), "|", archives.read("xzcase.tar.xz", "xzcase/sub/b.txt")
+	archives.compress_xz "xzcase/a.txt"
+	archives.decompress_to "xzcase/a.txt.xz", "xzcase-a.txt"
+	println files.read("xzcase-a.txt") == "hello"
+	files.delete "xzcase/a.txt.xz"
+	shell.set "CABBY_ZIP64", "1"
+	archives.make "xzcase64.zip", {"xzcase"}
+	shell.unset "CABBY_ZIP64"
+	println archives.list("xzcase64.zip"), archives.read("xzcase64.zip", "xzcase/sub/b.txt")
+	archives.unpack "xzcase64.zip", "xzcase-back"
+	println "back:", files.read("xzcase-back/xzcase/a.txt")
+	shell.status "rm -rf xzcase xzcase-back xzcase.tar.xz xzcase64.zip xzcase-a.txt nothing"
+	str Plain = shell.get("CABBY_SAVE_FOLDERS") + "/xzcase-a.txt"   // (the tests' own folder: the panic leaves it)
+	files.write Plain, "plain"
+	archives.decompress_to Plain, "nothing"
+	return 0
+}
+
+### sound_midi_synthesizer_monitoring
+// (a synthesizer, written down by CABBY_MIDI_OUT, read back; a keyboard
+// (CABBY_MIDI_IN's file) sent on to it, an octave up by its handler, and
+// as it is by send_to (in a millisecond or two: sorted, as their order may
+// differ); monitoring's settings; note names)
+//> outputs: 1 inputs: 1
+//> C4 C#4 B3 A0 C8
+//> violin: A4 C4 C5 C5 C6 E4 E5 G4 G5
+//> drums: C2
+//> monitoring: false 1.0 -> true 0.5
+// panic: a velocity is from 1 to 127, not 200
+use sound
+use events
+use shell
+
+object relay {
+	sound.keyboard K
+	sound.keyboard Again
+	sound.synthesizer S
+	int Heard
+
+	void begin {
+		S = sound.open_synthesizer
+		S.set_instrument "violin"
+		S.play_note "A4", 20
+		K = sound.open_keyboard
+		K.on_note played
+		events.run
+		Again = sound.open_keyboard
+		Again.send_to S
+		Again.on_note counted
+		Heard = 0
+		events.run
+		S.set_instrument "drums"
+		S.play_note "C2", 10
+		S.close
+	}
+
+	void played {
+		if K.pressed {
+			S.start_key K.key + 12
+		} else {
+			S.stop_key K.key + 12
+		}
+		Heard += 1
+		if Heard == 8 {
+			K.close
+		}
+	}
+
+	void counted {
+		Heard += 1
+		if Heard == 8 {
+			events.stop
+		}
+	}
+}
+
+int main {
+	println "outputs:", sound.midi_outputs.length, "inputs:", sound.midi_inputs.length
+	println sound.note_name(60), sound.note_name(61), sound.note_name(59), sound.note_name(21), sound.note_name(108)
+	relay R
+	R.begin
+	sound.song Got = sound.read_song shell.get("CABBY_MIDI_OUT")
+	for P in Got.Parts {
+		list str Names
+		for N in P.Notes {
+			Names.add N.name
+		}
+		Names.sort
+		println P.instrument + ":", Names.join(" ")
+	}
+	print "monitoring:", sound.monitoring, sound.monitor_volume
+	sound.set_monitoring true
+	sound.set_monitor_volume 0.5
+	println " ->", sound.monitoring, sound.monitor_volume
+	sound.synthesizer S = sound.open_synthesizer
+	S.set_velocity 200
+	return 0
+}
+
+### sound_from_workers
+// (two workers playing, writing and reading songs while the main program
+// plays: each worker's song is its own)
+//> worker 0 read back 15 notes, from C4
+//> worker 1 read back 15 notes, from C#4
+//> all played
+use threads
+use sound
+use files
+
+object singer : threads.worker {
+	int Number
+	str Path
+	int Read
+	str First
+
+	void work {
+		for I in 3 {
+			sound.play_note "C4", 10
+			sound.part Tune
+			Tune.set_instrument "flute"
+			Tune.notes "C4 D4 E4 F4 G4", 0.25
+			Tune.transpose Number
+			sound.song Song
+			Song.add Tune
+			Song.save Path
+			sound.song Back = sound.read_song Path
+			Read += Back.Parts[0].Notes.length
+			First = Back.Parts[0].Notes[0].name
+		}
+	}
+}
+
+int main {
+	singer Singers[2]
+	for I in 2 {
+		Singers[I].Number = I
+		Singers[I].Path = "worker-song-" + I.text + ".mid"
+		Singers[I].start
+	}
+	for I in 10 {
+		sound.play_note "E4", 10
+	}
+	for I in 2 {
+		Singers[I].wait
+		println "worker", Singers[I].Number, "read back", Singers[I].Read, "notes, from", Singers[I].First
+	}
+	sound.wait
+	println "all played"
+	for I in 2 {
+		files.delete Singers[I].Path
+	}
+	return 0
+}
+
+### archives_passwords
+// (zips with a password: AES-256 made and read; another program's AES-128
+// (AE-1) and `zip -e`'s ZipCrypto read; a wrong password; a tar can't
+// have one)
+//> [pwcase/, pwcase/note.txt, pwcase/sub/, pwcase/sub/big.txt]
+//> needs a password: true false
+//> Ein Geheimnis: ünd mehr
+//> big: true
+//> AES-128, AE-1, kept by another program.
+//> Made by zip -e, the old way.
+// panic: only a zip file can have a password
+use archives
+use files
+use directories
+use shell
+
+int main {
+	str Big = "Lorem ipsum dolor sit amet. ".repeat(5000)
+	directories.make "pwcase/sub"
+	files.write "pwcase/note.txt", "Ein Geheimnis: ünd mehr"
+	files.write "pwcase/sub/big.txt", Big
+	archives.make_with_password "pwcase.zip", {"pwcase"}, "correct horse battery"
+	println archives.list("pwcase.zip")
+	archives.make "pwcase-plain.zip", {"pwcase/note.txt"}
+	println "needs a password:", archives.needs_password("pwcase.zip"), archives.needs_password("pwcase-plain.zip")
+	println archives.read_with_password("pwcase.zip", "pwcase/note.txt", "correct horse battery")
+	archives.unpack_with_password "pwcase.zip", "pwcase-back", "correct horse battery"
+	println "big:", files.read("pwcase-back/pwcase/sub/big.txt") == Big
+	print archives.read_with_password("tests/archives/aes128-ae1.zip", "note.txt", "swordfish")
+	print archives.read_with_password("tests/archives/zipcrypto.zip", "old.txt", "swordfish")
+	shell.status "rm -rf pwcase pwcase-back pwcase.zip pwcase-plain.zip"
+	archives.make_with_password shell.get("CABBY_SAVE_FOLDERS") + "/pw.tar.gz", {"tests/archives"}, "x"
+	return 0
+}
+
+### archives_wrong_password
+// (a wrong password, for WinZip's AES: caught by the two bytes that check it)
+// panic: the password for 'tests/archives/aes128-ae1.zip' is wrong
+use archives
+
+int main {
+	println archives.read_with_password("tests/archives/aes128-ae1.zip", "note.txt", "sword fish")
+	return 0
+}
+
+### archives_needs_the_password
+// (a zip with a password, unpacked without one)
+// panic: 'old.txt' in 'tests/archives/zipcrypto.zip' is kept with a password
+use archives
+
+int main {
+	println archives.read("tests/archives/zipcrypto.zip", "old.txt")
+	return 0
+}
+
+### images_changed
+// pictures changed into new ones: scaled, cut out, turned, mirrored,
+// grayed, blurred; and text, in the font built in (the same everywhere)
+use images
+
+int main {
+	images.picture P = images.new 200, 100
+	P.fill_with "white"
+	P.set_color "red"
+	P.fill_rectangle 0, 0, 100, 50
+	P.set_color "blue"
+	P.fill_rectangle 100, 50, 100, 50
+	images.picture S = P.scaled 100, 50
+	println "scaled:", S.width, S.height, S.red(10, 10), S.blue(75, 40), S.red(49, 24), S.green(50, 25)
+	images.picture Big = P.scaled 400, 200
+	println "bigger:", Big.width, Big.height, Big.red(20, 20), Big.blue(380, 180)
+	images.picture C = P.cropped 90, 40, 50, 50
+	println "cut out:", C.width, C.height, C.red(0, 0), C.blue(20, 20)
+	images.picture Edge = P.cropped 180, 80, 50, 50
+	println "at the edge:", Edge.width, Edge.height
+	images.picture T = P.turned 90
+	println "a quarter turn:", T.width, T.height, T.red(99, 0), T.blue(0, 199)
+	images.picture Back = T.turned -90
+	println "and back:", Back.width, Back.height, Back.pixel(0, 0) == P.pixel(0, 0), Back.pixel(199, 99) == P.pixel(199, 99)
+	images.picture Half = P.turned 180
+	println "upside down:", Half.blue(0, 0), Half.red(199, 99)
+	images.picture R = P.turned 45
+	println "45 degrees:", R.width, R.height, R.pixel(0, 0)
+	images.picture M = P.mirrored
+	println "mirrored:", M.red(199, 0), M.blue(0, 99)
+	images.picture F = P.flipped
+	println "flipped:", F.red(0, 99), F.blue(199, 0)
+	images.picture G = P.gray
+	println "gray:", G.red(10, 10), G.green(10, 10), G.blue(10, 10), G.red(150, 75)
+	images.picture B = P.blurred 6
+	println "blurred:", B.red(100, 25), B.green(100, 25) > 0, B.green(100, 25) < 255, B.green(5, 5)
+	images.picture Fit = P.scaled_to_fit 50, 50
+	images.picture Same = P.scaled_to_fit 1000, 1000
+	images.picture Twice = P.scaled_by 2
+	println "fit:", Fit.width, Fit.height, Same.width, Same.height, Twice.width, Twice.height
+	println "the first, as it was:", P.width, P.height, P.red(10, 10)
+
+	images.picture W = images.new 40, 20
+	W.fill_with "white"
+	W.set_color "black"
+	images.set_font "builtin", 16
+	W.text 0, 0, "Hi"
+	int Ink = 0
+	for Y in 20 {
+		for X in 40 {
+			if W.red(X, Y) == 0 {
+				Ink++
+			}
+		}
+	}
+	println "text:", Ink, images.text_width("Hi"), images.text_width("Hello\nyou")
+	images.set_font "builtin", 32
+	println "bigger text:", images.text_width("Hi")
+	return 0
+}
+//> scaled: 100 50 255 255 255 0
+//> bigger: 400 200 255 255
+//> cut out: 50 50 255 255
+//> at the edge: 20 20
+//> a quarter turn: 100 200 255 255
+//> and back: 200 100 true true
+//> upside down: 255 255
+//> 45 degrees: 213 213 0
+//> mirrored: 255 255
+//> flipped: 255 255
+//> gray: 54 54 54 18
+//> blurred: 255 true true 0
+//> fit: 50 25 200 100 400 200
+//> the first, as it was: 200 100 255
+//> text: 52 16 40
+//> bigger text: 32

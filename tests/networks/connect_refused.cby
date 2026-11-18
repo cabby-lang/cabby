@@ -1,0 +1,14 @@
+// connecting to a port nothing listens on is a panic that says so
+//> nothing there: false
+// panic: nothing is listening on that port
+use networks
+
+int main {
+	networks.server S
+	S.listen_here 0
+	long Port = S.port
+	S.close
+	println "nothing there:", networks.can_connect("localhost", Port)
+	networks.connection C = networks.connect "localhost", Port
+	return 0
+}

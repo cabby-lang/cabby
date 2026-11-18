@@ -1,0 +1,1 @@
+int clamp int x, int lo, int hi

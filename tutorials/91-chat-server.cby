@@ -1,0 +1,174 @@
+// Tutorial 91: Servers and connections — a chat room
+//
+// Run it:      cabby 91-chat-server.cby
+// Or compile:  cabby -c 91-chat-server.cby && ./91-chat-server
+// Library:     use networks
+// Topics:      networks.server, listen_here, on_connect, on_line, on_close,
+//              from, reply, send_line_to, send_line_to_all, connections,
+//              address_of, close_connection; networks.connection, a lookup
+//              keyed by connection
+//
+// A server waits on a port for programs to connect, and talks to each of
+// them a line at a time. Here, a chat room: everyone who connects gives a
+// name, and what each says is heard by all. Two visitors connect to it from
+// the same program, to show it working; with the room on its own, anyone
+// can join from a terminal with `nc localhost 5000`.
+
+use networks
+use events
+
+// The room: who's there, by connection, and what's said.
+object chat_room {
+	networks.server S
+	lookup long str Names              // each connection's name, by its number
+
+	void open {
+		S.on_connect joined
+		S.on_line said
+		S.on_close left
+		S.listen_here 0                  // this computer only; 0: any free port
+	}
+
+	long port const {
+		return S.port
+	}
+
+	void joined {
+		Names[S.from] = "someone"
+		S.reply "welcome! say 'name' and yours"
+	}
+
+	void said {
+		str Line = S.line.copy
+		if Line.starts_with "name " {
+			Names[S.from] = Line[5 to]
+			S.send_line_to_all Names[S.from] + " is here (" + S.connections.length.text + " in the room)"
+		} else if Line is "who" {
+			list str Who
+			for Each in S.connections {
+				Who.add Names[Each].copy
+			}
+			S.reply "here: " + Who.join(", ")
+		} else if Line is "bye" {
+			S.reply "goodbye, " + Names[S.from]
+			long Who = S.from
+			S.close_connection Who       // (on_close is for the other end's closing)
+			gone Who
+		} else {
+			S.send_line_to_all Names[S.from] + ": " + Line
+		}
+	}
+
+	// a visitor who went without saying bye: their program ended, or
+	// their computer went off the network
+	void left {
+		gone S.from
+	}
+
+	void gone long Who {
+		str Name = Names[Who].copy
+		Names.remove Who
+		S.send_line_to_all Name + " has gone"
+	}
+
+	void close {
+		S.close
+	}
+}
+
+// A visitor: a connection to the room, which keeps what it hears.
+object visitor {
+	str Name
+	networks.connection C
+	list str Heard
+
+	void visit long Port {
+		C = networks.connect "localhost", Port
+		C.on_line heard
+	}
+
+	void say const str &Line {
+		C.send_line Line
+	}
+
+	void heard {
+		Heard.add C.line.copy
+	}
+
+	void tell {
+		for Line in Heard {
+			println "  " + Name + " hears:", Line
+		}
+		Heard.clear
+	}
+}
+
+// The conversation, a step at a time, on a timer: each step waits until
+// what came before has been heard. (What the two hear at the same moment
+// comes in either order, so it's told Ada's first.)
+object evening {
+	chat_room Room
+	visitor Ada
+	visitor Alan
+	timer Next
+	int Step
+
+	void begin {
+		Room.open
+		Ada.Name = "Ada"
+		Alan.Name = "Alan"
+		Next.on_tick step
+		Next.every time.milliseconds 50
+		events.run
+	}
+
+	void step {
+		Ada.tell
+		Alan.tell
+		Step++
+		if Step is 1 {
+			Ada.visit Room.port
+		} else if Step is 2 {
+			Ada.say "name Ada"
+		} else if Step is 3 {
+			Alan.visit Room.port
+		} else if Step is 4 {
+			Alan.say "name Alan"
+		} else if Step is 5 {
+			Ada.say "hello, Alan"
+		} else if Step is 6 {
+			Alan.say "who"
+		} else if Step is 7 {
+			Alan.say "bye"
+		} else if Step is 9 {
+			Next.stop
+			Room.close
+			println "the room is closed"
+		}
+	}
+}
+
+int main {
+	evening E
+	E.begin
+}
+
+// Try this:
+//  - Give the room a "me" command: `me waves` is heard as "* Ada waves".
+//  - Keep the last ten lines said, and send them to each newcomer.
+//  - Change `listen_here 0` to `listen 5000`, take out the evening, and
+//    join from two terminals with `nc localhost 5000` (or from another
+//    computer, with this one's address: `networks.local_address`).
+
+// ---------------------------------------------------------------- output
+//>   Ada hears: welcome! say 'name' and yours
+//>   Ada hears: Ada is here (1 in the room)
+//>   Alan hears: welcome! say 'name' and yours
+//>   Ada hears: Alan is here (2 in the room)
+//>   Alan hears: Alan is here (2 in the room)
+//>   Ada hears: Ada: hello, Alan
+//>   Alan hears: Ada: hello, Alan
+//>   Alan hears: here: Ada, Alan
+//>   Ada hears: Alan has gone
+//>   Alan hears: goodbye, Alan
+//> the room is closed

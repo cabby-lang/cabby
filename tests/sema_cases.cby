@@ -1,0 +1,2952 @@
+### ok_diamond_shared_base
+// expect: ok
+object A {
+	int v
+	int who const {
+		return 0
+	}
+}
+object B : A {
+	int b
+	int who const {
+		return 1
+	}
+}
+object C : A {
+	int c
+	int who const {
+		return 2
+	}
+}
+object D : B, C {
+	int d
+}
+void show const A &x {
+	println x.v, x.who()
+}
+int main {
+	D d = {1, 2, 3, 4}
+	show(d)
+	println d.v, d.b, d.c, d.d
+	return 0
+}
+
+### ok_moves_and_reinit
+// expect: ok
+object box {
+	int n
+}
+int take box b {
+	return b.n
+}
+int main {
+	box a = {1}
+	box b = a
+	a = box{2}
+	println take(a), take(b)
+	str s = "first"
+	str t = s
+	s = "second"
+	println s, t
+	return 0
+}
+
+### ok_borrow_ends_at_last_use
+// expect: ok
+object box {
+	int n
+}
+int main {
+	box a = {1}
+	const box &r = a
+	println r.n
+	a.n = 5
+	box b = a
+	println b.n
+	return 0
+}
+
+### ok_two_phase_method_call
+// expect: ok
+object counter {
+	int n
+	int get const {
+		return n
+	}
+	void set int v {
+		n = v
+	}
+}
+int main {
+	counter c
+	c.set(c.get() + 1)
+	for int i = 0; i < 3; i++ {
+		c.set(c.get() * 2)
+	}
+	println c.get()
+	return 0
+}
+
+### ok_zero_init_and_assign
+// expect: ok
+int main {
+	int x
+	bool flag = true
+	if flag {
+		x = 1
+	} else {
+		x = 2
+	}
+	println x
+	return 0
+}
+
+### ok_move_then_return_in_branch
+// expect: ok
+object box {
+	int n
+}
+void eat box b {
+}
+int main {
+	box a = {1}
+	bool quit = false
+	if quit {
+		eat(a)
+		return 0
+	}
+	println a.n
+	return 0
+}
+
+### ok_mut_ref_reborrow
+// expect: ok
+object counter {
+	int n
+}
+void inc counter &c {
+	c.n += 1
+}
+void twice counter &c {
+	inc(c)
+	inc(c)
+	c.n++
+}
+int main {
+	counter c
+	twice(c)
+	twice(c)
+	println c.n
+	return 0
+}
+
+### ok_loops_and_arrays
+// expect: ok
+object p {
+	int x
+}
+int sum const int a[], int n {
+	int t = 0
+	for int i = 0; i < n; i++ {
+		t += a[i]
+	}
+	return t
+}
+int main {
+	int nums[] = {1, 2, 3}
+	int total = sum(nums, 3)
+	p ps[2] = {p{1}, p{2}}
+	for int i = 0; i < 2; i++ {
+		total += ps[i].x
+	}
+	int grid[2][2] = {{1, 2}, {3, 4}}
+	grid[1][0] = 9
+	println total, grid[1][0], sizeof grid, sizeof(int)
+	return 0
+}
+
+### ok_upcast_refs_and_static
+// expect: ok
+object named {
+	str name
+	void greet const {
+		println "hi", name
+	}
+}
+object shape {
+	int sides
+	double area const {
+		return 0.0
+	}
+}
+object square : named, shape {
+	double side
+	double area const {
+		return side * side
+	}
+	static square make double s {
+		return square{.name = "square", .sides = 4, .side = s}
+	}
+	void grow {
+		side *= 2.0
+	}
+}
+void describe const named &n, const shape &s {
+	n.greet
+	println s.area()
+}
+int main {
+	square sq = square.make(2.0)
+	sq.grow
+	describe(sq, sq)
+	square &r = sq
+	r.grow
+	describe(r, r)
+	return 0
+}
+
+### ok_c_conversions
+// expect: ok
+int main {
+	char c = 65
+	short s = c
+	int i = s
+	long l = i
+	unsigned u = 7
+	unsigned long ul = u
+	double d = l
+	float f = 1.5
+	double d2 = f
+	bool b = i
+	int narrowed = (int)l
+	char back = (char)(c + 1)
+	int sum = c + 'a'
+	println c, s, i, l, u, ul, d, f, d2, b, narrowed, back, sum
+	return 0
+}
+
+### ok_logic_and_bits
+// expect: ok
+int main {
+	int x = 0b1010
+	bool even = (x & 1) == 0
+	bool both = even && x || !x
+	int mask = ~x ^ (x << 2) | x >> 1
+	double f = (double)x / 3.0
+	if x {
+		println even, both, mask, f
+	}
+	while x {
+		x >>= 1
+	}
+	return 0
+}
+
+### ok_strings
+// expect: ok
+object person {
+	str name
+}
+void show const str &s {
+	println s
+}
+int main {
+	person p = {"Ada"}
+	show(p.name)
+	show("literal")
+	bool same = p.name == "Ada"
+	println same, p.name != "Bob"
+	return 0
+}
+
+### ok_returns_everywhere
+// expect: ok
+int classify int n {
+	if n < 0 {
+		return -1
+	} else if n == 0 {
+		return 0
+	} else {
+		return 1
+	}
+}
+int spin {
+	int i = 0
+	while true {
+		i++
+		if i > 10 {
+			return i
+		}
+	}
+}
+int main {
+	println classify(-5), spin()
+	return 0
+}
+
+### ok_destructor
+// expect: ok
+object token {
+	int id
+	~token {
+		println "dropping", id
+	}
+}
+int main {
+	token t = {7}
+	token u = t
+	println u.id
+	return 0
+}
+
+### ok_extern
+// expect: ok
+extern int printf str fmt, ...
+extern int puts str s
+extern double sqrt double x
+int main {
+	str s = "owned"
+	printf("%d %f %s %s\n", 1, 2.5, "lit", s)
+	puts(s)
+	println s, sqrt(2.0)
+	return 0
+}
+
+### ok_min_long
+// expect: ok
+int main {
+	long m = -9223372036854775808
+	int n = -2147483648
+	println m, n
+	return 0
+}
+
+### ok_switch_goto_do
+// expect: ok
+enum color {
+	RED
+	GREEN = 5
+	BLUE
+}
+int main {
+	int n = 6
+	switch n {
+		case RED:
+			println "red"
+			break
+		case GREEN:
+		case BLUE:
+			println "green or blue"
+		default:
+			println "other"
+	}
+	do {
+		n--
+	} while n > 0
+	if n == 0 {
+		goto done
+	}
+	println "unreachable in practice"
+	done:
+	return 0
+}
+
+### ok_globals_and_statics
+// expect: ok
+const int LIMIT = 3
+const str GREETING = "hello"
+int counter
+int table[LIMIT] = {1, 2, 3}
+int bump {
+	static int calls
+	calls++
+	counter += calls
+	return calls
+}
+int main {
+	bump
+	bump
+	println GREETING, counter, table[2], bump()
+	return 0
+}
+
+### ok_struct_union_typedef
+// expect: ok
+unsigned long aka size_t
+struct point {
+	int x
+	int y
+}
+union bits {
+	float f
+	unsigned int u
+}
+point add point a, point b {
+	return point{a.x + b.x, a.y + b.y}
+}
+int main {
+	point a = {1, 2}
+	point b = a
+	point c = add(a, b)
+	bits w
+	w.f = 1.0f
+	size_t n = sizeof(point)
+	println c.x, c.y, w.u, n, a.x
+	return 0
+}
+
+### ok_implicit_self_and_shadow
+// expect: ok
+object acct {
+	int balance
+	void deposit int balance {
+		self.balance += balance
+	}
+	int total const {
+		return balance
+	}
+	void show const {
+		println total()
+	}
+}
+int main {
+	acct a
+	a.deposit 5
+	a.show
+	return 0
+}
+
+### err_no_auto
+// expect: Cabby has no 'auto': write the type, so the reader sees it ('long Big = ...')
+int main {
+	auto Big = 5000000000
+	println Big
+	return 0
+}
+
+### ok_prototype_then_definition
+// expect: ok
+int twice int x
+int main {
+	println twice(4)
+	return 0
+}
+int twice int x {
+	return x * 2
+}
+
+### ok_main_args
+// expect: ok
+int main int argc, str argv[] {
+	for int i = 0; i < argc; i++ {
+		println argv[i]
+	}
+	return 0
+}
+
+### err_use_after_move
+// expect: use of moved value 'a'
+object box {
+	int n
+}
+int main {
+	box a = {1}
+	box b = a
+	println a.n
+	return 0
+}
+
+### err_move_note
+// expect: 'a' was moved here
+object box {
+	int n
+}
+void eat box b {
+}
+int main {
+	box a = {1}
+	eat(a)
+	eat(a)
+	return 0
+}
+
+### err_move_in_loop
+// expect: 'a' may have been moved
+object box {
+	int n
+}
+void eat box b {
+}
+int main {
+	box a = {1}
+	for int i = 0; i < 2; i++ {
+		eat(a)
+	}
+	return 0
+}
+
+### err_conditional_move
+// expect: 'a' may have been moved
+object box {
+	int n
+}
+void eat box b {
+}
+int main {
+	box a = {1}
+	if true {
+		eat(a)
+	}
+	println a.n
+	return 0
+}
+
+### err_short_circuit_move
+// expect: 'a' may have been moved
+object box {
+	int n
+}
+bool eat box b {
+	return true
+}
+int main {
+	box a = {1}
+	bool ok = false && eat(a)
+	println a.n
+	return 0
+}
+
+### err_switch_fallthrough_move
+// expect: 's' may have been moved
+void eat str s {
+}
+int main {
+	str s = "x"
+	int n = 1
+	switch n {
+		case 1:
+			eat(s)
+		case 2:
+			println "two"
+	}
+	println s
+	return 0
+}
+
+### err_goto_skips_reinit
+// expect: 's' may have been moved
+void eat str s {
+}
+int main {
+	str s = "x"
+	int n = 1
+	eat(s)
+	if n == 1 {
+		goto out
+	}
+	s = "y"
+	out:
+	println s
+	return 0
+}
+
+### err_assign_const
+// expect: cannot assign to 'x' because it is const
+int main {
+	const int x = 1
+	x = 2
+	return 0
+}
+
+### err_increment_const
+// expect: cannot assign to 'x' because it is const
+int main {
+	const int x = 1
+	x++
+	return 0
+}
+
+### err_assign_through_shared
+// expect: cannot assign through 'r': it is a read-only borrow
+object box {
+	int n
+}
+int main {
+	box a = {1}
+	const box &r = a
+	r.n = 2
+	return 0
+}
+
+### err_const_method_changes
+// expect: cannot change the object inside a const method
+object box {
+	int n
+	void poke const {
+		n = 3
+	}
+}
+int main {
+	return 0
+}
+
+### err_const_method_calls_mutating
+// expect: cannot call 'set' from a const method
+object box {
+	int n
+	void set int v {
+		n = v
+	}
+	void peek const {
+		set(1)
+	}
+}
+int main {
+	return 0
+}
+
+### err_mutating_method_on_const
+// expect: cannot call 'grow' on 's': the method can change the object, but 's' is const
+object sq {
+	int side
+	void grow {
+		side++
+	}
+}
+int main {
+	const sq s = {1}
+	s.grow
+	return 0
+}
+
+### err_mut_borrow_of_const
+// expect: cannot lend 'x' as mutable because it is const
+void bump int &p {
+	p++
+}
+int main {
+	const int x = 1
+	bump(x)
+	return 0
+}
+
+### err_mut_ref_to_temporary
+// expect: cannot lend a temporary value as mutable
+void bump int &p {
+	p++
+}
+int main {
+	bump(3)
+	return 0
+}
+
+### err_register_borrow
+// expect: cannot borrow 'n' because it is declared 'register'
+void show const int &x {
+	println x
+}
+int main {
+	register int n = 3
+	show(n)
+	return 0
+}
+
+### err_assign_while_borrowed
+// expect: cannot change 'x' while it is borrowed
+int main {
+	int x = 1
+	const int &r = x
+	x = 5
+	println r
+	return 0
+}
+
+### err_assign_while_borrowed_count
+// expect: the borrow is still in use here, through 'r'
+// errors: 1
+int main {
+	int x = 1
+	const int &r = x
+	x = 5
+	println r
+	return 0
+}
+
+### err_two_mut_borrows
+// expect: cannot lend 'x' as mutable twice at the same time
+int main {
+	int x = 1
+	int &a = x
+	int &b = x
+	a++
+	b++
+	return 0
+}
+
+### err_move_while_borrowed
+// expect: cannot move 'a' while it is borrowed
+object box {
+	int n
+}
+int main {
+	box a = {1}
+	const box &r = a
+	box b = a
+	println r.n
+	return 0
+}
+
+### err_read_while_mut_borrowed
+// expect: cannot use 'x' while it is lent as mutable
+int main {
+	int x = 1
+	int &r = x
+	println x
+	r = 2
+	return 0
+}
+
+### err_ref_needs_binding
+// expect: a reference must say what it borrows
+int main {
+	int &r
+	return 0
+}
+
+### err_ref_to_temporary_kept
+// expect: cannot keep a reference to a temporary value
+object box {
+	int n
+}
+box make {
+	return box{1}
+}
+int main {
+	const box &r = make()
+	return 0
+}
+
+### err_loop_carried_borrow
+// expect: cannot change 'x' while it is borrowed
+void keep const int &a {
+}
+int main {
+	int x = 1
+	int y = 2
+	const int &r = y
+	while x < 10 {
+		println r
+		x = x + 1
+	}
+	const int &q = x
+	while x < 20 {
+		println q
+		x = x + 1
+	}
+	return 0
+}
+
+### err_mut_and_shared_args
+// expect: cannot borrow 'x' while it is lent as mutable
+void f int &a, const int &b {
+}
+int main {
+	int x = 1
+	f(x, x)
+	return 0
+}
+
+### err_receiver_conflict
+// expect: cannot lend 'c' as mutable while it is also borrowed read-only
+object counter {
+	int n
+	void absorb const counter &o {
+		n += o.n
+	}
+}
+int main {
+	counter c = {1}
+	c.absorb(c)
+	return 0
+}
+
+### err_move_field
+// expect: cannot move field 'name' (a 'str') out of its object
+object p {
+	str name
+}
+int main {
+	p x = {"x"}
+	str n = x.name
+	return 0
+}
+
+### err_move_through_borrow
+// expect: cannot take ownership of 's' through a borrow
+void keep str s {
+}
+void f const str &s {
+	keep(s)
+}
+int main {
+	return 0
+}
+
+### err_narrowing
+// expect: 'int' cannot hold every 'long' value; write a cast
+int main {
+	long big = 5
+	int small = big
+	return 0
+}
+
+### err_literal_too_big_for_a_long
+// expect: 18000000000000000000 is too big for 'X', a 'long'
+int main {
+	long X = 18000000000000000000
+	return 0
+}
+
+### err_literal_too_big_for_anything
+// expect: this number is too big for any whole-number type
+int main {
+	long X = -18000000000000000000
+	return 0
+}
+
+### ok_one_field_read_while_another_is_lent
+// expect: ok
+object o {
+	list str Said
+	long Port
+	str Name
+
+	void f {
+		Said.add "port " + Port.text
+		Said.add Name.copy
+	}
+}
+struct s {
+	list str L
+	int N
+}
+int main {
+	o X
+	X.f
+	s Y
+	Y.L.add Y.N.text
+	return 0
+}
+
+### err_the_same_field_read_while_lent
+// expect: cannot use 'Y' while it is lent as mutable
+struct s {
+	list str L
+}
+int main {
+	s Y
+	Y.L.add "a"
+	Y.L.add Y.L.length.text
+	return 0
+}
+
+### err_float_to_int
+// expect: this would drop the fraction
+int main {
+	double d = 2.5
+	int i = d
+	return 0
+}
+
+### err_constant_too_big
+// expect: 300 is too big for 'c', a 'char'
+int main {
+	char c = 300
+	return 0
+}
+
+### err_negative_unsigned
+// expect: expected 'unsigned int' for 'u', found 'int'
+int main {
+	unsigned u = -1
+	return 0
+}
+
+### err_mod_float
+// expect: '%' needs integer operands, not 'double'
+int main {
+	double d = 5.0 % 2.0
+	return 0
+}
+
+### err_bitwise_float
+// expect: '&' needs integer operands
+int main {
+	double d = 1.0
+	int x = d & 1
+	return 0
+}
+
+### err_string_plus_number
+// expect: '+' joins a 'str' with a 'str' or a 'char', not 'int'
+int main {
+	str a = "x"
+	str b = a + 1
+	return 0
+}
+
+### ok_string_tools
+// expect: ok
+str shout const str &s {
+	return s + "!"
+}
+int main {
+	str a = "x"
+	str b = a + "y" + 'z'
+	b += a
+	b += '.'
+	b[0] = 'X'
+	b[1] += 1
+	char c = b[2]
+	str d = b.copy
+	long n = d.length + a.length
+	println shout(b), a, c, n, d.copy().length
+	return 0
+}
+
+### err_string_char_borrow
+// expect: a character of a string cannot be borrowed
+void bump char &c {
+	c++
+}
+int main {
+	str s = "ab"
+	bump(s[0])
+	return 0
+}
+
+### err_string_const_borrow_write
+// expect: cannot assign through 's': it is a read-only borrow
+void f const str &s {
+	s[0] = 'x'
+}
+int main {
+	return 0
+}
+
+### err_string_length_readonly
+// expect: '.length' gives a value; it cannot be assigned to
+int main {
+	str s = "ab"
+	s.length = 3
+	return 0
+}
+
+### err_string_global_move_hint
+// expect: write 'NAME.copy' for a string of your own
+const str NAME = "x"
+int main {
+	str s = NAME
+	return 0
+}
+
+### ok_string_plus_borrows
+// expect: ok
+int main {
+	str a = "x"
+	str b = a + a
+	println a, b
+	return 0
+}
+
+### err_string_ordered_with_a_number
+// expect: '<' needs numbers, found 'str' and 'int'
+int main {
+	bool b = "a" < 3
+	return 0
+}
+
+### err_slice_assigned_to
+// expect: a slice is a new string; it can't be assigned to
+int main {
+	str W = "abc"
+	W[0 to 1] = "x"
+}
+
+### err_slice_of_an_array
+// expect: slices of arrays aren't in Cabby yet
+int main {
+	int A[3]
+	println A[0 to 1]
+}
+
+### err_string_tool_arguments
+// expect: '.replace' takes 2 arguments, but 1 was given
+int main {
+	str W = "abc"
+	str X = W.replace "a"
+}
+
+### err_find_a_number
+// expect: '.find' looks for text (a 'str' or a 'char'), not 'int'
+int main {
+	str W = "abc"
+	long n = W.find 3
+}
+
+### err_cement_is_reserved
+// expect: 'cement' is reserved for build-time settings
+int main {
+	int cement = 3
+}
+
+### err_object_condition
+// expect: an 'if' condition must be a number or bool, not 'box'
+object box {
+	int n
+}
+int main {
+	box b
+	if b {
+		println 1
+	}
+	return 0
+}
+
+### err_missing_return
+// expect: 'f' can reach the end of its body without returning a 'int'
+int f int x {
+	if x > 0 {
+		return 1
+	}
+}
+int main {
+	return f(1)
+}
+
+### err_return_without_value
+// expect: 'main' must return a 'int' value here
+int main {
+	return
+}
+
+### err_return_value_from_void
+// expect: 'f' returns void, so 'return' cannot give a value
+void f {
+	return 3
+}
+int main {
+	return 0
+}
+
+### err_ref_field
+// expect: fields cannot be references
+object holder {
+	int &r
+}
+int main {
+	return 0
+}
+
+### err_c3_inconsistent
+// expect: cannot compute a consistent method resolution order for 'C'
+object A {
+}
+object B : A {
+}
+object C : A, B {
+}
+int main {
+	return 0
+}
+
+### err_inheritance_cycle
+// expect: inheritance cycle
+object A : B {
+}
+object B : A {
+}
+int main {
+	return 0
+}
+
+### err_diamond_field_clash
+// expect: 'D' inherits two fields named 'name', from 'B' and 'C'
+object B {
+	str name
+}
+object C {
+	str name
+}
+object D : B, C {
+}
+int main {
+	return 0
+}
+
+### err_field_shadows_parent
+// expect: field 'v' in 'B' conflicts with the field inherited from 'A'
+object A {
+	int v
+}
+object B : A {
+	int v
+}
+int main {
+	return 0
+}
+
+### err_bad_override
+// expect: 'square.area' overrides 'shape.area' with a different signature
+object shape {
+	double area const {
+		return 0.0
+	}
+}
+object square : shape {
+	int area const {
+		return 0
+	}
+}
+int main {
+	return 0
+}
+
+### err_override_constness
+// expect: overrides 'shape.area' with a different signature
+object shape {
+	double area const {
+		return 0.0
+	}
+}
+object square : shape {
+	double area {
+		return 1.0
+	}
+}
+int main {
+	return 0
+}
+
+### err_incompatible_inherited
+// expect: 'D' inherits incompatible methods named 'f' from 'B' and 'C'
+object B {
+	int f const {
+		return 1
+	}
+}
+object C {
+	double f const {
+		return 1.0
+	}
+}
+object D : B, C {
+}
+int main {
+	return 0
+}
+
+### err_init_unknown_field
+// expect: 'point' has no field 'z'
+struct point {
+	int x
+	int y
+}
+int main {
+	point p = {.z = 3}
+	return 0
+}
+
+### err_init_too_many
+// expect: too many values for 'point'
+struct point {
+	int x
+	int y
+}
+int main {
+	point p = {1, 2, 3}
+	return 0
+}
+
+### err_init_twice
+// expect: field 'x' is given a value twice
+struct point {
+	int x
+	int y
+}
+int main {
+	point p = {1, .x = 2}
+	return 0
+}
+
+### err_untyped_init
+// expect: cannot tell what type this {...} is for
+int main {
+	println {1, 2}
+	return 0
+}
+
+### err_self_containing
+// expect: 'node' contains itself through field 'next'
+struct node {
+	int v
+	node next
+}
+int main {
+	return 0
+}
+
+### ok_upcast_by_value
+// expect: ok
+// (a square is a shape: it's given as one, its own methods kept)
+object shape {
+	int sides
+}
+object square : shape {
+	int side
+}
+void f shape s {
+}
+int main {
+	square q = {4, 2}
+	f(q)
+	return 0
+}
+
+### err_union_owned_field
+// expect: union fields must be plain data
+union u {
+	int i
+	str s
+}
+int main {
+	return 0
+}
+
+### err_global_str_mutable
+// expect: a global str must be const
+str name = "x"
+int main {
+	return 0
+}
+
+### err_global_object
+// expect: globals must be plain data
+object box {
+	int n
+}
+box b
+int main {
+	return 0
+}
+
+### err_global_not_constant
+// expect: a global's initial value must be a constant
+int f {
+	return 1
+}
+int g = f()
+int main {
+	return 0
+}
+
+### err_static_local_object
+// expect: static variables must be plain data
+object box {
+	int n
+}
+int main {
+	static box b
+	return 0
+}
+
+### err_variadic_object
+// expect: cannot pass 'box' to the '...' part of 'printf'
+extern int printf str fmt, ...
+object box {
+	int n
+}
+int main {
+	box b = {1}
+	printf("%d", b)
+	return 0
+}
+
+### err_extern_object_param
+// expect: extern functions can take numbers
+object box {
+	int n
+}
+extern void f box b
+int main {
+	return 0
+}
+
+### err_no_main
+// expect: the program has no 'main' function
+void helper {
+}
+
+### err_main_signature
+// expect: 'main' takes no parameters, or 'int argc, str argv[]'
+int main int x {
+	return 0
+}
+
+### err_unknown_type
+// expect: unknown type 'string'
+void f string s {
+}
+int main {
+	return 0
+}
+
+### err_unknown_name
+// expect: unknown name 'y'
+int main {
+	int x = y
+	return 0
+}
+
+### err_variable_statement
+// expect: this statement does nothing ('x' is a variable)
+int main {
+	int x = 1
+	x
+	return 0
+}
+
+### err_field_statement
+// expect: this statement does nothing ('width' is a field)
+object window {
+	int width
+	void show {
+		width
+	}
+}
+int main {
+	return 0
+}
+
+### err_break_outside_loop
+// expect: 'break' must be inside a loop or switch
+int main {
+	break
+	return 0
+}
+
+### err_continue_in_switch
+// expect: 'continue' must be inside a loop
+int main {
+	int n = 1
+	switch n {
+		case 1:
+			continue
+	}
+	return 0
+}
+
+### err_static_on_instance
+// expect: 'make' is a static method; call it as 'sq.make(...)'
+object sq {
+	int n
+	static sq make {
+		return sq{1}
+	}
+}
+int main {
+	sq s = {1}
+	sq t = s.make()
+	return 0
+}
+
+### err_instance_method_statically
+// expect: 'sq.grow' is not static
+object sq {
+	int n
+	void grow {
+		n++
+	}
+}
+int main {
+	sq.grow()
+	return 0
+}
+
+### err_index_oob
+// expect: index 3 is out of bounds for 'int[3]'
+int main {
+	int a[3] = {1, 2, 3}
+	println a[3]
+	return 0
+}
+
+### err_slice_wrong_element
+// expect: this parameter borrows an array of 'int'
+int sum const int a[] {
+	return a[0]
+}
+int main {
+	long xs[2] = {1, 2}
+	println sum(xs)
+	return 0
+}
+
+### err_switch_duplicate
+// expect: duplicate case value 2
+int main {
+	int n = 1
+	switch n {
+		case 1:
+			break
+		case 2:
+			break
+		case 1 + 1:
+			break
+	}
+	return 0
+}
+
+### err_switch_not_constant
+// expect: a case label must be a constant
+int main {
+	int n = 1
+	int k = 2
+	switch n {
+		case k:
+			break
+	}
+	return 0
+}
+
+### err_goto_backward
+// expect: 'goto' can only jump forward
+int main {
+	again:
+	goto again
+	return 0
+}
+
+### err_goto_past_declaration
+// expect: 'goto skip' would jump past the declaration of 'y'
+int main {
+	goto skip
+	int y = 2
+	skip:
+	return 0
+}
+
+### err_goto_into_block
+// expect: cannot jump into a block it is not already in
+int main {
+	goto inside
+	if true {
+		inside:
+		println 1
+	}
+	return 0
+}
+
+### err_goto_unknown
+// expect: there is no label 'nowhere'
+int main {
+	goto nowhere
+	return 0
+}
+
+### err_prototype_mismatch
+// expect: 'f' does not match its earlier declaration
+int f int x
+long f int x {
+	return x
+}
+int main {
+	return 0
+}
+
+### err_prototype_undefined
+// expect: 'g' is declared but never defined
+int g int x
+int main {
+	return 0
+}
+
+### err_duplicate_local
+// expect: 'x' is already declared in this block
+int main {
+	int x = 1
+	int x = 2
+	return 0
+}
+
+### err_array_size_not_constant
+// expect: an array size must be a constant integer
+int main {
+	int n = 3
+	int a[n]
+	return 0
+}
+
+### err_cascade_suppressed
+// expect: unknown name 'nope'
+// errors: 1
+int main {
+	int x = nope + 1
+	int y = x * 2
+	println y
+	return 0
+}
+
+### err_print_while_changed
+// expect: cannot lend 's' as mutable while it is also borrowed read-only
+int change str &s {
+	s = "new"
+	return 1
+}
+int main {
+	str s = "old"
+	println s, change(s)
+	return 0
+}
+
+### err_compare_while_changed
+// expect: cannot lend 's' as mutable while it is also borrowed read-only
+str pick str &s {
+	s = "z"
+	return "z"
+}
+int main {
+	str s = "old"
+	bool same = s == pick(s)
+	return 0
+}
+
+### ok_compare_then_change
+// expect: ok
+bool change str &s {
+	s = "new"
+	return true
+}
+int main {
+	str s = "old"
+	bool b = s == "x" || change(s)
+	println b, s
+	return 0
+}
+
+### ok_print_copies_numbers
+// expect: ok
+int bump int &x {
+	x++
+	return x
+}
+int main {
+	int n = 1
+	println n, bump(n)
+	return 0
+}
+
+### err_assign_self
+// expect: cannot assign to 'self'
+object box {
+	int n
+	void reset {
+		self = box{0}
+	}
+}
+int main {
+	return 0
+}
+
+### err_for_in_counter_read_only
+// expect: cannot change 'i': a 'for ... in' counter is read-only
+int main {
+	for i in 5 {
+		i = 2
+	}
+	return 0
+}
+
+### err_for_in_counter_not_lendable
+// expect: cannot lend 'i' as mutable: a 'for ... in' counter is read-only
+void inc int &x {
+	x++
+}
+int main {
+	for i in 3 {
+		inc(i)
+	}
+	return 0
+}
+
+### err_for_in_step_positive
+// expect: the step after 'by' must be positive
+int main {
+	for i in 10 by -2 {
+	}
+	return 0
+}
+
+### err_for_in_whole_numbers
+// expect: a 'for ... in' loop counts in whole numbers, not 'double'
+int main {
+	for x in 1.5 {
+	}
+	return 0
+}
+
+### err_for_in_counter_type_fits
+// expect: 300 is too big for the end of the range, an 'unsigned char'
+int main {
+	for unsigned char b in 300 {
+	}
+	return 0
+}
+
+### err_reserved_range_word
+// expect: expected a name, found the keyword 'to'
+int main {
+	int to = 3
+	return 0
+}
+
+### ok_for_in_shapes
+// expect: ok
+int main {
+	unsigned long n = 3
+	for i in n {
+		println i
+	}
+	for long j in 1 to 4 by 2 {
+		println j
+	}
+	for char c in 'a' to 'c' {
+		println c
+	}
+	for k in n down to 0 {
+		println k
+	}
+	return 0
+}
+
+### ok_gui_handlers
+// expect: ok
+use gui
+object app : gui.window {
+	gui.label shown
+	int n
+	void build {
+		shown = add_label "0"
+		gui.button b = add_button "+"
+		b.on_click more
+		gui.entry e = add_entry
+		e.on_change more
+		e.on_enter more
+	}
+	void more {
+		n++
+		shown.set_text n.text
+	}
+}
+int main {
+	app a
+	return 0
+}
+
+### err_handler_not_a_window
+// expect: so it must be a method of a window
+use gui
+object helper {
+	void attach gui.button &b {
+		b.on_click ping
+	}
+	void ping {
+	}
+}
+int main {
+	return 0
+}
+
+### err_handler_takes_arguments
+// expect: 'set' takes arguments; a handler takes none
+use gui
+object app : gui.window {
+	void build {
+		gui.button b = add_button "x"
+		b.on_click set
+	}
+	void set int v {
+	}
+}
+int main {
+	return 0
+}
+
+### err_handler_not_a_method
+// expect: is a handler: give the name of one of this object's methods
+use gui
+object app : gui.window {
+	void build {
+		gui.button b = add_button "x"
+		b.on_click 5
+	}
+}
+int main {
+	return 0
+}
+
+### err_handler_struct_field
+// expect: a handler can only be a parameter, or a field of an object (not one of a struct's fields)
+struct keeper {
+	handler h
+}
+int main {
+	return 0
+}
+
+### err_number_text_assign
+// expect: '.text' gives a value; it cannot be assigned to
+int main {
+	int n = 3
+	n.text = "4"
+	return 0
+}
+
+### err_array_length_readonly
+// expect: '.length' gives a value; it cannot be assigned to
+int main {
+	int xs[3]
+	xs.length = 9
+}
+
+### err_string_length_increment
+// expect: '.length' gives a value; it cannot be assigned to
+int main {
+	str s = "hello"
+	s.length++
+}
+
+### err_string_length_borrow_mut
+// expect: cannot lend a temporary value as mutable
+void f long &n {
+	n = 99
+}
+int main {
+	str s = "hello"
+	f s.length
+}
+
+### ok_inherited_method_to_borrow
+// expect: ok
+object base {
+	str name const {
+		return "base"
+	}
+}
+object kid : base {
+	void show {
+		say name
+		say(name)
+	}
+}
+void say const str &s {
+	println s
+}
+int main {
+	kid k
+	k.show
+	say k.name
+}
+
+### err_assign_to_function
+// expect: 'five' is a function: it gives a value and cannot be assigned to
+int five {
+	return 5
+}
+int main {
+	five = 3
+}
+
+### err_assign_to_method
+// expect: 'v' is a method: it gives a value and cannot be assigned to
+object a {
+	int v const {
+		return 1
+	}
+}
+int main {
+	a x
+	x.v = 3
+}
+
+### err_lend_function_mutably
+// expect: cannot lend a temporary value as mutable
+void bump int &n {
+	n++
+}
+int five {
+	return 5
+}
+int main {
+	bump five
+}
+
+### minus_after_a_function_without_parameters
+// expect: so the '-' after it subtracts
+object clock {
+	int tick int n {
+		return n
+	}
+}
+int tick {
+	return 10
+}
+int main {
+	println tick -1, 2
+	int Arr[2] = {tick -1, 2}
+}
+
+### statement_straight_inside_an_object
+// expect: an object holds only fields and methods
+object clock {
+	int Ticks
+	every 1000, tick
+	void tick {
+		Ticks++
+	}
+}
+int main {
+}
+
+### stderr_needs_a_call
+// expect: so a call goes after it
+int main {
+	int x = stderr 5
+}
+
+### err_list_changed_inside_its_loop
+// expect: cannot change 'Scores' inside a loop that goes through it
+int main {
+	list int Scores = {1, 2}
+	for s in Scores {
+		Scores.add s
+	}
+}
+
+### err_list_through_read_only_borrow
+// expect: '.add' changes the list, but 'View' is a read-only borrow
+int main {
+	list int Scores
+	const list int &View = Scores
+	View.add 3
+}
+
+### err_list_move_out_with_index
+// expect: cannot move a 'str' out of a list with [i]
+int main {
+	list str Names = {"a"}
+	str First = Names[0]
+}
+
+### err_list_join_needs_strings
+// expect: '.join' joins a list of strings (list str), not 'list int'
+int main {
+	list int A = {1}
+	str S = A.join ","
+}
+
+### err_list_copy_of_objects
+// expect: a 'list box' can't be copied
+object box {
+	int N
+}
+int main {
+	list box Boxes
+	list box Other = Boxes.copy
+}
+
+### err_list_wrong_element
+// expect: expected 'int' for an element of 'list int', found 'str'
+int main {
+	list int Scores
+	Scores.add "ten"
+}
+
+### err_list_element_moved_in
+// expect: use of moved value 'G'
+int main {
+	list str Names
+	str G = "g"
+	Names.add G
+	println G
+}
+
+### err_list_sort_objects
+// expect: '.sort' puts numbers, bools, chars and strings in order, not the elements of a 'list box'
+object box {
+	int N
+}
+int main {
+	list box Boxes
+	Boxes.sort
+}
+
+### err_list_sort_const
+// expect: '.sort' changes the list, but 'Scores' is const
+int main {
+	const list int Scores = {2, 1}
+	Scores.sort
+}
+
+### err_list_reverse_in_its_loop
+// expect: cannot change 'Scores' inside a loop that goes through it
+int main {
+	list int Scores = {1, 2}
+	for S in Scores {
+		Scores.reverse
+	}
+}
+
+### err_println_list_of_objects
+// expect: println cannot show a value of type 'list box'
+object box {
+	int N
+}
+int main {
+	list box Boxes
+	println Boxes
+}
+
+### err_lookup_float_keys
+// expect: a lookup's keys must be whole numbers, chars, bools or strings, not 'double'
+int main {
+	lookup double int D
+}
+
+### err_lookup_entry_without_key
+// expect: a lookup's entries are written key: value
+int main {
+	lookup str int A = {"a": 1, 2}
+}
+
+### err_key_value_for_a_list
+// expect: 'key: value' entries are for lookups, not 'list int'
+int main {
+	list int L = {"a": 1}
+}
+
+### err_lookup_wrong_key_type
+// expect: the keys of a 'lookup str int' are 'str', not 'int'
+int main {
+	lookup str int A
+	println A[3]
+}
+
+### err_lookup_move_out
+// expect: cannot move a 'str' out of a lookup with [key]
+int main {
+	lookup int str A
+	str S = A[1]
+}
+
+### err_lookup_copy_of_objects
+// expect: '.copy' copies the values, and the values of a 'lookup str box' can't be copied
+object box {
+	int N
+}
+int main {
+	lookup str box A
+	lookup str box B = A.copy
+}
+
+### err_lookup_remove_const
+// expect: '.remove' changes the lookup, but 'A' is const
+int main {
+	const lookup str int A = {"a": 1}
+	A.remove "a"
+}
+
+### err_lookup_set_const
+// expect: cannot assign to 'A' because it is const
+int main {
+	const lookup str int A = {"a": 1}
+	A["b"] = 2
+}
+
+### err_lookup_change_in_its_loop
+// expect: cannot change 'A' inside a loop that goes through it
+int main {
+	lookup str int A = {"a": 1}
+	for K, V in A {
+		A[K + "x"] = V
+	}
+}
+
+### err_two_names_over_a_list
+// expect: two names ('for Key, Value in ...') go through a lookup; a 'list int' takes one
+int main {
+	list int L
+	for I, X in L {
+	}
+}
+
+### err_lookup_no_member
+// expect: a lookup has no '.add'
+int main {
+	lookup str int A
+	A.add 1
+}
+
+### err_files_without_use
+// expect: unknown name 'files' (add 'use files' at the top of the file)
+int main {
+	str S = files.read "x"
+}
+
+### err_archives_without_use
+// expect: unknown name 'archives' (add 'use archives' at the top of the file)
+int main {
+	bool B = archives.needs_password "x.zip"
+}
+
+### err_files_text_not_str
+// expect: 'files.write' takes the text as a 'str', not 'int'
+use files
+
+int main {
+	files.write "x", 5
+}
+
+### err_file_no_member
+// expect: a file has no '.write'
+use files
+
+int main {
+	file F = files.open "x"
+	F.write "x"
+}
+
+### err_file_stream_needs_a_call
+// expect: the file 'F' takes what a call prints, so a call goes after it
+use files
+
+int main {
+	file F = files.open_to_write "x"
+	F 5
+}
+
+### err_borrow_same_field_in_loop
+// expect: cannot change 'self' inside a loop that goes through it
+object tally {
+	list int Values
+
+	void double_up {
+		for V in Values {
+			Values.add V
+		}
+	}
+}
+int main {
+}
+
+### err_borrow_whole_object_in_loop
+// expect: cannot change 'self' inside a loop that goes through it
+object tally {
+	list int Values
+	int Total
+
+	void bump {
+		Total++
+	}
+
+	void go {
+		for V in Values {
+			bump
+		}
+	}
+}
+int main {
+}
+
+### err_borrow_field_and_whole
+// expect: cannot borrow 'P' while it is lent as mutable
+object person {
+	str Name
+	int Age
+}
+void change person &Who, const str &Name {
+}
+int main {
+	person P
+	change P, P.Name
+}
+
+### err_shell_without_use
+// expect: unknown name 'shell' (add 'use shell' at the top of the file)
+int main {
+	str S = shell.run "date"
+}
+
+### err_shell_command_not_str
+// expect: 'shell.run' takes the command as a 'str', not 'int'
+use shell
+int main {
+	str S = shell.run 5
+}
+
+### err_shell_set_one_argument
+// expect: 'shell.set' takes 2 arguments, but 1 was given (e.g. 'shell.set "LANG", "C"')
+use shell
+int main {
+	shell.set "LANG"
+}
+
+### err_getenv_hint
+// expect: (Cabby's own: shell.get, with 'use shell')
+int main {
+	str S = getenv("HOME")
+}
+
+### err_typedef_says_aka
+// expect: Cabby has no 'typedef': write the type, then 'aka', then the new name (e.g. 'double aka celsius')
+typedef double celsius
+int main {
+}
+
+### err_aka_inside_function
+// expect: 'aka' gives a type a second name, and belongs at the top level of a file (e.g. 'double aka celsius')
+int main {
+	double aka celsius
+}
+
+### err_aka_with_const
+// expect: 'aka' names a type; 'const' belongs on the variables that use it
+const double aka celsius
+int main {
+}
+
+### err_handler_given_to_a_local
+// expect: 'on_tick' keeps this handler, so it can only be given to this object or a part of it
+object timer {
+	handler Tick
+	void on_tick handler h {
+		Tick = h
+	}
+}
+object clock {
+	void start {
+		timer X
+		X.on_tick show
+	}
+	void show {
+	}
+}
+int main {
+}
+
+### err_handler_passed_on_to_a_local
+// expect: 'on_tick' keeps this handler, so it can only be given to this object or a part of it
+object timer {
+	handler Tick
+	void on_tick handler h {
+		Tick = h
+	}
+}
+object panel {
+	timer T
+	void on_tick handler h {
+		T.on_tick h
+	}
+}
+object clock {
+	panel P
+	void start {
+		P.on_tick show
+		panel Q
+		Q.on_tick show
+	}
+	void show {
+	}
+}
+int main {
+}
+
+### err_handler_kept_elsewhere
+// expect: a handler can only be kept in this object's own fields
+object timer {
+	handler Tick
+}
+object y {
+	void on_x handler h, timer &Other {
+		Other.Tick = h
+	}
+}
+int main {
+}
+
+### err_handler_call_back_in_loop
+// expect: cannot change 'self' inside a loop that goes through it
+object timer {
+	handler Tick
+	void step {
+		Tick.call
+	}
+}
+object clock {
+	timer T
+	list str Names
+	void go {
+		for N in Names {
+			T.step
+		}
+	}
+}
+int main {
+}
+
+### err_handler_call_in_destructor
+// expect: a destructor can't call a handler
+object x {
+	handler H
+	~x {
+		H.call
+	}
+}
+int main {
+}
+
+### err_handler_call_in_const_method
+// expect: cannot call a handler from a const method
+object x {
+	handler H
+	void fire const {
+		H.call
+	}
+}
+int main {
+}
+
+### err_handler_local
+// expect: a handler can only be a parameter, or a field of an object (not a local variable)
+int main {
+	handler h
+}
+
+### err_handler_unknown_member
+// expect: a handler has no '.run' (it has .call, .is_set and .clear)
+object x {
+	handler H
+	void go {
+		H.run
+	}
+}
+int main {
+}
+
+### err_process_handler_to_a_local
+// expect: 'on_line' keeps this handler, so it can only be given to this object or a part of it
+use processes
+object runner {
+	void go {
+		process P
+		P.on_line got
+	}
+	void got {
+	}
+}
+int main {
+}
+
+### err_process_without_use
+// expect: the type 'process' needs 'use processes' at the top of the file
+int main {
+	process P
+}
+
+### err_inner_method_from_outside
+// expect: 'launch' is an inner method of 'rocket': only rocket's own methods (and those of objects made from it) can use it
+object rocket {
+	inner void launch {
+	}
+}
+int main {
+	rocket R
+	R.launch
+}
+
+### err_inner_field_from_outside
+// expect: 'Balance' is an inner field of 'account'
+object account {
+	inner int Balance
+}
+int main {
+	account A
+	A.Balance = 5
+}
+
+### err_inner_field_in_initializer
+// expect: 'Balance' is an inner field of 'account'
+object account {
+	inner int Balance
+}
+int main {
+	account A = {.Balance = 5}
+}
+
+### err_inner_override_mismatch
+// expect: so it must be inner if that one is, and only then
+object a {
+	inner void f {
+	}
+}
+object b : a {
+	void f {
+	}
+}
+int main {
+}
+
+### err_inner_in_struct
+// expect: only objects have inner parts
+struct s {
+	inner int X
+}
+int main {
+}
+
+### err_maker_called
+// expect: 'rocket { }' runs by itself when the object is made; it can't be called
+object rocket {
+	rocket {
+	}
+}
+int main {
+	rocket R
+	R.rocket
+}
+
+### err_maker_with_parameters
+// expect: what runs when 'rocket' is made takes no parameters
+object rocket {
+	rocket int Seconds {
+	}
+}
+int main {
+}
+
+### err_maker_twice
+// expect: 'rocket' already says what runs when one is made
+object rocket {
+	rocket {
+	}
+	rocket {
+	}
+}
+int main {
+}
+
+### err_maker_in_struct
+// expect: only objects can run something when made
+struct s {
+	int X
+	s {
+	}
+}
+int main {
+}
+
+### err_address_of_str
+// expect: an address can only point at plain data
+use addresses
+int main {
+	str S = "x"
+	address A = addresses.of S
+}
+
+### err_address_at_needs_a_kind
+// expect: say what kind of address this is, e.g. 'address short Port = addresses.at 0x0200'
+use addresses
+int main {
+	println (addresses.at 5).number
+}
+
+### err_address_without_use
+// expect: unknown type 'address' (add 'use addresses' at the top of the file)
+int main {
+	address int A
+}
+
+### err_address_wrong_kind
+// expect: to read the memory as another kind, cast it
+use addresses
+int main {
+	int X
+	address long B = addresses.of X
+}
+
+### err_address_multiply
+// expect: '*' can't be used with 'address int' and 'int'
+use addresses
+int main {
+	int X
+	address int A = addresses.of X
+	address int B = A * 2
+}
+
+### err_address_of_nothing_in_particular
+// expect: an 'address' of nothing in particular has nothing to read
+use addresses
+int main {
+	int X
+	address V = addresses.of X
+	println V.value
+}
+
+### err_events_without_use
+// expect: unknown name 'events' (add 'use events' at the top of the file)
+int main {
+	events.run
+}
+
+### err_timer_without_use
+// expect: the type 'timer' needs 'use events' at the top of the file
+int main {
+	timer T
+}
+
+### err_timer_handler_to_a_local
+// expect: 'on_tick' keeps this handler, so it can only be given to this object or a part of it
+use events
+object clock {
+	void start {
+		timer T
+		T.on_tick show
+	}
+	void show {
+	}
+}
+int main {
+}
+
+### err_allocate_needs_a_kind
+// expect: say what the memory is for, e.g. 'address int Buffer = addresses.allocate 100'
+use addresses
+int main {
+	println (addresses.allocate 5).number
+}
+
+### err_allocate_count
+// expect: how many values: a whole number, not 'str'
+use addresses
+int main {
+	address int A = addresses.allocate "lots"
+}
+
+### err_free_not_an_address
+// expect: 'addresses.free' takes an address, not 'int'
+use addresses
+int main {
+	addresses.free 5
+}
+
+### err_reallocate_arguments
+// expect: 'addresses.reallocate' takes two arguments
+use addresses
+int main {
+	address int A = addresses.allocate 2
+	A = addresses.reallocate A
+}
+
+### warn_return_address_of_local
+// expect: warning: this gives the address of 'Count', which is gone once 'make_counter' returns
+use addresses
+address int make_counter {
+	int Count = 5
+	return addresses.of Count
+}
+int main {
+}
+
+### return_address_of_borrowed
+// expect: ok
+use addresses
+address int first_of int &X {
+	return addresses.of X
+}
+int main {
+}
+
+### err_of_text_needs_str
+// expect: 'addresses.of_text' takes a str, not 'list int' (for a list: addresses.of_items)
+use addresses
+int main {
+	list int Xs
+	address char A = addresses.of_text Xs
+}
+
+### err_of_items_plain_only
+// expect: an address can only point at plain data
+use addresses
+int main {
+	list str Names
+	address A = addresses.of_items Names
+}
+
+### err_of_text_needs_a_place
+// expect: 'addresses.of_text' needs a variable, field or element that holds the text
+use addresses
+int main {
+	address char A = addresses.of_text "hello"
+}
+
+### err_free_a_cabby_value
+// expect: this is the address of one of Cabby's own values, which gives its memory back itself
+use addresses
+int main {
+	str Name = "John"
+	addresses.free addresses.of_text Name
+}
+
+### err_kind_plain_variable
+// expect: expected 'meters' for the assignment, found 'long'
+long kind meters
+int main {
+	meters M
+	long N = 5
+	M = N
+}
+
+### err_kind_strict_number
+// expect: (it is strict: not even written ones)
+strict long kind meters
+int main {
+	meters X = 5
+}
+
+### err_kind_steps_number
+// expect: expected 'spot' for 'X', found 'int'
+long kind meters
+long kind spot, steps meters
+int main {
+	spot X = 5
+}
+
+### err_kind_whole_numbers
+// expect: a 'meters' is kept as a 'long', so it holds whole numbers
+long kind meters
+int main {
+	meters X = 1.5
+}
+
+### err_strict_not_a_kind
+// expect: 'strict' belongs in front of a kind: 'strict long kind duration'
+strict long Total
+int main {
+}
+
+### err_kind_add_variable
+// expect: '+' can't be used with 'meters' and 'int'
+long kind meters
+int main {
+	meters A
+	int N = 3
+	meters X = A + N
+}
+
+### err_kind_two_points
+// expect: '+' can't be used with 'spot' and 'spot'
+long kind meters
+long kind spot, steps meters
+int main {
+	spot H
+	spot X = H + H
+}
+
+### err_kind_different_kinds
+// expect: they are different kinds of value
+long kind meters
+long kind grams
+int main {
+	meters A
+	grams B
+	meters X = A + B
+}
+
+### err_kind_of_text
+// expect: a kind is kept as a plain number (int, long, double...), not 'str'
+str kind name
+int main {
+}
+
+### err_duration_needs_units
+// expect: expected 'duration' for argument 1 of 'time.sleep', found 'int'
+use time
+int main {
+	time.sleep 5
+}
+
+### err_kind_unknown_method
+// expect: a 'duration' has no '.weeks'
+use time
+int main {
+	duration D
+	println D.weeks
+}
+
+### err_json_index_by_bool
+// expect: a 'json' is indexed by a name (a str) or a number, not 'bool'
+use json
+int main {
+	json J
+	println J[true].str
+}
+
+### err_json_from_char
+// expect: expected 'json' for argument 1 of 'json.add'
+use json
+int main {
+	json J = json.list
+	J.add 'x'
+}
+
+### file_handle_is_for_libraries
+// expect: a file has no '.handle'
+use files
+
+int main {
+	file F = files.open "x.txt"
+	long H = F.handle
+	return 0
+}
+
+### str_to_bytes_reads_it
+// expect: ok
+use bytes
+
+void show const bytes &B {
+	println B
+}
+
+int main {
+	str Name = "Ada"
+	bytes B = Name
+	show Name
+	show "Tom"
+	println Name, B
+	return 0
+}
+
+### bytes_mutable_ref_needs_bytes
+// expect: expected 'bytes' for argument 1 of 'grow', found 'str'
+use bytes
+
+void grow bytes &B {
+	B.add 1
+}
+
+int main {
+	grow "Ada"
+	return 0
+}
+
+### json_from_needs_a_struct
+// expect: 'json.from' makes JSON from a struct's fields, so it takes a struct, not a 'int'
+use json
+
+int main {
+	json J = json.from 5
+	return 0
+}
+
+### json_fill_needs_a_struct
+// expect: '.fill' fills in a struct's fields from the JSON, so it takes a struct, not a 'str'
+use json
+
+int main {
+	json J = json.lookup
+	str S
+	J.fill S
+	return 0
+}
+
+### json_struct_with_a_file
+// expect: a 'holder' can't go to and from JSON by itself: its field 'Out' is 'file', which JSON can't hold
+use json
+use files
+
+struct holder {
+	str Name
+	file Out
+}
+
+int main {
+	holder H
+	json J = json.from H
+	return 0
+}
+
+### json_struct_lookup_keys
+// expect: its field 'Names' is a lookup whose keys aren't str
+use json
+
+struct keyed {
+	lookup int str Names
+}
+
+int main {
+	keyed K
+	json J = json.from K
+	return 0
+}
+
+### json_struct_names_like_types
+// expect: ok
+use json
+
+struct node {
+	str Label
+	list node Children
+}
+
+int main {
+	node N
+	json J = json.from N
+	J.fill N
+	return 0
+}
+
+### ok_slice_of_a_list_read_by_its_methods
+// expect: ok
+int main {
+	list str Words = {"sign", "3,2", "The", "woods."}
+	str Said = Words[2 to Words.length - 1].join " "
+	println Said, Words[0 to 1].length, Words[1 to 2].contains("The")
+}
+
+### err_slice_of_a_list_changed
+// expect: '.add' would change a slice, a new list that's then thrown away
+int main {
+	list str Words = {"a", "b"}
+	Words[0 to 1].add "c"
+}
+
+### threads_worker_global
+// expect: 'Count' is a global that can change, and 'counter' (a worker) can reach it from 'work'
+use threads
+
+int Count = 0
+
+void bump {
+	Count++
+}
+
+object counter : threads.worker {
+	void work {
+		bump
+	}
+}
+
+int main {
+	counter C
+	C.start
+	return 0
+}
+
+### threads_worker_const_global
+// expect: ok
+use threads
+
+const int STEP = 3
+
+object counter : threads.worker {
+	int Count
+
+	void work {
+		Count += STEP
+	}
+}
+
+int main {
+	counter C
+	C.start
+	C.wait
+	println C.Count
+	return 0
+}
+
+### threads_worker_destructor
+// expect: a worker can't have a destructor of its own
+use threads
+
+object counter : threads.worker {
+	void work {
+	}
+
+	~counter {
+	}
+}
+
+int main {
+	counter C
+	return 0
+}
+
+### threads_worker_handler
+// expect: a worker can't keep a handler
+use threads
+
+object counter : threads.worker {
+	handler Told
+
+	void work {
+	}
+}
+
+int main {
+	counter C
+	return 0
+}
+
+### threads_done_handler_is_the_libraries
+// expect: 'DoneHandler' is threads.worker's own
+use threads
+
+object sneaky : threads.worker {
+	void work {
+		DoneHandler.call
+	}
+}
+
+int main {
+	sneaky S
+	return 0
+}
+
+### threads_message_handler_is_the_libraries
+// expect: 'say_message' is threads.worker's own
+use threads
+
+object sneaky : threads.worker {
+	void work {
+		say_message
+	}
+}
+
+int main {
+	sneaky S
+	return 0
+}
+
+### else_block_after_declaration_must_leave
+// expect: 'A' has no value if this fails, so the 'else' block has to leave
+use files
+
+int main {
+	str A = files.read "x" else {
+		println "no"
+	}
+	println A
+	return 0
+}
+
+### else_value_has_the_variables_type
+// expect: expected 'int' for 'N' (after 'else'), found 'str'
+int main {
+	int N = "7".to_int else "seven"
+	return N
+}
+
+### else_value_after_a_call_alone
+// expect: 'else' with a value needs something to give it to
+use files
+
+int main {
+	files.delete "x" else 3
+	return 0
+}
+
+### else_after_two_declarations
+// expect: 'else' goes after one variable's declaration with a value
+int main {
+	int A, B = 1 else 2
+	return A + B
+}
+
+### else_after_a_reference
+// expect: 'else' can't follow a reference's declaration
+int main {
+	str A = "x"
+	str &R = A else A
+	return 0
+}
+
+### else_why_is_text
+// expect: '+' joins a 'str' with a 'str' or a 'char', not 'int'
+int main {
+	int N = "x".to_int else Why {
+		println Why + 1
+		return 1
+	}
+	return N
+}
+
+### else_forms_check
+// expect: ok
+use files
+
+int main {
+	str A = files.read "x" else ""
+	int N = A.to_int else Why {
+		println Why
+		return 1
+	}
+	N += A.length else 0
+	files.delete "x" else { }
+	files.delete "x" else Why {
+		println Why
+	}
+	for I in 3 {
+		int M = "y".to_int else {
+			continue
+		}
+		println M, I
+	}
+	return N
+}
+
+### list_of_a_base_holds_its_derived
+// expect: ok
+object shape {
+	double area const {
+		return 0
+	}
+}
+object square : shape {
+	double Side
+	double area const {
+		return Side * Side
+	}
+}
+int main {
+	list shape Shapes
+	square S
+	Shapes.add S
+	shape One = Shapes.take_last
+	println One.area
+	return 0
+}
+
+### list_of_a_derived_takes_no_base
+// expect: expected 'square' for an element of 'list square', found 'shape'
+object shape {
+	int Sides
+}
+object square : shape {
+	int Side
+}
+int main {
+	list square Squares
+	shape P
+	Squares.add P
+	return 0
+}

@@ -1,0 +1,128 @@
+// Tutorial 74: Songs — writing MIDI files
+//
+// Run it:      cabby 74-songs.cby
+// Or compile:  cabby -c 74-songs.cby && ./74-songs
+// Library:     use sound
+// Topics:      sound.part, sound.song, notes in beats, chords, drums,
+//              saving a MIDI file, reading one back, transposing
+//
+// Tutorial 72 played notes as they were asked for. A song is written down
+// first, then saved as a MIDI file, which any music program can open,
+// play, show as a score, or change: GarageBand, MuseScore, Logic, a
+// keyboard.
+//
+// A song is made of parts, and a part is one instrument's notes. Notes go
+// one after another, and their lengths are in beats; the song's tempo says
+// how fast the beats go. Here is a twelve bar blues in A: a bass, a piano
+// playing chords, and drums, saved as blues.mid, read back, put up into E,
+// and played.
+
+use sound
+
+const int BARS = 12
+
+// a blues, a chord a bar: the chords' roots, as half steps above A
+list int blues_chords {
+	return {0, 0, 0, 0, 5, 5, 0, 0, 7, 5, 0, 7}
+}
+
+// the bass walks up the chord, and back down, a note a beat. Notes can be
+// MIDI numbers too: 45 is A2, and 4 more is the C#3 above it.
+sound.part bass_part {
+	sound.part Bass
+	Bass.set_instrument "bass"
+	Bass.set_held 0.9                       // a little gap between the notes
+	list int Chords = blues_chords
+	list int Steps = {0, 4, 7, 9}
+	for Bar in BARS {
+		int Root = 45 + Chords[Bar]
+		for Beat in 4 {
+			int Step = Steps[Beat]
+			if Bar % 2 == 1 {
+				Step = Steps[3 - Beat]          // every other bar, back down
+			}
+			Bass.note (Root + Step).text, 1
+		}
+	}
+	return Bass
+}
+
+// the piano plays the chord on the second and fourth beats: a rest, then a
+// short chord, twice a bar
+sound.part piano_part {
+	sound.part Piano
+	Piano.set_instrument "piano"
+	Piano.set_volume 0.6
+	list int Chords = blues_chords
+	for Bar in BARS {
+		int Root = 57 + Chords[Bar]             // A3
+		list str Chord = {(Root + 4).text, (Root + 7).text, (Root + 10).text}
+		for Twice in 2 {
+			Piano.rest 1
+			Piano.chord Chord, 0.5
+			Piano.rest 0.5
+		}
+	}
+	return Piano
+}
+
+// drums: each note is a drum. They're put at their beats with note_at,
+// since a hi-hat and a bass drum can sound at the same time.
+sound.part drum_part {
+	sound.part Drums
+	Drums.set_instrument "drums"
+	for Beat in BARS * 4 {
+		if Beat % 2 == 0 {
+			Drums.note_at "C2", Beat, 0.5       // the bass drum: beats 1 and 3
+		} else {
+			Drums.note_at "D2", Beat, 0.5       // the snare: 2 and 4
+		}
+		Drums.note_at "F#2", Beat, 0.5          // the hi-hat, twice a beat
+		Drums.note_at "F#2", Beat + 0.5, 0.5
+	}
+	Drums.move_to BARS * 4                  // (the part is as long as the others)
+	return Drums
+}
+
+int main {
+	sound.song Blues
+	Blues.set_tempo 120                     // beats a minute
+	Blues.set_time_signature 4, 4
+	Blues.add bass_part
+	Blues.add piano_part
+	Blues.add drum_part
+	Blues.save "blues.mid"
+	println "blues.mid:", Blues.beats, "beats,", Blues.seconds, "seconds"
+
+	// read back: a part for each instrument in the file, with its notes
+	sound.song Again = sound.read_song "blues.mid"
+	println "read back:", Again.tempo, "beats a minute,", Again.time_signature
+	for Part in Again.Parts {
+		println " ", Part.instrument + ":", Part.Notes.length, "notes, from", Part.Notes[0].name
+	}
+
+	// up a fifth, into E: seven half steps (the drums stay as they are)
+	Again.transpose 7
+	Again.save "blues-in-e.mid"
+	println "in E, the bass starts on", Again.Parts[0].Notes[0].name
+
+	sound.play_song Again
+	sound.wait
+}
+
+// Try this:
+//  - Open blues.mid in a music program, and see the score.
+//  - Make it a slow blues: Blues.set_tempo 70.
+//  - Change the piano's instrument to "organ", or the bass's to
+//    "double bass".
+//  - Write a tune of your own with notes: "E4 D4 C4:2 - G4:0.5 G4:0.5",
+//    where :2 is two beats and - is a rest.
+//  - Read a MIDI file you have, and print its parts.
+
+// ---------------------------------------------------------------- output
+//> blues.mid: 48.0 beats, 24.0 seconds
+//> read back: 120.0 beats a minute, 4/4
+//>   bass: 48 notes, from A2
+//>   piano: 72 notes, from C#4
+//>   drums: 144 notes, from C2
+//> in E, the bass starts on E3

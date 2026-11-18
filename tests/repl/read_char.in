@@ -1,0 +1,6 @@
+// read_char takes a line's first character, and leaves nothing behind
+char C = read_char
+yes
+C
+exit
+n

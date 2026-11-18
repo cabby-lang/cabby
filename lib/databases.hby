@@ -1,0 +1,315 @@
+// databases.hby — SQLite databases: records kept in tables, in one file.
+//
+//     use databases
+//
+//     databases.database Shop = databases.open "shop.db"      made if it's new
+//     Shop.run "create table if not exists items (name text, price real)"
+//     Shop.run_with "insert into items values (?, ?)", {"bread", "4.50"}
+//     for Row in Shop.rows "select name, price from items order by price" {
+//         println Row["name"], Row["price"]
+//     }
+//     str Count = Shop.value "select count(*) from items"
+//
+//     databases.statement Add = Shop.prepare "insert into items values (?, ?)"
+//     Add.add_text "milk"                  values for its ?s, of any kind:
+//     Add.add_number 2.10                  text, numbers, bytes, nothing
+//     Add.run                              made once, run as often as it's needed
+//
+//     for Row in Shop.records "select name, price from items" {
+//         item I
+//         Row.fill I                       a row into a struct, by its fields' names
+//     }
+//
+//     databases.database Server = databases.connect "postgresql://tom@localhost/shop"
+//
+// The database is one file, with no server to run (or, with connect, a
+// PostgreSQL server's, asked the same things in the same way). What's asked of it is
+// SQL, the language every database speaks. Values go in through ?s, never
+// pasted into the SQL: a name with a ' in it can't break a statement, or
+// change what it does. Rows come back as lookups, column by column, all
+// as text ("" for none); .to_int and .to_double turn them into numbers.
+//
+// Something SQL can't do (a table that isn't there, a wrong word) is a
+// panic that says what SQLite said.
+//
+// The full reference is databases.md, next to this file.
+
+use addresses
+use bytes
+use json
+
+// ---- the C side (runtime/databases.c)
+
+extern long cby_databases_open str path
+extern long cby_databases_connect str where
+extern void cby_databases_close long id
+extern void cby_databases_value str value
+extern long cby_databases_run long id, str sql, int keep
+extern long cby_databases_columns void
+extern long cby_databases_changes long id
+extern long cby_databases_last_id long id
+extern long cby_databases_result_length long i
+extern void cby_databases_take long i, address char dst
+extern long cby_databases_records void
+extern long cby_databases_bytes void
+extern long cby_databases_prepare long id, str sql
+extern long cby_databases_statement_run long id, int keep
+extern void cby_databases_statement_free long id
+extern void cby_databases_statement_text long id, str v
+extern void cby_databases_statement_bytes long id, long b
+extern void cby_databases_statement_number long id, double v
+extern void cby_databases_statement_whole long id, long v
+extern void cby_databases_statement_nothing long id
+
+// (what's kept of the rows: 0 nothing, 1 text, 2 records as json, 3 the
+// first value as bytes)
+
+// one of the texts C has just found
+static str databases_result long I {
+	str Text = " ".repeat(cby_databases_result_length(I))
+	if Text.length > 0 {
+		address char Room = addresses.of_text Text
+		cby_databases_take I, Room
+	}
+	return Text
+}
+
+// the rows C has just found, as lookups: column name to value
+static list lookup str str databases_rows long Count {
+	long Columns = cby_databases_columns()
+	list str Names
+	for C in Columns {
+		Names.add databases_result(C)
+	}
+	list lookup str str Rows
+	for R in Count {
+		lookup str str Row
+		for C in Columns {
+			Row[Names[C].copy] = databases_result(Columns + R * Columns + C)
+		}
+		Rows.add Row
+	}
+	return Rows
+}
+
+// the values for a statement's ?s, in order
+static void databases_give const list str &Values {
+	for Value in Values {
+		cby_databases_value Value
+	}
+}
+
+// the records C has just made, as a json list
+static json databases_records {
+	json Records
+	Records.adopt cby_databases_records()
+	return Records
+}
+
+// the bytes C has just found
+static bytes databases_bytes {
+	bytes B
+	B.adopt cby_databases_bytes()
+	return B
+}
+
+// One statement of SQL, made once (with Database.prepare) to run as many
+// times as it's needed: quicker than giving its SQL each time, and its ?s
+// can take values of any kind, bytes among them.
+object databases.statement {
+	long Id                         // (its number, on the C side)
+
+	// values for its ?s, in order, the next time it runs
+	void add_text const str &Text const {
+		cby_databases_statement_text Id, Text
+	}
+
+	void add_number double Number const {
+		cby_databases_statement_number Id, Number
+	}
+
+	// a whole number (a long), kept exactly
+	void add_whole long Number const {
+		cby_databases_statement_whole Id, Number
+	}
+
+	// bytes: a picture, a file, anything that isn't text (a BLOB)
+	void add_bytes const bytes &Data const {
+		cby_databases_statement_bytes Id, Data.handle
+	}
+
+	// nothing: NULL, as a value missing
+	void add_nothing const {
+		cby_databases_statement_nothing Id
+	}
+
+	// runs it, with the values added since it last ran
+	void run const {
+		cby_databases_statement_run Id, 0
+	}
+
+	// the same, with these as its values (text, each)
+	void run_with const list str &Values const {
+		for Value in Values {
+			add_text Value
+		}
+		cby_databases_statement_run Id, 0
+	}
+
+	// the rows it gives, each a lookup of its columns (all text)
+	list lookup str str rows const {
+		return databases_rows(cby_databases_statement_run(Id, 1))
+	}
+
+	list lookup str str rows_with const list str &Values const {
+		for Value in Values {
+			add_text Value
+		}
+		return databases_rows(cby_databases_statement_run(Id, 1))
+	}
+
+	// the rows as json: numbers as numbers, nothing as null, ready for
+	// `Row.fill` into a struct
+	json records const {
+		cby_databases_statement_run Id, 2
+		return databases_records
+	}
+
+	// the first column of the first row ("" if there are no rows)
+	str value const {
+		if cby_databases_statement_run(Id, 1) == 0 {
+			return ""
+		}
+		return databases_result cby_databases_columns()
+	}
+
+	// the first column of the first row, as bytes (none if there are no
+	// rows)
+	bytes bytes_value const {
+		cby_databases_statement_run Id, 3
+		return databases_bytes
+	}
+
+	~statement {
+		cby_databases_statement_free Id
+	}
+}
+
+// A database, open: one file.
+object databases.database {
+	long Id                         // (its number, on the C side)
+
+	// runs SQL that gives no rows back: making tables, putting rows in,
+	// changing them. Several statements, with ; between them, run in turn.
+	void run const str &Sql const {
+		cby_databases_run Id, Sql, 0
+	}
+
+	// the same, with values for its ?s, in order
+	void run_with const str &Sql, const list str &Values const {
+		databases_give Values
+		cby_databases_run Id, Sql, 0
+	}
+
+	// the rows a select gives, each a lookup of its columns
+	list lookup str str rows const str &Sql const {
+		return databases_rows(cby_databases_run(Id, Sql, 1))
+	}
+
+	list lookup str str rows_with const str &Sql, const list str &Values const {
+		databases_give Values
+		return databases_rows(cby_databases_run(Id, Sql, 1))
+	}
+
+	// the first column of the first row: "select count(*) from items"
+	// ("" if there are no rows)
+	str value const str &Sql const {
+		if cby_databases_run(Id, Sql, 1) == 0 {
+			return ""
+		}
+		return databases_result cby_databases_columns()
+	}
+
+	str value_with const str &Sql, const list str &Values const {
+		databases_give Values
+		if cby_databases_run(Id, Sql, 1) == 0 {
+			return ""
+		}
+		return databases_result cby_databases_columns()
+	}
+
+	// the rows a select gives as json: a list of lookups, numbers as
+	// numbers and nothing as null, ready for `Row.fill` into a struct
+	json records const str &Sql const {
+		cby_databases_run Id, Sql, 2
+		return databases_records
+	}
+
+	json records_with const str &Sql, const list str &Values const {
+		databases_give Values
+		cby_databases_run Id, Sql, 2
+		return databases_records
+	}
+
+	// the first column of the first row, as bytes: a picture kept in it
+	// (none if there are no rows)
+	bytes bytes_value const str &Sql const {
+		cby_databases_run Id, Sql, 3
+		return databases_bytes
+	}
+
+	bytes bytes_value_with const str &Sql, const list str &Values const {
+		databases_give Values
+		cby_databases_run Id, Sql, 3
+		return databases_bytes
+	}
+
+	// one statement made once, to run as many times as it's needed (and
+	// whose ?s can take values of any kind, bytes among them)
+	databases.statement prepare const str &Sql const {
+		return databases.statement{.Id = cby_databases_prepare(Id, Sql)}
+	}
+
+	// how many rows the last insert, update or delete changed
+	long changes const {
+		return cby_databases_changes Id
+	}
+
+	// the number SQLite gave the last row put in (its rowid, or its
+	// "integer primary key"); PostgreSQL's, its serial column's
+	long last_id const {
+		return cby_databases_last_id Id
+	}
+
+	// changes that go together: none of them are kept until commit (and
+	// rollback forgets them). Many inserts between begin and commit are
+	// much faster, too.
+	void begin const {
+		cby_databases_run Id, "begin", 0
+	}
+
+	void commit const {
+		cby_databases_run Id, "commit", 0
+	}
+
+	void rollback const {
+		cby_databases_run Id, "rollback", 0
+	}
+
+	~database {
+		cby_databases_close Id
+	}
+}
+
+// a database file, opened (made, if it isn't there)
+databases.database databases.open const str &Path {
+	return databases.database{.Id = cby_databases_open(Path)}
+}
+
+// a PostgreSQL server's database, connected to:
+// "postgresql://tom:secret@localhost/shop" (or libpq's "host=localhost
+// dbname=shop user=tom"). It's asked the same things, in the same way, as
+// a file's.
+databases.database databases.connect const str &Where {
+	return databases.database{.Id = cby_databases_connect(Where)}
+}

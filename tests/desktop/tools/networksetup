@@ -1,0 +1,6 @@
+#!/bin/sh
+# a stand-in (run_desktop_tests.sh): there only when CABBY_HAVE names it
+case ",$CABBY_HAVE," in *",$(basename "$0"),"*) ;; *) exit 127 ;; esac
+S=$CABBY_TEST_STATE
+if [ -n "$CABBY_MAC_WIFI_HIDDEN" ]; then echo "You are not associated with an AirPort network."; exit 0; fi
+echo "Current Wi-Fi Network: Studio"

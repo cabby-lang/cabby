@@ -1,0 +1,44 @@
+// html.hby — reading web pages, and making them.
+//
+//     use html
+//
+//     html Page = html.read networks.download "https://example.com"
+//     println Page.find("title")                  the page's title
+//     for Link in Page.find_all "a" {             every link
+//         println Link.text, Link.attribute "href"
+//     }
+//     element Price = Page.find "#prices li.price"
+//
+//     element List = html.element "ul"            building
+//     element Item = html.element "li"
+//     Item.add_text "Tea & cake"                  written as Tea &amp; cake
+//     List.add Item
+//     println List.markup                         <ul><li>Tea &amp; cake</li></ul>
+//
+// Elements are found with CSS selectors: "a" (a tag), ".price" (a class),
+// "#prices" (an id), "a[href]" (an attribute), "ul li" (inside), "ul > li"
+// (directly inside), several with commas. A page is read the way browsers
+// read it, so pages with mistakes (tags left open) still read.
+//
+// The full reference is html.md, next to this file.
+
+use markup
+
+// a whole web page
+object html : element {
+}
+
+// a page read from its HTML (it always reads: mistakes are forgiven, as a
+// browser forgives them)
+html html.read const str &Text {
+	html Page
+	Page.adopt cby_markup_read(Text, 1)
+	return Page
+}
+
+// a new element, to build with: html.element "p"
+element html.element const str &Tag {
+	element E
+	E.adopt cby_markup_new(Tag, 1)
+	return E
+}

@@ -1,0 +1,60 @@
+// Tutorial 29: register and volatile
+//
+// Run it:      cabby 29-register-volatile.cby
+// Keywords:    register, volatile
+//
+// Two storage hints inherited from C. Neither changes what a correct
+// program prints, which is why this tutorial is mostly about the rules.
+//
+// register
+//   Says "keep this in a CPU register if you can". Modern compilers decide
+//   that for themselves, so the useful part is the rule that comes with
+//   it: a register variable can never be BORROWED (no `&` to it, no
+//   passing it to a reference parameter). Use it to promise that nothing
+//   else will ever see or change the variable.
+//
+// volatile
+//   Says "every read and write of this must really happen". Compiled code
+//   normally keeps a value in a register and skips repeated reads and
+//   writes it can prove are pointless. That breaks when something outside
+//   the program's own logic can see or change the memory: hardware
+//   registers, a signal handler, a debugger watching it, or a timing loop
+//   you don't want optimized away. In the interpreter every access
+//   happens anyway; it matters in `cabby -c` programs.
+
+void bump int &n {
+	n++
+}
+
+int main {
+	// register: an ordinary variable in every way except borrowing.
+	register int Total = 0
+	for register int i = 1; i <= 100; i++ {
+		Total += i
+	}
+	println "1 + ... + 100 =", Total
+	// bump Total          // error: a register variable can't be borrowed
+
+	int Normal = 1
+	bump Normal            // fine: an ordinary variable can be borrowed
+	println "normal:", Normal
+
+	// volatile: a busy-wait loop the optimizer must not delete. Without
+	// volatile, -O2 could see that `Spins` is never used and remove the
+	// loop entirely.
+	volatile long Spins = 0
+	for i in 1000000 {
+		Spins++
+	}
+	println "spun", Spins, "times"
+}
+
+// Try this:
+//  - Uncomment `bump Total` and read the error.
+//  - Compile with `cabby -c 29-register-volatile.cby --emit-llvm` and look
+//    for `load volatile` and `store volatile` in the .ll file.
+
+// ---------------------------------------------------------------- output
+//> 1 + ... + 100 = 5050
+//> normal: 2
+//> spun 1000000 times

@@ -1,0 +1,456 @@
+// speech.hby — text read aloud, the same way on Linux and macOS.
+//
+//     use speech
+//
+//     speech.say "The lesson is at four."      waits until it's said
+//
+//     speech.speaker Latin
+//     Latin.set_language "la"
+//     Latin.set_rate 140                       words a minute
+//     Latin.say "Gallia est omnis divisa in partes tres."
+//     Latin.save "Arma virumque cano.", "aeneid.wav"
+//
+// Linux: espeak-ng (or the older espeak, or Speech Dispatcher's spd-say),
+// whichever the computer has. macOS: its own voices (say).
+//
+// And heard: speech to text, by Whisper (whisper.cpp's whisper-cli), on
+// the computer itself, with no service:
+//
+//     str Said = speech.hear "lesson.mp3"      what's said in it, as text
+//     str Now = speech.hear_for time.seconds(5)   what's said to the microphone
+//
+// The full reference is speech.md, next to this file.
+
+use addresses
+use files
+use directories
+use networks
+use sound
+use time
+use shell
+use os
+
+// ---- the C side (runtime/desktop.c)
+
+extern long cby_desktop_capture str line, str input, int has_input
+extern void cby_desktop_take_text address char dst
+extern int cby_desktop_on_a_mac void
+
+// what a program prints (its arguments each after a "\x1f"), given Input
+// if Has; "\x1e" if it couldn't be run or didn't work
+static str speech_run const str &Line, const str &Input, bool Has {
+	int Given = 0
+	if Has {
+		Given = 1
+	}
+	long Length = cby_desktop_capture Line, Input, Given
+	if Length < 0 {
+		return "\x1e"
+	}
+	str Text = " ".repeat Length
+	address char Room = addresses.of_text Text
+	cby_desktop_take_text Room
+	return Text
+}
+
+// which program says it: "say" (a Mac's), "espeak-ng", "espeak",
+// "spd-say", or "" for none
+static str speech_program {
+	if cby_desktop_on_a_mac is not 0 {
+		return "say"
+	}
+	for Program in "espeak-ng,espeak,spd-say".split "," {
+		if speech_run(Program + "\x1f--version", "", false) is not "\x1e" {
+			return Program.copy
+		}
+	}
+	return ""
+}
+
+// the words of a line, without the spaces between them
+static list str speech_words const str &Line {
+	list str Words
+	for Word in Line.split " " {
+		if Word is not "" {
+			Words.add Word.copy
+		}
+	}
+	return Words
+}
+
+// a Mac's voices, from say -v '?': "Alex   en_US    # Most people ...",
+// as (name, language) pairs, one after the other
+static list str speech_mac_voices {
+	list str Pairs
+	str Said = speech_run "say\x1f-v\x1f?", "", false
+	if Said is "\x1e" {
+		return Pairs
+	}
+	for Line in Said.split "\n" {
+		long Hash = Line.find "#"
+		str Before = Line.copy
+		if Hash > 0 {
+			Before = Line[to Hash - 1]
+		}
+		list str Words = speech_words Before
+		if Words.length > 1 {
+			str Name = Words[0].copy
+			long I = 1
+			while I + 1 < Words.length {
+				Name += " " + Words[I]
+				I += 1
+			}
+			Pairs.add Name
+			Pairs.add Words[Words.length - 1].replace("_", "-").lower
+		}
+	}
+	return Pairs
+}
+
+// ---- a speaker: a voice, a language and a speed
+
+// How it's said: by which voice (one of speech.voices), in which
+// language ("en", "en-gb", "la", "fr"), how fast (words a minute)
+object speech.speaker {
+	inner str Voice
+	inner str Language
+	inner long Rate
+
+	// one of speech.voices
+	void set_voice const str &Name {
+		Voice = Name.copy
+	}
+
+	// "en", "en-us", "fr", "de", "la" (Latin), "grc" (Ancient Greek): what
+	// a voice is there for
+	void set_language const str &Code {
+		Language = Code.lower
+	}
+
+	// how fast, in words a minute (175 or so is usual; 80 is slow, 300 fast)
+	void set_rate long Words {
+		Rate = Words
+	}
+
+	// (the program's arguments, each after a "\x1f", for saying it, and
+	// saving it into Path if Path isn't "")
+	str arguments const str &Program, const str &Path const {
+		str Line = Program.copy
+		if Program is "say" {
+			str Name = Voice.copy
+			if Name is "" and Language is not "" {
+				list str Pairs = speech_mac_voices
+				long I = 0
+				while I + 1 < Pairs.length and Name is "" {
+					if Pairs[I + 1] is Language or Pairs[I + 1].starts_with(Language + "-") {
+						Name = Pairs[I].copy
+					}
+					I += 2
+				}
+			}
+			if Name is not "" {
+				Line += "\x1f-v\x1f" + Name
+			}
+			if Rate > 0 {
+				Line += "\x1f-r\x1f" + Rate.text
+			}
+			if Path is not "" {
+				Line += "\x1f-o\x1f" + Path
+				if Path.lower.ends_with ".wav" {
+					Line += "\x1f--data-format=LEI16@22050"
+				}
+			}
+		} else if Program is "spd-say" {
+			Line += "\x1f-w"
+			if Voice is not "" {
+				Line += "\x1f-y\x1f" + Voice
+			}
+			if Language is not "" {
+				Line += "\x1f-l\x1f" + Language
+			}
+			if Rate > 0 {
+				// (its speed is from -100 to 100, 0 being usual)
+				long Speed = (Rate - 175) * 100 / 175
+				if Speed < -100 {
+					Speed = -100
+				}
+				if Speed > 100 {
+					Speed = 100
+				}
+				Line += "\x1f-r\x1f" + Speed.text
+			}
+			Line += "\x1f-e"
+		} else {
+			if Voice is not "" {
+				Line += "\x1f-v\x1f" + Voice
+			} else if Language is not "" {
+				Line += "\x1f-v\x1f" + Language
+			}
+			if Rate > 0 {
+				Line += "\x1f-s\x1f" + Rate.text
+			}
+			if Path is not "" {
+				Line += "\x1f-w\x1f" + Path
+			}
+			Line += "\x1f--stdin"
+		}
+		return Line
+	}
+
+	// Says it aloud, waiting until it's said: true if it was
+	bool say const str &Text const {
+		str Program = speech_program
+		if Program is "" {
+			return false
+		}
+		return speech_run(arguments(Program, ""), Text, true) is not "\x1e"
+	}
+
+	// Saves it said into a sound file instead: WAV (and on a Mac, AIFF for
+	// a ".aiff"): true if it was saved. (spd-say can't, so it's espeak-ng
+	// that's needed for this on Linux.)
+	bool save const str &Text, const str &Path const {
+		str Program = speech_program
+		if Program is "" or Program is "spd-say" {
+			return false
+		}
+		return speech_run(arguments(Program, Path), Text, true) is not "\x1e"
+	}
+}
+
+// ---- the usual voice
+
+// says it aloud in the usual voice, waiting until it's said: true if it was
+bool speech.say const str &Text {
+	speech.speaker Usual
+	return Usual.say Text
+}
+
+// saves it said in the usual voice into a sound file (WAV)
+bool speech.save const str &Text, const str &Path {
+	speech.speaker Usual
+	return Usual.save Text, Path
+}
+
+// true if there's something to say it with
+bool speech.can_speak {
+	return speech_program is not ""
+}
+
+// The voices there are, for set_voice: a Mac's by name ("Samantha",
+// "Daniel"); espeak-ng's by language ("en-gb", "la"); Speech
+// Dispatcher's by its names for them.
+list str speech.voices {
+	list str Names
+	str Program = speech_program
+	if Program is "say" {
+		list str Pairs = speech_mac_voices
+		long I = 0
+		while I < Pairs.length {
+			Names.add Pairs[I].copy
+			I += 2
+		}
+	} else if Program is "spd-say" {
+		// "NAME  LANGUAGE  VARIANT", after a line saying so
+		for Line in speech_run("spd-say\x1f-L", "", false).split "\n" {
+			list str Words = speech_words Line
+			if Words.length > 0 and Words[0] is not "NAME" and Words[0] is not "\x1e" {
+				Names.add Words[0].copy
+			}
+		}
+	} else if Program is not "" {
+		// " 5  en-gb   --/M   English_(Great_Britain)  gmw/en ...", after
+		// a line saying "Pty Language ..."
+		for Line in speech_run(Program + "\x1f--voices", "", false).split "\n" {
+			list str Words = speech_words Line
+			if Words.length > 1 and Words[0] is not "Pty" and Words[0] is not "\x1e" {
+				Names.add Words[1].copy
+			}
+		}
+	}
+	return Names
+}
+
+// ---- hearing: speech to text, by Whisper (whisper.cpp), on the computer
+
+// whisper.cpp's program, as it's called now ("whisper-cli"), or before
+// ("whisper-cpp", Homebrew's), or "" for none
+static str speech_whisper {
+	for Program in "whisper-cli,whisper-cpp".split(",") {
+		if speech_run(Program + "\x1f--help", "", false) is not "\x1e" {
+			return Program.copy
+		}
+	}
+	return ""
+}
+
+// where Cabby keeps the models it fetches (speech.get_model)
+str speech.model_folder {
+	return directories.save_folder("Cabby") + "/whisper"
+}
+
+// the first model file (ggml-...bin) in a folder, the smaller ones first
+// ("" for none)
+static str speech_model_in const str &Folder {
+	if !directories.exists(Folder) {
+		return ""
+	}
+	list str Names = directories.list Folder
+	for Size in "tiny,base,small,medium,large".split(",") {
+		for Name in Names {
+			if Name.starts_with("ggml-" + Size) and Name.ends_with(".bin") {
+				return Folder + "/" + Name
+			}
+		}
+	}
+	for Name in Names {
+		if Name.starts_with("ggml-") and Name.ends_with(".bin") {
+			return Folder + "/" + Name
+		}
+	}
+	return ""
+}
+
+// The model Whisper hears with, as it's found: CABBY_WHISPER_MODEL, then
+// the models speech.get_model fetched, then where whisper.cpp's packages
+// put them ("" for none).
+str speech.model {
+	if shell.has("CABBY_WHISPER_MODEL") and shell.get("CABBY_WHISPER_MODEL") is not "" {
+		return shell.get "CABBY_WHISPER_MODEL"
+	}
+	str Home = directories.home
+	list str Folders
+	Folders.add speech.model_folder
+	Folders.add Home + "/.local/share/whisper.cpp/models"
+	Folders.add Home + "/.cache/whisper.cpp"
+	Folders.add "/usr/share/whisper.cpp/models"
+	Folders.add "/usr/local/share/whisper.cpp/models"
+	Folders.add "/opt/homebrew/share/whisper-cpp"
+	Folders.add "/usr/local/share/whisper-cpp"
+	for Folder in Folders {
+		str Found = speech_model_in(Folder)
+		if Found is not "" {
+			return Found
+		}
+	}
+	return ""
+}
+
+// Fetches one of Whisper's models from the web (whisper.cpp's own, on
+// Hugging Face), for speech.model to find: "base.en" (148 MB, English
+// only: quick, and good), "base" (any language), "small" (466 MB, better),
+// "medium". It's fetched once; its path is given.
+str speech.get_model const str &Name {
+	str Folder = speech.model_folder
+	directories.make Folder
+	str Path = Folder + "/ggml-" + Name + ".bin"
+	if !files.exists(Path) {
+		networks.download_to "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-" + Name + ".bin", Path
+	}
+	return Path
+}
+
+// How it's heard: which model, in which language. The usual one finds its
+// model as speech.model says, and its language by listening.
+object speech.listener {
+	inner str Model
+	inner str Language
+
+	// a model's file (ggml-base.en.bin), rather than the one found
+	void set_model const str &Path {
+		Model = Path.copy
+	}
+
+	// "en", "de", "fr", "la" (Latin), "el" (Greek): what's said in it (to
+	// begin with, "auto": Whisper works out which, from the first part)
+	void set_language const str &Code {
+		Language = Code.lower
+	}
+
+	// What's said in a sound file (WAV, MP3, FLAC, Ogg Vorbis), as text: a
+	// panic if there's nothing to hear it with (speech.can_hear says).
+	str hear const str &Path const {
+		str Program = speech_whisper()
+		if Program is "" {
+			speech_cant_hear "there's no whisper-cli (whisper.cpp) to hear with: whisper.cpp on Arch (in the AUR), brew install whisper-cpp on a Mac"
+		}
+		str Using = Model.copy
+		if Using is "" {
+			Using = speech.model
+		}
+		if Using is "" {
+			speech_cant_hear "there's no Whisper model to hear with: speech.get_model \"base.en\" fetches one"
+		}
+		if !files.exists(Path) {
+			speech_cant_hear "there's no sound file '" + Path + "' to hear"
+		}
+		// (as Whisper hears: 16000 a second, in one channel)
+		str Wav = speech_temporary("heard")
+		sound.convert_to_wav Path, Wav, 16000, 1
+		str Code = Language.copy
+		if Code is "" {
+			Code = "auto"
+		}
+		str Said = speech_run(Program + "\x1f-m\x1f" + Using + "\x1f-f\x1f" + Wav + "\x1f-l\x1f" + Code + "\x1f-nt\x1f-np", "", false)
+		files.delete Wav
+		if Said is "\x1e" {
+			speech_cant_hear Program + " couldn't hear '" + Path + "' (is the model a whisper.cpp one: ggml-...bin?)"
+		}
+		// (a line for each part it heard, each with a space before it)
+		str Words
+		for Line in Said.split "\n" {
+			str Part = Line.trim
+			if Part is not "" {
+				if Words is not "" {
+					Words += " "
+				}
+				Words += Part
+			}
+		}
+		return Words
+	}
+
+	// what's said to the microphone, for so long (it waits)
+	str hear_for duration Wait const {
+		sound.recording Take = sound.record
+		time.sleep Wait
+		Take.stop
+		str Wav = speech_temporary("said")
+		Take.save Wav
+		str Heard = hear(Wav)
+		files.delete Wav
+		return Heard
+	}
+}
+
+// (a file of its own in the temporary folder: by this program's number)
+static str speech_temporary const str &What {
+	str Folder = "/tmp"
+	if shell.has("TMPDIR") and shell.get("TMPDIR") is not "" {
+		Folder = shell.get "TMPDIR"
+	}
+	return Folder + "/cabby-" + What + "-" + os.pid.text + ".wav"
+}
+
+extern void cby_speech_panic str why
+
+static void speech_cant_hear const str &Why {
+	cby_speech_panic Why
+}
+
+// what's said in a sound file, as text (in the language it's in)
+str speech.hear const str &Path {
+	speech.listener Usual
+	return Usual.hear Path
+}
+
+// what's said to the microphone, for so long
+str speech.hear_for duration Wait {
+	speech.listener Usual
+	return Usual.hear_for Wait
+}
+
+// whether there's something to hear with: whisper.cpp, and a model
+bool speech.can_hear {
+	return speech_whisper() is not "" and speech.model is not ""
+}

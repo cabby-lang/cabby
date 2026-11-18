@@ -1,0 +1,52 @@
+// Tutorial 103: Printing — a practice sheet
+//
+// Run it:      cabby 103-printing.cby
+// Or compile:  cabby -c 103-printing.cby && ./103-printing
+// Library:     use printing
+// Topics:      printing.printers, default_printer, can_print; print,
+//              print_text, print_with, printing.settings (set_copies,
+//              set_two_sided, set_pages, set_landscape,
+//              set_black_and_white, set_title); jobs, done, cancel
+//
+// Printing goes through the computer's own printing (CUPS, on Linux and on
+// a Mac), to any printer it knows: a file (a PDF, a picture, text) or text
+// made by the program, with settings for copies, both sides, pages and
+// more.
+//
+// Paper is paper, so this only prints when asked: `cabby 103-printing.cby
+// print` prints a practice sheet, twice, on both sides. Without it (as the
+// tests run it), it says which printers there are.
+
+use printing
+
+int main int Argc, str Argv[] {
+	if !printing.can_print {
+		println "There's no printer to print to (CUPS knows of none)."
+		return 0
+	}
+	println "Printers:", printing.printers
+	println "The default:", printing.default_printer
+	println "Waiting to print:", printing.jobs.length, "jobs"
+	if Argc > 1 and Argv[1] is "print" {
+		str Sheet = "Practice, week 7\n\nC major, two octaves, hands together\nA minor, harmonic\n"
+		printing.settings Two
+		Two.set_copies 2
+		Two.set_two_sided
+		Two.set_title "Practice sheet"
+		str Job = printing.print_text_with Sheet, Two
+		if Job is "" {
+			println "It didn't print."
+			return 1
+		}
+		println "Printing, as", Job
+	}
+}
+
+// Try this:
+//  - Print a file of your own: printing.print "scales.pdf".
+//  - Print pages 1 to 3 only, sideways (set_pages "1-3", set_landscape).
+//  - Wait until a job's done (printing.done Job), and say so.
+
+// ---------------------------------------------------------------- output
+// output varies: what one computer said (one with no printers)
+//> There's no printer to print to (CUPS knows of none).

@@ -1,0 +1,350 @@
+// json.hby — reading and writing JSON.
+//
+//     use json
+//
+//     json Weather = json.read files.read "weather.json"
+//     println Weather["city"].str                     Sydney
+//     double Now = Weather["now"]["temperature"].double
+//     for Day in Weather["days"] {                    a list's items
+//         println Day["day"].str, Day["high"].long
+//     }
+//     long Wind = Weather["wind"].long_or 0           0 if it isn't there
+//
+//     json Settings = json.lookup                     { }
+//     Settings["name"] = "Ada"                        text, numbers and
+//     Settings["volume"] = 7                          true/false go in as
+//     files.write "settings.json", Settings.pretty    they are
+//
+// A json value holds any JSON: text, a number, true or false, null, a list
+// ([ ]) or a lookup ({ }: names and values; JSON calls it an "object", but
+// in Cabby an object is something else, and a lookup is what this is).
+// .str, .double, .long and .bool give Cabby values; the wrong kind, or a
+// name that isn't there, is a panic that says what it found, unless the
+// _or form gives a default. A value taken out of another (J["days"]) is
+// part of it: changing it changes the whole.
+//
+// The full reference is json.md, next to this file.
+
+use addresses
+
+// ---- the C side (in Cabby's runtime)
+
+extern long cby_json_read str text
+extern int cby_json_can_read str text
+extern long cby_json_new long kind
+extern long cby_json_from_str str s
+extern long cby_json_from_double double d
+extern long cby_json_from_bool int b
+extern void cby_json_release long node
+extern long cby_json_get long node, str key
+extern long cby_json_at long node, long i
+extern int cby_json_has long node, str key
+extern long cby_json_kind long node
+extern long cby_json_length long node
+extern double cby_json_double long node
+extern long cby_json_long long node
+extern int cby_json_bool long node
+extern int cby_json_is long node, long kind
+extern long cby_json_text long node, long what, long i
+extern void cby_json_take_text address char dst
+extern void cby_json_set long node, str key, long value
+extern void cby_json_set_at long node, long i, long value
+extern void cby_json_add long node, long value
+extern void cby_json_remove long node, str key
+extern long cby_json_copy long node
+extern void cby_json_must_be_lookup long node, str struct_name
+extern int cby_json_given long node, str key
+extern long cby_json_given_name long node, str a, str b, str c
+extern long cby_json_whole_in long node, long lo, long hi
+extern long cby_json_char long node
+extern void cby_json_not_one_of long node, str what
+
+// the text C has just made, as a str
+static str json_text_from_c long Length {
+	str Text = " ".repeat(Length)
+	if Length > 0 {
+		address char Room = addresses.of_text Text
+		cby_json_take_text Room
+	}
+	return Text
+}
+
+// ---- a JSON value
+
+object json {
+	inner long Node
+
+	json {
+		Node = cby_json_new(0)              // null, until it is given a value
+	}
+
+	~json {
+		cby_json_release Node
+	}
+
+	// (for libraries: this value, as its C side knows it)
+	long node const {
+		return Node
+	}
+
+	// (for the library's own functions: the value becomes this C node)
+	void adopt long Given {
+		cby_json_release Node
+		Node = Given
+	}
+
+	// ---- inside: J["name"], J[2] (and `for X in J`, for a list)
+
+	json item const str &Name const {
+		json Found
+		Found.adopt cby_json_get(Node, Name)
+		return Found
+	}
+
+	json item_at long Index const {
+		json Found
+		Found.adopt cby_json_at(Node, Index)
+		return Found
+	}
+
+	void set_item const str &Name, json Value {
+		cby_json_set Node, Name, Value.Node
+	}
+
+	void set_item_at long Index, json Value {
+		cby_json_set_at Node, Index, Value.Node
+	}
+
+	// a list: one more at the end
+	void add json Value {
+		cby_json_add Node, Value.Node
+	}
+
+	// a lookup: takes a name and its value out
+	void remove const str &Name {
+		cby_json_remove Node, Name
+	}
+
+	bool has const str &Name const {
+		return cby_json_has(Node, Name) != 0
+	}
+
+	// a list's items, a lookup's names, or a text's characters
+	long length const {
+		return cby_json_length(Node)
+	}
+
+	// a lookup's names, in order
+	list str keys const {
+		list str Names
+		long Count = cby_json_length(Node)
+		for i in Count {
+			Names.add json_text_from_c(cby_json_text(Node, 3, i))
+		}
+		return Names
+	}
+
+	// ---- values out
+
+	str str_ const {
+		return json_text_from_c(cby_json_text(Node, 2, 0))
+	}
+
+	double double_ const {
+		return cby_json_double(Node)
+	}
+
+	long long_ const {
+		return cby_json_long(Node)
+	}
+
+	bool bool_ const {
+		return cby_json_bool(Node) != 0
+	}
+
+	// ---- or a default, if it isn't there (or isn't that kind)
+
+	str str_or const str &Default const {
+		if cby_json_is(Node, 3) != 0 {
+			return json_text_from_c(cby_json_text(Node, 2, 0))
+		}
+		return Default.copy
+	}
+
+	double double_or double Default const {
+		if cby_json_is(Node, 2) != 0 {
+			return cby_json_double(Node)
+		}
+		return Default
+	}
+
+	long long_or long Default const {
+		if cby_json_is(Node, 7) != 0 {
+			return cby_json_long(Node)
+		}
+		return Default
+	}
+
+	bool bool_or bool Default const {
+		if cby_json_is(Node, 1) != 0 {
+			return cby_json_bool(Node) != 0
+		}
+		return Default
+	}
+
+	// ---- what kind of value it is
+
+	bool is_null const {
+		return cby_json_kind(Node) == 0
+	}
+
+	bool is_bool const {
+		return cby_json_kind(Node) == 1
+	}
+
+	bool is_number const {
+		return cby_json_kind(Node) == 2
+	}
+
+	bool is_str const {
+		return cby_json_kind(Node) == 3
+	}
+
+	bool is_list const {
+		return cby_json_kind(Node) == 4
+	}
+
+	bool is_lookup const {
+		return cby_json_kind(Node) == 5
+	}
+
+	// a name that wasn't there, or an item past the end
+	bool is_missing const {
+		return cby_json_kind(Node) == 6
+	}
+
+	// ---- as JSON text
+
+	// on one line, for sending (also what println shows)
+	str text const {
+		return json_text_from_c(cby_json_text(Node, 0, 0))
+	}
+
+	// indented over several lines, for files people read
+	str pretty const {
+		return json_text_from_c(cby_json_text(Node, 1, 0))
+	}
+
+	// a copy of its own, not part of anything
+	json copy const {
+		json C
+		C.adopt cby_json_copy(Node)
+		return C
+	}
+}
+
+// ---- making values
+
+// JSON text read into a value; text that isn't JSON is a panic that says
+// where (check first with json.can_read when it might not be)
+json json.read const str &Text {
+	json J
+	J.adopt cby_json_read(Text)
+	return J
+}
+
+bool json.can_read const str &Text {
+	return cby_json_can_read(Text) != 0
+}
+
+// an empty lookup: { }
+json json.lookup {
+	json J
+	J.adopt cby_json_new(5)
+	return J
+}
+
+// an empty list: [ ]
+json json.list {
+	json J
+	J.adopt cby_json_new(4)
+	return J
+}
+
+// null
+json json.null {
+	json J
+	return J
+}
+
+// ---- structs: json.from P, and J.fill P
+//
+// For every struct, Cabby writes json.from_struct_<name> and
+// json.fill_struct_<name> (which `json.from P` and `J.fill P` call), using
+// these.
+
+void json.must_be_lookup const json &Json, const str &Struct {
+	cby_json_must_be_lookup Json.node, Struct
+}
+
+bool json.given const json &Json, const str &Name {
+	return cby_json_given(Json.node, Name) != 0
+}
+
+// which spelling of a field's name the JSON has: date_of_birth,
+// dateOfBirth or DateOfBirth; "" if none (or it's null)
+str json.given_name const json &Json, const str &Snake, const str &Camel, const str &Field {
+	long Which = cby_json_given_name(Json.node, Snake, Camel, Field)
+	if Which == 1 {
+		return Snake.copy
+	}
+	if Which == 2 {
+		return Camel.copy
+	}
+	if Which == 3 {
+		return Field.copy
+	}
+	return ""
+}
+
+long json.whole_in const json &Json, long Lo, long Hi {
+	return cby_json_whole_in(Json.node, Lo, Hi)
+}
+
+char json.char_of const json &Json {
+	return (char)cby_json_char(Json.node)
+}
+
+void json.not_one_of const json &Json, const str &What {
+	cby_json_not_one_of Json.node, What
+}
+
+// text, numbers and true/false become json values by themselves where one
+// is wanted (Settings["name"] = "Ada"), through these
+json json.from_str const str &Text {
+	json J
+	J.adopt cby_json_from_str(Text)
+	return J
+}
+
+json json.from_long long Number {
+	json J
+	J.adopt cby_json_from_double((double)Number)
+	return J
+}
+
+json json.from_double double Number {
+	json J
+	J.adopt cby_json_from_double(Number)
+	return J
+}
+
+json json.from_bool bool Yes {
+	json J
+	int B = 0
+	if Yes {
+		B = 1
+	}
+	J.adopt cby_json_from_bool(B)
+	return J
+}

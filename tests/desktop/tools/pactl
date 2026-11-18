@@ -1,0 +1,13 @@
+#!/bin/sh
+# a stand-in (run_desktop_tests.sh): there only when CABBY_HAVE names it
+case ",$CABBY_HAVE," in *",$(basename "$0"),"*) ;; *) exit 127 ;; esac
+S=$CABBY_TEST_STATE
+# PulseAudio's
+case "$1" in
+get-sink-volume) echo "Volume: front-left: 29491 /  $(cat "$S/level")% / -20.81 dB,   front-right: 29491 /  $(cat "$S/level")% / -20.81 dB"
+	echo "        balance 0.00" ;;
+get-sink-mute) [ "$(cat "$S/muted")" = 1 ] && echo "Mute: yes" || echo "Mute: no" ;;
+set-sink-volume) echo "$3" | tr -d % > "$S/level" ;;
+set-sink-mute) echo "$3" > "$S/muted" ;;
+*) exit 1 ;;
+esac

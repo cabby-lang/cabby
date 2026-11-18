@@ -1,0 +1,5 @@
+// return ends the session with that exit status
+// exit: 5
+int code = 4
+return code + 1
+println "not reached"

@@ -1,0 +1,678 @@
+// linux.hby — what only Linux has: the computer's sensors (temperatures,
+// fans), its disks and their partitions, USB devices, the kernel's modules
+// and settings, and systemd's services.
+//
+//     use linux
+//
+//     for T in linux.temperatures {
+//         println T.chip, T.label, T.value, "°C"      "coretemp Package id 0 48.0 °C"
+//     }
+//     linux.service Ssh = linux.service_named "ssh"
+//     println Ssh.active                              "active"
+//     println linux.setting "net.ipv4.ip_forward"     "0"
+//
+// What every system has (disks' space, programs, watching files) is in
+// the os library. The full reference is linux.md, next to this file.
+
+use addresses
+
+// ---- the C side (runtime/linux.c); use what's below instead
+
+extern void cby_linux_take address char dst
+extern long cby_linux_sensors void
+extern long cby_linux_sensor_text long i, long what
+extern double cby_linux_sensor_value long i, long what
+extern long cby_linux_block_devices void
+extern long cby_linux_block_text long i, long what
+extern long cby_linux_block_number long i, long what
+extern long cby_linux_usb_devices void
+extern long cby_linux_usb_text long i, long what
+extern long cby_linux_usb_number long i, long what
+extern long cby_linux_modules void
+extern long cby_linux_module_text long i, long what
+extern long cby_linux_module_number long i, long what
+extern long cby_linux_setting str name
+extern int cby_linux_has_setting str name
+extern int cby_linux_set_setting str name, str value
+extern void cby_linux_no_service str name
+extern long cby_desktop_capture str line, str input, int has_input
+extern void cby_desktop_take_text address char dst
+
+static str linux_text long Length {
+	str Text = " ".repeat Length
+	address char Room = addresses.of_text Text
+	cby_linux_take Room
+	return Text
+}
+
+// what a program prints (its arguments each after a "\x1f"); "\x1e" if
+// it couldn't be run or didn't work
+static str linux_run const str &Line {
+	long Length = cby_desktop_capture Line, "", 0
+	if Length < 0 {
+		return "\x1e"
+	}
+	str Text = " ".repeat Length
+	address char Room = addresses.of_text Text
+	cby_desktop_take_text Room
+	return Text
+}
+
+static list str linux_words const str &Line {
+	list str Words
+	for Word in Line.replace("\t", " ").split " " {
+		if Word is not "" {
+			Words.add Word.copy
+		}
+	}
+	return Words
+}
+
+// ---- sensors
+
+// A sensor: a temperature, a fan, a voltage, power or current, as it read
+// when it was found.
+object linux.sensor {
+	inner str Chip
+	inner str Label
+	inner str Kind
+	inner double Value
+	inner double High
+	inner double Critical
+
+	// (made by linux.sensors)
+	void fill long I {
+		Chip = linux_text cby_linux_sensor_text(I, 0)
+		Label = linux_text cby_linux_sensor_text(I, 1)
+		Kind = linux_text cby_linux_sensor_text(I, 2)
+		Value = cby_linux_sensor_value I, 0
+		High = cby_linux_sensor_value I, 1
+		Critical = cby_linux_sensor_value I, 2
+	}
+
+	// the chip it's on, as its driver names it: "coretemp" (an Intel
+	// processor), "k10temp" (an AMD one), "nvme", "amdgpu", "acpitz"
+	str chip const {
+		return Chip.copy
+	}
+
+	// which it is, on the chip: "Package id 0", "Core 3", "Composite",
+	// "fan1" (if the chip doesn't say)
+	str label const {
+		return Label.copy
+	}
+
+	// "temperature", "fan", "voltage", "power" or "current"
+	str kind const {
+		return Kind.copy
+	}
+
+	// what it read: degrees Celsius, turns a minute, volts, watts, amps
+	double value const {
+		return Value
+	}
+
+	// the unit: "°C", "RPM", "V", "W", "A"
+	str unit const {
+		if Kind is "temperature" {
+			return "°C"
+		} else if Kind is "fan" {
+			return "RPM"
+		} else if Kind is "voltage" {
+			return "V"
+		} else if Kind is "power" {
+			return "W"
+		}
+		return "A"
+	}
+
+	// when it's too much, as the chip says (0 if it doesn't): high, and
+	// critical (when the computer may turn itself off)
+	double high const {
+		return High
+	}
+
+	double critical const {
+		return Critical
+	}
+}
+
+static list linux.sensor linux_sensors_of const str &Kind {
+	list linux.sensor Found
+	for I in cby_linux_sensors {
+		linux.sensor S
+		S.fill I
+		if Kind is "" or S.kind is Kind {
+			Found.add S
+		}
+	}
+	return Found
+}
+
+// every sensor the kernel knows of (its hwmon drivers'; the thermal zones'
+// where they have no temperatures)
+list linux.sensor linux.sensors {
+	return linux_sensors_of ""
+}
+
+list linux.sensor linux.temperatures {
+	return linux_sensors_of "temperature"
+}
+
+list linux.sensor linux.fans {
+	return linux_sensors_of "fan"
+}
+
+// ---- disks and their partitions
+
+// A disk, or a partition of one, as the kernel has it (/sys/block), as it
+// was when it was found.
+object linux.block_device {
+	inner str Name
+	inner str Kind
+	inner str Model
+	inner str Disk
+	inner str Mounted
+	inner str Label
+	inner long Size
+	inner bool Removable
+	inner bool Ssd
+	inner bool ReadOnly
+
+	// (made by linux.block_devices)
+	void fill long I {
+		Name = linux_text cby_linux_block_text(I, 0)
+		Kind = linux_text cby_linux_block_text(I, 1)
+		Model = linux_text cby_linux_block_text(I, 2)
+		Disk = linux_text cby_linux_block_text(I, 3)
+		Mounted = linux_text cby_linux_block_text(I, 4)
+		Label = linux_text cby_linux_block_text(I, 5)
+		Size = cby_linux_block_number I, 0
+		Removable = cby_linux_block_number(I, 1) != 0
+		Ssd = cby_linux_block_number(I, 2) != 0
+		ReadOnly = cby_linux_block_number(I, 3) != 0
+	}
+
+	// its name, "sda", "nvme0n1", "sda1"; and its device, "/dev/sda1"
+	str name const {
+		return Name.copy
+	}
+
+	str path const {
+		return "/dev/" + Name
+	}
+
+	// "disk" or "partition"
+	str kind const {
+		return Kind.copy
+	}
+
+	// a disk's maker and model: "ATA Samsung SSD 870", "WD Blue SN570"
+	str model const {
+		return Model.copy
+	}
+
+	// a partition's disk: "sda" ("" for a disk)
+	str disk const {
+		return Disk.copy
+	}
+
+	// where it's mounted ("" if it isn't), and its label (its name, "" if
+	// it hasn't one)
+	str mounted_at const {
+		return Mounted.copy
+	}
+
+	str label const {
+		return Label.copy
+	}
+
+	// its size, in bytes
+	long size const {
+		return Size
+	}
+
+	// whether it can be taken out (a USB stick, an SD card), whether it's
+	// an SSD rather than a spinning disk, and whether it can only be read
+	bool removable const {
+		return Removable
+	}
+
+	bool ssd const {
+		return Ssd
+	}
+
+	bool read_only const {
+		return ReadOnly
+	}
+}
+
+// the disks and partitions, each disk followed by its partitions
+list linux.block_device linux.block_devices {
+	list linux.block_device Found
+	for I in cby_linux_block_devices {
+		linux.block_device B
+		B.fill I
+		Found.add B
+	}
+	return Found
+}
+
+// just the disks, and a disk's partitions
+list linux.block_device linux.disks {
+	list linux.block_device Found
+	for I in cby_linux_block_devices {
+		linux.block_device B
+		B.fill I
+		if B.kind is "disk" {
+			Found.add B
+		}
+	}
+	return Found
+}
+
+list linux.block_device linux.partitions_of const str &Disk {
+	list linux.block_device Found
+	for I in cby_linux_block_devices {
+		linux.block_device B
+		B.fill I
+		if B.disk is Disk {
+			Found.add B
+		}
+	}
+	return Found
+}
+
+// ---- USB devices
+
+// A USB device plugged in: a keyboard, a stick, an audio interface.
+object linux.usb_device {
+	inner str Name
+	inner str Maker
+	inner str Vendor
+	inner str Product
+	inner str Serial
+	inner long Bus
+	inner long Number
+	inner long Speed
+
+	// (made by linux.usb_devices)
+	void fill long I {
+		Name = linux_text cby_linux_usb_text(I, 0)
+		Maker = linux_text cby_linux_usb_text(I, 1)
+		Vendor = linux_text cby_linux_usb_text(I, 2)
+		Product = linux_text cby_linux_usb_text(I, 3)
+		Serial = linux_text cby_linux_usb_text(I, 4)
+		Bus = cby_linux_usb_number I, 0
+		Number = cby_linux_usb_number I, 1
+		Speed = cby_linux_usb_number I, 2
+	}
+
+	// what it says it is, and who made it: "Scarlett 2i2 USB", "Focusrite"
+	// ("" for one that doesn't say)
+	str name const {
+		return Name.copy
+	}
+
+	str maker const {
+		return Maker.copy
+	}
+
+	// its numbers, in hexadecimal, as lsusb shows them: "1235" and "8210"
+	str vendor_id const {
+		return Vendor.copy
+	}
+
+	str product_id const {
+		return Product.copy
+	}
+
+	// its serial number ("" if it hasn't one)
+	str serial const {
+		return Serial.copy
+	}
+
+	// where it is: its bus, and its number on it (as lsusb shows them)
+	long bus const {
+		return Bus
+	}
+
+	long number const {
+		return Number
+	}
+
+	// how fast it talks, in megabits a second: 12 (USB 1), 480 (USB 2),
+	// 5000 (USB 3)
+	long speed const {
+		return Speed
+	}
+}
+
+// the USB devices plugged in (not the computer's own hubs)
+list linux.usb_device linux.usb_devices {
+	list linux.usb_device Found
+	for I in cby_linux_usb_devices {
+		linux.usb_device U
+		U.fill I
+		Found.add U
+	}
+	return Found
+}
+
+// ---- the kernel's modules
+
+// A module loaded into the kernel: a driver, mostly.
+object linux.module {
+	inner str Name
+	inner str Users
+	inner long Size
+	inner long Used
+
+	// (made by linux.modules)
+	void fill long I {
+		Name = linux_text cby_linux_module_text(I, 0)
+		Users = linux_text cby_linux_module_text(I, 1)
+		Size = cby_linux_module_number I, 0
+		Used = cby_linux_module_number I, 1
+	}
+
+	// "snd_hda_intel", "i915", "bluetooth"
+	str name const {
+		return Name.copy
+	}
+
+	// its size in memory, in bytes
+	long size const {
+		return Size
+	}
+
+	// how many use it, and which modules do
+	long used const {
+		return Used
+	}
+
+	list str used_by const {
+		list str Names
+		if Users is not "" {
+			Names = Users.split ","
+		}
+		return Names
+	}
+}
+
+// the modules loaded, by name
+list linux.module linux.modules {
+	list linux.module Found
+	for I in cby_linux_modules {
+		linux.module M
+		M.fill I
+		Found.add M
+	}
+	return Found
+}
+
+// whether a module's loaded ("-" and "_" are the same in its name, as for
+// modprobe)
+bool linux.module_loaded const str &Name {
+	str Want = Name.replace "-", "_"
+	for I in cby_linux_modules {
+		if linux_text(cby_linux_module_text(I, 0)) == Want {
+			return true
+		}
+	}
+	return false
+}
+
+// loads a module, and what it needs, with modprobe (it needs the
+// administrator): true if it's loaded
+bool linux.load_module const str &Name {
+	return linux_run("modprobe\x1f" + Name) is not "\x1e"
+}
+
+// unloads one (and what only it needed): true if it was
+bool linux.unload_module const str &Name {
+	return linux_run("modprobe\x1f-r\x1f" + Name) is not "\x1e"
+}
+
+// ---- the kernel's settings (as sysctl has them, in /proc/sys)
+
+// A setting's value: linux.setting "net.ipv4.ip_forward" is "0" or "1".
+// One that isn't there is a panic (has_setting checks first).
+str linux.setting const str &Name {
+	return linux_text cby_linux_setting(Name)
+}
+
+bool linux.has_setting const str &Name {
+	return cby_linux_has_setting(Name) is not 0
+}
+
+// Changes one, until the computer starts again (it needs the
+// administrator): true if it was changed. (For good: a file in
+// /etc/sysctl.d.)
+bool linux.set_setting const str &Name, const str &Value {
+	return cby_linux_set_setting(Name, Value) is not 0
+}
+
+// ---- systemd's services
+
+// A service systemd runs: a program kept running (ssh, bluetooth, cups),
+// as it was when it was asked about.
+object linux.service {
+	inner str Name
+	inner str Description
+	inner str Active
+	inner str Sub
+	inner str Enabled
+	inner str Loaded
+	inner bool User
+
+	// (made by linux.services and linux.service_named)
+	void set_up const str &Unit, bool Users {
+		Name = Unit.copy
+		User = Users
+	}
+
+	void set_state const str &Says, const str &Running, const str &About, const str &Enable {
+		Active = Says.copy
+		Sub = Running.copy
+		Description = About.copy
+		Enabled = Enable.copy
+		Loaded = "loaded"
+	}
+
+	// its name, as systemd has it: "ssh.service"
+	str name const {
+		return Name.copy
+	}
+
+	// what it is: "OpenBSD Secure Shell server"
+	str description const {
+		return Description.copy
+	}
+
+	// "active", "inactive", "failed", "activating", "deactivating"
+	str active const {
+		return Active.copy
+	}
+
+	// whether it's running now
+	bool running const {
+		return Sub is "running"
+	}
+
+	// whether it starts with the computer: "enabled", "disabled",
+	// "static" (when something else needs it), "masked" (it can't be
+	// started at all)
+	str enabled const {
+		return Enabled.copy
+	}
+
+	// one of this person's own (systemctl --user), not the system's
+	bool users_own const {
+		return User
+	}
+
+	// (systemctl, with --user for one's own)
+	inner str systemctl const str &What const {
+		str Line = "systemctl"
+		if User {
+			Line += "\x1f--user"
+		}
+		return Line + "\x1f" + What
+	}
+
+	// Starts, stops or restarts it, starts it with the computer or not: true
+	// if it was done. The system's need the administrator.
+	bool start {
+		return act "start"
+	}
+
+	bool stop {
+		return act "stop"
+	}
+
+	bool restart {
+		return act "restart"
+	}
+
+	bool enable {
+		return act "enable"
+	}
+
+	bool disable {
+		return act "disable"
+	}
+
+	inner bool act const str &What {
+		bool Done = linux_run(systemctl(What) + "\x1f" + Name) is not "\x1e"
+		refresh
+		return Done
+	}
+
+	// asks systemd again how it is
+	void refresh {
+		lookup str str Says = linux_show systemctl("show"), Name
+		str ActiveNow = linux_said Says, "ActiveState"
+		str About = linux_said Says, "Description"
+		set_state ActiveNow, linux_said(Says, "SubState"), About, linux_said(Says, "UnitFileState")
+		Loaded = linux_said Says, "LoadState"
+	}
+
+	// whether systemd knows of it ("not-found": it doesn't)
+	bool known const {
+		return Loaded is "loaded"
+	}
+}
+
+// "Key=value" lines, as systemctl show writes them
+static lookup str str linux_show const str &Systemctl, const str &Unit {
+	lookup str str Says
+	str Line = Systemctl + "\x1f--property=Id,Description,LoadState,ActiveState,SubState,UnitFileState\x1f" + Unit
+	str Said = linux_run Line
+	if Said is "\x1e" {
+		return Says
+	}
+	for Each in Said.split "\n" {
+		long Equals = Each.find "="
+		if Equals > 0 {
+			str Key = Each[to Equals - 1]
+			str Value = Each[Equals + 1 to]
+			Says[Key] = Value
+		}
+	}
+	return Says
+}
+
+static str linux_said const lookup str str &Says, const str &Key {
+	if Says.contains Key {
+		return Says[Key].copy
+	}
+	return ""
+}
+
+// a service's full name: "ssh" is "ssh.service"
+static str linux_unit const str &Name {
+	if Name.contains "." {
+		return Name.copy
+	}
+	return Name + ".service"
+}
+
+static list linux.service linux_services_of bool Users {
+	list linux.service Found
+	str Systemctl = "systemctl"
+	if Users {
+		Systemctl += "\x1f--user"
+	}
+	// whether each starts with the computer, from one list
+	lookup str str Enable
+	str Files = linux_run Systemctl + "\x1flist-unit-files\x1f--type=service\x1f--no-legend\x1f--plain\x1f--no-pager"
+	if Files is not "\x1e" {
+		for Line in Files.split "\n" {
+			list str Words = linux_words Line
+			if Words.length >= 2 {
+				Enable[Words[0]] = Words[1].copy
+			}
+		}
+	}
+	str Units = linux_run Systemctl + "\x1flist-units\x1f--type=service\x1f--all\x1f--no-legend\x1f--plain\x1f--no-pager"
+	if Units is "\x1e" {
+		return Found
+	}
+	for Line in Units.split "\n" {
+		list str Words = linux_words Line
+		if Words.length >= 4 {
+			// "ssh.service loaded active running OpenBSD Secure Shell server"
+			str Description
+			long I = 4
+			while I < Words.length {
+				if Description is not "" {
+					Description += " "
+				}
+				Description += Words[I]
+				I += 1
+			}
+			linux.service S
+			S.set_up Words[0], Users
+			S.set_state Words[2], Words[3], Description, linux_said(Enable, Words[0])
+			Found.add S
+		}
+	}
+	return Found
+}
+
+// the system's services (all that systemd knows of: running or not)
+list linux.service linux.services {
+	return linux_services_of false
+}
+
+// this person's own (systemctl --user)
+list linux.service linux.user_services {
+	return linux_services_of true
+}
+
+// One of the system's services, by name ("ssh", or "ssh.service"). One
+// systemd doesn't know is a panic (has_service checks first).
+linux.service linux.service_named const str &Name {
+	return linux_service_found Name, false
+}
+
+linux.service linux.user_service_named const str &Name {
+	return linux_service_found Name, true
+}
+
+static linux.service linux_service_found const str &Name, bool Users {
+	linux.service S
+	S.set_up linux_unit(Name), Users
+	S.refresh
+	if !S.known {
+		cby_linux_no_service Name
+	}
+	return S
+}
+
+// whether systemd has a service by that name
+bool linux.has_service const str &Name {
+	lookup str str Says = linux_show "systemctl\x1fshow", linux_unit(Name)
+	return linux_said(Says, "LoadState") is "loaded"
+}

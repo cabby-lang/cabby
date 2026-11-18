@@ -1,0 +1,65 @@
+// hashes.hby — a fingerprint of text or a file: SHA-256, SHA-1 and MD5.
+//
+//     use hashes
+//
+//     str Sum = hashes.sha256_of_file "debian.iso"     64 hexadecimal digits
+//     if Sum == "a1b2..." { ... }                       the download is whole
+//     str Check = hashes.sha256 "some text"
+//
+// The same text (or file) always gives the same hash, and any change,
+// even one letter, gives a quite different one: a hash says whether two
+// things are the same without comparing them byte by byte, and whether a
+// download arrived whole, by comparing it with the one its website shows.
+//
+// SHA-256 is the one to use. SHA-1 and MD5 are older, and someone could
+// make two different files with the same hash: they're here for checking
+// against old websites that only show those. A file can be any size: it's
+// read a piece at a time.
+//
+// The full reference is hashes.md, next to this file.
+
+use addresses
+
+// ---- the C side (runtime/hashes.c)
+
+extern long cby_hashes_text long kind, str text, long length
+extern long cby_hashes_file long kind, str path
+extern void cby_hashes_take address char dst
+
+// what C has just worked out
+static str hashes_answer long Length {
+	str Hex = " ".repeat(Length)
+	address char Room = addresses.of_text Hex
+	cby_hashes_take Room
+	return Hex
+}
+
+// ---- SHA-256: 64 hexadecimal digits
+
+str hashes.sha256 const str &Text {
+	return hashes_answer(cby_hashes_text(1, Text, Text.length))
+}
+
+str hashes.sha256_of_file const str &Path {
+	return hashes_answer(cby_hashes_file(1, Path))
+}
+
+// ---- SHA-1: 40 digits (for checking old downloads)
+
+str hashes.sha1 const str &Text {
+	return hashes_answer(cby_hashes_text(2, Text, Text.length))
+}
+
+str hashes.sha1_of_file const str &Path {
+	return hashes_answer(cby_hashes_file(2, Path))
+}
+
+// ---- MD5: 32 digits (for checking old downloads)
+
+str hashes.md5 const str &Text {
+	return hashes_answer(cby_hashes_text(3, Text, Text.length))
+}
+
+str hashes.md5_of_file const str &Path {
+	return hashes_answer(cby_hashes_file(3, Path))
+}

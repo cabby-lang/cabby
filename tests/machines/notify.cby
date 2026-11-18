@@ -1,0 +1,8 @@
+// A notification, and a web page opened.
+use desktop
+
+int main {
+	println "notified:", desktop.notify("Cabby", "A notification from Cabby's machine checks")
+	println "opened:", desktop.open("https://example.com")
+	return 0
+}

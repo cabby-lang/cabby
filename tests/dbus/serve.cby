@@ -1,0 +1,112 @@
+// Against a bus alone (run_dbus_tests.sh starts one): an object of the
+// program's own, called by a worker (on a thread of its own, as another
+// program would), and a signal it sends, heard on another connection.
+//> the name is ours: true
+//> asked: Hello Livia
+//> asked: Add 2, 40
+//> asked: Nope
+//> worker heard: Salve, Livia! | 42 | org.cabby.Error.NoSuchMethod: there's no method 'Nope' | ping ok | described: true
+//> heard the signal: Greeted Livia
+//> done
+use dbus
+use events
+use threads
+
+// another program, as it were: it calls ours
+object caller : threads.worker {
+	str Heard
+
+	void work {
+		dbus.bus Bus = dbus.session
+		dbus.message Hello = dbus.method_call("org.cabby.Greeter", "/org/cabby/Greeter",
+			"org.cabby.Greeter", "Hello")
+		Hello.add_str "Livia"
+		Heard = Bus.call(Hello)[0].str
+		dbus.message Add = dbus.method_call("org.cabby.Greeter", "/org/cabby/Greeter",
+			"org.cabby.Greeter", "Add")
+		Add.add_int 2
+		Add.add_int 40
+		Heard += " | " + Bus.call(Add)[0].long.text
+		dbus.message Nope = dbus.method_call("org.cabby.Greeter", "/org/cabby/Greeter",
+			"org.cabby.Greeter", "Nope")
+		Bus.try_call Nope
+		Heard += " | " + Bus.error
+		dbus.message Ping = dbus.method_call("org.cabby.Greeter", "/org/cabby/Greeter",
+			"org.freedesktop.DBus.Peer", "Ping")
+		Bus.call Ping
+		Heard += " | ping ok"
+		dbus.message Look = dbus.method_call("org.cabby.Greeter", "/org/cabby/Greeter",
+			"org.freedesktop.DBus.Introspectable", "Introspect")
+		Heard += " | described: " + Bus.call(Look)[0].str.contains("<method name='Hello'>").text
+	}
+}
+
+object greeter {
+	dbus.bus Bus                      // where the object is
+	dbus.bus Ear                      // and where its signal is heard
+	caller Caller
+	int Heard                         // the worker done, and the signal heard: 2
+	str Signal                        // (said at the end: it may come before the worker's done)
+
+	void begin {
+		Bus = dbus.session
+		println "the name is ours:", Bus.own_name("org.cabby.Greeter")
+		Bus.serve "/org/cabby/Greeter"
+		str Xml = "<interface name='org.cabby.Greeter'><method name='Hello'>"
+		Xml += "<arg type='s' direction='in'/><arg type='s' direction='out'/></method></interface>"
+		Bus.describe "/org/cabby/Greeter", Xml
+		Bus.on_call answer
+		Ear = dbus.session
+		Ear.listen "org.cabby.Greeter", "Greeted"
+		Ear.on_signal heard
+		Caller.on_done finished
+		Caller.start
+	}
+
+	void answer {
+		json Values = Bus.call_values
+		if Bus.call_name == "Hello" {
+			println "asked: Hello", Values[0].str
+			dbus.message A = dbus.answer
+			A.add_str "Salve, " + Values[0].str + "!"
+			Bus.reply A
+			dbus.message S = dbus.signal_message "/org/cabby/Greeter", "org.cabby.Greeter", "Greeted"
+			S.add_str Values[0].str
+			Bus.send S
+		} else if Bus.call_name == "Add" {
+			println "asked: Add " + Values[0].long.text + ", " + Values[1].long.text
+			dbus.message A = dbus.answer
+			A.add_int Values[0].long + Values[1].long
+			Bus.reply A
+		} else {
+			println "asked:", Bus.call_name
+			Bus.fail "org.cabby.Error.NoSuchMethod", "there's no method '" + Bus.call_name + "'"
+		}
+	}
+
+	void heard {
+		Signal = Ear.signal_name + " " + Ear.signal[0].str
+		one_less
+	}
+
+	void finished {
+		println "worker heard:", Caller.Heard
+		one_less
+	}
+
+	void one_less {
+		Heard++
+		if Heard is 2 {
+			println "heard the signal:", Signal
+			events.stop
+		}
+	}
+}
+
+int main {
+	greeter G
+	G.begin
+	events.run
+	println "done"
+	return 0
+}

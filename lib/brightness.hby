@@ -1,0 +1,54 @@
+// brightness.hby — the screen's brightness, the same way on Linux and macOS.
+//
+//     use brightness
+//
+//     println "brightness:", brightness.level     from 0 (darkest) to 100
+//     brightness.set 60
+//     brightness.down 10
+//
+// Linux: a laptop's screen through /sys/class/backlight (written there
+// if the program may, else by brightnessctl, else by logind, which lets
+// the person at the computer); a desktop's monitor by ddcutil, down its
+// cable. macOS: the Mac's own screen (a laptop's, or an iMac's), as its
+// brightness keys set it.
+//
+// The full reference is brightness.md, next to this file.
+
+// ---- the C side (runtime/desktop.c)
+
+extern long cby_brightness_level void
+extern int cby_brightness_set long level
+
+// how bright, from 0 to 100 (-1: it couldn't be found out)
+int brightness.level {
+	return (int)cby_brightness_level()
+}
+
+// sets how bright, from 0 to 100 (less than 0 is 0, more than 100 is
+// 100): true if it was set
+bool brightness.set int Level {
+	return cby_brightness_set(Level) is not 0
+}
+
+// brighter by Amount (out of 100): true if it was set
+bool brightness.up int Amount {
+	int Now = brightness.level
+	if Now < 0 {
+		return false
+	}
+	return brightness.set(Now + Amount)
+}
+
+// darker by Amount
+bool brightness.down int Amount {
+	int Now = brightness.level
+	if Now < 0 {
+		return false
+	}
+	return brightness.set(Now - Amount)
+}
+
+// true if there's a screen here whose brightness can be read
+bool brightness.can_set {
+	return brightness.level >= 0
+}

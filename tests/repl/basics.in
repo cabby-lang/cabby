@@ -1,0 +1,13 @@
+// values persist between inputs, and expressions are echoed
+int x = 5
+x + 1
+x = x * 10
+x
+double r = 2.5
+r * 2
+'A'
+true && x > 3
+str s = "hello"
+s
+print "no newline"
+println " - then the rest"

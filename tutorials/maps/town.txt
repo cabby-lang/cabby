@@ -1,0 +1,33 @@
+// Cabby Town, south of the woods (tutorial 73 reads this).
+//
+// The map comes first, a character for each tile:
+//   T  a tree (taller than a tile: its leaves reach over the tile above)
+//   ~  water      S  a sign      =  the path      f  flowers      .  grass
+//   H  a house's wall      D  its door (the house is drawn there)
+// Then, after a line of ---, what else is here, a line each:
+//   sign <col>,<row> <what it says>
+//   way <col>,<row> <area> <col>,<row>     step there, and you're in that
+//                                          area's map, on that tile
+//   person <col>,<row> <picture> <facing> <what they say>
+// Columns and rows count from 0, at the top left.
+TTTTTTTT=TTTTTTTTTTTTTTT
+T.......=..............T
+T.f.....=.....f.....f..T
+T.......=..............T
+T..HHH..=......HHH.....T
+T..HDH..=......HDH.....T
+T...=...=........=.....T
+T...==============.....T
+T.......=.......S......T
+T..f....=.........~~~..T
+T.......=....f....~~~..T
+T...T...=.........~~~..T
+T.......=..............T
+T..f....=.....T.....f..T
+T.......=..............T
+TTTTTTTTTTTTTTTTTTTTTTTT
+---
+sign 16,8 Cabby Town. The woods are to the north.
+way 8,0 woods 8,12
+person 11,3 elder down Salve, amice! Welcome to Cabby Town.
+person 6,9 baker down Good morning! The bread is fresh today.

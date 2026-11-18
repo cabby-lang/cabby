@@ -1,0 +1,78 @@
+// Tutorial 42: Web addresses — URLs, taken apart and put together
+//
+// Run it:      cabby 42-web-addresses.cby
+// Or compile:  cabby -c 42-web-addresses.cby && ./43-web-addresses
+// Library:     use networks (and use files, use directories)
+// Topics:      networks.read_url, networks.url and its parts, text,
+//              Query, networks.encode and decode
+//
+// A web address has parts: what kind of address it is, the computer, the
+// page on it, and, after a ?, names and values for the page to use:
+//
+//     https://example.com/search?q=fish+%26+chips&page=2#top
+//     kind   computer    page     query                  part of the page
+//
+// Some letters can't go in an address as they are: a space is %20, & is
+// %26. networks.read_url takes an address apart, decoding as it goes, and
+// a networks.url's text puts one back together, encoding what needs it.
+// The parts in between are plain text, to read or change.
+
+use networks
+use files
+use directories
+
+int main {
+	// ---- taking an address apart
+	networks.url Page = networks.read_url "https://Example.com/search?q=fish+%26+chips&page=2#top"
+	println Page.Scheme, Page.Host, Page.Path        // the kind, the computer, the page
+	println Page.Query, Page.Fragment               // the query, the part of the page
+	println "searching for:", Page.Query["q"]
+
+	// ---- changing a part, and putting it back together
+	Page.Query["page"] = "3"
+	Page.Query.remove "q"
+	Page.Query["q"] = "pie & mash"
+	println Page.text
+
+	// ---- making one from nothing: a weather service's question
+	networks.url Weather
+	Weather.Scheme = "https"
+	Weather.Host = "api.open-meteo.com"
+	Weather.Path = "/v1/forecast"
+	Weather.Query["latitude"] = "-33.87"
+	Weather.Query["longitude"] = "151.21"
+	Weather.Query["current_weather"] = "true"
+	println Weather.text
+
+	// ---- encoding text by itself: a word with an accent, a space, an &
+	str Safe = networks.encode "café & crème"
+	println Safe, "is", networks.decode(Safe)
+
+	// ---- an address for a file on this computer: file://, a path, no host
+	files.write "menu.txt", "Today: fish & chips\n"
+	networks.url Menu
+	Menu.Scheme = "file"
+	Menu.Path = directories.current + "/menu.txt"
+	print networks.download(Menu.text)
+	files.delete "menu.txt"
+
+	// ---- an address with something missing
+	networks.url Wrong = networks.read_url "example.com/search"
+}
+
+// Try this:
+//  - Download Weather.text with networks.download (it's a real address),
+//    and read it with json.read: Sydney's weather now.
+//  - Take apart an address from your browser's address bar, and print
+//    every name and value in its query.
+//  - Add a port: Weather.Port = 8080, and see where it goes.
+
+// ---------------------------------------------------------------- output
+//> https example.com /search
+//> {q: fish & chips, page: 2} top
+//> searching for: fish & chips
+//> https://example.com/search?page=3&q=pie%20%26%20mash#top
+//> https://api.open-meteo.com/v1/forecast?latitude=-33.87&longitude=151.21&current_weather=true
+//> caf%C3%A9%20%26%20cr%C3%A8me is café & crème
+//> Today: fish & chips
+// panic: 'example.com/search' isn't a web address: it needs its kind first, like https://

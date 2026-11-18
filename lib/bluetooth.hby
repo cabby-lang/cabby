@@ -1,0 +1,746 @@
+// bluetooth.hby — Bluetooth: turning it on and off, the devices it knows,
+// searching for more, pairing, connecting and forgetting them, and being
+// told when they come and go.
+//
+//     use bluetooth
+//
+//     bluetooth.turn_on
+//     for D in bluetooth.search time.seconds(10) {
+//         println D.name, D.address, D.kind
+//     }
+//     bluetooth.device Phones = bluetooth.device_named "Headphones"
+//     if Phones.found and Phones.pair and Phones.connect {
+//         println "connected"
+//     } else {
+//         println "it didn't work:", bluetooth.error
+//     }
+//
+// On Linux, Bluetooth is BlueZ (bluetoothd), which every desktop has,
+// reached over D-Bus's system bus. On a Mac, it's the Mac's own
+// (IOBluetooth), through runtime/bluetooth_mac.h. The same program works
+// on both.
+//
+// The full reference is bluetooth.md, next to this file.
+
+use dbus
+use time
+use events
+
+// ---- the C side (runtime/bluetooth.c); use what's below instead
+
+extern long cby_bluetooth_bus void
+extern int cby_bluetooth_agent void
+extern void cby_bluetooth_wait_long int on
+extern long cby_bluetooth_code_length void
+extern char cby_bluetooth_code_char long i
+extern void cby_bluetooth_no_device void
+extern int cby_bluetooth_native void
+extern int cby_bluetooth_mac_available void
+extern int cby_bluetooth_mac_is_on void
+extern int cby_bluetooth_mac_set_on int on
+extern int cby_bluetooth_mac_visible void
+extern int cby_bluetooth_mac_set_visible int on
+extern int cby_bluetooth_mac_list int which
+extern int cby_bluetooth_mac_search int ms
+extern int cby_bluetooth_mac_find str address
+extern int cby_bluetooth_mac_do str address, int what
+extern long cby_bluetooth_mac_text long i, long what
+extern long cby_bluetooth_mac_number long i, long what
+extern long cby_bluetooth_mac_error void
+extern char cby_bluetooth_handed_char long i
+
+// (a Mac's: true there; everything below asks it instead of BlueZ)
+bool bluetooth_mac {
+	return cby_bluetooth_native != 0
+}
+
+str bluetooth_handed long Length {
+	str s
+	for i in Length {
+		s += cby_bluetooth_handed_char i
+	}
+	return s
+}
+
+// (BlueZ's objects, and calls to it, on the connection the library shares)
+
+json bluetooth_call dbus.message &M {
+	json Answer
+	long Bus = cby_bluetooth_bus
+	if Bus != 0 {
+		Answer.adopt cby_dbus_try_call(Bus, M.id)
+	}
+	return Answer
+}
+
+// what went wrong with the last call ("" if it worked)
+str bluetooth_said long Bus {
+	long Length = cby_dbus_text Bus, 1
+	str Text = " ".repeat Length
+	if Length > 0 {
+		address char Room = addresses.of_text Text
+		cby_dbus_take_text Room
+	}
+	return Text
+}
+
+bool bluetooth_worked {
+	long Bus = cby_bluetooth_bus
+	return Bus != 0 and bluetooth_said(Bus) == ""
+}
+
+json bluetooth_objects {
+	dbus.message M = dbus.method_call "org.bluez", "/", "org.freedesktop.DBus.ObjectManager", "GetManagedObjects"
+	json Answer = bluetooth_call M
+	if !Answer.is_list or Answer.length == 0 {
+		json Nothing
+		return Nothing
+	}
+	return Answer[0].copy
+}
+
+// the adapter's path ("/org/bluez/hci0"; "" if there isn't one)
+str bluetooth_adapter {
+	json All = bluetooth_objects
+	if !All.is_lookup {
+		return ""
+	}
+	for Path in All.keys {
+		if All[Path].has "org.bluez.Adapter1" {
+			return Path.copy
+		}
+	}
+	return ""
+}
+
+bool bluetooth_set const str &Path, const str &Interface, const str &Name, bool On {
+	if Path == "" {
+		return false   // (no adapter: bluetooth.error says so)
+	}
+	dbus.message M = dbus.method_call "org.bluez", Path, "org.freedesktop.DBus.Properties", "Set"
+	M.add_str Interface
+	M.add_str Name
+	M.begin_variant "b"
+	M.add_bool On
+	M.end_variant
+	bluetooth_call M
+	return bluetooth_worked
+}
+
+bool bluetooth_adapter_says const str &Name {
+	str Path = bluetooth_adapter
+	if Path == "" {
+		return false
+	}
+	json All = bluetooth_objects
+	return All[Path]["org.bluez.Adapter1"][Name].bool_or false
+}
+
+// ---- the adapter: the computer's own Bluetooth
+
+// true if the computer has Bluetooth (and BlueZ is running)
+bool bluetooth.available {
+	if bluetooth_mac {
+		return cby_bluetooth_mac_available != 0
+	}
+	return bluetooth_adapter != ""
+}
+
+// true if it's on
+bool bluetooth.is_on {
+	if bluetooth_mac {
+		return cby_bluetooth_mac_is_on != 0
+	}
+	return bluetooth_adapter_says "Powered"
+}
+
+// turns it on (or off); false if it couldn't (bluetooth.error says why:
+// it may be blocked, as by airplane mode)
+bool bluetooth.turn_on {
+	if bluetooth_mac {
+		return cby_bluetooth_mac_set_on(1) != 0
+	}
+	return bluetooth_set bluetooth_adapter, "org.bluez.Adapter1", "Powered", true
+}
+
+bool bluetooth.turn_off {
+	if bluetooth_mac {
+		return cby_bluetooth_mac_set_on(0) != 0
+	}
+	return bluetooth_set bluetooth_adapter, "org.bluez.Adapter1", "Powered", false
+}
+
+// whether other devices searching can see this computer, to pair from them
+bool bluetooth.set_visible bool On {
+	if bluetooth_mac {
+		int Want = 0
+		if On {
+			Want = 1
+		}
+		return cby_bluetooth_mac_set_visible(Want) != 0
+	}
+	return bluetooth_set bluetooth_adapter, "org.bluez.Adapter1", "Discoverable", On
+}
+
+bool bluetooth.visible {
+	if bluetooth_mac {
+		return cby_bluetooth_mac_visible != 0
+	}
+	return bluetooth_adapter_says "Discoverable"
+}
+
+// why the last thing that returned false didn't work ("" if it worked):
+// "Page Timeout" (the device didn't answer: off, or too far away),
+// "Authentication Failed", "Not Ready" (Bluetooth is off) ...
+str bluetooth.error {
+	if bluetooth_mac {
+		return bluetooth_handed cby_bluetooth_mac_error
+	}
+	long Bus = cby_bluetooth_bus
+	if Bus == 0 {
+		return "there's no Bluetooth here (BlueZ, on the system bus)"
+	}
+	str Said = bluetooth_said Bus   // (first: what's asked next would change it)
+	if Said == "" and bluetooth_adapter == "" {
+		return "there's no Bluetooth adapter (or BlueZ isn't running)"
+	}
+	if Said.contains "org.freedesktop.DBus.Error.ServiceUnknown" {
+		return "Bluetooth's service isn't running (bluetoothd: systemctl start bluetooth)"
+	}
+	str Prefix = "org.bluez.Error."
+	if Said.starts_with Prefix {
+		Said = Said[Prefix.length to]
+		long Colon = Said.find ": "
+		if Colon >= 0 {
+			Said = Said[Colon + 2 to]
+		}
+	}
+	return Said
+}
+
+// the code shown for the last pairing (a keyboard's, typed on it), or ""
+str bluetooth.code {
+	str s
+	for i in cby_bluetooth_code_length {
+		s += cby_bluetooth_code_char i
+	}
+	return s
+}
+
+// ---- devices
+
+// A device: headphones, a keyboard, a phone. What it says (name,
+// connected ...) is as it was when it was found; refresh reads it again.
+object bluetooth.device {
+	inner str Path
+	inner str Name
+	inner str Address
+	inner str Kind
+	inner bool Paired
+	inner bool Connected
+	inner bool Trusted
+	inner int Strength
+	inner int Battery
+
+	// (made by bluetooth.devices and the rest, from BlueZ's object)
+	void fill const str &At, const json &Object {
+		Path = At.copy
+		json Dev = Object["org.bluez.Device1"]
+		Address = Dev["Address"].str_or ""
+		Name = Dev["Alias"].str_or Dev["Name"].str_or(Address)
+		Kind = Dev["Icon"].str_or ""
+		Paired = Dev["Paired"].bool_or false
+		Connected = Dev["Connected"].bool_or false
+		Trusted = Dev["Trusted"].bool_or false
+		Strength = (int)Dev["RSSI"].long_or(0)
+		Battery = -1
+		if Object.has "org.bluez.Battery1" {
+			Battery = (int)Object["org.bluez.Battery1"]["Percentage"].long_or(-1)
+		}
+	}
+
+	// (made from a Mac's listing: the i-th device in it)
+	void fill_mac long I {
+		Address = bluetooth_handed cby_bluetooth_mac_text(I, 1)
+		Path = "mac:" + Address
+		Name = bluetooth_handed cby_bluetooth_mac_text(I, 0)
+		Kind = bluetooth_handed cby_bluetooth_mac_text(I, 2)
+		Paired = cby_bluetooth_mac_number(I, 3) != 0
+		Connected = cby_bluetooth_mac_number(I, 4) != 0
+		Trusted = Paired
+		Strength = (int)cby_bluetooth_mac_number(I, 5)
+		Battery = -1
+	}
+
+	// (a Mac's: pair 0, connect 1, disconnect 2, forget 3)
+	bool mac_do int What {
+		bool Worked = cby_bluetooth_mac_do(Address, What) != 0
+		if Worked and What != 3 and cby_bluetooth_mac_find(Address) > 0 {
+			fill_mac 0
+		}
+		return Worked
+	}
+
+	// false for a device_named that found none
+	bool found const {
+		return Path != ""
+	}
+
+	// its name, as its owner set it ("Ana's Headphones")
+	str name const {
+		return Name.copy
+	}
+
+	// its address, which is its own: "AA:BB:CC:DD:EE:FF"
+	str address const {
+		return Address.copy
+	}
+
+	// what it is, as it says: "audio-headset", "audio-headphones",
+	// "input-keyboard", "input-mouse", "input-gaming", "phone", "computer"
+	// ... ("" if it doesn't say)
+	str kind const {
+		return Kind.copy
+	}
+
+	bool paired const {
+		return Paired
+	}
+
+	bool connected const {
+		return Connected
+	}
+
+	// trusted: it may connect by itself, without asking
+	bool trusted const {
+		return Trusted
+	}
+
+	// how strong its signal is, in dBm, nearer 0 nearer: -40 is close by,
+	// -90 at the edge (0: not heard lately)
+	int strength const {
+		return Strength
+	}
+
+	// its battery, in percent (-1: it doesn't say)
+	int battery const {
+		return Battery
+	}
+
+	// reads what it says again
+	void refresh {
+		if Path.starts_with "mac:" {
+			if cby_bluetooth_mac_find(Address) > 0 {
+				fill_mac 0
+			}
+			return
+		}
+		json All = bluetooth_objects
+		if All.is_lookup and All.has(Path) {
+			str At = Path.copy
+			fill At, All[At]
+		}
+	}
+
+	// Pairs with it: the two remember each other, so it can connect.
+	// Pairing a keyboard, a code is shown (bluetooth.code, and on the
+	// terminal) to type on it. It waits (up to two minutes); false if it
+	// didn't work (bluetooth.error). Paired, it's trusted too, so it can
+	// connect again by itself.
+	bool pair {
+		if Path == "" {
+			cby_bluetooth_no_device
+		}
+		if Path.starts_with "mac:" {
+			return mac_do 0
+		}
+		if Paired {
+			return true
+		}
+		cby_bluetooth_agent
+		cby_bluetooth_wait_long 1
+		dbus.message M = dbus.method_call "org.bluez", Path, "org.bluez.Device1", "Pair"
+		bluetooth_call M
+		bool Worked = bluetooth_worked
+		cby_bluetooth_wait_long 0
+		if Worked {
+			bluetooth_set Path, "org.bluez.Device1", "Trusted", true
+			refresh   // (not when it didn't: bluetooth.error keeps why)
+		}
+		return Worked
+	}
+
+	// connects to it (paired already): headphones then play the computer's
+	// sound, a keyboard types. False if it didn't work (bluetooth.error)
+	bool connect {
+		if Path == "" {
+			cby_bluetooth_no_device
+		}
+		if Path.starts_with "mac:" {
+			return mac_do 1
+		}
+		cby_bluetooth_wait_long 1
+		dbus.message M = dbus.method_call "org.bluez", Path, "org.bluez.Device1", "Connect"
+		bluetooth_call M
+		bool Worked = bluetooth_worked
+		cby_bluetooth_wait_long 0
+		if Worked {
+			refresh   // (not when it didn't: bluetooth.error keeps why)
+		}
+		return Worked
+	}
+
+	bool disconnect {
+		if Path == "" {
+			cby_bluetooth_no_device
+		}
+		if Path.starts_with "mac:" {
+			return mac_do 2
+		}
+		dbus.message M = dbus.method_call "org.bluez", Path, "org.bluez.Device1", "Disconnect"
+		bluetooth_call M
+		bool Worked = bluetooth_worked
+		if Worked {
+			refresh   // (not when it didn't: bluetooth.error keeps why)
+		}
+		return Worked
+	}
+
+	// trusted (or not): whether it may connect by itself
+	bool set_trusted bool On {
+		if Path == "" {
+			cby_bluetooth_no_device
+		}
+		if Path.starts_with "mac:" {
+			Trusted = On   // (a Mac's paired devices connect by themselves)
+			return true
+		}
+		bool Worked = bluetooth_set Path, "org.bluez.Device1", "Trusted", On
+		if Worked {
+			refresh   // (not when it didn't: bluetooth.error keeps why)
+		}
+		return Worked
+	}
+
+	// forgets it: unpaired, and gone from the list (until it's found again)
+	bool forget {
+		if Path == "" {
+			cby_bluetooth_no_device
+		}
+		if Path.starts_with "mac:" {
+			return mac_do 3
+		}
+		str Adapter = Path[to Path.find("/dev_") - 1]
+		dbus.message M = dbus.method_call "org.bluez", Adapter, "org.bluez.Adapter1", "RemoveDevice"
+		M.add_path Path
+		bluetooth_call M
+		bool Worked = bluetooth_worked
+		if Worked {
+			Paired = false
+			Connected = false
+			Trusted = false
+		}
+		return Worked
+	}
+}
+
+// (the devices BlueZ knows: 0 all, 1 paired, 2 connected, 3 heard by the
+// search, the most strongly heard first)
+list bluetooth.device bluetooth_devices int Which {
+	list bluetooth.device Found
+	if bluetooth_mac {
+		for I in cby_bluetooth_mac_list Which {
+			bluetooth.device D
+			D.fill_mac I
+			Found.add D
+		}
+		return Found
+	}
+	json All = bluetooth_objects
+	if !All.is_lookup {
+		return Found
+	}
+	for Path in All.keys {
+		if !All[Path].has("org.bluez.Device1") {
+			continue
+		}
+		bluetooth.device D
+		D.fill Path, All[Path]
+		if Which == 1 and !D.paired or Which == 2 and !D.connected or Which == 3 and D.strength == 0 {
+			continue
+		}
+		long At = Found.length
+		if Which == 3 {
+			At = 0
+			while At < Found.length and Found[At].strength >= D.strength {
+				At++
+			}
+		}
+		Found.insert At, D
+	}
+	return Found
+}
+
+// every device BlueZ knows: paired ones, and those found by a search
+// lately
+list bluetooth.device bluetooth.devices {
+	return bluetooth_devices 0
+}
+
+list bluetooth.device bluetooth.paired_devices {
+	return bluetooth_devices 1
+}
+
+list bluetooth.device bluetooth.connected_devices {
+	return bluetooth_devices 2
+}
+
+// the device with that name, or that address ("AA:BB:CC:DD:EE:FF");
+// found is false if there's none
+bluetooth.device bluetooth.device_named const str &Name {
+	bluetooth.device D
+	if bluetooth_mac {
+		for I in cby_bluetooth_mac_list 0 {
+			D.fill_mac I
+			if D.name == Name or D.address == Name {
+				return D
+			}
+		}
+		bluetooth.device None
+		return None
+	}
+	json All = bluetooth_objects
+	if !All.is_lookup {
+		return D
+	}
+	for Path in All.keys {
+		if All[Path].has "org.bluez.Device1" {
+			D.fill Path, All[Path]
+			if D.name == Name or D.address == Name {
+				return D
+			}
+		}
+	}
+	bluetooth.device None
+	return None
+}
+
+// ---- searching for devices nearby (they must be set to be found:
+// headphones' pairing mode, a phone's Bluetooth settings open)
+
+// starts searching, and goes straight on: what's found joins
+// bluetooth.devices as it's found, until stop_search
+bool bluetooth.start_search {
+	if bluetooth_mac {
+		return false   // (a Mac's search waits: bluetooth.search)
+	}
+	if bluetooth_adapter == "" {
+		return false
+	}
+	dbus.message M = dbus.method_call "org.bluez", bluetooth_adapter, "org.bluez.Adapter1", "StartDiscovery"
+	bluetooth_call M
+	return bluetooth_worked
+}
+
+bool bluetooth.stop_search {
+	if bluetooth_mac {
+		return true
+	}
+	if bluetooth_adapter == "" {
+		return false
+	}
+	dbus.message M = dbus.method_call "org.bluez", bluetooth_adapter, "org.bluez.Adapter1", "StopDiscovery"
+	bluetooth_call M
+	return bluetooth_worked
+}
+
+// searches for that long, then gives what was heard (most strongly heard
+// first). It waits: in a window, start_search and a timer instead.
+list bluetooth.device bluetooth.search duration Wait {
+	list bluetooth.device Found
+	if bluetooth_mac {
+		int Ms = (int)Wait.whole_milliseconds
+		for I in cby_bluetooth_mac_search Ms {
+			bluetooth.device D
+			D.fill_mac I
+			Found.add D
+		}
+		return Found
+	}
+	if !bluetooth.start_search {
+		return Found
+	}
+	time.sleep Wait
+	Found = bluetooth_devices 3
+	bluetooth.stop_search
+	return Found
+}
+
+// ---- being told what changes
+
+// Tells a handler when a device is found, connects or disconnects, or its
+// battery changes: on_change gives the handler (a method of the object
+// that has the watcher, as a window's), and in it, device is the device
+// and what is what happened. Told from a window's (or a game's, or
+// events.run's) loop, between their other events.
+object bluetooth.watcher {
+	dbus.bus Bus
+	handler Changed
+	inner str Path
+	inner str What
+	timer Poll                // (a Mac's: looked at each second)
+	lookup str str Was        // (and what each device was: paired, connected)
+	bool Looked
+
+	void on_change handler h {
+		Changed = h
+		if bluetooth_mac {
+			Poll.on_tick look
+			Poll.every time.seconds(1)
+			look
+			return
+		}
+		Bus = dbus.system
+		Bus.listen "org.freedesktop.DBus.Properties", "PropertiesChanged"
+		Bus.listen "org.freedesktop.DBus.ObjectManager", "InterfacesAdded"
+		Bus.listen "org.freedesktop.DBus.ObjectManager", "InterfacesRemoved"
+		Bus.on_signal heard
+	}
+
+	// what happened: "found", "gone" (forgotten), "connected",
+	// "disconnected", "paired", "unpaired", "battery", "name" or "strength"
+	str what const {
+		return What.copy
+	}
+
+	// the device it happened to (for "gone", found is false: it's gone)
+	bluetooth.device device const {
+		bluetooth.device D
+		if Path.starts_with "mac:" {
+			str Address = Path[4 to]
+			if cby_bluetooth_mac_find(Address) > 0 {
+				D.fill_mac 0
+			}
+			return D
+		}
+		json All = bluetooth_objects
+		if All.is_lookup and All.has(Path) {
+			str At = Path.copy
+			D.fill At, All[At]
+		}
+		return D
+	}
+
+	// (a Mac's, each second: what's changed since, told)
+	void look {
+		lookup str str Now
+		for D in bluetooth.devices {
+			str State = "-"
+			if D.paired {
+				State = "p"
+			}
+			if D.connected {
+				State += "c"
+			}
+			Now[D.address] = State
+		}
+		if Looked {
+			for Address, State in Now {
+				Path = "mac:" + Address
+				if !Was.contains(Address) {
+					What = "found"
+					Changed.call
+					continue
+				}
+				str Before = Was[Address].copy
+				if Before.starts_with("p") != State.starts_with("p") {
+					What = "unpaired"
+					if State.starts_with "p" {
+						What = "paired"
+					}
+					Changed.call
+				}
+				if Before.ends_with("c") != State.ends_with("c") {
+					What = "disconnected"
+					if State.ends_with "c" {
+						What = "connected"
+					}
+					Changed.call
+				}
+			}
+			list str Gone
+			for Address in Was {
+				if !Now.contains(Address) {
+					Gone.add Address.copy
+				}
+			}
+			for Address in Gone {
+				Path = "mac:" + Address
+				What = "gone"
+				Changed.call
+			}
+		}
+		Was = Now
+		Looked = true
+	}
+
+	// (each signal: told on if it's about a device)
+	void heard {
+		json Values = Bus.signal
+		str Name = Bus.signal_name
+		if Name == "PropertiesChanged" {
+			if !Bus.signal_path.contains("/dev_") or Values[0].str_or("") != "org.bluez.Device1" and Values[0].str_or("") != "org.bluez.Battery1" {
+				return
+			}
+			Path = Bus.signal_path
+			json Changes = Values[1]
+			if Changes.has "Connected" {
+				What = "disconnected"
+				if Changes["Connected"].bool_or false {
+					What = "connected"
+				}
+				Changed.call
+			}
+			if Changes.has "Paired" {
+				What = "unpaired"
+				if Changes["Paired"].bool_or false {
+					What = "paired"
+				}
+				Changed.call
+			}
+			if Changes.has "Percentage" {
+				What = "battery"
+				Changed.call
+			}
+			if Changes.has "Alias" {
+				What = "name"
+				Changed.call
+			}
+			if Changes.has "RSSI" {
+				What = "strength"
+				Changed.call
+			}
+		} else if Name == "InterfacesAdded" or Name == "InterfacesRemoved" {
+			str At = Values[0].str_or ""
+			bool Device = false
+			if Name == "InterfacesAdded" {
+				Device = Values[1].has "org.bluez.Device1"
+			} else {
+				for I in Values[1].length {
+					if Values[1][I].str_or("") == "org.bluez.Device1" {
+						Device = true
+					}
+				}
+			}
+			if !Device {
+				return
+			}
+			Path = At
+			What = "gone"
+			if Name == "InterfacesAdded" {
+				What = "found"
+			}
+			Changed.call
+		}
+	}
+}

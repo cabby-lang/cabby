@@ -1,0 +1,151 @@
+// A screen reader's stand-in, for run_accessibility_tests.sh: on a bus of
+// the test's own, it's the AT-SPI registry a program joins (it answers
+// Embed), and then it reads the program as Orca would: its tree of
+// objects, what each is called and is, and what it says changes.
+use dbus
+use events
+
+object reader {
+	dbus.bus Bus
+	str App                           // the program's name on the bus
+	str Button                        // the path of its "Say hello" button
+	str Salve                         // and of the drop-down's "Salve"
+	timer Later
+	int Step
+
+	void begin {
+		Bus = dbus.session
+		Bus.own_name "org.a11y.atspi.Registry"
+		Bus.serve "/org/a11y/atspi/accessible/root"
+		Bus.on_call answer
+		Bus.listen "org.a11y.atspi.Event.Object", ""
+		Bus.on_signal heard
+		Later.on_tick next
+		println "reader: waiting"
+	}
+
+	// the program saying it's here
+	void answer {
+		if Bus.call_name is not "Embed" {
+			Bus.fail "org.a11y.atspi.Error", "not here"
+			return
+		}
+		json Values = Bus.call_values
+		App = Values[0][0].str
+		println "reader: embedded", Values[0][1].str
+		dbus.message A = dbus.answer
+		A.begin_struct
+		A.add_str Bus.name
+		A.add_path "/org/a11y/atspi/accessible/root"
+		A.end_struct
+		Bus.reply A
+		Later.after time.milliseconds(200)
+	}
+
+	json ask const str &Path, const str &Interface, const str &Method {
+		dbus.message M = dbus.method_call App, Path, Interface, Method
+		return Bus.call M
+	}
+
+	str name_of const str &Path {
+		str Who = App.copy
+		return Bus.property(Who, Path, "org.a11y.atspi.Accessible", "Name").str
+	}
+
+	str role_of const str &Path {
+		return ask(Path, "org.a11y.atspi.Accessible", "GetRoleName")[0].str
+	}
+
+	// what its states say, of those a reader would say
+	str states_of const str &Path {
+		long Bits = ask(Path, "org.a11y.atspi.Accessible", "GetState")[0][0].long
+		str S
+		if (Bits / 4096) % 2 is 1 {
+			S += " focused"
+		}
+		if (Bits / 16) % 2 is 1 {
+			S += " checked"
+		}
+		if (Bits / 128) % 2 is 1 {
+			S += " editable"
+		}
+		if (Bits / 8388608) % 2 is 1 {
+			S += " selected"
+		}
+		return S
+	}
+
+	bool act const str &Path {
+		dbus.message M = dbus.method_call App, Path, "org.a11y.atspi.Action", "DoAction"
+		M.add_int 0
+		return Bus.call(M)[0].bool
+	}
+
+	void walk const str &Path, int Depth {
+		str Role = role_of(Path)
+		str Line = "  ".repeat(Depth) + Role + " '" + name_of(Path) + "'" + states_of(Path)
+		if Role is "entry" or Role is "label" or Role is "combo box" {
+			dbus.message M = dbus.method_call App, Path, "org.a11y.atspi.Text", "GetText"
+			M.add_int 0
+			M.add_int -1
+			Line += " text '" + Bus.call(M)[0].str + "'"
+		}
+		if Role is "push button" {
+			Line += " (" + ask(Path, "org.a11y.atspi.Action", "GetName")[0].str + ")"
+			if name_of(Path) is "Say hello" {
+				Button = Path.copy
+			}
+		}
+		if Role is "list item" and name_of(Path) is "Salve" {
+			Salve = Path.copy
+		}
+		println Line
+		json Kids = ask(Path, "org.a11y.atspi.Accessible", "GetChildren")[0]
+		for I in Kids.length {
+			walk Kids[I][1].str, Depth + 1
+		}
+	}
+
+	void next {
+		Step++
+		println "reader: the tree"
+		walk "/org/a11y/atspi/accessible/root", 1
+		if Step is 2 {
+			events.stop
+		}
+	}
+
+	void heard {
+		json V = Bus.signal
+		str What = Bus.signal_name
+		str Path = Bus.signal_path
+		if What is "StateChanged" {
+			str Detail = V[0].str
+			if Detail is not "focused" and Detail is not "checked" and Detail is not "selected" {
+				return
+			}
+			println "reader: heard", Detail, V[1].long, "-", role_of(Path), "'" + name_of(Path) + "'"
+			if Detail is "checked" and V[1].long is 1 {
+				// choosing Salve, and pressing the button, as a person using
+				// the reader would
+				str Option = Salve.copy
+				str Press = Button.copy
+				println "reader: chose Salve:", act(Option)
+				println "reader: pressed the button:", act(Press)
+				Later.after time.milliseconds(300)
+			}
+		} else if What is "TextChanged" {
+			println "reader: heard text", V[0].str, V[1].long, V[2].long, "'" + V[3].str + "'"
+		} else if What is "TextCaretMoved" {
+			println "reader: heard the caret move to", V[1].long
+		}
+	}
+}
+
+int main {
+	reader R
+	R.begin
+	events.run
+	println "reader: done"
+	return 0
+}

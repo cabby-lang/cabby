@@ -1,0 +1,28 @@
+// The computer's own Bluetooth, looked at (nothing changed), for
+// run_bluetooth_tests.sh with CABBY_BLUETOOTH_REAL=1: on Linux, BlueZ; on a
+// Mac, the Mac's own. What it prints depends on the computer.
+use bluetooth
+
+int main {
+	println "available:", bluetooth.available
+	if !bluetooth.available {
+		println "why:", bluetooth.error
+		println "done"
+		return 0
+	}
+	println "on:", bluetooth.is_on, "visible:", bluetooth.visible
+	for D in bluetooth.devices {
+		println " ", D.name, D.address, D.kind, "paired", D.paired, "connected", D.connected, "battery", D.battery
+	}
+	if bluetooth.is_on {
+		println "searching for 5 seconds..."
+		for D in bluetooth.search time.seconds(5) {
+			println " heard", D.strength, D.name, D.address, D.kind
+		}
+		if bluetooth.error != "" {
+			println "the search said:", bluetooth.error
+		}
+	}
+	println "done"
+	return 0
+}

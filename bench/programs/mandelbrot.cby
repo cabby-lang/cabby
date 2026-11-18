@@ -1,0 +1,22 @@
+int main {
+	int n = @N@
+	int Inside = 0
+	for Py in n {
+		double Ci = 2.0 * Py / n - 1.0
+		for Px in n {
+			double Cr = 3.0 * Px / n - 2.0
+			double Zr = 0.0, Zi = 0.0
+			int k = 0
+			while k < 50 && Zr * Zr + Zi * Zi <= 4.0 {
+				double t = Zr * Zr - Zi * Zi + Cr
+				Zi = 2.0 * Zr * Zi + Ci
+				Zr = t
+				k++
+			}
+			if k == 50 {
+				Inside++
+			}
+		}
+	}
+	println Inside
+}

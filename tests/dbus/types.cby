@@ -1,0 +1,65 @@
+// Against service.py (run_dbus_tests.sh starts it): types.
+//> sbyiuxtdo
+//> String(dbus.String('hello')) | Boolean(dbus.Boolean(True)) | Byte(dbus.Byte(200)) | Int32(dbus.Int32(-5)) | UInt32(dbus.UInt32(4000000000)) | Int64(dbus.Int64(-9000000000)) | UInt64(dbus.UInt64(9000000000)) | Double(dbus.Double(0.5)) | ObjectPath(dbus.ObjectPath('/a/b'))
+//> asa{sv}a(si)(yd)au
+//> [String(dbus.String('x')), String(dbus.String('yy'))]<s> | {String(dbus.String('name')): String(dbus.String('Ana', variant_level=1))@1, String(dbus.String('n')): UInt32(dbus.UInt32(7, variant_level=1))@1}<sv> | [(String(dbus.String('one')), Int32(dbus.Int32(1)))]<(si)> | (Byte(dbus.Byte(1)), Double(dbus.Double(2.0))) | []<u>
+//> -7 Ana 30 b 1.5
+//> two 2 104 105 -9000000000 18000000000 2.25 true /org/x
+use dbus
+
+str describe dbus.bus &Bus, dbus.message &M {
+	json Answer = Bus.call M
+	return Answer[0].str
+}
+
+int main {
+	dbus.bus Bus = dbus.session
+	str S = "org.cabby.Test"
+	str P = "/org/cabby/Test"
+	dbus.message M = dbus.method_call S, P, S, "Describe"
+	M.add_str "hello"
+	M.add_bool true
+	M.add_byte 200
+	M.add_int -5
+	M.add_uint 4000000000
+	M.add_long -9000000000
+	M.add_ulong 9000000000
+	M.add_double 0.5
+	M.add_path "/a/b"
+	println M.signature
+	println describe(Bus, M)
+
+	dbus.message N = dbus.method_call S, P, S, "Describe"
+	list str Words = {"x", "yy"}
+	N.add_strs Words
+	N.begin_lookup "s", "v"
+	N.add_str "name"
+	N.begin_variant "s"
+	N.add_str "Ana"
+	N.end_variant
+	N.add_str "n"
+	N.begin_variant "u"
+	N.add_uint 7
+	N.end_variant
+	N.end_lookup
+	N.begin_list "(si)"
+	N.begin_struct
+	N.add_str "one"
+	N.add_int 1
+	N.end_struct
+	N.end_list
+	N.begin_struct
+	N.add_byte 1
+	N.add_double 2.0
+	N.end_struct
+	N.begin_list "u"
+	N.end_list
+	println N.signature
+	println describe(Bus, N)
+
+	dbus.message G = dbus.method_call S, P, S, "Give"
+	json A = Bus.call G
+	println A[0].long, A[1]["name"].str, A[1]["age"].long, A[1]["tags"][1].str, A[1]["nested"]["x"].double
+	println A[2][1][0].str, A[2][1][1].long, A[3][0].long, A[3][1].long, A[4].long, A[5].long, A[6].double, A[7].bool, A[8].str
+	return 0
+}

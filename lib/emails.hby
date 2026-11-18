@@ -1,0 +1,596 @@
+// emails.hby — sending email: a message (who it's from and to, a subject,
+// its text, an HTML version, attachments), sent through an email
+// account's server (SMTP), as a mail program sends it.
+//
+//     use emails
+//
+//     emails.message M
+//     M.set_from "Thomas <tom@example.com>"
+//     M.add_to "ana@example.com"
+//     M.set_subject "Lesson on Friday"
+//     M.set_text "Hi Ana,\n\nThe lesson is at four.\n\nThomas"
+//     M.attach "scales.pdf"
+//
+//     emails.account Mail = emails.account_at "smtp.example.com", "tom@example.com", Password
+//     if !Mail.send(M) {
+//         println "it didn't go:", Mail.error
+//     }
+//
+// It's sent with libcurl (the curl package), as the networks library
+// downloads, the same on Linux and macOS. The full reference is
+// emails.md, next to this file.
+
+use addresses
+
+// ---- the C side (runtime/emails.c); use the objects below instead
+
+extern long cby_email_new void
+extern void cby_email_free long id
+extern void cby_email_set long id, long what, str value
+extern void cby_email_add long id, long what, str value
+extern long cby_email_text long id
+extern long cby_email_error void
+extern char cby_email_char long i
+extern int cby_email_send long id, str host, long port, str user, str password, long security
+extern void cby_email_save long id, str path
+
+str emails_handed long Length {
+	str s
+	for i in Length {
+		s += cby_email_char i
+	}
+	return s
+}
+
+// ---- a message
+
+// An email: who it's from, who it goes to, its subject, its text (and
+// an HTML version, if it has one), and files attached to it. An address
+// is written "ana@example.com", or with a name: "Ana Rossi
+// <ana@example.com>".
+object emails.message {
+	inner long Id
+
+	emails.message {
+		Id = cby_email_new
+	}
+
+	~emails.message {
+		cby_email_free Id
+	}
+
+	// who it's from (the account's address, usually)
+	void set_from const str &Address {
+		cby_email_set Id, 0, Address
+	}
+
+	// who it's to; Cc: shown to everyone as copied in; Bcc: sent a copy,
+	// without the others knowing
+	void add_to const str &Address {
+		cby_email_add Id, 0, Address
+	}
+
+	void add_cc const str &Address {
+		cby_email_add Id, 1, Address
+	}
+
+	void add_bcc const str &Address {
+		cby_email_add Id, 2, Address
+	}
+
+	// where answers go, if not to whom it's from
+	void set_reply_to const str &Address {
+		cby_email_set Id, 4, Address
+	}
+
+	void set_subject const str &Subject {
+		cby_email_set Id, 1, Subject
+	}
+
+	// what it says ("\n" between lines)
+	void set_text const str &Text {
+		cby_email_set Id, 2, Text
+	}
+
+	// what it says, as HTML too (bold, links, pictures from the web): mail
+	// programs show this, and the text where they can't
+	void set_html const str &Html {
+		cby_email_set Id, 3, Html
+	}
+
+	// a file sent with it (a PDF, a picture, a recording)
+	void attach const str &Path {
+		cby_email_add Id, 3, Path
+	}
+
+	// the whole message as it's sent (headers, then what it says)
+	str text const {
+		return emails_handed cby_email_text(Id)
+	}
+
+	// saved as a file (.eml: a mail program opens it)
+	void save const str &Path const {
+		cby_email_save Id, Path
+	}
+
+	long id const {
+		return Id
+	}
+}
+
+// ---- an account: the server that sends it
+
+// An email account's server, for sending: its address, and the login.
+// The port and the way it's kept private are a server's usual: 465, with
+// TLS from the start (set_port 587 for STARTTLS, which some use instead).
+object emails.account {
+	inner str Host
+	inner str User
+	inner str Password
+	inner long Port
+	inner long Security    // 0 TLS from the start, 1 STARTTLS, 2 none
+	inner str Error
+
+	// (made by emails.account_at)
+	void set_up const str &Server, const str &Login, const str &Secret {
+		Host = Server.copy
+		User = Login.copy
+		Password = Secret.copy
+		Port = 465
+		Security = 0
+	}
+
+	// the server's port: 465 (TLS from the start) or 587 (STARTTLS) are a
+	// server's usual; 25 is for servers sending to each other
+	void set_port long Number {
+		Port = Number
+		if Number == 465 {
+			Security = 0
+		} else if Security == 0 {
+			Security = 1
+		}
+	}
+
+	// Sends it without TLS: only for a server on this computer, or a
+	// test's (anything sent so can be read on the way)
+	void set_unencrypted {
+		Security = 2
+	}
+
+	// sends it: true if the server took it, else false, and error says why
+	bool send const emails.message &Message {
+		bool Sent = cby_email_send(Message.id, Host, Port, User, Password, Security) != 0
+		Error = emails_handed cby_email_error
+		return Sent
+	}
+
+	// why the last send didn't work ("" if it did): "Login denied" (the
+	// login, or an app password needed), "Couldn't connect to server" ...
+	str error const {
+		return Error.copy
+	}
+}
+
+// an account, at the server, with the login (an address, usually) and its
+// password (for many, an "app password" made in the account's settings)
+emails.account emails.account_at const str &Server, const str &Login, const str &Password {
+	emails.account A
+	A.set_up Server, Login, Password
+	return A
+}
+
+// ---- reading: a mailbox's messages (IMAP)
+
+extern long cby_imap_open str host, long port, long security, str user, str password
+extern void cby_imap_close long id
+extern long cby_imap_folders long id
+extern long cby_imap_folder long id, long i
+extern int cby_imap_select long id, str folder
+extern long cby_imap_count long id, str folder, long what
+extern long cby_imap_search long id, str criteria
+extern long cby_imap_found long id, long i
+extern long cby_imap_fetch long id, long uid
+extern int cby_imap_store long id, long uid, str change
+extern int cby_imap_move long id, long uid, str folder
+extern int cby_imap_append long id, str folder, str raw, int seen
+extern int cby_imap_delete long id, long uid
+extern long cby_conn_error void
+extern void cby_conn_panic void
+extern void cby_conn_take address char dst
+extern long cby_email_read_file str path
+extern void cby_email_got_free long id
+extern long cby_email_got_text long id, long what, str name
+extern long cby_email_got_number long id, long what, long k
+extern int cby_email_save_attachment long id, long k, str path
+extern void cby_email_take address char dst
+
+static str emails_given long Length {
+	str Text = " ".repeat Length
+	address char Room = addresses.of_text Text
+	cby_email_take Room
+	return Text
+}
+
+static str emails_conn_given long Length {
+	str Text = " ".repeat Length
+	address char Room = addresses.of_text Text
+	cby_conn_take Room
+	return Text
+}
+
+// A message as it came: who it's from, its subject, its text, its
+// attachments. Read from a mailbox (emails.mailbox), or from a file
+// (emails.read_message "saved.eml").
+object emails.received {
+	inner long Id
+
+	~emails.received {
+		cby_email_got_free Id
+	}
+
+	// (made by a mailbox, or emails.read_message)
+	void set_up long Number {
+		Id = Number
+	}
+
+	// who it's from, as it says: "Ana Rossi <ana@example.com>"; and just the
+	// address, and just the name ("" if it gives none)
+	str from const {
+		return header "From"
+	}
+
+	str from_address const {
+		return emails_given cby_email_got_text(Id, 3, "")
+	}
+
+	str from_name const {
+		return emails_given cby_email_got_text(Id, 4, "")
+	}
+
+	// who it's to, and copied in ("Ana <ana@example.com>, bo@example.com")
+	str sent_to const {
+		return header "To"
+	}
+
+	str cc const {
+		return header "Cc"
+	}
+
+	str subject const {
+		return header "Subject"
+	}
+
+	// when it was sent, as it says: "Mon, 16 Nov 2026 10:00:00 +1100"
+	str date const {
+		return header "Date"
+	}
+
+	// any header, by its name: "Reply-To", "Message-ID" ("" if it hasn't one)
+	str header const str &Name const {
+		return emails_given cby_email_got_text(Id, 0, Name)
+	}
+
+	// what it says, as text; and as HTML, if it came with that ("" if not)
+	str text const {
+		return emails_given cby_email_got_text(Id, 1, "")
+	}
+
+	str html const {
+		return emails_given cby_email_got_text(Id, 2, "")
+	}
+
+	// its attachments: how many, each's name ("scales.pdf"), kind
+	// ("application/pdf") and size in bytes, and saved as a file
+	int attachments const {
+		return (int)cby_email_got_number(Id, 0, 0)
+	}
+
+	str attachment_name int Which const {
+		return emails_given cby_email_got_text(Id, 5, Which.text)
+	}
+
+	str attachment_type int Which const {
+		return emails_given cby_email_got_text(Id, 6, Which.text)
+	}
+
+	long attachment_size int Which const {
+		return cby_email_got_number Id, 1, Which
+	}
+
+	// saved as a file: false if it couldn't be written
+	bool save_attachment int Which, const str &Path const {
+		return cby_email_save_attachment(Id, Which, Path) is not 0
+	}
+
+	// in a mailbox: its number there (to mark it read, move it, delete
+	// it), whether it's been read, and flagged (starred)
+	long number const {
+		return cby_email_got_number Id, 2, 0
+	}
+
+	bool read const {
+		return cby_email_got_number(Id, 4, 0) is not 0
+	}
+
+	bool flagged const {
+		return cby_email_got_number(Id, 5, 0) is not 0
+	}
+
+	// its size, in bytes
+	long size const {
+		return cby_email_got_number Id, 3, 0
+	}
+
+	// the whole message as it came (headers, then what it says), to save
+	// as a .eml file
+	str whole const {
+		return emails_given cby_email_got_text(Id, 7, "")
+	}
+}
+
+// a message saved as a file (.eml, as a mail program saves them)
+emails.received emails.read_message const str &Path {
+	emails.received R
+	R.set_up cby_email_read_file(Path)
+	return R
+}
+
+// An email account's mailbox, for reading (IMAP): its folders, the
+// messages in them, unread ones, and marking, moving and deleting them.
+// It connects when it's first asked something (a panic that says why if
+// it can't), encrypted (TLS), on port 993 to begin with.
+//
+//     emails.mailbox Mail = emails.mailbox_at "imap.gmail.com", "tom@example.com", Password
+//     for M in Mail.unread {
+//         println M.from_name, "-", M.subject
+//     }
+object emails.mailbox {
+	inner long Id
+	inner str Host
+	inner str User
+	inner str Password
+	inner long Port
+	inner long Security    // 0 TLS from the start, 1 STARTTLS, 2 none
+	inner str Folder
+	inner str Error
+
+	~emails.mailbox {
+		if Id is not 0 {
+			cby_imap_close Id
+		}
+	}
+
+	// (made by emails.mailbox_at)
+	void set_up const str &Server, const str &Login, const str &Secret {
+		Host = Server.copy
+		User = Login.copy
+		Password = Secret.copy
+		Port = 993
+		Security = 0
+		Folder = "INBOX"
+	}
+
+	// The server's port: 993 (TLS from the start) is a server's usual; on
+	// 143, STARTTLS (plain to begin with, then encrypted)
+	void set_port long Number {
+		Port = Number
+		if Security is not 2 {
+			Security = 0
+			if Number is 143 {
+				Security = 1
+			}
+		}
+	}
+
+	// without TLS: only for a server on this computer, or a test's
+	void set_unencrypted {
+		Security = 2
+	}
+
+	// (connected, and the folder chosen, when first needed)
+	inner void ready {
+		if Id is not 0 {
+			return
+		}
+		Id = cby_imap_open Host, Port, Security, User, Password
+		if Id is 0 {
+			cby_conn_panic
+		}
+		if cby_imap_select(Id, Folder) is 0 {
+			cby_conn_panic
+		}
+	}
+
+	// whether it can connect and log in: false, and error says why, if not
+	bool can_connect {
+		if Id is not 0 {
+			return true
+		}
+		Id = cby_imap_open Host, Port, Security, User, Password
+		if Id is 0 {
+			Error = emails_conn_given cby_conn_error()
+			return false
+		}
+		if cby_imap_select(Id, Folder) is 0 {
+			Error = emails_conn_given cby_conn_error()
+			return false
+		}
+		return true
+	}
+
+	// why can_connect couldn't ("Login denied" ...)
+	str error const {
+		return Error.copy
+	}
+
+	// its folders: ["INBOX", "Sent", "Archive", "[Gmail]/Spam"]
+	list str folders {
+		ready
+		list str Names
+		long Count = cby_imap_folders Id
+		if Count < 0 {
+			cby_conn_panic
+		}
+		for I in Count {
+			Names.add emails_conn_given(cby_imap_folder(Id, I))
+		}
+		return Names
+	}
+
+	// The folder read from now on ("INBOX" to begin with); a panic if it
+	// isn't there.
+	void open_folder const str &Name {
+		Folder = Name.copy
+		if Id is not 0 and cby_imap_select(Id, Folder) is 0 {
+			cby_conn_panic
+		}
+	}
+
+	str folder const {
+		return Folder.copy
+	}
+
+	// how many messages there are in the folder, and how many unread
+	long count {
+		ready
+		return cby_imap_count Id, Folder, 0
+	}
+
+	long unread_count {
+		ready
+		return cby_imap_count Id, Folder, 1
+	}
+
+	// (the messages a search finds, at most Most, the newest Most)
+	inner list emails.received found const str &Criteria, long Most {
+		ready
+		list emails.received Got
+		long Count = cby_imap_search Id, Criteria
+		if Count < 0 {
+			cby_conn_panic
+		}
+		long From = 0
+		if Most > 0 and Count > Most {
+			From = Count - Most
+		}
+		long I = From
+		while I < Count {
+			long Found = cby_imap_fetch(Id, cby_imap_found(Id, I))
+			if Found is not 0 {
+				emails.received R
+				R.set_up Found
+				Got.add R
+			}
+			I++
+		}
+		return Got
+	}
+
+	// the messages not yet read, oldest first (reading them doesn't mark
+	// them read: mark_read does)
+	list emails.received unread {
+		return found "UNSEEN", 0
+	}
+
+	// the newest so many, oldest first
+	list emails.received latest long Count {
+		return found "ALL", Count
+	}
+
+	// every message in the folder (a big folder takes a while)
+	list emails.received all {
+		return found "ALL", 0
+	}
+
+	// those from someone (part of a name or address), with words in the
+	// subject, or with words anywhere in them
+	list emails.received from const str &Who {
+		return found "FROM " + emails_imap_quoted(Who), 0
+	}
+
+	list emails.received with_subject const str &Words {
+		return found "SUBJECT " + emails_imap_quoted(Words), 0
+	}
+
+	list emails.received containing const str &Words {
+		return found "TEXT " + emails_imap_quoted(Words), 0
+	}
+
+	// one message, by its number (a panic if there's none)
+	emails.received message long Number {
+		ready
+		long Found = cby_imap_fetch Id, Number
+		if Found is 0 {
+			cby_conn_panic
+		}
+		emails.received R
+		R.set_up Found
+		return R
+	}
+
+	// marked read, or unread; flagged (starred), or not: true if it was
+	bool mark_read long Number {
+		ready
+		return cby_imap_store(Id, Number, "+FLAGS (\\Seen)") is not 0
+	}
+
+	bool mark_unread long Number {
+		ready
+		return cby_imap_store(Id, Number, "-FLAGS (\\Seen)") is not 0
+	}
+
+	bool flag long Number {
+		ready
+		return cby_imap_store(Id, Number, "+FLAGS (\\Flagged)") is not 0
+	}
+
+	bool unflag long Number {
+		ready
+		return cby_imap_store(Id, Number, "-FLAGS (\\Flagged)") is not 0
+	}
+
+	// moved to another folder ("Archive"), and deleted for good: true if
+	// it was
+	bool move long Number, const str &To {
+		ready
+		return cby_imap_move(Id, Number, To) is not 0
+	}
+
+	bool delete long Number {
+		ready
+		return cby_imap_delete(Id, Number) is not 0
+	}
+
+	// a message put into a folder, as it is, without sending it: a copy
+	// in "Sent", or a draft in "Drafts" (true if it was). It's marked
+	// read; save_unread leaves it unread.
+	bool save const emails.message &Message, const str &Folder {
+		ready
+		return cby_imap_append(Id, Folder, Message.text, 1) is not 0
+	}
+
+	bool save_unread const emails.message &Message, const str &Folder {
+		ready
+		return cby_imap_append(Id, Folder, Message.text, 0) is not 0
+	}
+
+	// the same, for a message as text (a .eml file read, or a received
+	// one's whole)
+	bool save_text const str &Raw, const str &Folder {
+		ready
+		return cby_imap_append(Id, Folder, Raw, 1) is not 0
+	}
+}
+
+// (text as IMAP quotes it, for a search)
+static str emails_imap_quoted const str &Text {
+	return "\"" + Text.replace("\\", "\\\\").replace("\"", "\\\"") + "\""
+}
+
+// an account's mailbox, at the server, with the login (an address,
+// usually) and its password (for many, an "app password")
+emails.mailbox emails.mailbox_at const str &Server, const str &Login, const str &Password {
+	emails.mailbox M
+	M.set_up Server, Login, Password
+	return M
+}

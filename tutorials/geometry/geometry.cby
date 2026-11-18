@@ -1,0 +1,22 @@
+// geometry.cby — the implementation for geometry.hby (tutorial 33).
+
+use math
+use local geometry
+
+// static: private to this file. Programs that use geometry can't
+// call it.
+static double square double v {
+	return v * v
+}
+
+double distance vec2 a, vec2 b {
+	return sqrt square(b.x - a.x) + square(b.y - a.y)
+}
+
+double perimeter const polygon &p {
+	double Total = 0.0
+	for int i = 0; i < p.Count; i++ {
+		Total += distance p.Points[i], p.Points[(i + 1) % p.Count]
+	}
+	return Total
+}

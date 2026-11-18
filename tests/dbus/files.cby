@@ -1,0 +1,17 @@
+// Open files passed over the bus (h), to and from tests/dbus/service.py:
+// a file it gives comes as a number, and goes back as a file it can read.
+//> a file came: true
+//> it says: from python
+use dbus
+
+int main {
+	dbus.bus Bus = dbus.session
+	dbus.message Give = dbus.method_call("org.cabby.Test", "/org/cabby/Test", "org.cabby.Test", "GiveFile")
+	long Fd = Bus.call(Give)[0].long
+	println "a file came:", Fd >= 0
+	dbus.message Read = dbus.method_call("org.cabby.Test", "/org/cabby/Test", "org.cabby.Test", "ReadFile")
+	Read.add_file Fd
+	println "it says:", Bus.call(Read)[0].str
+	dbus.close_file Fd
+	return 0
+}

@@ -1,0 +1,7 @@
+#!/bin/sh
+# a stand-in (run_desktop_tests.sh): there only when CABBY_HAVE names it.
+# "brightnessctl --quiet set 375": into the test's backlight folder
+case ",$CABBY_HAVE," in *",$(basename "$0"),"*) ;; *) exit 127 ;; esac
+[ "$2" = set ] || exit 1
+for d in "$CABBY_BACKLIGHT"/*; do echo "$3" > "$d/brightness"; done
+echo brightnessctl >> "$CABBY_TEST_STATE/told"

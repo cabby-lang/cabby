@@ -1,0 +1,9 @@
+// desktop's notifications and opening, with stand-ins for osascript and
+// xdg-open that say what they were given (run_desktop_tests.sh)
+use desktop
+
+int main {
+	println "shown:", desktop.notify("Backup \"done\"", "All files copied.")
+	println "opened:", desktop.open("https://example.org/a b")
+	return 0
+}

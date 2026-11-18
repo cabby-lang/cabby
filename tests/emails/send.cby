@@ -1,0 +1,67 @@
+// The emails library, sending to a stand-in server (smtp.cby: its port
+// in CABBY_TEST_PEER), for run_emails_tests.sh.
+//> wrong password: false Login denied
+//> sent: true []
+//> envelope: from <tom@example.com>, to <ana@example.com>, to <bruno@example.com>, to <carla@example.com>
+//> subject: Subject: =?UTF-8?B?TGVzc29uIG9uIEZyaWRheSDigJQgw6AgYmllbnTDtHQ=?=
+//> the text: The lesson is at four. Caf=C3=A9?
+//> a dot kept: .and a line starting with a dot
+//> attached: Content-Disposition: attachment; filename="notes.txt"
+//> no bcc in it: true
+//> saved: true
+//> nothing there: false
+use emails
+use shell
+use files
+
+int main {
+	long Port = shell.get("CABBY_TEST_PEER").to_long
+	files.write "notes.txt", "Scales: C, G, D.\n"
+	emails.message M
+	M.set_from "Thomas Whalan <tom@example.com>"
+	M.add_to "ana@example.com"
+	M.add_cc "Bruno <bruno@example.com>"
+	M.add_bcc "carla@example.com"
+	M.set_subject "Lesson on Friday — à bientôt"
+	M.set_text "Hi Ana,\n\nThe lesson is at four. Café?\n.and a line starting with a dot\n\nThomas"
+	M.attach "notes.txt"
+
+	emails.account Wrong = emails.account_at "localhost", "tom@example.com", "guess"
+	Wrong.set_port Port
+	Wrong.set_unencrypted
+	println "wrong password:", Wrong.send(M), Wrong.error
+
+	emails.account Mail = emails.account_at "localhost", "tom@example.com", "secret"
+	Mail.set_port Port
+	Mail.set_unencrypted
+	bool Sent = Mail.send M
+	println "sent:", Sent, "[" + Mail.error + "]"
+
+	str Got = files.read "received.eml"
+	list str Lines = Got.split "\n"
+	println "envelope:", Lines[0]
+	for Line in Lines {
+		if Line.starts_with "Subject:" {
+			println "subject:", Line.trim
+		}
+		if Line.contains "Caf=" {
+			println "the text:", Line.trim
+		}
+		if Line.contains "a line starting" {
+			println "a dot kept:", Line.trim
+		}
+		if Line.starts_with "Content-Disposition" {
+			println "attached:", Line.trim
+		}
+	}
+	str Message = Got[Got.find("\n") + 1 to]
+	println "no bcc in it:", !Message.contains("carla")
+	M.save "draft.eml"
+	println "saved:", files.read("draft.eml").contains("Subject:")
+
+	emails.account Nowhere = emails.account_at "localhost", "tom@example.com", "secret"
+	Nowhere.set_port 1
+	Nowhere.set_unencrypted
+	println "nothing there:", Nowhere.send(M)
+	return 0
+}

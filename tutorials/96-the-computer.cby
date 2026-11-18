@@ -1,0 +1,120 @@
+// Tutorial 96: The computer — what it is, and what it's doing
+//
+// Run it:      cabby 96-the-computer.cby
+// Or compile:  cabby -c 96-the-computer.cby && ./96-the-computer
+// Library:     use system, use os
+// Topics:      system.name, kind, hostname, machine, processors, memory,
+//              uptime; os.disks, os.cpu_use, os.memory_used, os.load,
+//              os.programs; os.watcher (watching a folder); os.signals
+//              (catching one, sent to itself)
+//
+// `system` says what the computer is; `os` what it's doing: its disks,
+// how busy its processors are, the programs running, and the changes to
+// files as they happen. The same on Linux and on a Mac.
+//
+// What a computer says about itself is its own, so the output below is one
+// computer's. The last part, watching a folder and catching a signal, is
+// the same everywhere.
+
+use system
+use os
+use events
+use files
+use directories
+
+// ---- a folder watched, and a signal caught
+
+object caretaker {
+	os.watcher Notes
+	os.signals Signals
+	timer Steps
+	int Step
+
+	void begin {
+		directories.make "cabby-notes"
+		Notes.watch "cabby-notes"
+		Notes.on_change changed
+		Signals.catch "user1"
+		Signals.on_signal signalled
+		Steps.on_tick step
+		Steps.every time.milliseconds 100
+		events.run
+	}
+
+	// one change to the folder at a time, so they're told in order
+	void step {
+		Step++
+		if Step is 1 {
+			files.write "cabby-notes/shopping.txt", "milk"
+		} else if Step is 2 {
+			files.rename "cabby-notes/shopping.txt", "cabby-notes/list.txt"
+		} else if Step is 3 {
+			files.delete "cabby-notes/list.txt"
+		} else if Step is 4 {
+			os.send_signal os.pid, "user1"      // to itself
+		} else if Step is 6 {
+			Steps.stop
+			Notes.stop
+			directories.remove "cabby-notes"
+		}
+	}
+
+	void changed {
+		if Notes.change is "renamed" {
+			println "  " + Notes.old_path, "is now", Notes.path
+		} else if Notes.change is "created" or Notes.change is "deleted" {
+			println "  " + Notes.path, "was", Notes.change
+		}
+	}
+
+	void signalled {
+		println "  caught", Signals.signal
+	}
+}
+
+int main {
+	println "This is", system.name, "on", system.hostname, "(" + system.kind + ", " + system.machine + ")"
+	println system.processors, "processors,", system.memory / 1000000000, "GB of memory, up", system.uptime / 3600, "hours"
+	println "The processors are", os.cpu_use.text(0) + "% busy; memory in use:", os.memory_used / 1000000, "MB"
+	list double Load = os.load
+	println "Waiting for a processor, on average:", Load[0].text(2), "in the last minute,", Load[2].text(2), "in the last fifteen"
+	for Disk in os.disks {
+		println "A disk at", Disk.path + ":", Disk.free / 1000000000, "GB free of", Disk.size / 1000000000
+	}
+	list os.program Programs = os.programs
+	long Biggest = 0
+	for I in Programs.length {
+		if Programs[I].memory > Programs[Biggest].memory {
+			Biggest = I
+		}
+	}
+	println Programs.length, "programs are running; the biggest is", Programs[Biggest].name, "at", Programs[Biggest].memory / 1000000, "MB"
+	println "This program is number", os.pid, "started by", os.parent_pid
+
+	println "Watching a folder:"
+	caretaker C
+	C.begin
+}
+
+// Try this:
+//  - Print the five programs using the most memory (sort os.programs by
+//    .memory).
+//  - Watch your Downloads folder with `watch`, and say each file that
+//    arrives.
+//  - Catch "interrupt", and print "tidying up" before stopping when Ctrl+C
+//    is pressed.
+
+// ---------------------------------------------------------------- output
+// output varies: what one computer said about itself (a disk or two left out)
+//> This is Ubuntu 24.04.5 LTS on vm (linux, x86_64)
+//> 2 processors, 8 GB of memory, up 1 hours
+//> The processors are 0% busy; memory in use: 621 MB
+//> Waiting for a processor, on average: 0.28 in the last minute, 1.02 in the last fifteen
+//> A disk at /: 31 GB free of 270
+//> 9 programs are running; the biggest is claude at 404 MB
+//> This program is number 13480 started by 13479
+//> Watching a folder:
+//>   cabby-notes/shopping.txt was created
+//>   cabby-notes/shopping.txt is now cabby-notes/list.txt
+//>   cabby-notes/list.txt was deleted
+//>   caught user1

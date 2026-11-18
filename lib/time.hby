@@ -1,0 +1,134 @@
+// time.hby — moments, and how long things take.
+//
+//     use time
+//
+//     moment Start = time.now                     this moment
+//     duration Took = time.since Start             how long ago that was
+//     println Took                                 "1.25 seconds"
+//     time.sleep (time.seconds 2)                  waits
+//     duration Break = time.minutes 5 + time.seconds 30
+//     println Break.seconds                        330 (a double)
+//
+// A duration is a length of time, and a moment is one exact moment; they
+// are kinds of their own, not plain numbers, so seconds and milliseconds
+// can't be mixed up. A moment and a duration give a moment (Start +
+// time.hours 1); two moments give the duration between them.
+//
+// For calendar days, clock times and time zones: use dates.
+// The full reference is time.md, next to this file.
+
+// ---- the C side (in Cabby's runtime)
+
+extern long cby_time_now void
+extern void cby_time_sleep long ns
+extern long cby_duration_text long ns
+extern char cby_dates_char long i
+
+// ---- the kinds
+
+strict long kind duration
+long kind moment, steps duration
+
+static str time_text_from_c long Length {
+	str Text
+	for i in Length {
+		Text += cby_dates_char(i)
+	}
+	return Text
+}
+
+// ---- moments
+
+// the moment now
+moment time.now {
+	return (moment)cby_time_now()
+}
+
+// how long ago a moment was
+duration time.since moment Then {
+	return time.now - Then
+}
+
+// waits for a while
+void time.sleep duration Wait {
+	long Ns = (long)Wait
+	cby_time_sleep Ns
+}
+
+// ---- durations
+
+duration time.nanoseconds long Count {
+	return (duration)Count
+}
+
+duration time.milliseconds double Count {
+	return (duration)(Count * 1000000.0)
+}
+
+duration time.seconds double Count {
+	return (duration)(Count * 1000000000.0)
+}
+
+duration time.minutes double Count {
+	return (duration)(Count * 60000000000.0)
+}
+
+duration time.hours double Count {
+	return (duration)(Count * 3600000000000.0)
+}
+
+duration time.days double Count {
+	return (duration)(Count * 86400000000000.0)
+}
+
+// the duration in each unit, with any fraction
+double duration.milliseconds duration D {
+	return (double)D / 1000000.0
+}
+
+double duration.seconds duration D {
+	return (double)D / 1000000000.0
+}
+
+double duration.minutes duration D {
+	return (double)D / 60000000000.0
+}
+
+double duration.hours duration D {
+	return (double)D / 3600000000000.0
+}
+
+double duration.days duration D {
+	return (double)D / 86400000000000.0
+}
+
+// whole ones, for counting
+long duration.nanoseconds duration D {
+	return (long)D
+}
+
+long duration.whole_milliseconds duration D {
+	return (long)D / 1000000
+}
+
+long duration.whole_seconds duration D {
+	return (long)D / 1000000000
+}
+
+long duration.whole_minutes duration D {
+	return (long)D / 60000000000
+}
+
+long duration.whole_hours duration D {
+	return (long)D / 3600000000000
+}
+
+long duration.whole_days duration D {
+	return (long)D / 86400000000000
+}
+
+// "1.25 seconds", "2 minutes 5 seconds", "3 hours"
+str duration.text duration D {
+	long Ns = (long)D
+	return time_text_from_c(cby_duration_text(Ns))
+}

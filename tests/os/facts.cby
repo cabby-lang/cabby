@@ -1,0 +1,50 @@
+// disks, memory, processors and programs (run_os_tests.sh): what's true
+// on any computer
+use os
+use system
+
+int main {
+	// the disk this is on is among the disks, and has room
+	list os.disk Disks = os.disks
+	bool Root = false
+	for D in Disks {
+		if D.path == "/" {
+			Root = true
+			println "/:", D.size > 0, D.free <= D.size, D.used <= D.size, D.device is not "", D.kind is not ""
+		}
+	}
+	println "a disk at /:", Root
+	println "space here:", os.disk_size(".") > 0, os.free_space(".") <= os.disk_size("."), os.used_space(".") > 0
+
+	// processors and memory
+	double Busy = os.cpu_use
+	println "processors:", Busy >= 0 and Busy <= 100
+	bool AddsUp = os.memory_used + os.memory_available <= os.memory_total + 4096
+	println "memory:", os.memory_total == system.memory, os.memory_used > 0, os.memory_available > 0, AddsUp
+	println "swap:", os.swap_used <= os.swap_total
+	list double Load = os.load
+	println "load:", Load.length, Load[0] >= 0
+
+	// the programs: this one among them
+	bool Me = false
+	for P in os.programs {
+		if P.pid == os.pid {
+			Me = true
+			println "me:", P.parent_pid == os.parent_pid, P.memory > 0, P.cpu_seconds >= 0, P.user is not "", P.running
+		}
+	}
+	println "found myself:", Me
+	println "running:", os.running(os.pid), os.running(999999999)
+	return 0
+}
+
+//> /: true true true true true
+//> a disk at /: true
+//> space here: true true true
+//> processors: true
+//> memory: true true true true
+//> swap: true
+//> load: 3 true
+//> me: true true true true true
+//> found myself: true
+//> running: true false

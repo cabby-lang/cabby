@@ -1,0 +1,7 @@
+Apple
+Cherry
+<input>:1:16: error: expected 'nodes' for an element of 'list nodes', found 'node'
+    Heads.Next.add C
+                   ^
+Apple
+Cherry

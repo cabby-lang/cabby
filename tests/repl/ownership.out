@@ -1,0 +1,22 @@
+<input>:1:9: error: use of moved value 'a'
+    println a
+            ^
+<earlier input>:1:9: note: 'a' was moved here; a 'str' is moved, not copied
+    str b = a
+            ^
+one
+took one
+<input>:1:1: error: use of moved value 'b'
+    b
+    ^
+<earlier input>:1:6: note: 'b' was moved here; a 'str' is moved, not copied
+    take b
+         ^
+again
+<input>:1:1: error: cannot assign to 'c' because it is const
+    c = 3
+    ^
+<earlier input>:1:11: note: 'c' is declared const
+    const int c = 2
+              ^
+7

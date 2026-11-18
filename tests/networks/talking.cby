@@ -1,0 +1,105 @@
+// a server and two programs connecting to it, all in one program, through
+// the event loop: each line answered, one sent to all, and connections
+// closing (Ann by "localhost", which may be IPv6's ::1 or IPv4's
+// 127.0.0.1, and Bob by 127.0.0.1: listen_here listens at both)
+//> listening on a port: true
+//> server: hello, from this computer: true
+//> Ann heard: welcome
+//> server: hello, from this computer: true
+//> Bob heard: welcome
+//> server: Ann said 'I am Ann'
+//> Ann heard: you said: I am Ann
+//> server: Bob said 'I am Bob'
+//> Bob heard: you said: I am Bob
+//> Ann heard: everyone: 2 here
+//> Bob heard: everyone: 2 here
+//> server: Ann said 'bye'
+//> server: Ann has gone, 1 left
+//> server: Bob said 'last, with no line end'
+//> server: Bob has gone, 0 left
+//> Ann is open: false
+//> done
+use networks
+use events
+
+object chat {
+	networks.server S
+	networks.connection Ann
+	networks.connection Bob
+	int Heard
+	lookup long str Names
+
+	void begin {
+		S.on_connect hello
+		S.on_line said
+		S.on_close gone
+		S.listen_here 0
+		println "listening on a port:", S.port > 0
+		Ann = networks.connect "localhost", S.port
+		Ann.on_line ann_heard
+		wait_for 1
+		Names[S.connections[0]] = "Ann"
+		Bob = networks.connect "127.0.0.1", S.port
+		Bob.on_line bob_heard
+		wait_for 2
+		Names[S.connections[1]] = "Bob"
+		Ann.send_line "I am Ann"
+		wait_for 3
+		Bob.send_line "I am Bob"
+		wait_for 4
+		S.send_line_to_all "everyone: " + S.connections.length.text + " here"
+		wait_for 6
+		Ann.send_line "bye"
+		Ann.close
+		while S.connections.length > 1 {
+			events.step
+		}
+		Bob.send "last, with no line end"
+		Bob.close
+		while S.connections.length > 0 {
+			events.step
+		}
+		println "Ann is open:", Ann.is_open
+		S.close
+		println "done"
+	}
+
+	void wait_for int Count {
+		while Heard < Count {
+			events.step
+		}
+	}
+
+	void hello {
+		str From = S.address_of S.from
+		println "server: hello, from this computer:", From is "127.0.0.1" or From is "::1"
+		S.reply "welcome"
+	}
+
+	void said {
+		println "server:", Names[S.from], "said '" + S.line + "'"
+		if S.line is not "bye" and not S.line.starts_with("last") {
+			S.reply "you said: " + S.line
+		}
+	}
+
+	void gone {
+		println "server:", Names[S.from], "has gone,", S.connections.length, "left"
+	}
+
+	void ann_heard {
+		println "Ann heard:", Ann.line
+		Heard += 1
+	}
+
+	void bob_heard {
+		println "Bob heard:", Bob.line
+		Heard += 1
+	}
+}
+
+int main {
+	chat C
+	C.begin
+	return 0
+}

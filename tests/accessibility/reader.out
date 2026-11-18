@@ -1,0 +1,52 @@
+// What reader.cby prints, read by run_accessibility_tests.sh: the
+// window's tree as a screen reader sees it, before and after, and what
+// it heard said in between.
+//> reader: waiting
+//> reader: embedded /org/a11y/atspi/accessible/root
+//> reader: heard focused 1 - entry 'Your name:'
+//> reader: the tree
+//>   application 'app'
+//>     frame 'Greeter'
+//>       menu bar ''
+//>         menu 'File'
+//>           menu item 'Say hello'
+//>           separator ''
+//>           menu item 'Quit'
+//>       label 'Your name:' text 'Your name:'
+//>       entry 'Your name:' focused editable text ''
+//>       check box 'Loud'
+//>       label 'Greeting:' text 'Greeting:'
+//>       combo box 'Greeting:' text 'Hello'
+//>         list item 'Hello' selected
+//>         list item 'Salve'
+//>       push button 'Say hello' (click)
+//>       push button 'Play' (click)
+//>       label '' text ''
+//> reader: heard text insert 0 5 'Livia'
+//> reader: heard the caret move to 5
+//> reader: heard focused 0 - entry 'Your name:'
+//> reader: heard focused 1 - check box 'Loud'
+//> reader: heard checked 1 - check box 'Loud'
+//> reader: chose Salve: true
+//> reader: pressed the button: true
+//> reader: heard focused 0 - check box 'Loud'
+//> reader: heard focused 1 - combo box 'Greeting:'
+//> reader: the tree
+//>   application 'app'
+//>     frame 'Greeter'
+//>       menu bar ''
+//>         menu 'File'
+//>           menu item 'Say hello'
+//>           separator ''
+//>           menu item 'Quit'
+//>       label 'Your name:' text 'Your name:'
+//>       entry 'Your name:' editable text 'Livia'
+//>       check box 'Loud' checked
+//>       label 'Greeting:' text 'Greeting:'
+//>       combo box 'Greeting:' focused text 'Salve'
+//>         list item 'Hello'
+//>         list item 'Salve' selected
+//>       push button 'Say hello' (click)
+//>       push button 'Play' (click)
+//>       label 'SALVE, LIVIA!' text 'SALVE, LIVIA!'
+//> reader: done

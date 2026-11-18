@@ -1,0 +1,140 @@
+// patterns.hby — patterns in text: regular expressions (regex).
+//
+//     use patterns
+//
+//     patterns.pattern Date = patterns.make "(\\d{4})-(\\d{2})-(\\d{2})"
+//     if Date.matches "2026-11-10" { ... }       the whole text is a date
+//     list str Parts = Date.parts Text           {"2026", "11", "10"}: its ( )s
+//     list str All = Date.find_all Text          every date in it
+//     str Tidy = Date.replace_all Text, "\\3/\\2/\\1"    10/11/2026
+//
+// A pattern is made once, and checked as it's made: one that can't be
+// used is a panic that says why. Text is matched as UTF-8, a letter at a
+// time: "." is one letter, and [[:alpha:]] takes in Greek and the rest.
+//
+// The full reference is patterns.md, next to this file: what can go in a
+// pattern, and every member.
+
+use addresses
+
+// ---- the C side (runtime/patterns.c); use the functions below instead
+
+extern long cby_patterns_make str pattern, int ignore_case
+extern void cby_patterns_free long id
+extern int cby_patterns_matches long id, str text
+extern long cby_patterns_position long id, str text
+extern long cby_patterns_find long id, str text, int all
+extern long cby_patterns_parts long id, str text
+extern long cby_patterns_replace long id, str text, str with, int all
+extern long cby_patterns_split long id, str text
+extern long cby_patterns_part_number long id, str name, int needed
+extern long cby_patterns_names long id
+extern long cby_patterns_result_length long i
+extern void cby_patterns_take long i, address char dst
+
+// what C has just found, as a list
+static list str patterns_results long Count {
+	list str Found
+	for I in Count {
+		str Text = " ".repeat(cby_patterns_result_length(I))
+		if Text.length > 0 {
+			address char Room = addresses.of_text Text
+			cby_patterns_take I, Room
+		}
+		Found.add Text
+	}
+	return Found
+}
+
+// A pattern, ready to look for in text.
+object patterns.pattern {
+	long Id                         // (its number, on the C side)
+
+	// whether the whole text is like the pattern
+	bool matches const str &Text const {
+		return cby_patterns_matches(Id, Text) != 0
+	}
+
+	// whether it's somewhere in the text
+	bool found_in const str &Text const {
+		return cby_patterns_position(Id, Text) >= 0
+	}
+
+	// where it first is in the text (counting bytes from 0, as Text[I]
+	// does), or -1
+	long position const str &Text const {
+		return cby_patterns_position Id, Text
+	}
+
+	// the first piece of the text like it ("" if there's none)
+	str find const str &Text const {
+		list str Found = patterns_results(cby_patterns_find(Id, Text, 0))
+		if Found.length == 0 {
+			return ""
+		}
+		return Found[0].copy
+	}
+
+	// every piece of the text like it, in order
+	list str find_all const str &Text const {
+		return patterns_results(cby_patterns_find(Id, Text, 1))
+	}
+
+	// what the parts in ( ) matched, the first time it's found: {} if it
+	// isn't there (a part that matched nothing is "")
+	list str parts const str &Text const {
+		return patterns_results(cby_patterns_parts(Id, Text))
+	}
+
+	// what the part named Name ((?<Name> )) matched, the first time it's
+	// found: "" if it isn't there (a panic if no part has that name)
+	str part const str &Name, const str &Text const {
+		long Number = cby_patterns_part_number(Id, Name, 1)
+		list str Parts = parts(Text)
+		if Parts.length == 0 {
+			return ""
+		}
+		return Parts[Number - 1].copy
+	}
+
+	// whether it has a part named Name
+	bool has_part const str &Name const {
+		return cby_patterns_part_number(Id, Name, 0) > 0
+	}
+
+	// its parts' names, in order ("" for a part without one)
+	list str part_names const {
+		return patterns_results(cby_patterns_names(Id))
+	}
+
+	// the text with the first piece like it replaced: in With, \1 to \9
+	// are what its ( ) parts matched, \k<name> a named part's, \0 all of
+	// it, and \\ a \
+	str replace const str &Text, const str &With const {
+		return patterns_results(cby_patterns_replace(Id, Text, With, 0))[0].copy
+	}
+
+	// the same, for every piece like it
+	str replace_all const str &Text, const str &With const {
+		return patterns_results(cby_patterns_replace(Id, Text, With, 1))[0].copy
+	}
+
+	// the text cut into pieces wherever it's found (what's found goes)
+	list str split const str &Text const {
+		return patterns_results(cby_patterns_split(Id, Text))
+	}
+
+	~pattern {
+		cby_patterns_free Id
+	}
+}
+
+// a pattern to look for: "\\d+" (in a Cabby string, \\ is one \)
+patterns.pattern patterns.make const str &Pattern {
+	return patterns.pattern{.Id = cby_patterns_make(Pattern, 0)}
+}
+
+// the same, but big and small letters alike: "cabby" finds "Cabby"
+patterns.pattern patterns.make_ignoring_case const str &Pattern {
+	return patterns.pattern{.Id = cby_patterns_make(Pattern, 1)}
+}

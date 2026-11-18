@@ -1,0 +1,171 @@
+// Tutorial 92: A web server — a recipe site
+//
+// Run it:      cabby 92-web-server.cby
+// Or compile:  cabby -c 92-web-server.cby && ./92-web-server
+// Library:     use networks (and threads, for the visitor)
+// Topics:      networks.web_server, on_request, method, path, query_value,
+//              form_value, body_json, cookie, send_page, send_text,
+//              send_json, send_status, send_not_found, redirect,
+//              send_from_folder, set_cookie, add_header, answered
+//
+// A web server answers browsers. Each request (a page asked for, a form
+// sent, a program asking for JSON) goes to one handler, which looks at what
+// was asked and answers it. Here, a little site of recipes: pages, a search,
+// a form to add one, the recipes as JSON for other programs, and a
+// picture from a folder.
+//
+// A browser would be the visitor; here a worker is, asking for one page
+// after another and printing what came back, so the program runs on its
+// own. With the site on its own, open http://localhost:8080 in a browser.
+
+use networks
+use threads
+use events
+use json
+use files
+use directories
+
+// ---- the site
+
+object recipe_site {
+	networks.web_server Web
+	lookup str str Recipes              // name to what's in it
+
+	void open {
+		Recipes["pancakes"] = "flour, milk, eggs"
+		Recipes["toast"] = "bread, butter"
+		directories.make "cabby-public"
+		files.write "cabby-public/style.css", "h1 { color: green }"
+		Web.on_request answer
+		Web.listen_here 0                  // this computer only; 0: any free port
+	}
+
+	void answer {
+		str Path = Web.path.copy
+		if Path is "/" {
+			Web.send_page "<h1>Recipes</h1><p>" + Recipes.keys.join(", ") + "</p>"
+		} else if Path is "/search" {
+			search Web.query_value("for")
+		} else if Path is "/add" and Web.method is "POST" {
+			Recipes[Web.form_value("name")] = Web.form_value "what"
+			Web.set_cookie "last_added", Web.form_value("name")
+			Web.redirect "/"                 // a browser goes back to the list
+		} else if Path is "/recipes.json" {
+			json All = json.lookup
+			for Name, What in Recipes {
+				All[Name] = What.copy
+			}
+			Web.add_header "Cache-Control", "no-store"
+			Web.send_json All
+		} else if Path is "/last" {
+			Web.send_text "you last added " + Web.cookie("last_added")
+		} else if Path is "/secret" {
+			Web.send_status 403, "Not for you."
+		} else if Path.starts_with "/static/" {
+			Web.send_from_folder_at "cabby-public", "/static"
+		}
+		if !Web.answered {
+			Web.send_not_found               // (it would be anyway)
+		}
+	}
+
+	void search const str &Word {
+		list str Found
+		for Name, What in Recipes {
+			if What.contains Word {
+				Found.add Name.copy
+			}
+		}
+		Web.send_text "with " + Word + ": " + Found.join(", ")
+	}
+
+	void close {
+		Web.close
+		files.delete "cabby-public/style.css"
+		directories.remove "cabby-public"
+	}
+}
+
+// ---- a visitor, on a worker: one request after another
+
+object visitor : threads.worker {
+	long Port
+	list str Said
+
+	void work {
+		str Site = "http://localhost:" + Port.text
+		ask Site + "/", ""
+		ask Site + "/search?for=milk", ""
+		lookup str str Form
+		Form["name"] = "porridge"
+		Form["what"] = "oats, milk"
+		networks.request Add = networks.request_to Site + "/add"
+		Add.set_form Form
+		Add.send                           // (and follows where it's sent on to)
+		Said.add "POST /add: " + Add.status.text + " " + Add.answer
+		ask Site + "/", ""
+		ask Site + "/search?for=milk", ""
+		ask Site + "/last", "last_added=porridge"
+		ask Site + "/recipes.json", ""
+		ask Site + "/static/style.css", ""
+		ask Site + "/secret", ""
+		ask Site + "/nowhere", ""
+	}
+
+	void ask const str &Url, const str &Cookie {
+		networks.request R = networks.request_to Url
+		if Cookie is not "" {
+			R.set_header "Cookie", Cookie      // as a browser sends back what it was given
+		}
+		R.send
+		str Answer = R.answer.copy
+		if not R.worked {
+			Answer = "(a page saying so)"
+		}
+		Said.add networks.read_url(Url).Path + ": " + R.status.text + " " + Answer
+	}
+}
+
+object evening {
+	recipe_site Site
+	visitor Browser
+
+	void begin {
+		Site.open
+		Browser.Port = Site.Web.port
+		Browser.on_done finished
+		Browser.start
+		events.run                         // the site answers, until it's closed
+	}
+
+	void finished {
+		for Line in Browser.Said {
+			println Line
+		}
+		Site.close
+	}
+}
+
+int main {
+	evening E
+	E.begin
+}
+
+// Try this:
+//  - Change `listen_here 0` to `listen_here 8080`, take out the visitor
+//    (`Site.open` then `events.run`), and visit http://localhost:8080 in a
+//    browser. Add a page with a <form method="post" action="/add">.
+//  - Make /recipe?name=toast show one recipe, or "404 Not Found".
+//  - Count the visits to each page, and show them at /visits as JSON.
+
+// ---------------------------------------------------------------- output
+//> /: 200 <h1>Recipes</h1><p>pancakes, toast</p>
+//> /search: 200 with milk: pancakes
+//> POST /add: 200 <h1>Recipes</h1><p>pancakes, toast, porridge</p>
+//> /: 200 <h1>Recipes</h1><p>pancakes, toast, porridge</p>
+//> /search: 200 with milk: pancakes, porridge
+//> /last: 200 you last added porridge
+//> /recipes.json: 200 {"pancakes":"flour, milk, eggs","toast":"bread, butter","porridge":"oats, milk"}
+//> /static/style.css: 200 h1 { color: green }
+//> /secret: 403 (a page saying so)
+//> /nowhere: 404 (a page saying so)

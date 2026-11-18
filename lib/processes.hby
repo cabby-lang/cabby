@@ -1,0 +1,250 @@
+// processes.hby — programs your program starts and talks to.
+//
+//     use processes
+//
+//     process P
+//     P.start "sort"                  run by /bin/sh, like a line in a terminal
+//     P.send "pear"                   a line to its input
+//     P.send "apple"
+//     P.end_input                     nothing more to send
+//     until P.at_end {
+//         println P.read_line         a line it printed
+//     }
+//     int Status = P.wait             waits for it to end: its exit status
+//
+// P.write sends text with no line end added. P.keep_errors_apart, before
+// P.start, gives what it prints to stderr as lines of their own
+// (P.read_error_line, or P.on_error_line).
+//
+// With handlers, its lines arrive by themselves: `P.on_line got_line` calls
+// one of your methods for each line (read it with `P.line`), and
+// `P.on_end finished` when it ends. They're called while your program waits:
+// in `P.wait`, or between events in a gui or tui window.
+//
+// A process belongs to its object: when the object is dropped, the program
+// waits for the process to end. `P.stop` ends it now. `P.detach` before
+// `P.start` makes it a daemon: it runs on its own, and keeps running after
+// your program ends.
+//
+// The full reference is processes.md, next to this file.
+
+// ---- the C side (runtime/processes.c); use the object below instead
+
+extern long cby_process_new void
+extern void cby_process_set_detached long id
+extern void cby_process_watch long id, int has_line, handler deliver, int has_end, handler ended
+extern void cby_process_start long id, str command
+extern void cby_process_send long id, str text
+extern void cby_process_end_input long id
+extern int cby_process_take_line long id
+extern int cby_process_line_ready long id
+extern long cby_process_line_length long id
+extern char cby_process_line_char long id, long i
+extern void cby_process_no_line long id
+extern int cby_process_is_running long id
+extern int cby_process_wait long id
+extern int cby_process_status long id
+extern void cby_process_stop long id
+extern void cby_process_free long id
+extern void cby_process_write long id, str text
+extern void cby_process_set_errors_apart long id
+extern void cby_process_watch_errors long id, int has_line, handler deliver
+extern int cby_process_take_line_of long id, int errors
+extern int cby_process_line_ready_of long id, int errors
+extern long cby_process_line_length_of long id, int errors
+extern char cby_process_line_char_of long id, int errors, long i
+extern void cby_process_no_line_of long id, int errors
+
+// ---- a process
+
+object process {
+	long Id
+	handler LineHandler
+	handler EndHandler
+	handler ErrorLineHandler
+
+	// Starts `Command`, run by /bin/sh (so pipes and the rest work).
+	void start const str &Command {
+		open
+		tell_handlers
+		cby_process_start Id, Command
+	}
+
+	// Sends a line to its input ("\n" is added).
+	void send const str &Text {
+		open
+		cby_process_send Id, Text
+	}
+
+	// Sends text as it is, with no line end added (a program that reads
+	// letter by letter, or a password prompt).
+	void write const str &Text {
+		open
+		cby_process_write Id, Text
+	}
+
+	// Tells it nothing more will be sent (many programs wait for that).
+	void end_input {
+		open
+		cby_process_end_input Id
+	}
+
+	// The next line it printed, without its line end; waits for one if
+	// none has come yet. At the end it gives "".
+	str read_line {
+		open
+		if cby_process_line_ready(Id) is 0 {
+			cby_process_no_line Id
+			return ""
+		}
+		cby_process_take_line Id
+		return line
+	}
+
+	// true when it has ended and every line it printed has been read
+	// (waits until it knows)
+	bool at_end {
+		open
+		return cby_process_line_ready(Id) is 0
+	}
+
+	// The line just read, or just handed to the line handler.
+	str line const {
+		str s
+		if Id is 0 {
+			return s
+		}
+		for i in cby_process_line_length Id {
+			s += cby_process_line_char Id, i
+		}
+		return s
+	}
+
+	// Waits for it to end, handing its lines to the line handler meanwhile;
+	// gives its exit status (0: it worked).
+	int wait {
+		open
+		return cby_process_wait Id
+	}
+
+	// true while it is still running
+	bool is_running {
+		open
+		return cby_process_is_running(Id) is not 0
+	}
+
+	// Its exit status, once it has ended (-1 before then).
+	int status {
+		open
+		return cby_process_status Id
+	}
+
+	// Ends it now.
+	void stop {
+		open
+		cby_process_stop Id
+	}
+
+	// Before `start`: it will run on its own, as a daemon.
+	void detach {
+		open
+		cby_process_set_detached Id
+	}
+
+	// ---- what it prints to stderr, as lines of their own
+
+	// Before `start`: what it prints to stderr comes to this program as
+	// lines of their own (read_error_line, on_error_line), instead of
+	// going where this program's stderr goes.
+	void keep_errors_apart {
+		open
+		cby_process_set_errors_apart Id
+	}
+
+	// The next line it printed to stderr; waits for one if none has come
+	// yet. At the end it gives "".
+	str read_error_line {
+		open
+		if cby_process_line_ready_of(Id, 1) is 0 {
+			cby_process_no_line_of Id, 1
+			return ""
+		}
+		cby_process_take_line_of Id, 1
+		return error_line
+	}
+
+	// true when its stderr has ended and every line has been read
+	bool errors_at_end {
+		open
+		return cby_process_line_ready_of(Id, 1) is 0
+	}
+
+	// The error line just read, or just handed to the error line handler.
+	str error_line const {
+		str s
+		if Id is 0 {
+			return s
+		}
+		for i in cby_process_line_length_of Id, 1 {
+			s += cby_process_line_char_of Id, 1, i
+		}
+		return s
+	}
+
+	// ---- handlers
+
+	// calls h for each line it prints to stderr (read it with
+	// `error_line`); keep_errors_apart first
+	void on_error_line handler h {
+		ErrorLineHandler = h
+		open
+		cby_process_watch_errors Id, ErrorLineHandler.is_set, pass_error_lines
+	}
+
+	void pass_error_lines {
+		while cby_process_take_line_of(Id, 1) is 1 {
+			ErrorLineHandler.call
+		}
+	}
+
+	// calls h for each line it prints (read it with `line`)
+	void on_line handler h {
+		LineHandler = h
+		tell_handlers
+	}
+
+	// calls h when it ends
+	void on_end handler h {
+		EndHandler = h
+		tell_handlers
+	}
+
+	// (which of these methods the C side should call)
+	void tell_handlers {
+		open
+		cby_process_watch Id, LineHandler.is_set, pass_lines, EndHandler.is_set, say_ended
+	}
+
+	void pass_lines {
+		while cby_process_take_line(Id) is 1 {
+			LineHandler.call
+		}
+	}
+
+	void say_ended {
+		EndHandler.call
+	}
+
+	// (the process is made when it is first needed)
+	void open {
+		if Id is 0 {
+			Id = cby_process_new
+		}
+	}
+
+	~process {
+		if Id is not 0 {
+			cby_process_free Id
+		}
+	}
+}

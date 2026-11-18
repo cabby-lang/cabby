@@ -1,0 +1,105 @@
+// watching files and folders (run_os_tests.sh): each change told, in
+// order, by inotify on Linux, and (CABBY_WATCH_BY_LOOKING=1) by the Mac's
+// way, looking again and comparing
+use os
+use files
+use directories
+use events
+use time
+
+object test {
+	os.watcher W
+	os.watcher One
+	timer Step
+	int At
+
+	void begin {
+		directories.make "w/inside"
+		directories.make "outside"
+		files.write "w/a.txt", "one"
+		files.write "alone.txt", "by itself"
+		files.write "outside/visitor.txt", "from elsewhere"
+		W.watch_all "w"
+		W.on_change changed
+		One.watch "alone.txt"
+		One.on_change alone_changed
+		Step.on_tick next
+		Step.every time.milliseconds(100)
+		events.run
+	}
+
+	void next {
+		At++
+		if At == 1 {
+			files.write "w/b.txt", "new"
+		} else if At == 2 {
+			files.append "w/a.txt", " two"
+		} else if At == 3 {
+			files.rename "w/b.txt", "w/c.txt"
+		} else if At == 4 {
+			files.write "w/inside/deep.txt", "deep"
+		} else if At == 5 {
+			directories.make "w/later"
+		} else if At == 6 {
+			files.write "w/later/x.txt", "x"
+		} else if At == 7 {
+			directories.rename "w/later", "w/renamed"
+		} else if At == 8 {
+			files.write "w/renamed/y.txt", "y"
+		} else if At == 9 {
+			files.rename "outside/visitor.txt", "w/visitor.txt"
+		} else if At == 10 {
+			files.rename "w/visitor.txt", "outside/visitor.txt"
+		} else if At == 11 {
+			files.delete "w/c.txt"
+		} else if At == 12 {
+			files.append "alone.txt", ", and changed"
+		} else if At == 13 {
+			files.delete "w/inside/deep.txt"
+			directories.remove "w/inside"
+		} else if At == 14 {
+			files.delete "alone.txt"
+		} else if At == 15 {
+			W.stop
+			files.write "w/after.txt", "not heard: it's stopped"
+		} else if At == 16 {
+			Step.stop
+		}
+	}
+
+	void changed {
+		if W.change == "renamed" {
+			println W.change, W.path, "from", W.old_path
+		} else {
+			println W.change, W.path
+		}
+	}
+
+	void alone_changed {
+		println "alone:", One.change, One.path
+	}
+}
+
+int main {
+	test T
+	T.begin
+	println "done"
+	return 0
+}
+
+//> created w/b.txt
+//> changed w/a.txt
+//> renamed w/c.txt from w/b.txt
+//> created w/inside/deep.txt
+//> created w/later
+//> created w/later/x.txt
+//> renamed w/renamed from w/later
+//> created w/renamed/y.txt
+//> created w/visitor.txt
+//> deleted w/visitor.txt
+//> deleted w/c.txt
+//> alone: changed alone.txt
+//> deleted w/inside/deep.txt
+//> deleted w/inside
+//> alone: deleted alone.txt
+//> done

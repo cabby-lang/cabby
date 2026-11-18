@@ -1,0 +1,15 @@
+bool Composite[@N1@]
+
+int main {
+	int n = @N@
+	int Count = 0
+	for i in 2 to n {
+		if !Composite[i] {
+			Count++
+			for long j = (long)i * i; j <= n; j += i {
+				Composite[j] = true
+			}
+		}
+	}
+	println Count
+}

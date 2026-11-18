@@ -1,0 +1,48 @@
+// A window for the screen reader stand-in (reader.cby) to read: run by
+// run_accessibility_tests.sh.
+use gui
+
+object greeter : gui.window {
+	gui.entry Name
+	gui.check Loud
+	gui.choice Greeting
+	gui.label Said
+
+	void build {
+		set_title "Greeter"
+		gui.menu File = add_menu "File"
+		File.add_item "Say hello", "Ctrl+H", hello
+		File.add_separator
+		File.add_item "Quit", "Ctrl+Q", quit
+		add_label "Your name:"
+		Name = add_entry
+		Loud = add_check "Loud"
+		add_label "Greeting:"
+		Greeting = add_choice
+		Greeting.add_option "Hello"
+		Greeting.add_option "Salve"
+		gui.button Hello = add_button "Say hello"
+		Hello.on_click hello
+		gui.button Play = add_button ""
+		Play.set_description "Play"
+		Said = add_label ""
+	}
+
+	void hello {
+		str Words = Greeting.text + ", " + Name.text + "!"
+		if Loud.checked {
+			Words = Words.upper
+		}
+		Said.set_text Words
+		println "app: said", Words
+	}
+
+	void quit {
+		close
+	}
+}
+
+int main {
+	greeter G
+	G.run
+}

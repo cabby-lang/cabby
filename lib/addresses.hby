@@ -1,0 +1,24 @@
+// addresses.hby — where things are in memory.
+//
+//     use addresses
+//
+//     int Count = 5
+//     address int A = addresses.of Count      where Count is
+//     A.value = 6                             what's there: Count is now 6
+//     address int Next = A + 1                the next int along in memory
+//     A[2]                                    two ints along, like (A + 2).value
+//     address short Port = addresses.at 0x0200    a fixed address (a device's register)
+//     address int Nowhere = addresses.none    no address (C's NULL)
+//     A.is_none   A.number   B - A   A < B
+//
+// An address can point at plain data: numbers, bool, char, other addresses,
+// and structs and arrays of those. `address` on its own points at nothing
+// in particular (C's void *). Functions in C can take and give addresses.
+//
+// Cabby can't check what an address points at before the program runs:
+// that is why addresses need this `use` line. When interpreting, Cabby
+// checks reading and writing through addresses of its own values (stepping
+// past the end of an array is a panic); compiled programs don't check.
+//
+// These are built into Cabby; this header turns them on. The full
+// reference is addresses.md, next to this file.

@@ -1,0 +1,95 @@
+// Tutorial 44: XML
+//
+// Run it:      cabby 44-xml.cby
+// Or compile:  cabby -c 44-xml.cby && ./45-xml
+// Library:     use xml
+// Topics:      xml.read, find_all, attributes, xml.can_read, building a
+//              document, .pretty
+//
+// A news feed (RSS, the XML many sites publish their news in): the program
+// reads the stories from it, then writes a little XML file of its own. A
+// real feed would come from networks.download.
+
+use xml
+use files
+
+str feed_text {
+	str Feed = "<?xml version=\"1.0\"?>\n"
+	Feed += "<rss version=\"2.0\">\n<channel>\n"
+	Feed += "  <title>Cabby News</title>\n"
+	Feed += "  <item>\n    <title>Kinds arrive</title>\n    <link>https://example.com/kinds</link>\n"
+	Feed += "    <category>language</category>\n    <dc:creator>Ada</dc:creator>\n  </item>\n"
+	Feed += "  <item>\n    <title>JSON &amp; HTML</title>\n    <link>https://example.com/json</link>\n"
+	Feed += "    <category>libraries</category>\n  </item>\n"
+	Feed += "  <item>\n    <title>Downloading</title>\n    <link>https://example.com/net</link>\n"
+	Feed += "    <category>libraries</category>\n  </item>\n"
+	Feed += "</channel>\n</rss>\n"
+	return Feed
+}
+
+int main {
+	xml Feed = xml.read feed_text
+	println Feed.tag, "version", Feed.attribute "version"
+	println "Feed:", Feed.find("channel > title")
+
+	// ---- each story
+	for Story in Feed.find_all "item" {
+		element Author = Story.find "dc:creator"
+		str By = "nobody named"
+		if not Author.is_missing {
+			By = Author.text
+		}
+		println " ", Story.find("title"), "(by", By + ")"
+	}
+
+	// ---- picking by what's inside
+	int Libraries = 0
+	for Category in Feed.find_all "item category" {
+		if Category.text is "libraries" {
+			Libraries++
+		}
+	}
+	println Libraries, "stories about libraries"
+
+	// ---- XML that's wrong is caught
+	str Broken = "<item><title>Oops</item>"
+	println "Can read the broken one?", xml.can_read(Broken)
+
+	// ---- writing XML of our own: what was read, and when
+	element Log = xml.element "reading"
+	Log.set_attribute "feed", Feed.find("channel > title").text
+	for Story in Feed.find_all "item" {
+		element Seen = xml.element "seen"
+		Seen.set_attribute "link", Story.find("link").text
+		Seen.add_text Story.find("title").text
+		Log.add Seen
+	}
+	files.write "reading.xml", "<?xml version=\"1.0\"?>\n" + Log.pretty
+	print files.read "reading.xml"
+	println
+	xml Again = xml.read files.read "reading.xml"
+	println "Read back:", Again.children.length, "stories"
+	files.delete "reading.xml"
+	return 0
+}
+
+// Try this:
+//  - Count the stories in each category.
+//  - Download a news feed from a site you read (its "RSS" link), and print
+//    its headlines.
+
+// ---------------------------------------------------------------- output
+//> rss version 2.0
+//> Feed: Cabby News
+//>   Kinds arrive (by Ada)
+//>   JSON & HTML (by nobody named)
+//>   Downloading (by nobody named)
+//> 2 stories about libraries
+//> Can read the broken one? false
+//> <?xml version="1.0"?>
+//> <reading feed="Cabby News">
+//>   <seen link="https://example.com/kinds">Kinds arrive</seen>
+//>   <seen link="https://example.com/json">JSON &amp; HTML</seen>
+//>   <seen link="https://example.com/net">Downloading</seen>
+//> </reading>
+//> Read back: 3 stories

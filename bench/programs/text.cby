@@ -1,0 +1,23 @@
+int main {
+	int n = @N@
+	long Total = 0, Hits = 0, Sevens = 0, Smaller = 0
+	for i in n {
+		str Line = "  item " + i.text + ": the cat sat on the mat  "
+		str Trimmed = Line.trim
+		long Colon = Trimmed.find ':'
+		str Name = Trimmed[to Colon - 1]
+		str Rest = Trimmed[Colon + 2 to]
+		if Rest.contains "cat" {
+			Hits++
+		}
+		str Changed = Rest.replace "cat", "dog"
+		Total += Changed.length + Name.length
+		if Name.upper.starts_with "ITEM 7" {
+			Sevens++
+		}
+		if Name < "item 5" {
+			Smaller++
+		}
+	}
+	println Total, Hits, Sevens, Smaller
+}

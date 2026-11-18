@@ -1,0 +1,251 @@
+// A stand-in for BlueZ (bluetoothd), for run_bluetooth_tests.sh: on a bus
+// of the test's own, it's org.bluez, with an adapter (hci0) and four
+// devices, answering as BlueZ does:
+//   Headphones    paired with no fuss; a battery at 80
+//   Keyboard      pairing shows a code to type on it (the agent is told)
+//   Phone         only there once a search has started
+//   Far Speaker   pairs, but won't connect: "Page Timeout", as when it's off
+// It says "ready" once it's on the bus, and ends when the test stops it.
+use dbus
+use events
+
+object device {
+	str Path
+	str Name
+	str Address
+	str Icon
+	bool Paired
+	bool Connected
+	bool Trusted
+	bool Seen         // there (Phone: not until a search)
+	int Strength
+	int Battery       // -1: none
+}
+
+object bluez {
+	dbus.bus Bus
+	list device Devices
+	bool Powered
+	bool Discoverable
+	bool Searching
+	str AgentOwner
+	str AgentPath
+
+	void begin {
+		Bus = dbus.system
+		Bus.own_name "org.bluez"
+		Bus.serve "/"
+		Bus.serve "/org/bluez"
+		Bus.serve "/org/bluez/hci0"
+		add "Headphones", "AA:BB:CC:00:00:01", "audio-headset", true, -48, 80
+		add "Keyboard", "AA:BB:CC:00:00:02", "input-keyboard", true, -60, -1
+		add "Phone", "AA:BB:CC:00:00:03", "phone", false, -71, -1
+		add "Far Speaker", "AA:BB:CC:00:00:04", "audio-card", true, -90, -1
+		Bus.on_call answer
+		println "ready"
+	}
+
+	void add const str &Name, const str &Address, const str &Icon, bool Seen, int Strength, int Battery {
+		device D
+		D.Name = Name.copy
+		D.Address = Address.copy
+		D.Icon = Icon.copy
+		D.Path = "/org/bluez/hci0/dev_" + Address.replace(":", "_")
+		D.Seen = Seen
+		D.Strength = Strength
+		D.Battery = Battery
+		Bus.serve D.Path
+		Devices.add D
+	}
+
+	long which const str &Path const {
+		for I in Devices.length {
+			if Devices[I].Path == Path {
+				return I
+			}
+		}
+		return -1
+	}
+
+	// ---- what's sent: an object's interfaces and properties
+
+	void adapter_props dbus.message &M const {
+		M.begin_lookup "s", "v"
+		M.add_str "Address"
+		bool_or_str M, "s", "00:11:22:33:44:55", false
+		M.add_str "Powered"
+		bool_or_str M, "b", "", Powered
+		M.add_str "Discoverable"
+		bool_or_str M, "b", "", Discoverable
+		M.add_str "Discovering"
+		bool_or_str M, "b", "", Searching
+		M.end_lookup
+	}
+
+	void bool_or_str dbus.message &M, const str &Type, const str &S, bool B const {
+		M.begin_variant Type
+		if Type == "s" {
+			M.add_str S
+		} else {
+			M.add_bool B
+		}
+		M.end_variant
+	}
+
+	void device_props dbus.message &M, long I const {
+		M.begin_lookup "s", "v"
+		M.add_str "Address"
+		bool_or_str M, "s", Devices[I].Address, false
+		M.add_str "Alias"
+		bool_or_str M, "s", Devices[I].Name, false
+		M.add_str "Icon"
+		bool_or_str M, "s", Devices[I].Icon, false
+		M.add_str "Paired"
+		bool_or_str M, "b", "", Devices[I].Paired
+		M.add_str "Connected"
+		bool_or_str M, "b", "", Devices[I].Connected
+		M.add_str "Trusted"
+		bool_or_str M, "b", "", Devices[I].Trusted
+		if Searching {
+			M.add_str "RSSI"
+			M.begin_variant "i"   // (BlueZ's is "n", 16 bits: read the same)
+			M.add_int Devices[I].Strength
+			M.end_variant
+		}
+		M.end_lookup
+	}
+
+	void interfaces_of dbus.message &M, long I const {
+		M.begin_lookup "s", "a{sv}"
+		M.add_str "org.bluez.Device1"
+		device_props M, I
+		if Devices[I].Battery >= 0 {
+			M.add_str "org.bluez.Battery1"
+			M.begin_lookup "s", "v"
+			M.add_str "Percentage"
+			M.begin_variant "y"
+			M.add_byte Devices[I].Battery
+			M.end_variant
+			M.end_lookup
+		}
+		M.end_lookup
+	}
+
+	// a device's properties changed: the PropertiesChanged signal
+	void changed long I, const str &Name, bool Value {
+		dbus.message S = dbus.signal_message Devices[I].Path, "org.freedesktop.DBus.Properties", "PropertiesChanged"
+		S.add_str "org.bluez.Device1"
+		S.begin_lookup "s", "v"
+		S.add_str Name
+		bool_or_str S, "b", "", Value
+		S.end_lookup
+		S.begin_list "s"
+		S.end_list
+		Bus.send S
+	}
+
+	// ---- calls
+
+	void answer {
+		json Values = Bus.call_values
+		str Name = Bus.call_name
+		str Path = Bus.call_path
+		dbus.message A = dbus.answer
+		if Name == "GetManagedObjects" {
+			A.begin_lookup "o", "a{sa{sv}}"
+			A.add_path "/org/bluez/hci0"
+			A.begin_lookup "s", "a{sv}"
+			A.add_str "org.bluez.Adapter1"
+			adapter_props A
+			A.end_lookup
+			for I in Devices.length {
+				if Devices[I].Seen {
+					A.add_path Devices[I].Path
+					interfaces_of A, I
+				}
+			}
+			A.end_lookup
+		} else if Name == "RegisterAgent" {
+			AgentOwner = Bus.call_sender
+			AgentPath = Values[0].str
+			println "bluez: an agent, wanting", Values[1].str
+		} else if Name == "RequestDefaultAgent" {
+		} else if Name == "Set" {
+			str Prop = Values[1].str
+			bool To = Values[2].bool
+			if Path == "/org/bluez/hci0" and Prop == "Powered" {
+				Powered = To
+			} else if Path == "/org/bluez/hci0" and Prop == "Discoverable" {
+				Discoverable = To
+			} else if which(Path) >= 0 and Prop == "Trusted" {
+				Devices[which(Path)].Trusted = To
+			} else {
+				Bus.fail "org.bluez.Error.InvalidArguments", "can't set " + Prop
+				return
+			}
+		} else if Name == "StartDiscovery" or Name == "StopDiscovery" {
+			if !Powered {
+				Bus.fail "org.bluez.Error.NotReady", "Resource Not Ready"
+				return
+			}
+			Searching = Name == "StartDiscovery"
+			if Searching and !Devices[2].Seen {
+				Devices[2].Seen = true
+				dbus.message S = dbus.signal_message "/", "org.freedesktop.DBus.ObjectManager", "InterfacesAdded"
+				S.add_path Devices[2].Path
+				interfaces_of S, 2
+				Bus.send S
+			}
+		} else if Name == "RemoveDevice" {
+			long I = which Values[0].str
+			if I < 0 {
+				Bus.fail "org.bluez.Error.DoesNotExist", "Does Not Exist"
+				return
+			}
+			Devices[I].Paired = false
+			Devices[I].Trusted = false
+			Devices[I].Connected = false
+			Devices[I].Seen = false
+			dbus.message S = dbus.signal_message "/", "org.freedesktop.DBus.ObjectManager", "InterfacesRemoved"
+			S.add_path Devices[I].Path
+			S.begin_list "s"
+			S.add_str "org.bluez.Device1"
+			S.end_list
+			Bus.send S
+		} else if Name == "Pair" {
+			long I = which Path
+			if Devices[I].Icon == "input-keyboard" {
+				// a keyboard: the agent shows the code to type
+				dbus.message Ask = dbus.method_call AgentOwner, AgentPath, "org.bluez.Agent1", "DisplayPinCode"
+				Ask.add_path Path
+				Ask.add_str "482913"
+				Bus.call Ask
+			}
+			Devices[I].Paired = true
+			changed I, "Paired", true
+		} else if Name == "Connect" {
+			long I = which Path
+			if Devices[I].Name == "Far Speaker" {
+				Bus.fail "org.bluez.Error.Failed", "Page Timeout"
+				return
+			}
+			Devices[I].Connected = true
+			changed I, "Connected", true
+		} else if Name == "Disconnect" {
+			long I = which Path
+			Devices[I].Connected = false
+			changed I, "Connected", false
+		} else {
+			Bus.fail "org.freedesktop.DBus.Error.UnknownMethod", "no method " + Name
+			return
+		}
+		Bus.reply A
+	}
+}
+
+int main {
+	bluez B
+	B.begin
+	events.run
+	return 0
+}

@@ -1,0 +1,32 @@
+// A window to look at: colors, a menu with a shortcut, and keys pressed.
+use gui
+
+object look : gui.window {
+	gui.label Said
+
+	void build {
+		set_title "Cabby: a window to look at"
+		set_size 420, 200
+		gui.label Top = add_label "White on dark blue, if colors work"
+		Top.set_text_color "white"
+		Top.set_background "#1d3557"
+		Said = add_label "Press a key (or the menu's Quit, or its shortcut)"
+		gui.menu File = add_menu "File"
+		File.add_item "Quit", "Ctrl+Q", quit
+		on_key pressed
+	}
+
+	void pressed {
+		Said.set_text "You pressed: " + key
+	}
+
+	void quit {
+		close
+	}
+}
+
+int main {
+	look L
+	L.run
+	return 0
+}

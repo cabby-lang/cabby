@@ -1,0 +1,15 @@
+// speech to text (run_desktop_tests.sh), with a stand-in for whisper.cpp's
+// whisper-cli (tools/) and a model where speech.get_model would put it
+use speech
+use shell
+
+int main {
+	str Sound = shell.get "CABBY_TEST_SOUND"
+	println "can hear:", speech.can_hear
+	println "model:", speech.model.ends_with("/Cabby/whisper/ggml-base.en.bin")
+	println "heard:", speech.hear(Sound)
+	speech.listener Latin
+	Latin.set_language "la"
+	println "in Latin:", Latin.hear(Sound)
+	return 0
+}

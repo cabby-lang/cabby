@@ -1,0 +1,14 @@
+// the mime library, on the files in files/ (made by run_desktop_tests.sh:
+// a PNG called "picture", a PDF called "notes.txt", and the rest)
+use mime
+use shell
+
+int main {
+	str At = shell.get("FILES") + "/"
+	for Name in "picture,notes.txt,page,tune.mp3,data.json,readme,empty.md,binary,report.docx,script,folder,nothing".split "," {
+		println Name + ":", mime.of_file(At + Name)
+	}
+	println "by name:", mime.of_name("Photo.JPG"), mime.of_name("a/b.tar.gz"), "[" + mime.of_name(".profile") + "]", "[" + mime.of_name("what.zzz") + "]"
+	println "is:", mime.is_image(At + "picture"), mime.is_text(At + "data.json"), mime.is_text(At + "picture"), mime.is_audio(At + "tune.mp3"), mime.is_video(At + "tune.mp3")
+	return 0
+}

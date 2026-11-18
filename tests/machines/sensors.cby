@@ -1,0 +1,20 @@
+// Linux's own: temperatures, fans and services.
+use linux
+
+int main {
+	for T in linux.temperatures {
+		println T.chip, T.label + ":", T.value, T.unit
+	}
+	for F in linux.fans {
+		println "fan", F.label + ":", F.value, F.unit
+	}
+	int Running = 0
+	list linux.service All = linux.services
+	for S in All {
+		if S.running {
+			Running++
+		}
+	}
+	println All.length, "services,", Running, "running"
+	return 0
+}

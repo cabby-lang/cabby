@@ -1,0 +1,47 @@
+#!/bin/sh
+# a stand-in for systemd's systemctl (run_linux_tests.sh): services kept in
+# the test's state folder, one file each ("active sub enabled description"),
+# started and stopped as the real one would; what it's asked goes in its log.
+S=$CABBY_TEST_STATE
+user=""
+[ "$1" = --user ] && { user=user; shift; }
+dir="$S/${user:-system}"
+if [ ! -d "$dir" ]; then
+	mkdir -p "$dir"
+	if [ -n "$user" ]; then
+		echo "active running enabled PipeWire Multimedia Service" > "$dir/pipewire.service"
+	else
+		echo "active running enabled OpenBSD Secure Shell server" > "$dir/ssh.service"
+		echo "inactive dead disabled CUPS Scheduler" > "$dir/cups.service"
+		echo "failed failed enabled Bluetooth service" > "$dir/bluetooth.service"
+	fi
+fi
+echo "systemctl ${user:+--user }$*" >> "$S/log"
+what=$1; shift
+case "$what" in
+list-unit-files)
+	for f in "$dir"/*.service; do set -- $(cat "$f"); echo "$(basename "$f") $3 enabled"; done ;;
+list-units)
+	for f in "$dir"/*.service; do set -- $(cat "$f"); a=$1 s=$2; shift 3; echo "$(basename "$f") loaded $a $s $*"; done ;;
+show)
+	unit=""; for a in "$@"; do case "$a" in --*) ;; *) unit=$a ;; esac; done
+	if [ -f "$dir/$unit" ]; then
+		set -- $(cat "$dir/$unit"); a=$1 s=$2 e=$3; shift 3
+		printf 'Id=%s\nDescription=%s\nLoadState=loaded\nActiveState=%s\nSubState=%s\nUnitFileState=%s\n' "$unit" "$*" "$a" "$s" "$e"
+	else
+		printf 'Id=%s\nDescription=%s\nLoadState=not-found\nActiveState=inactive\nSubState=dead\nUnitFileState=\n' "$unit" "$unit"
+	fi ;;
+start|stop|restart|enable|disable)
+	unit=$1
+	[ -f "$dir/$unit" ] || { echo "Unit $unit not found." >&2; exit 5; }
+	[ -n "$CABBY_NOT_ROOT" ] && [ -z "$user" ] && { echo "Access denied" >&2; exit 4; }
+	set -- $(cat "$dir/$unit"); a=$1 s=$2 e=$3; shift 3
+	case "$what" in
+	start|restart) a=active s=running ;;
+	stop) a=inactive s=dead ;;
+	enable) e=enabled ;;
+	disable) e=disabled ;;
+	esac
+	echo "$a $s $e $*" > "$dir/$unit" ;;
+*) exit 1 ;;
+esac

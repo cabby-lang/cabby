@@ -1,0 +1,7 @@
+// What power says, for each computer run_desktop_tests.sh pretends to be
+use power
+
+int main {
+	println "battery:", power.has_battery, power.battery_percent, "charging:", power.charging, "plugged in:", power.plugged_in, "full:", power.battery_full
+	return 0
+}

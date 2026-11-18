@@ -1,0 +1,5 @@
+#!/bin/sh
+# a stand-in (run_desktop_tests.sh): there only when CABBY_HAVE names it
+case ",$CABBY_HAVE," in *",$(basename "$0"),"*) ;; *) exit 127 ;; esac
+S=$CABBY_TEST_STATE
+printf '<dictionary> {\n  BSSID : <redacted>\n  SSID : %s\n  Security : WPA2_PSK\n}\n' "${CABBY_MAC_SSID:-<redacted>}"

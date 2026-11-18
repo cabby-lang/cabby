@@ -1,0 +1,755 @@
+// game.hby — games: a window with a stage, sprites on it, and frames.
+//
+//     use game
+//
+//     object catch_game : game.window {
+//         game.sprite Basket
+//
+//         void build {
+//             set_title "Catch"
+//             set_size 480, 360
+//             set_background "skyblue"
+//             Basket = add_sprite "basket.png", 240, 330
+//             on_frame step
+//         }
+//
+//         void step {                          // 60 times a second
+//             if key_hold "left" {
+//                 Basket.move -5, 0
+//             }
+//         }
+//     }
+//
+//     int main {
+//         catch_game g
+//         g.run
+//     }
+//
+// A game.window is a window with a stage: the picture the game is played
+// on, set_size big. Underneath is SDL 3, which draws with the graphics card;
+// nothing here needs it. Its stage draws as a gui canvas does, with the
+// same methods, and the window has gui's set_title, run, close, every,
+// add_shortcut and show_message.
+//
+// Everything happens in frames, 60 a second: each frame, on_frame's handler
+// runs, then any timers that are due, and the stage is drawn again. The
+// keys are read in frames too: key_press is true in the frame a key went
+// down, key_hold in every frame it's held, key_release in the frame it was
+// let go.
+//
+// The full reference is game.md, next to this file.
+
+use time
+
+// ---- the C side (runtime/game.c); use the objects below instead
+
+extern long cby_game_window_new void
+extern void cby_game_set_title long win, str title
+extern void cby_game_run long win
+extern void cby_game_close long win
+extern void cby_game_show_message long win, str text
+extern void cby_game_add_shortcut long win, str keys, handler h
+extern char cby_game_text_char long i
+extern void cby_game_stage_on_draw long win, handler h
+extern void cby_game_stage_redraw long win
+extern void cby_game_stage_set_color long win, str color
+extern void cby_game_stage_fill_with long win, str color
+extern void cby_game_stage_set_line_width long win, double width
+extern void cby_game_stage_set_font_size long win, double size
+extern void cby_game_stage_set_font long win, str font
+extern void cby_game_stage_line long win, double x1, double y1, double x2, double y2
+extern void cby_game_stage_rectangle long win, double x, double y, double w, double h, int filled
+extern void cby_game_stage_ellipse long win, double x, double y, double rx, double ry, int filled
+extern void cby_game_stage_arc long win, double x, double y, double r, double start, double finish
+extern void cby_game_stage_corner long win, double x, double y
+extern void cby_game_stage_polygon long win, int filled, long numbers
+extern void cby_game_stage_text long win, double x, double y, str text
+extern double cby_game_stage_text_width long win, str text
+extern double cby_game_stage_line_height long win
+extern int cby_game_stage_lines_for long win, double width, str text
+extern int cby_game_stage_write_wrapped long win, double x, double y, double width, str text
+extern void cby_game_stage_image long win, double x, double y, str path
+extern void cby_game_stage_save long win, str path
+extern int cby_game_stage_mouse_x long win
+extern int cby_game_stage_mouse_y long win
+extern long cby_game_stage_key_length long win
+extern void cby_game_stage_on_click long win, handler h
+extern void cby_game_stage_on_mouse_move long win, handler h
+extern void cby_game_stage_on_key long win, handler h
+
+extern void cby_game_set_size long win, int width, int height
+extern int cby_game_width long win
+extern int cby_game_height long win
+extern void cby_game_set_background long win, str spec
+extern void cby_game_on_frame long win, handler h
+extern long cby_game_frame long win
+extern void cby_game_set_paused long win, int on
+extern int cby_game_paused long win
+extern void cby_game_every long win, int ms, int repeat, handler h
+extern void cby_game_stop_timers long win
+extern int cby_game_key_press long win, str name
+extern int cby_game_key_hold long win, str name
+extern int cby_game_key_release long win, str name
+extern int cby_game_key_held_for long win, str name
+extern long cby_game_sprite_picture long win, str path, double x, double y
+extern long cby_game_sprite_rectangle long win, double width, double height, str color, double x, double y
+extern long cby_game_sprite_circle long win, double radius, str color, double x, double y
+extern double cby_game_sprite_x long sprite
+extern double cby_game_sprite_y long sprite
+extern double cby_game_sprite_angle long sprite
+extern double cby_game_sprite_scale long sprite
+extern int cby_game_sprite_visible long sprite
+extern int cby_game_sprite_removed long sprite
+extern double cby_game_sprite_width long sprite
+extern double cby_game_sprite_height long sprite
+extern void cby_game_sprite_move_to long sprite, double x, double y
+extern void cby_game_sprite_move long sprite, double dx, double dy
+extern void cby_game_sprite_move_forward long sprite, double distance
+extern void cby_game_sprite_set_angle long sprite, double degrees
+extern void cby_game_sprite_turn long sprite, double degrees
+extern void cby_game_sprite_set_scale long sprite, double scale
+extern void cby_game_sprite_set_visible long sprite, int on
+extern void cby_game_sprite_remove long sprite
+extern void cby_game_sprite_set_picture long sprite, str path
+extern void cby_game_sprite_set_color long sprite, str color
+extern void cby_game_sprite_animate_start long sprite
+extern void cby_game_sprite_animate_picture long sprite, str path
+extern void cby_game_sprite_animate_end long sprite, int ms
+extern void cby_game_sprite_to_front long sprite
+extern void cby_game_sprite_to_back long sprite
+extern void cby_game_sprite_set_layer long sprite, int layer
+extern int cby_game_sprite_layer long sprite
+extern void cby_game_sort_by_depth long win, int layer
+extern int cby_game_random int low, int high
+extern int cby_game_sprite_touches long sprite, long other
+extern double cby_game_sprite_left long sprite
+extern double cby_game_sprite_top long sprite
+extern double cby_game_sprite_right long sprite
+extern double cby_game_sprite_bottom long sprite
+extern int cby_game_sprite_on_stage long sprite
+extern void cby_game_sprite_set_group long sprite, str group
+extern long cby_game_sprite_group_length long sprite
+extern int cby_game_find long win, long touching, str group
+extern long cby_game_found int i
+extern long cby_game_sprite_window long sprite
+extern void cby_game_set_world_size long win, int width, int height
+extern void cby_game_set_world_area long win, int left, int top, int width, int height
+extern int cby_game_world_left long win
+extern int cby_game_world_top long win
+extern int cby_game_world_width long win
+extern int cby_game_world_height long win
+extern void cby_game_move_camera_to long win, double x, double y
+extern void cby_game_follow long win, long sprite
+extern double cby_game_camera_x long win
+extern double cby_game_camera_y long win
+
+// ---- sprites: what moves on the stage
+
+// A picture or shape on the stage. Its position is its middle, in pixels
+// from the stage's top left corner, y counting down.
+object game.sprite {
+	long Id
+
+	// (A sprite is a handle to what's on the stage, so its methods are all
+	// const: even a read-only one, as `for Rock in sprites_in "rock"` gives,
+	// can move it.)
+
+	double x const {
+		return cby_game_sprite_x Id
+	}
+
+	double y const {
+		return cby_game_sprite_y Id
+	}
+
+	// moves its middle to there
+	void move_to double X, double Y const {
+		cby_game_sprite_move_to Id, X, Y
+	}
+
+	// moves it by this much: right and down (negative: left and up)
+	void move double Across, double Down const {
+		cby_game_sprite_move Id, Across, Down
+	}
+
+	// moves it the way it's facing (see angle)
+	void move_forward double Distance const {
+		cby_game_sprite_move_forward Id, Distance
+	}
+
+	// which way it's facing, in degrees clockwise: 0 as it was drawn, facing
+	// up the stage; 90 facing right
+	double angle const {
+		return cby_game_sprite_angle Id
+	}
+
+	void set_angle double Degrees const {
+		cby_game_sprite_set_angle Id, Degrees
+	}
+
+	// turns it clockwise by this many degrees (negative: anticlockwise)
+	void turn double Degrees const {
+		cby_game_sprite_turn Id, Degrees
+	}
+
+	// how big it's drawn: 1 as it is, 2 twice as big
+	double scale const {
+		return cby_game_sprite_scale Id
+	}
+
+	void set_scale double Scale const {
+		cby_game_sprite_set_scale Id, Scale
+	}
+
+	// its size on the stage, in pixels (before it's turned)
+	double width const {
+		return cby_game_sprite_width Id
+	}
+
+	double height const {
+		return cby_game_sprite_height Id
+	}
+
+	bool visible const {
+		return cby_game_sprite_visible(Id) != 0
+	}
+
+	// hidden (false), or shown again (true)
+	void set_visible bool On const {
+		cby_game_sprite_set_visible Id, On
+	}
+
+	// takes it off the stage for good
+	void remove const {
+		cby_game_sprite_remove Id
+	}
+
+	bool removed const {
+		return cby_game_sprite_removed(Id) != 0
+	}
+
+	// a sprite made from a picture: shows another
+	void set_picture const str &Path const {
+		cby_game_sprite_set_picture Id, Path
+	}
+
+	// a shape: changes its color
+	void set_color const str &Color const {
+		cby_game_sprite_set_color Id, Color
+	}
+
+	// shows these pictures in turn, each for Ms milliseconds, round and
+	// round (set_picture stops it)
+	void animate const list str &Pictures, int Ms const {
+		cby_game_sprite_animate_start Id
+		for Path in Pictures {
+			cby_game_sprite_animate_picture Id, Path
+		}
+		cby_game_sprite_animate_end Id, Ms
+	}
+
+	// ---- touching
+
+	// whether it touches the other sprite (a hidden or removed one touches
+	// nothing)
+	bool touches const game.sprite &Other const {
+		return cby_game_sprite_touches(Id, Other.Id) != 0
+	}
+
+	// the sprites in a group that it touches ("" for any group)
+	list game.sprite touching const str &Group const {
+		list game.sprite Found
+		int Count = cby_game_find(cby_game_sprite_window(Id), Id, Group)
+		for i in Count {
+			Found.add game.sprite{.Id = cby_game_found(i)}
+		}
+		return Found
+	}
+
+	// its edges in the world: the box round what shows of it
+	double left const {
+		return cby_game_sprite_left Id
+	}
+
+	double top const {
+		return cby_game_sprite_top Id
+	}
+
+	double right const {
+		return cby_game_sprite_right Id
+	}
+
+	double bottom const {
+		return cby_game_sprite_bottom Id
+	}
+
+	// whether any of it is where the camera can see
+	bool on_stage const {
+		return cby_game_sprite_on_stage(Id) != 0
+	}
+
+	// a name for a kind of sprite ("apple", "wall"), to find them by
+	void set_group const str &Group const {
+		cby_game_sprite_set_group Id, Group
+	}
+
+	str group const {
+		str s
+		for i in cby_game_sprite_group_length Id {
+			s += cby_game_text_char i
+		}
+		return s
+	}
+
+	// ---- drawing order
+
+	// drawn over every other sprite, or under them all
+	void to_front const {
+		cby_game_sprite_to_front Id
+	}
+
+	void to_back const {
+		cby_game_sprite_to_back Id
+	}
+
+	// the layer it's drawn in: lower layers first (0, the ground, to begin
+	// with); to_front and to_back work within its layer
+	void set_layer int Layer const {
+		cby_game_sprite_set_layer Id, Layer
+	}
+
+	int layer const {
+		return cby_game_sprite_layer Id
+	}
+}
+
+// The stage: the canvas a game is drawn on. Its on_draw draws over the
+// sprites (a score, a message), and it has the same methods as gui's canvas.
+object game.canvas {
+	long Win
+
+	// calls h to draw the canvas
+	void on_draw handler h {
+		cby_game_stage_on_draw Win, h
+	}
+
+	// (the stage is drawn again every frame, so this does nothing; it's here
+	// so a gui canvas's drawing works on the stage as it is)
+	void redraw {
+		cby_game_stage_redraw Win
+	}
+
+	// its size, in pixels
+	int width const {
+		return cby_game_width Win
+	}
+
+	int height const {
+		return cby_game_height Win
+	}
+
+	// ---- drawing (in on_draw's handler)
+
+	// the color for what's drawn next: "red", "steelblue", "#3366cc"
+	void set_color const str &Color {
+		cby_game_stage_set_color Win, Color
+	}
+
+	// the whole stage in one color (the color for drawing stays as it was)
+	void fill_with const str &Color {
+		cby_game_stage_fill_with Win, Color
+	}
+
+	void set_line_width double Width {
+		cby_game_stage_set_line_width Win, Width
+	}
+
+	// the size of text, in pixels (14 to begin with)
+	void set_font_size double Size {
+		cby_game_stage_set_font_size Win, Size
+	}
+
+	// the font for text, as a font button gives it: "Serif Bold 16" (its
+	// size in pixels; "Sans 14" to begin with)
+	void set_font const str &Font {
+		cby_game_stage_set_font Win, Font
+	}
+
+	void line double X1, double Y1, double X2, double Y2 {
+		cby_game_stage_line Win, X1, Y1, X2, Y2
+	}
+
+	// X, Y is the top left corner
+	void rectangle double X, double Y, double Width, double Height {
+		cby_game_stage_rectangle Win, X, Y, Width, Height, 0
+	}
+
+	void fill_rectangle double X, double Y, double Width, double Height {
+		cby_game_stage_rectangle Win, X, Y, Width, Height, 1
+	}
+
+	// X, Y is the center
+	void circle double X, double Y, double Radius {
+		cby_game_stage_ellipse Win, X, Y, Radius, Radius, 0
+	}
+
+	void fill_circle double X, double Y, double Radius {
+		cby_game_stage_ellipse Win, X, Y, Radius, Radius, 1
+	}
+
+	void ellipse double X, double Y, double Across, double Down {
+		cby_game_stage_ellipse Win, X, Y, Across, Down, 0
+	}
+
+	void fill_ellipse double X, double Y, double Across, double Down {
+		cby_game_stage_ellipse Win, X, Y, Across, Down, 1
+	}
+
+	// part of a circle, From and To in degrees as on a clock: 0 at the top,
+	// going clockwise
+	void arc double X, double Y, double Radius, double From, double To {
+		cby_game_stage_arc Win, X, Y, Radius, From, To
+	}
+
+	// corners as x, y, x, y ...: {10, 10, 90, 10, 50, 80} is a triangle
+	void polygon const list double &Corners {
+		corners Corners
+		cby_game_stage_polygon Win, 0, Corners.length
+	}
+
+	void fill_polygon const list double &Corners {
+		corners Corners
+		cby_game_stage_polygon Win, 1, Corners.length
+	}
+
+	// text, its top left corner at X, Y
+	void write double X, double Y, const str &Text {
+		cby_game_stage_text Win, X, Y, Text
+	}
+
+	// the text, broken into lines no wider than Width (at spaces, and at
+	// "\n"), its top left corner at X, Y: how many lines it took
+	int write_wrapped double X, double Y, double Width, const str &Text {
+		return cby_game_stage_write_wrapped(Win, X, Y, Width, Text)
+	}
+
+	// how wide the text is, and how far apart lines are, in the font and
+	// size set now (to size a box round it)
+	double text_width const str &Text const {
+		return cby_game_stage_text_width(Win, Text)
+	}
+
+	double line_height const {
+		return cby_game_stage_line_height(Win)
+	}
+
+	// how many lines write_wrapped would take for it
+	int lines_for double Width, const str &Text const {
+		return cby_game_stage_lines_for(Win, Width, Text)
+	}
+
+	// a picture from a file, its top left corner at X, Y
+	void image double X, double Y, const str &Path {
+		cby_game_stage_image Win, X, Y, Path
+	}
+
+	// the stage as it is (the background, the sprites, and what on_draw
+	// draws), saved as a PNG picture
+	void save const str &Path {
+		cby_game_stage_save Win, Path
+	}
+
+	// ---- the mouse and keys
+
+	// calls h when the stage is clicked; mouse_x and mouse_y say where
+	void on_click handler h {
+		cby_game_stage_on_click Win, h
+	}
+
+	// calls h each time the mouse moves over the stage
+	void on_mouse_move handler h {
+		cby_game_stage_on_mouse_move Win, h
+	}
+
+	// calls h when a key is pressed in the game; key says which
+	void on_key handler h {
+		cby_game_stage_on_key Win, h
+	}
+
+	int mouse_x const {
+		return cby_game_stage_mouse_x Win
+	}
+
+	int mouse_y const {
+		return cby_game_stage_mouse_y Win
+	}
+
+	// the key last pressed, as read_key names it: "a", " ", "up", "enter"
+	str key const {
+		str s
+		for i in cby_game_stage_key_length Win {
+			s += cby_game_text_char i
+		}
+		return s
+	}
+
+	inner void corners const list double &Corners {
+		for i in Corners.length / 2 {
+			cby_game_stage_corner Win, Corners[2 * i], Corners[2 * i + 1]
+		}
+	}
+}
+
+// ---- the window
+
+object game.window {
+	long Win
+	bool Built
+
+	// Override this to add the game's sprites and handlers.
+	void build {
+	}
+
+	void set_title const str &Title {
+		open
+		cby_game_set_title Win, Title
+	}
+
+	// shows a message, with an OK button
+	void show_message const str &Text {
+		open
+		cby_game_show_message Win, Text
+	}
+
+	// calls h when these keys are pressed (even while paused): "P", "F5",
+	// "Ctrl+S"
+	void add_shortcut const str &Keys, handler h {
+		open
+		cby_game_add_shortcut Win, Keys, h
+	}
+
+	// closes the window, ending run
+	void close {
+		if Win != 0 {
+			cby_game_close Win
+		}
+	}
+
+	// the stage's size, in pixels (640 by 480 to begin with). The window
+	// starts that size; made bigger, the stage grows with it, keeping its
+	// shape (and its size in pixels, as the game sees it)
+	void set_size int Width, int Height {
+		open
+		cby_game_set_size Win, Width, Height
+	}
+
+	int width const {
+		return cby_game_width Win
+	}
+
+	int height const {
+		return cby_game_height Win
+	}
+
+	// a color ("skyblue", "#336699") or a picture, stretched to fill the stage
+	void set_background const str &Background {
+		open
+		cby_game_set_background Win, Background
+	}
+
+	// the canvas the game is drawn on: its on_draw draws over the sprites
+	// (a score, say), and its on_click and mouse_x work as on gui's canvas
+	game.canvas stage const {
+		return game.canvas{.Win = Win}   // (the window is open by build)
+	}
+
+	// ---- sprites
+
+	// a sprite from a picture file, its middle at X, Y
+	game.sprite add_sprite const str &Picture, double X, double Y {
+		open
+		return game.sprite{.Id = cby_game_sprite_picture(Win, Picture, X, Y)}
+	}
+
+	// a rectangle of a color, its middle at X, Y
+	game.sprite add_rectangle double Width, double Height, const str &Color, double X, double Y {
+		open
+		return game.sprite{.Id = cby_game_sprite_rectangle(Win, Width, Height, Color, X, Y)}
+	}
+
+	// a circle of a color, its middle at X, Y
+	game.sprite add_circle double Radius, const str &Color, double X, double Y {
+		open
+		return game.sprite{.Id = cby_game_sprite_circle(Win, Radius, Color, X, Y)}
+	}
+
+	// every sprite in a group, in the order they were added ("" for all)
+	list game.sprite sprites_in const str &Group const {
+		list game.sprite Found
+		int Count = cby_game_find(Win, 0, Group)
+		for i in Count {
+			Found.add game.sprite{.Id = cby_game_found(i)}
+		}
+		return Found
+	}
+
+	// ---- layers
+
+	// in this layer, what's lower on the stage is drawn in front: a hero
+	// south of a tree stands in front of it, one north of it behind it
+	void sort_by_depth int Layer {
+		open
+		cby_game_sort_by_depth Win, Layer
+	}
+
+	// ---- a world bigger than the stage, and a camera on it
+
+	// the world's size, in pixels (the stage's, to begin with): sprites can
+	// be anywhere in it, and the camera shows a stage-sized part of it
+	void set_world_size int Width, int Height {
+		open
+		cby_game_set_world_size Win, Width, Height
+	}
+
+	// the same, starting somewhere else than 0, 0: above the top, or left
+	// of the left, as well (the world's top left corner is Left, Top)
+	void set_world_area int Left, int Top, int Width, int Height {
+		open
+		cby_game_set_world_area Win, Left, Top, Width, Height
+	}
+
+	int world_left const {
+		return cby_game_world_left Win
+	}
+
+	int world_top const {
+		return cby_game_world_top Win
+	}
+
+	int world_width const {
+		return cby_game_world_width Win
+	}
+
+	int world_height const {
+		return cby_game_world_height Win
+	}
+
+	// keeps the sprite in the middle of the stage (but never shows past the
+	// world's edges)
+	void follow const game.sprite &Sprite const {
+		cby_game_follow cby_game_sprite_window(Sprite.Id), Sprite.Id
+	}
+
+	// shows the world from there: the point at the stage's top left corner
+	void move_camera_to double X, double Y {
+		open
+		cby_game_move_camera_to Win, X, Y
+	}
+
+	// where the camera is: the world's point at the stage's top left corner
+	double camera_x const {
+		return cby_game_camera_x Win
+	}
+
+	double camera_y const {
+		return cby_game_camera_y Win
+	}
+
+	// ---- frames
+
+	// calls h every frame, 60 times a second
+	void on_frame handler h {
+		open
+		cby_game_on_frame Win, h
+	}
+
+	// how many frames have run
+	long frame const {
+		return cby_game_frame Win
+	}
+
+	// stops the frames (and timers) until resume; the stage is still drawn
+	void pause {
+		open
+		cby_game_set_paused Win, 1
+	}
+
+	void resume {
+		open
+		cby_game_set_paused Win, 0
+	}
+
+	bool paused const {
+		return cby_game_paused(Win) != 0
+	}
+
+	// ---- timers, counted in frames: they wait while the game is paused
+
+	// calls h every so often: every time.milliseconds(800), drop_apple
+	void every duration Wait, handler h {
+		open
+		int Ms = (int)Wait.whole_milliseconds
+		cby_game_every Win, Ms, 1, h
+	}
+
+	// calls h once, after a while: after time.seconds(2), next_level
+	void after duration Wait, handler h {
+		open
+		int Ms = (int)Wait.whole_milliseconds
+		cby_game_every Win, Ms, 0, h
+	}
+
+	void stop_timers {
+		open
+		cby_game_stop_timers Win
+	}
+
+	// ---- keys: "left", "space", "a", "enter", "f1" ...
+
+	// true in the frame the key went down
+	bool key_press const str &Key const {
+		return cby_game_key_press(Win, Key) != 0
+	}
+
+	// true in every frame the key is held down
+	bool key_hold const str &Key const {
+		return cby_game_key_hold(Win, Key) != 0
+	}
+
+	// true in the frame the key was let go
+	bool key_release const str &Key const {
+		return cby_game_key_release(Win, Key) != 0
+	}
+
+	// how long the key has been held, in milliseconds; in the frame it's let
+	// go, how long it was held (0 if it isn't held)
+	int key_held_for const str &Key const {
+		return cby_game_key_held_for Win, Key
+	}
+
+	// ---- random numbers
+
+	// a whole number from From to To, both included: random 1, 6 for a dice
+	int random int From, int To const {
+		return cby_game_random From, To
+	}
+
+	// ---- running
+
+	// shows the window and runs the game, until the window is closed
+	void run {
+		open
+		if !Built {
+			Built = true
+			build
+		}
+		cby_game_run Win
+	}
+
+	// (the window is made when it is first needed)
+	void open {
+		if Win == 0 {
+			Win = cby_game_window_new
+		}
+	}
+}

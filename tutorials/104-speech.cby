@@ -1,0 +1,52 @@
+// Tutorial 104: Speech — said aloud, and heard
+//
+// Run it:      cabby 104-speech.cby say
+// Or compile:  cabby -c 104-speech.cby && ./104-speech say
+// Library:     use speech
+// Topics:      speech.can_speak, voices, say, save; speech.speaker
+//              (set_language, set_rate, set_voice); speech.can_hear, hear,
+//              hear_for; speech.listener
+//
+// Text said aloud, by the computer's own voices (eSpeak NG on Linux, the
+// Mac's own `say`), in many languages, Latin and Ancient Greek among them.
+// And what's said heard as text, by Whisper (whisper.cpp), on the computer
+// itself, with nothing sent anywhere.
+//
+// Speaking makes a noise, so it only speaks when asked: `cabby
+// 104-speech.cby say`. Without it, it says what it could do, and saves
+// what it would say into a file, and (if Whisper's here) hears it back.
+
+use speech
+use files
+
+int main int Argc, str Argv[] {
+	if !speech.can_speak {
+		println "Nothing here can speak: install espeak-ng (Linux)."
+		return 0
+	}
+	println speech.voices.length, "voices to speak with"
+	speech.speaker Latin
+	Latin.set_language "la"
+	Latin.set_rate 140                        // a little slower than usual
+	if Argc > 1 and Argv[1] is "say" {
+		speech.say "Hello from Cabby."
+		Latin.say "Salve, magister. Quid agis?"
+	}
+	speech.save "Hello from Cabby.", "cabby-hello.wav"
+	println "saved:", files.size("cabby-hello.wav") > 1000
+	if speech.can_hear {
+		println "heard back:", speech.hear("cabby-hello.wav")
+	} else {
+		println "nothing here hears (whisper.cpp, and a model: speech.get_model \"base.en\")"
+	}
+	files.delete "cabby-hello.wav"
+}
+
+// Try this:
+//  - Say the time, every quarter of an hour.
+//  - Read a file aloud, a line at a time, slowly (set_rate 100).
+//  - Hear five seconds from the microphone: speech.hear_for time.seconds(5).
+
+// ---------------------------------------------------------------- output
+// output varies: what one computer said (one with no voices; with eSpeak NG, it saves and checks the file too)
+//> Nothing here can speak: install espeak-ng (Linux).

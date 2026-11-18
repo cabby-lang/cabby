@@ -1,0 +1,42 @@
+// power.hby — the battery, the same way on Linux and macOS.
+//
+//     use power
+//
+//     if power.has_battery {
+//         println power.battery_percent, "%, charging:", power.charging
+//     }
+//
+// Linux: /sys/class/power_supply (no UPower needed). macOS: pmset. A
+// computer with no battery (a desktop, a Mac mini) says so, and that
+// it's plugged in.
+//
+// The full reference is power.md, next to this file.
+
+// ---- the C side (runtime/desktop.c)
+
+extern long cby_power_read long what
+
+// true if the computer has a battery (a laptop)
+bool power.has_battery {
+	return cby_power_read(0) is not 0
+}
+
+// how full it is, from 0 to 100; -1 with no battery
+int power.battery_percent {
+	return (int)cby_power_read(1)
+}
+
+// true while it's being charged
+bool power.charging {
+	return cby_power_read(2) is not 0
+}
+
+// true on mains power (charging, full, or with no battery at all)
+bool power.plugged_in {
+	return cby_power_read(3) is not 0
+}
+
+// true when it's as full as it gets
+bool power.battery_full {
+	return cby_power_read(4) is not 0
+}

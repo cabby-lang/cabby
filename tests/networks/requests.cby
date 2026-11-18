@@ -1,0 +1,59 @@
+// requests of every kind, against tests/networks/server.py (its address
+// in CABBY_TEST_SERVER)
+//> post: {"agent": "Cabby", "auth": "", "body": "Hello there", "method": "POST", "type": "text/plain"}
+//> json: POST application/json {"name":"Ada","age":36}
+//> form: q=fish%20%26%20chips&page=2
+//> put: PUT Bearer abc123 x
+//> delete: 200 DELETE
+//> 404: 404 false not here yes
+//> 201: 201 true
+//> redirect: GET 200
+//> head: 200 []
+//> no answer: 0 true
+//> bytes: 1000 250
+//> panic next
+// panic: 500 Internal Server Error: the site has a problem (it said: status 500)
+use networks
+use shell
+
+int main {
+	str At = shell.get "CABBY_TEST_SERVER"
+	println "post:", networks.post(At + "/echo", "Hello there", "text/plain")
+	json Item = json.lookup
+	Item["name"] = json.read "\"Ada\""
+	Item["age"] = json.read "36"
+	json Said = networks.post_json At + "/echo", Item
+	println "json:", Said["method"].str, Said["type"].str, Said["body"].str
+	lookup str str Form
+	Form["q"] = "fish & chips"
+	Form["page"] = "2"
+	println "form:", json.read(networks.post_form(At + "/echo", Form))["body"].str
+	networks.request Put = networks.request_to At + "/echo"
+	Put.set_method "put"
+	Put.set_header "Authorization", "Bearer abc123"
+	Put.set_body "x", "text/plain"
+	Put.send
+	println "put:", Put.answer_json["method"].str, Put.answer_json["auth"].str, Put.answer_json["body"].str
+	networks.request Del = networks.request_to At + "/echo"
+	Del.set_method "DELETE"
+	println "delete:", Del.send, Del.answer_json["method"].str
+	networks.request Missing = networks.request_to At + "/nothing"
+	println "404:", Missing.send, Missing.worked, Missing.answer, Missing.answer_header("x-cabby-test")
+	networks.request Made = networks.request_to At + "/status/201"
+	println "201:", Made.send, Made.worked
+	networks.request Moved = networks.request_to At + "/moved"
+	Moved.send
+	println "redirect:", Moved.answer_json["method"].str, Moved.status
+	networks.request Head = networks.request_to At + "/echo"
+	Head.set_method "HEAD"
+	println "head:", Head.send, "[" + Head.answer + "]"
+	networks.request Nowhere = networks.request_to "http://127.0.0.1:1/"
+	println "no answer:", Nowhere.send, Nowhere.error is not ""
+	networks.request Big = networks.request_to At + "/big?n=1000"
+	Big.send
+	bytes B = Big.answer_bytes
+	println "bytes:", B.length, B[250 - 1] + 1
+	println "panic next"
+	networks.post At + "/status/500", "", "text/plain"
+	return 0
+}

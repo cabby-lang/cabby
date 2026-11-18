@@ -1,0 +1,411 @@
+# Build for cabby, the Cabby compiler and interpreter.
+#   make            build ./cabby (and the lexdump/astdump development tools)
+#   make test       run every test suite
+#   make debug      build with AddressSanitizer + UBSan into build-debug/
+#   make install    install to $(PREFIX) (default /usr/local)
+
+CC      ?= cc
+CFLAGS  ?= -std=c11 -O2 -g
+CFLAGS  += -Wall -Wextra -Wpedantic -Wshadow -Wno-unused-parameter -D_POSIX_C_SOURCE=200809L -D_DEFAULT_SOURCE
+DBGFLAGS = -O0 -g -fsanitize=address,undefined -fno-omit-frame-pointer
+
+BUILD   := build
+CORE    := arena.c diag.c util.c lexer.c ast.c ast_print.c parser.c types.c style.c \
+           sema_decl.c sema_expr.c sema_stmt.c sema_flow.c interpreter.c codegen.c repl.c lineedit.c highlight.c runtime/rt.c runtime/dates.c runtime/json.c runtime/networks.c runtime/markup.c runtime/bytes.c runtime/patterns.c runtime/hashes.c runtime/archives.c runtime/databases.c runtime/threads.c runtime/dbus.c runtime/bluetooth.c runtime/emails.c runtime/secrets.c runtime/desktop.c runtime/zones.c runtime/connections.c runtime/images.c runtime/os.c runtime/linux.c
+LDLIBS  := -lffi -lm -ldl -pthread
+
+# macOS: Homebrew's libffi (it isn't on the usual paths), the BSD and
+# Darwin parts of the C library, and libraries that are allowed to use the
+# interpreter's own functions (as Linux allows by itself).
+UNAME := $(shell uname -s)
+ifeq ($(UNAME),Darwin)
+PLATFORM_DEFS := -D_DARWIN_C_SOURCE
+PLATFORM_SHARED := -Wl,-undefined,dynamic_lookup
+# the first thread's stack (where a window program runs): 60 MB, under
+# macOS's usual limit of 64
+LDFLAGS += -Wl,-stack_size,0x3c00000
+SOUND_FRAMEWORKS := -framework CoreFoundation -framework CoreAudio -framework AudioToolbox
+CFLAGS += $(PLATFORM_DEFS)
+# ffi.h: Homebrew's libffi (wherever Homebrew is: /opt/homebrew or
+# /usr/local), or else the one in Apple's own SDK
+BREW_FFI := $(firstword $(wildcard $(shell brew --prefix libffi 2>/dev/null)/include/ffi.h) \
+	$(wildcard /opt/homebrew/opt/libffi/include/ffi.h) $(wildcard /usr/local/opt/libffi/include/ffi.h))
+SDK_FFI := $(wildcard $(shell xcrun --show-sdk-path 2>/dev/null)/usr/include/ffi/ffi.h)
+ifneq ($(BREW_FFI),)
+CFLAGS += -I$(dir $(BREW_FFI))
+LDFLAGS += -L$(dir $(BREW_FFI))../lib
+else ifneq ($(SDK_FFI),)
+CFLAGS += -I$(dir $(SDK_FFI))
+else
+$(warning ffi.h wasn't found: install libffi with 'brew install libffi')
+endif
+endif
+CORE_O  := $(CORE:%.c=$(BUILD)/%.o)
+
+.PHONY: install-vim install-extras install-icons uninstall-icons uninstall-vim uninstall all debug test clean install gui gtk game world videos
+
+# The gtk library (`use gtk`, the gui library drawn by GTK, an option)
+# needs GTK 4: found with pkg-config, or (without GTK's development
+# headers) by the libraries' names, using runtime/gtk_min.h.
+GTK_LIBS := $(shell pkg-config --libs gtk4 2>/dev/null)
+GTK_CFLAGS := $(shell pkg-config --cflags gtk4 2>/dev/null)
+GUI_WARN := -Wall -Wextra -Wno-unused-parameter -Werror=incompatible-pointer-types -Werror=int-conversion -Werror=implicit-function-declaration
+ifeq ($(strip $(GTK_LIBS)),)
+GTK_LIBS := $(shell for l in libgtk-4.so.1 libgio-2.0.so.0 libgobject-2.0.so.0 libglib-2.0.so.0 libcairo.so.2 libpango-1.0.so.0; do \
+	ldconfig -p 2>/dev/null | awk -v l="$$l" '$$1 == l { print $$NF; exit }'; done | tr '\n' ' ')
+ifneq ($(words $(GTK_LIBS)),6)
+GTK_LIBS :=
+endif
+endif
+ifneq ($(strip $(GTK_LIBS)),)
+GTK_TARGETS := lib/libcabbygtk.so lib/libcabbygtk.a lib/gtk.link
+endif
+
+TUI_TARGETS := lib/libcabbytui.so lib/libcabbytui.a lib/tui.link $(PROC_TARGETS) $(SOUND_TARGETS)
+PROC_TARGETS := lib/libcabbyprocesses.so lib/libcabbyprocesses.a lib/processes.link
+SOUND_TARGETS := lib/libcabbysound.so lib/libcabbysound.a lib/sound.link
+
+# The game library needs SDL 3 (found with pkg-config): sdl3 on Arch,
+# libsdl3-dev on Debian.
+GAME_LIBS := $(shell pkg-config --libs sdl3 2>/dev/null)
+GAME_CFLAGS := $(shell pkg-config --cflags sdl3 2>/dev/null)
+ifeq ($(strip $(GAME_LIBS)),)
+# (without pkg-config: where Homebrew puts it, or the usual places)
+SDL_PREFIX := $(firstword $(patsubst %/include/SDL3/SDL.h,%,$(wildcard $(shell brew --prefix sdl3 2>/dev/null)/include/SDL3/SDL.h \
+	/opt/homebrew/opt/sdl3/include/SDL3/SDL.h /usr/local/opt/sdl3/include/SDL3/SDL.h /usr/local/include/SDL3/SDL.h)))
+ifneq ($(SDL_PREFIX),)
+GAME_LIBS := -L$(SDL_PREFIX)/lib -lSDL3
+GAME_CFLAGS := -I$(SDL_PREFIX)/include
+endif
+endif
+ifneq ($(strip $(GAME_LIBS)),)
+GAME_TARGETS := lib/libcabbygame.so lib/libcabbygame.a lib/game.link
+TGAME_TARGETS := lib/libcabbytgame.so lib/libcabbytgame.a lib/tgame.link
+GUI_TARGETS := lib/libcabbygui.so lib/libcabbygui.a lib/gui.link
+WORLD_TARGETS := lib/libcabbyworld.so lib/libcabbyworld.a lib/world.link
+endif
+
+all: cabby lib/libcabbyrt.a $(BUILD)/lexdump $(BUILD)/astdump gui gtk game world videos $(TUI_TARGETS) $(PROC_TARGETS) $(SOUND_TARGETS)
+
+# the gui library (`use gui`): windows, drawn by Cabby itself with SDL 3. A
+# shared library for the interpreter, a static one to link into compiled
+# programs, and the flags those programs need
+gui: $(GUI_TARGETS)
+ifeq ($(strip $(GAME_LIBS)),)
+	@echo "note: SDL 3 was not found, so the gui and game libraries were not built (install sdl3 on Arch, libsdl3-dev on Debian, or 'brew install sdl3' on a Mac)"
+endif
+
+GUI_SRC := runtime/gui.c runtime/video_source.h runtime/accessibility.h version.h runtime/sdl_common.h runtime/text_layout.h runtime/colors.h runtime/game_font.h runtime/third_party/stb_image.h runtime/third_party/stb_image_write.h runtime/third_party/stb_truetype.h
+lib/libcabbygui.so: $(GUI_SRC)
+	$(CC) -std=c11 -O2 -fPIC -shared $(PLATFORM_SHARED) $(GUI_WARN) -D_DEFAULT_SOURCE -D_POSIX_C_SOURCE=200809L $(PLATFORM_DEFS) $(GAME_CFLAGS) runtime/gui.c -o $@ $(GAME_LIBS) -lm -ldl
+
+lib/libcabbygui.a: $(GUI_SRC) | $(BUILD)
+	$(CC) -std=c11 -O2 -fPIC $(GUI_WARN) -D_DEFAULT_SOURCE -D_POSIX_C_SOURCE=200809L $(PLATFORM_DEFS) $(GAME_CFLAGS) -c runtime/gui.c -o $(BUILD)/gui_lib.o
+	ar rcs $@ $(BUILD)/gui_lib.o
+
+lib/gui.link: Makefile
+	echo "$(GAME_LIBS) -ldl" > $@
+
+# the gtk library (`use gtk`): the same objects and methods, drawn by GTK 4.
+# Its header is made from gui's, with gtk. names (always, so `use gtk` can
+# say what's missing when GTK isn't installed)
+gtk: lib/gtk.hby $(GTK_TARGETS)
+
+lib/gtk.hby: lib/gui.hby
+	sed 's/gui\./gtk./g; s/cby_gui_/cby_gtk_/g; s/use gui$$/use gtk/; s/^\/\/ gtk.hby —/\/\/ gtk.hby (made from gui.hby by the Makefile) —/' lib/gui.hby > $@
+
+lib/libcabbygtk.so: runtime/gtk.c runtime/gtk_min.h
+	$(CC) -std=c11 -O2 -fPIC -shared $(PLATFORM_SHARED) $(GUI_WARN) -D_DEFAULT_SOURCE -D_POSIX_C_SOURCE=200809L $(PLATFORM_DEFS) $(GTK_CFLAGS) runtime/gtk.c -o $@ $(GTK_LIBS)
+
+lib/libcabbygtk.a: runtime/gtk.c runtime/gtk_min.h | $(BUILD)
+	$(CC) -std=c11 -O2 -fPIC $(GUI_WARN) -D_DEFAULT_SOURCE -D_POSIX_C_SOURCE=200809L $(PLATFORM_DEFS) $(GTK_CFLAGS) -c runtime/gtk.c -o $(BUILD)/gtk_lib.o
+	ar rcs $@ $(BUILD)/gtk_lib.o
+
+lib/gtk.link: Makefile
+	echo "$(GTK_LIBS)" > $@
+
+# the tui library: windows in a terminal; it needs nothing but the C library
+lib/libcabbytui.so: runtime/tui.c
+	$(CC) -std=c11 -O2 -fPIC -shared $(PLATFORM_SHARED) $(GUI_WARN) -D_DEFAULT_SOURCE -D_POSIX_C_SOURCE=200809L $(PLATFORM_DEFS) runtime/tui.c -o $@
+
+lib/libcabbytui.a: runtime/tui.c | $(BUILD)
+	$(CC) -std=c11 -O2 -fPIC $(GUI_WARN) -D_DEFAULT_SOURCE -D_POSIX_C_SOURCE=200809L $(PLATFORM_DEFS) -c runtime/tui.c -o $(BUILD)/tui_lib.o
+	ar rcs $@ $(BUILD)/tui_lib.o
+
+lib/tui.link: Makefile
+	echo "" > $@
+
+game: $(GAME_TARGETS) lib/tgame.hby $(TGAME_TARGETS)
+
+# the game library: a window with a stage, sprites and frames, on SDL 3
+# (stb_image, stb_image_write and stb_truetype are built into it)
+GAME_SRC := runtime/game.c runtime/sdl_common.h runtime/text_layout.h runtime/colors.h runtime/game_font.h runtime/third_party/stb_image.h runtime/third_party/stb_image_write.h runtime/third_party/stb_truetype.h
+lib/libcabbygame.so: $(GAME_SRC)
+	$(CC) -std=c11 -O2 -fPIC -shared $(PLATFORM_SHARED) $(GUI_WARN) -D_DEFAULT_SOURCE -D_POSIX_C_SOURCE=200809L $(PLATFORM_DEFS) $(GAME_CFLAGS) runtime/game.c -o $@ $(GAME_LIBS) -lm
+
+lib/libcabbygame.a: $(GAME_SRC) | $(BUILD)
+	$(CC) -std=c11 -O2 -fPIC $(GUI_WARN) -D_DEFAULT_SOURCE -D_POSIX_C_SOURCE=200809L $(PLATFORM_DEFS) $(GAME_CFLAGS) -c runtime/game.c -o $(BUILD)/game_lib.o
+	ar rcs $@ $(BUILD)/game_lib.o
+
+lib/game.link: Makefile
+	echo "$(GAME_LIBS)" > $@
+
+# the tgame library (`use tgame`): the game library again, shown in a
+# terminal. game.c is built with TERMINAL_GAME (tgame_terminal.h) and
+# cby_tgame_ names; its header is made from game's, with tgame. names
+# (always, so `use tgame` can say what's missing without SDL 3)
+$(BUILD)/tgame.c: runtime/game.c | $(BUILD)
+	sed 's/cby_game_/cby_tgame_/g' runtime/game.c > $@
+
+TGAME_SRC := $(BUILD)/tgame.c $(GAME_SRC) runtime/tgame_terminal.h
+lib/libcabbytgame.so: $(TGAME_SRC)
+	$(CC) -std=c11 -O2 -fPIC -shared $(PLATFORM_SHARED) $(GUI_WARN) -D_DEFAULT_SOURCE -D_POSIX_C_SOURCE=200809L $(PLATFORM_DEFS) -DTERMINAL_GAME -Iruntime $(GAME_CFLAGS) $(BUILD)/tgame.c -o $@ $(GAME_LIBS) -lm -ldl
+
+lib/libcabbytgame.a: $(TGAME_SRC)
+	$(CC) -std=c11 -O2 -fPIC $(GUI_WARN) -D_DEFAULT_SOURCE -D_POSIX_C_SOURCE=200809L $(PLATFORM_DEFS) -DTERMINAL_GAME -Iruntime $(GAME_CFLAGS) -c $(BUILD)/tgame.c -o $(BUILD)/tgame_lib.o
+	ar rcs $@ $(BUILD)/tgame_lib.o
+
+lib/tgame.link: Makefile
+	echo "$(GAME_LIBS) -ldl" > $@
+
+lib/tgame.hby: lib/game.hby
+	sed 's/\([^a-z_]\)game\./\1tgame./g; s/^game\./tgame./; s/cby_game_/cby_tgame_/g; s/use game$$/use tgame/; s/^\/\/ tgame.hby —/\/\/ tgame.hby (made from game.hby by the Makefile) — in a terminal:/' lib/game.hby > $@
+
+# the world library (`use world`): 3D, on SDL 3 and OpenGL (looked up when
+# a window opens: nothing more to link). Built without fused multiply-adds,
+# so Cabby's own drawing (for tests) is the same on every computer.
+world: $(WORLD_TARGETS)
+
+WORLD_SRC := runtime/world.c runtime/world_soft.h runtime/world_gl.h runtime/world_text.h runtime/world_models.h runtime/third_party/cgltf.h runtime/sdl_common.h runtime/text_layout.h runtime/colors.h runtime/game_font.h runtime/third_party/stb_image.h runtime/third_party/stb_image_write.h runtime/third_party/stb_truetype.h
+lib/libcabbyworld.so: $(WORLD_SRC)
+	$(CC) -std=c11 -O2 -fPIC -shared -ffp-contract=off $(PLATFORM_SHARED) $(GUI_WARN) -D_DEFAULT_SOURCE -D_POSIX_C_SOURCE=200809L $(PLATFORM_DEFS) $(GAME_CFLAGS) runtime/world.c -o $@ $(GAME_LIBS) -lm -ldl
+
+lib/libcabbyworld.a: $(WORLD_SRC) | $(BUILD)
+	$(CC) -std=c11 -O2 -fPIC -ffp-contract=off $(GUI_WARN) -D_DEFAULT_SOURCE -D_POSIX_C_SOURCE=200809L $(PLATFORM_DEFS) $(GAME_CFLAGS) -c runtime/world.c -o $(BUILD)/world_lib.o
+	ar rcs $@ $(BUILD)/world_lib.o
+
+lib/world.link: Makefile
+	echo "$(GAME_LIBS) -ldl" > $@
+
+# the videos library (`use videos`): video files, on FFmpeg's libraries
+# (found with pkg-config: ffmpeg on Arch, libavformat-dev, libavcodec-dev,
+# libswscale-dev and libswresample-dev on Debian, Homebrew's ffmpeg)
+FFMPEG_PKGS := libavformat libavcodec libswscale libswresample libavutil
+VIDEOS_LIBS := $(shell pkg-config --libs $(FFMPEG_PKGS) 2>/dev/null)
+VIDEOS_CFLAGS := $(shell pkg-config --cflags $(FFMPEG_PKGS) 2>/dev/null)
+# (without pkg-config: where Homebrew puts it, or the usual places)
+ifeq ($(strip $(VIDEOS_LIBS)),)
+FFMPEG_PREFIX := $(firstword $(patsubst %/include/libavformat/avformat.h,%,$(wildcard $(shell brew --prefix ffmpeg 2>/dev/null)/include/libavformat/avformat.h \
+	/opt/homebrew/opt/ffmpeg/include/libavformat/avformat.h /usr/local/opt/ffmpeg/include/libavformat/avformat.h /usr/local/include/libavformat/avformat.h)))
+ifneq ($(FFMPEG_PREFIX),)
+VIDEOS_LIBS := -L$(FFMPEG_PREFIX)/lib -lavformat -lavcodec -lswscale -lswresample -lavutil
+VIDEOS_CFLAGS := -I$(FFMPEG_PREFIX)/include
+endif
+endif
+ifneq ($(strip $(VIDEOS_LIBS)),)
+VIDEOS_TARGETS := lib/libcabbyvideos.so lib/libcabbyvideos.a lib/videos.link
+endif
+videos: $(VIDEOS_TARGETS)
+ifeq ($(strip $(VIDEOS_LIBS)),)
+	@echo "note: FFmpeg's libraries were not found, so the videos library was not built (install ffmpeg on Arch, libavformat-dev libavcodec-dev libswscale-dev libswresample-dev on Debian, or 'brew install ffmpeg' on a Mac)"
+endif
+
+VIDEOS_SRC := runtime/videos.c runtime/video_source.h runtime/rt.h
+lib/libcabbyvideos.so: $(VIDEOS_SRC)
+	$(CC) -std=c11 -O2 -fPIC -shared $(PLATFORM_SHARED) $(GUI_WARN) -D_DEFAULT_SOURCE -D_POSIX_C_SOURCE=200809L $(PLATFORM_DEFS) $(VIDEOS_CFLAGS) runtime/videos.c -o $@ $(VIDEOS_LIBS) -lpthread -lm
+
+lib/libcabbyvideos.a: $(VIDEOS_SRC) | $(BUILD)
+	$(CC) -std=c11 -O2 -fPIC $(GUI_WARN) -D_DEFAULT_SOURCE -D_POSIX_C_SOURCE=200809L $(PLATFORM_DEFS) $(VIDEOS_CFLAGS) -c runtime/videos.c -o $(BUILD)/videos_lib.o
+	ar rcs $@ $(BUILD)/videos_lib.o
+
+lib/videos.link: Makefile
+	echo "$(VIDEOS_LIBS) -lpthread -lm" > $@
+
+# the sound library: sound files, notes and MIDI files (miniaudio and
+# TinySoundFont are built into it; it needs nothing installed)
+SOUND_SRC := runtime/sound.c runtime/midi.c runtime/third_party/miniaudio.h runtime/third_party/tsf.h runtime/third_party/tml.h
+lib/libcabbysound.so: $(SOUND_SRC)
+	$(CC) -std=c11 -O2 -fPIC -shared $(PLATFORM_SHARED) $(GUI_WARN) -D_DEFAULT_SOURCE -D_POSIX_C_SOURCE=200809L $(PLATFORM_DEFS) runtime/sound.c runtime/midi.c -o $@ -lpthread -lm -ldl $(SOUND_FRAMEWORKS)
+
+lib/libcabbysound.a: $(SOUND_SRC) | $(BUILD)
+	$(CC) -std=c11 -O2 -fPIC $(GUI_WARN) -D_DEFAULT_SOURCE -D_POSIX_C_SOURCE=200809L $(PLATFORM_DEFS) -c runtime/sound.c -o $(BUILD)/sound_lib.o
+	$(CC) -std=c11 -O2 -fPIC $(GUI_WARN) -D_DEFAULT_SOURCE -D_POSIX_C_SOURCE=200809L $(PLATFORM_DEFS) -c runtime/midi.c -o $(BUILD)/midi_lib.o
+	ar rcs $@ $(BUILD)/sound_lib.o $(BUILD)/midi_lib.o
+
+lib/sound.link: Makefile
+	echo "-lpthread -ldl $(SOUND_FRAMEWORKS)" > $@
+
+# the processes library: programs a program starts and talks to
+lib/libcabbyprocesses.so: runtime/processes.c
+	$(CC) -std=c11 -O2 -fPIC -shared $(PLATFORM_SHARED) $(GUI_WARN) -D_DEFAULT_SOURCE -D_POSIX_C_SOURCE=200809L $(PLATFORM_DEFS) runtime/processes.c -o $@
+
+lib/libcabbyprocesses.a: runtime/processes.c | $(BUILD)
+	$(CC) -std=c11 -O2 -fPIC $(GUI_WARN) -D_DEFAULT_SOURCE -D_POSIX_C_SOURCE=200809L $(PLATFORM_DEFS) -c runtime/processes.c -o $(BUILD)/processes_lib.o
+	ar rcs $@ $(BUILD)/processes_lib.o
+
+lib/processes.link: Makefile
+	echo "" > $@
+
+# the runtime linked into compiled programs
+lib/libcabbyrt.a: runtime/rt.c runtime/dates.c runtime/json.c runtime/networks.c runtime/markup.c runtime/bytes.c runtime/patterns.c runtime/hashes.c runtime/archives.c runtime/databases.c runtime/threads.c runtime/dbus.c runtime/bluetooth.c runtime/bluetooth_mac.h runtime/emails.c runtime/secrets.c runtime/desktop.c runtime/zones.c runtime/connections.c runtime/web.h runtime/websockets.h runtime/tls.h runtime/imap.h runtime/postgres.h runtime/images.c runtime/os.c runtime/linux.c runtime/colors.h runtime/rt.h
+	$(CC) -std=c11 -O2 -fPIC -D_DEFAULT_SOURCE -D_POSIX_C_SOURCE=200809L $(PLATFORM_DEFS) -c runtime/rt.c -o $(BUILD)/rt_lib.o
+	$(CC) -std=c11 -O2 -fPIC -D_DEFAULT_SOURCE -D_POSIX_C_SOURCE=200809L $(PLATFORM_DEFS) -c runtime/dates.c -o $(BUILD)/dates_lib.o
+	$(CC) -std=c11 -O2 -fPIC -D_DEFAULT_SOURCE -D_POSIX_C_SOURCE=200809L $(PLATFORM_DEFS) -c runtime/json.c -o $(BUILD)/json_lib.o
+	$(CC) -std=c11 -O2 -fPIC -D_DEFAULT_SOURCE -D_POSIX_C_SOURCE=200809L $(PLATFORM_DEFS) -c runtime/networks.c -o $(BUILD)/networks_lib.o
+	$(CC) -std=c11 -O2 -fPIC -D_DEFAULT_SOURCE -D_POSIX_C_SOURCE=200809L $(PLATFORM_DEFS) -c runtime/markup.c -o $(BUILD)/markup_lib.o
+	$(CC) -std=c11 -O2 -fPIC -D_DEFAULT_SOURCE -D_POSIX_C_SOURCE=200809L $(PLATFORM_DEFS) -c runtime/bytes.c -o $(BUILD)/bytes_lib.o
+	$(CC) -std=c11 -O2 -fPIC -D_DEFAULT_SOURCE -D_POSIX_C_SOURCE=200809L $(PLATFORM_DEFS) -c runtime/patterns.c -o $(BUILD)/patterns_lib.o
+	$(CC) -std=c11 -O2 -fPIC -D_DEFAULT_SOURCE -D_POSIX_C_SOURCE=200809L $(PLATFORM_DEFS) -c runtime/hashes.c -o $(BUILD)/hashes_lib.o
+	$(CC) -std=c11 -O2 -fPIC -D_DEFAULT_SOURCE -D_POSIX_C_SOURCE=200809L $(PLATFORM_DEFS) -c runtime/archives.c -o $(BUILD)/archives_lib.o
+	$(CC) -std=c11 -O2 -fPIC -D_DEFAULT_SOURCE -D_POSIX_C_SOURCE=200809L $(PLATFORM_DEFS) -c runtime/databases.c -o $(BUILD)/databases_lib.o
+	$(CC) -std=c11 -O2 -fPIC -D_DEFAULT_SOURCE -D_POSIX_C_SOURCE=200809L $(PLATFORM_DEFS) -c runtime/threads.c -o $(BUILD)/threads_lib.o
+	$(CC) -std=c11 -O2 -fPIC -D_DEFAULT_SOURCE -D_POSIX_C_SOURCE=200809L $(PLATFORM_DEFS) -c runtime/dbus.c -o $(BUILD)/dbus_lib.o
+	$(CC) -std=c11 -O2 -fPIC -D_DEFAULT_SOURCE -D_POSIX_C_SOURCE=200809L $(PLATFORM_DEFS) -c runtime/bluetooth.c -o $(BUILD)/bluetooth_lib.o
+	$(CC) -std=c11 -O2 -fPIC -D_DEFAULT_SOURCE -D_POSIX_C_SOURCE=200809L $(PLATFORM_DEFS) -c runtime/emails.c -o $(BUILD)/emails_lib.o
+	$(CC) -std=c11 -O2 -fPIC -D_DEFAULT_SOURCE -D_POSIX_C_SOURCE=200809L $(PLATFORM_DEFS) -c runtime/secrets.c -o $(BUILD)/secrets_lib.o
+	$(CC) -std=c11 -O2 -fPIC -D_DEFAULT_SOURCE -D_POSIX_C_SOURCE=200809L $(PLATFORM_DEFS) -c runtime/os.c -o $(BUILD)/os_lib.o
+	$(CC) -std=c11 -O2 -fPIC -D_DEFAULT_SOURCE -D_POSIX_C_SOURCE=200809L $(PLATFORM_DEFS) -c runtime/linux.c -o $(BUILD)/linux_lib.o
+	$(CC) -std=c11 -O2 -fPIC -D_DEFAULT_SOURCE -D_POSIX_C_SOURCE=200809L $(PLATFORM_DEFS) -c runtime/desktop.c -o $(BUILD)/desktop_lib.o
+	$(CC) -std=c11 -O2 -fPIC -D_DEFAULT_SOURCE -D_POSIX_C_SOURCE=200809L $(PLATFORM_DEFS) -c runtime/zones.c -o $(BUILD)/zones_lib.o
+	$(CC) -std=c11 -O2 -fPIC -D_DEFAULT_SOURCE -D_POSIX_C_SOURCE=200809L $(PLATFORM_DEFS) -c runtime/connections.c -o $(BUILD)/connections_lib.o
+	$(CC) -std=c11 -O2 -fPIC -D_DEFAULT_SOURCE -D_POSIX_C_SOURCE=200809L $(PLATFORM_DEFS) -c runtime/images.c -o $(BUILD)/images_lib.o
+	ar rcs $@ $(BUILD)/rt_lib.o $(BUILD)/dates_lib.o $(BUILD)/json_lib.o $(BUILD)/networks_lib.o $(BUILD)/markup_lib.o $(BUILD)/bytes_lib.o $(BUILD)/patterns_lib.o $(BUILD)/hashes_lib.o $(BUILD)/archives_lib.o $(BUILD)/databases_lib.o $(BUILD)/threads_lib.o $(BUILD)/dbus_lib.o $(BUILD)/bluetooth_lib.o $(BUILD)/emails_lib.o $(BUILD)/secrets_lib.o $(BUILD)/desktop_lib.o $(BUILD)/zones_lib.o $(BUILD)/connections_lib.o $(BUILD)/images_lib.o $(BUILD)/os_lib.o $(BUILD)/linux_lib.o
+
+# -rdynamic: libraries the interpreter loads (processes, tui, gui) use its
+# event loop, as compiled programs use the runtime's
+# (where `make install` puts the libraries, known to cabby itself too)
+$(BUILD)/main.o: CFLAGS += -DCABBY_PREFIX='"$(PREFIX)"'
+
+cabby: $(BUILD)/main.o $(CORE_O)
+	$(CC) $(LDFLAGS) -rdynamic $^ $(LDLIBS) -o $@
+
+debug:
+	$(MAKE) BUILD=build-debug CFLAGS="-std=c11 -D_POSIX_C_SOURCE=200809L -D_DEFAULT_SOURCE $(DBGFLAGS)" LDFLAGS="$(DBGFLAGS)" build-debug/cabby build-debug/lexdump build-debug/astdump
+
+build-debug/cabby: build-debug/main.o $(CORE:%.c=build-debug/%.o)
+	$(CC) $(LDFLAGS) -rdynamic $^ $(LDLIBS) -o $@
+
+$(BUILD)/%.o: %.c | $(BUILD)
+	@mkdir -p $(dir $@)
+	$(CC) $(CFLAGS) -MMD -MP -c $< -o $@
+
+$(BUILD)/tools/%.o: tools/%.c | $(BUILD)
+	@mkdir -p $(BUILD)/tools
+	$(CC) $(CFLAGS) -MMD -MP -c $< -o $@
+
+$(BUILD)/lexdump: $(BUILD)/tools/lexdump.o $(CORE_O)
+	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
+
+$(BUILD)/astdump: $(BUILD)/tools/astdump.o $(CORE_O)
+	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
+
+$(BUILD):
+	mkdir -p $(BUILD)
+
+PREFIX ?= /usr/local
+
+test: all
+	BUILD=$(BUILD) ./tests/run_all.sh
+
+install: all
+	install -d $(DESTDIR)$(PREFIX)/bin $(DESTDIR)$(PREFIX)/lib/cabby
+	install -m 755 cabby $(DESTDIR)$(PREFIX)/bin/cabby
+	install -m 644 lib/*.hby lib/*.md lib/libcabbyrt.a $(DESTDIR)$(PREFIX)/lib/cabby/
+	@# libraries that were renamed or merged (string, stdio, stdlib)
+	rm -f $(addprefix $(DESTDIR)$(PREFIX)/lib/cabby/,string.hby string.md stdio.hby stdio.md stdlib.hby stdlib.md)
+	@# (and sdlgui, which became gui); then native code from before, so none is left over
+	rm -f $(addprefix $(DESTDIR)$(PREFIX)/lib/cabby/,sdlgui.hby libcabbysdlgui.so libcabbysdlgui.a sdlgui.link)
+	rm -f $(DESTDIR)$(PREFIX)/lib/cabby/libcabby*.so $(DESTDIR)$(PREFIX)/lib/cabby/*.link
+	for f in $(GUI_TARGETS) $(GTK_TARGETS) $(TGAME_TARGETS) lib/libcabbytui.so lib/libcabbytui.a lib/tui.link lib/libcabbyprocesses.so lib/libcabbyprocesses.a lib/processes.link $(SOUND_TARGETS) $(GAME_TARGETS) $(WORLD_TARGETS) $(VIDEOS_TARGETS); do \
+		if [ -f $$f ]; then install -m 644 $$f $(DESTDIR)$(PREFIX)/lib/cabby/; fi; done
+	install -d $(DESTDIR)$(PREFIX)/share/doc/cabby/tutorials/geometry
+	install -m 644 README.md STYLE.md $(DESTDIR)$(PREFIX)/share/doc/cabby/
+	install -m 644 tutorials/README.md tutorials/tutorials.md tutorials/*.cby $(DESTDIR)$(PREFIX)/share/doc/cabby/tutorials/
+	install -m 644 tutorials/geometry/* $(DESTDIR)$(PREFIX)/share/doc/cabby/tutorials/geometry/
+	install -d $(DESTDIR)$(PREFIX)/share/doc/cabby/tutorials/reverse
+	install -m 644 tutorials/reverse/* $(DESTDIR)$(PREFIX)/share/doc/cabby/tutorials/reverse/
+	install -d $(DESTDIR)$(PREFIX)/share/doc/cabby/tutorials/pictures
+	install -m 644 tutorials/pictures/* $(DESTDIR)$(PREFIX)/share/doc/cabby/tutorials/pictures/
+	install -d $(DESTDIR)$(PREFIX)/share/doc/cabby/tutorials/models
+	install -m 644 tutorials/models/* $(DESTDIR)$(PREFIX)/share/doc/cabby/tutorials/models/
+	install -d $(DESTDIR)$(PREFIX)/share/doc/cabby/tutorials/videos
+	install -m 644 tutorials/videos/* $(DESTDIR)$(PREFIX)/share/doc/cabby/tutorials/videos/
+	install -d $(DESTDIR)$(PREFIX)/share/doc/cabby/tutorials/sounds
+	install -m 644 tutorials/sounds/* $(DESTDIR)$(PREFIX)/share/doc/cabby/tutorials/sounds/
+	install -d $(DESTDIR)$(PREFIX)/share/doc/cabby/tutorials/music $(DESTDIR)$(PREFIX)/share/doc/cabby/tutorials/quest
+	install -m 644 tutorials/music/* $(DESTDIR)$(PREFIX)/share/doc/cabby/tutorials/music/
+	install -m 644 tutorials/quest/* $(DESTDIR)$(PREFIX)/share/doc/cabby/tutorials/quest/
+	install -d $(DESTDIR)$(PREFIX)/share/doc/cabby/tutorials/maps
+	install -m 644 tutorials/maps/* $(DESTDIR)$(PREFIX)/share/doc/cabby/tutorials/maps/
+
+# File icons for .cby and .hby, and the Cabby logo, for one user: run
+# without sudo. File managers show them once the type is known (restart
+# the file manager afterwards).
+#
+# They go in hicolor, the theme every theme falls back on, and also in the
+# icon theme in use (ICON_THEME): a theme like Papirus has a plain text-file
+# icon of its own, which GTK would choose before looking in hicolor.
+DATADIR ?= $(HOME)/.local/share
+ICON_THEME ?= Papirus-Dark
+ICON_SIZES = 16x16 22x22 24x24 32x32 48x48 64x64
+install-icons:
+	install -d $(DATADIR)/mime/packages $(DATADIR)/icons/hicolor/scalable/mimetypes $(DATADIR)/icons/hicolor/scalable/apps
+	install -m 644 icons/cabby-mime.xml $(DATADIR)/mime/packages/cabby.xml
+	install -m 644 icons/text-x-cabby.svg icons/text-x-cabby-header.svg $(DATADIR)/icons/hicolor/scalable/mimetypes/
+	install -m 644 icons/cabby.svg $(DATADIR)/icons/hicolor/scalable/apps/
+	@for t in $(ICON_THEME); do \
+		if [ -d /usr/share/icons/$$t ] || [ -d $(DATADIR)/icons/$$t ]; then \
+			for s in $(ICON_SIZES); do \
+				install -d $(DATADIR)/icons/$$t/$$s/mimetypes; \
+				install -m 644 icons/text-x-cabby.svg icons/text-x-cabby-header.svg $(DATADIR)/icons/$$t/$$s/mimetypes/; \
+			done; echo "  also in the $$t theme"; \
+		fi; done
+	-update-mime-database $(DATADIR)/mime
+	-gtk-update-icon-cache -f -t $(DATADIR)/icons/hicolor
+	@echo "Cabby's icons installed in $(DATADIR); restart the file manager to see them"
+
+uninstall-icons:
+	rm -f $(DATADIR)/mime/packages/cabby.xml $(DATADIR)/icons/hicolor/scalable/mimetypes/text-x-cabby*.svg
+	rm -f $(DATADIR)/icons/hicolor/scalable/apps/cabby.svg
+	for t in $(ICON_THEME); do for s in $(ICON_SIZES); do \
+		rm -f $(DATADIR)/icons/$$t/$$s/mimetypes/text-x-cabby*.svg; done; done
+	-update-mime-database $(DATADIR)/mime
+	-gtk-update-icon-cache -f -t $(DATADIR)/icons/hicolor
+
+# For packages (packaging/): the file icons, the logo and Vim support for
+# everyone, under $(DESTDIR)$(PREFIX)/share, where the system's own file
+# managers and Vim look. (The package manager updates the icon and type
+# caches itself.)
+install-extras:
+	install -d $(DESTDIR)$(PREFIX)/share/mime/packages $(DESTDIR)$(PREFIX)/share/icons/hicolor/scalable/mimetypes \
+		$(DESTDIR)$(PREFIX)/share/icons/hicolor/scalable/apps
+	install -m 644 icons/cabby-mime.xml $(DESTDIR)$(PREFIX)/share/mime/packages/cabby.xml
+	install -m 644 icons/text-x-cabby.svg icons/text-x-cabby-header.svg $(DESTDIR)$(PREFIX)/share/icons/hicolor/scalable/mimetypes/
+	install -m 644 icons/cabby.svg $(DESTDIR)$(PREFIX)/share/icons/hicolor/scalable/apps/
+	for d in ftdetect ftplugin indent syntax; do \
+		install -d $(DESTDIR)$(PREFIX)/share/vim/vimfiles/$$d && \
+		install -m 644 editor/vim/$$d/cabby.vim $(DESTDIR)$(PREFIX)/share/vim/vimfiles/$$d/; done
+
+# Vim support, for one user: run without sudo.
+VIMDIR ?= $(HOME)/.vim
+install-vim:
+	for d in ftdetect ftplugin indent syntax; do \
+		install -d $(VIMDIR)/$$d && install -m 644 editor/vim/$$d/cabby.vim $(VIMDIR)/$$d/; done
+	@echo "Vim support for Cabby installed in $(VIMDIR)"
+	@# (macOS's Vim, unlike most Linux ones, starts with colors and file types off)
+	@if ! grep -qsE '^[[:space:]]*(syntax[[:space:]]+(on|enable)|source[[:space:]].*defaults\.vim)' $(HOME)/.vimrc; then \
+		echo "note: your ~/.vimrc doesn't turn colors on; add these two lines to it:"; \
+		echo "  syntax on"; echo "  filetype plugin indent on"; fi
+
+uninstall-vim:
+	rm -f $(VIMDIR)/ftdetect/cabby.vim $(VIMDIR)/ftplugin/cabby.vim \
+		$(VIMDIR)/indent/cabby.vim $(VIMDIR)/syntax/cabby.vim
+
+uninstall:
+	rm -f $(DESTDIR)$(PREFIX)/bin/cabby
+	rm -rf $(DESTDIR)$(PREFIX)/lib/cabby $(DESTDIR)$(PREFIX)/share/doc/cabby
+
+clean:
+	rm -rf build build-debug cabby lib/libcabbyrt.a lib/libcabbygui.so lib/libcabbygui.a lib/gui.link lib/libcabbytui.so lib/libcabbytui.a lib/tui.link $(PROC_TARGETS) $(SOUND_TARGETS) lib/libcabbygame.so lib/libcabbygame.a lib/game.link lib/libcabbygtk.so lib/libcabbygtk.a lib/gtk.link lib/gtk.hby lib/libcabbytgame.so lib/libcabbytgame.a lib/tgame.link lib/tgame.hby lib/libcabbysdlgui.so lib/libcabbysdlgui.a lib/sdlgui.link lib/sdlgui.hby lib/libcabbyworld.so lib/libcabbyworld.a lib/world.link lib/libcabbyvideos.so lib/libcabbyvideos.a lib/videos.link
+
+-include $(wildcard $(BUILD)/*.d $(BUILD)/tools/*.d $(BUILD)/runtime/*.d)

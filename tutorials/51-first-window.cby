@@ -1,0 +1,83 @@
+// Tutorial 51: Your first window
+//
+// Run it:      cabby 51-first-window.cby
+// Library:     use gui
+// Topics:      gui.window, labels, buttons, text boxes, handlers
+//
+// A window is an object made from gui.window. You describe what is in it
+// in a method called `build`, and say what should happen when things are
+// clicked or typed. Then `run` shows it:
+//
+//     new window -> build: add things, attach handlers -> run
+//
+// While the window is open the program sleeps, using no processor time,
+// until something happens. Then it calls your handler, the way an
+// interrupt calls its service routine. `run` returns when the window is
+// closed.
+//
+// What goes where (the manual's "The build method" has the whole story):
+//
+//   build              runs once, just before the window appears: the
+//                      title and size, the widgets, attaching handlers,
+//                      starting timers, and starting values for fields.
+//                      Keep it quick, and don't wait in it for the user.
+//   the object's body  only fields (starting at zero) and methods. A line
+//                      that does something, like `add_label "Hi"` or
+//                      `every time.seconds(1), tick`, goes inside a method.
+//   the top level      `use`, constants, plain functions, and main, which
+//                      makes the window and calls run.
+
+use gui
+
+object greeter : gui.window {
+	// The things the handlers need later are kept as fields.
+	gui.label Message
+	gui.entry Name
+
+	void build {
+		set_title "Greeter"
+		set_size 360, 180
+
+		// Things appear top to bottom in the order they are added.
+		Message = add_label "What's your name?"
+		Name = add_entry
+		gui.button Hello = add_button "Say hello"
+
+		// Handlers: name one of this window's methods. It is not called
+		// now; it is called each time the button is clicked.
+		Hello.on_click say_hello
+		Name.on_enter say_hello          // pressing Enter in the box does the same
+	}
+
+	// A handler: a method of the window, with no parameters.
+	void say_hello {
+		str Who = Name.text              // what is typed in the box
+		if Who.length == 0 {
+			Message.set_text "Type your name first!"
+			return
+		}
+		Message.set_text "Hello, " + Who + "!"
+		println "greeted", Who
+	}
+}
+
+int main {
+	greeter g
+	g.run                                // returns when the window is closed
+	println "goodbye"
+}
+
+// (For Cabby's test suite: what to do in the window, as a person would.
+// Without a test script, the window simply waits for you.)
+// script: click Say hello; type 1 Ada; click Say hello; type 1 Grace; enter 1; close
+//
+// Try this:
+//  - Add a second button, "Clear", whose handler empties the box with
+//    `Name.set_text ""`.
+//  - Make a handler count how many people have been greeted, and show the
+//    count in another label with `count.text`.
+
+// ---------------------------------------------------------------- output
+//> greeted Ada
+//> greeted Grace
+//> goodbye

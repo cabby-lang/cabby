@@ -1,0 +1,73 @@
+// the videos library without a window: what's in a file, pictures from
+// it, its sound saved, and playing by its own clock (run_videos_tests.sh;
+// the test videos are made by tools/make-test-video.py)
+use videos
+use files
+use bytes
+
+void about const videos.video &V {
+	println V.kind, "|", V.picture_codec, "|", V.sound_codec, "|", V.title
+	println V.width, "by", V.height, "for", V.length, "seconds at", V.frame_rate
+	println "picture:", V.has_picture, "sound:", V.has_sound
+}
+
+// a picture's pixel, as #rrggbb
+str color const images.picture &P, int X, int Y {
+	long Pixel = P.pixel X, Y
+	str Hex = "0123456789abcdef"
+	str Text = "#"
+	long Shift = 24
+	while Shift >= 8 {
+		long Byte = (Pixel >> Shift) & 255
+		Text += Hex[Byte / 16 to Byte / 16] + Hex[Byte % 16 to Byte % 16]
+		Shift -= 8
+	}
+	return Text
+}
+
+int main {
+	videos.video Film = videos.open "colors.mkv"
+	about Film
+	println "position:", Film.position, "playing:", Film.playing, "ended:", Film.ended
+
+	// pictures from it: a frame's left half says which it is (8 x its
+	// number), its right half which second (red, green, blue)
+	list double Times = {0.0, 0.35, 0.99, 1.0, 2.55, 2.99, 5.0}
+	for At in Times {
+		images.picture P = Film.picture_at At
+		println At, "->", color(P, 10, 10), color(P, 150, 80), P.width, P.height
+	}
+	println "position after:", Film.position
+
+	// its sound, as a WAV: 48000 a second, two channels, 16 bits
+	println "saved:", Film.save_sound("sound.wav")
+	bytes Wav = files.read_bytes "sound.wav"
+	println "wav:", Wav.length, Wav.int_at(24), Wav.short_at(22), Wav.int_at(40)
+	println "samples:", Wav.short_at(44), Wav.short_at(46), Wav.short_at(44 + 4 * 11999), Wav.short_at(44 + 4 * 12000)
+	files.delete "sound.wav"
+
+	// looping and volume
+	println "looping:", Film.looping, "volume:", Film.volume
+	Film.set_looping true
+	Film.set_volume 40
+	println "looping:", Film.looping, "volume:", Film.volume
+	Film.set_volume 250
+	println "volume past 100:", Film.volume
+
+	// a seek, by itself
+	Film.seek 1.5
+	println "seeked:", Film.position, Film.playing
+	Film.rewind
+	println "rewound:", Film.position
+
+	videos.video Silent = videos.open "silent.mkv"
+	about Silent
+	println "saved:", Silent.save_sound("nothing.wav"), files.exists("nothing.wav")
+
+	videos.video Tone = videos.open "tone.mka"
+	about Tone
+
+	println "can open:", videos.can_open("colors.mkv"), videos.can_open("window.cby"), videos.can_open("nowhere.mp4")
+	println "ffmpeg:", videos.ffmpeg_version.length > 0
+	return 0
+}

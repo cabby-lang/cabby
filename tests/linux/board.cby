@@ -1,0 +1,17 @@
+// a board's sensors (run_linux_tests.sh, CABBY_SYSFS=tests/linux/board):
+// no temperatures from hwmon, so the thermal zones', as a Raspberry Pi has
+// them; and a service the system won't start without the administrator
+use linux
+
+int main {
+	for T in linux.temperatures {
+		println T.chip, T.label, T.value, T.unit
+	}
+	linux.service Ssh = linux.service_named "ssh"
+	println "stop, not as root:", Ssh.stop, Ssh.active
+	return 0
+}
+
+//> cpu-thermal thermal_zone0 51.54 °C
+//> gpu-thermal thermal_zone1 49.0 °C
+//> stop, not as root: false active

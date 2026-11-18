@@ -1,0 +1,14 @@
+// standard.hby — the parts of C's standard library that Cabby doesn't
+// have its own way to do yet: formatted printing, whole-number size,
+// random numbers, leaving early, and running a command.
+// A `str` parameter is passed to C as a NUL-terminated string, without moving it.
+//
+// The full reference is standard.md, next to this file.
+
+extern int printf str format, ...
+extern int abs int x
+extern long labs long x
+extern int rand void
+extern void srand unsigned int seed
+extern void exit int status
+extern int system str command

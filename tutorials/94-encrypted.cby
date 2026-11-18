@@ -1,0 +1,121 @@
+// Tutorial 94: Encrypted — HTTPS, and a server's own certificate
+//
+// Run it:      cabby 94-encrypted.cby
+// Or compile:  cabby -c 94-encrypted.cby && ./94-encrypted
+// Library:     use networks (and threads, for the visitor)
+// Topics:      networks.make_certificate, set_certificate, encrypted,
+//              networks.trust_certificate, networks.can_connect_encrypted,
+//              networks.connect_encrypted, https:// and wss://
+//
+// What goes over a network can be read, and changed, by anything it passes
+// through on the way. Encrypted, it can't: a web server with a certificate
+// answers in HTTPS, and a server's connections are TLS. The certificate
+// says which computer it is, so a visitor knows it's talking to the right
+// one.
+//
+// On the internet, a certificate comes from someone browsers trust (Let's
+// Encrypt's are free). For this computer, or a home network,
+// make_certificate makes one of its own, and the visitor is told to trust
+// it.
+
+use networks
+use threads
+use events
+use files
+
+// ---- the site, and a server, both encrypted
+
+object safe_site {
+	networks.web_server Web
+	networks.server Vault
+
+	void open {
+		networks.make_certificate "localhost", "cabby-cert.pem", "cabby-key.pem"
+		Web.set_certificate "cabby-cert.pem", "cabby-key.pem"
+		Web.on_request answer
+		Web.listen_here 0
+		Vault.set_certificate "cabby-cert.pem", "cabby-key.pem"
+		Vault.on_line heard
+		Vault.listen_here 0
+		println "the site is encrypted:", Web.encrypted, "and the vault:", Vault.encrypted
+	}
+
+	void answer {
+		Web.send_text "Hello, securely! You asked for " + Web.path
+	}
+
+	void heard {
+		Vault.reply "the vault says: " + Vault.line.upper
+	}
+
+	void close {
+		Web.close
+		Vault.close
+		files.delete "cabby-cert.pem"
+		files.delete "cabby-key.pem"
+	}
+}
+
+// ---- a visitor, on a worker
+
+object visitor : threads.worker {
+	long WebPort
+	long VaultPort
+	list str Said
+
+	void work {
+		// before it's trusted: no connection at all
+		Said.add "can connect before trusting: " + networks.can_connect_encrypted("localhost", VaultPort).text
+		networks.trust_certificate "cabby-cert.pem"
+		Said.add "and after: " + networks.can_connect_encrypted("localhost", VaultPort).text
+		Said.add networks.download("https://localhost:" + WebPort.text + "/recipes")
+		networks.connection C = networks.connect_encrypted "localhost", VaultPort
+		Said.add "the connection is encrypted: " + C.encrypted.text
+		C.send_line "open sesame"
+		if C.read_line {
+			Said.add C.line
+		}
+		C.close
+	}
+}
+
+object evening {
+	safe_site Site
+	visitor Guest
+
+	void begin {
+		Site.open
+		Guest.WebPort = Site.Web.port
+		Guest.VaultPort = Site.Vault.port
+		Guest.on_done finished
+		Guest.start
+		events.run
+	}
+
+	void finished {
+		for Line in Guest.Said {
+			println Line
+		}
+		Site.close
+	}
+}
+
+int main {
+	evening E
+	E.begin
+}
+
+// Try this:
+//  - Take out `trust_certificate`, and see what download says.
+//  - Make the certificate for this computer's own name (`system.hostname`,
+//    with `use system`), listen with `listen 8443`, and visit
+//    https://<that name>:8443 from another computer's browser: it warns,
+//    because it doesn't know the certificate; go on past it.
+
+// ---------------------------------------------------------------- output
+//> the site is encrypted: true and the vault: true
+//> can connect before trusting: false
+//> and after: true
+//> Hello, securely! You asked for /recipes
+//> the connection is encrypted: true
+//> the vault says: OPEN SESAME

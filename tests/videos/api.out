@@ -1,0 +1,29 @@
+matroska,webm | ffv1 | flac | Cabby's test colors
+160 by 90 for 3.0 seconds at 10.0
+picture: true sound: true
+position: 0.0 playing: false ended: false
+0.0 -> #004080 #ff0000 160 90
+0.35 -> #184080 #ff0000 160 90
+0.99 -> #484080 #ff0000 160 90
+1.0 -> #504080 #00ff00 160 90
+2.55 -> #c84080 #0000ff 160 90
+2.99 -> #e84080 #0000ff 160 90
+5.0 -> #e84080 #0000ff 160 90
+position after: 3.0
+saved: true
+wav: 576044 48000 2 576000
+samples: 8192 4096 -8192 0
+looping: false volume: 100
+looping: true volume: 40
+volume past 100: 100
+seeked: 1.5 false
+rewound: 0.0
+matroska,webm | ffv1 |  | Cabby's test colors
+160 by 90 for 1.0 seconds at 10.0
+picture: true sound: false
+saved: false false
+matroska,webm |  | flac | 
+0 by 0 for 1.0 seconds at 0.0
+picture: false sound: true
+can open: true false false
+ffmpeg: true

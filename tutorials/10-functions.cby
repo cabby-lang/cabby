@@ -1,0 +1,114 @@
+// Tutorial 10: Functions
+//
+// Run it:      cabby 10-functions.cby
+// Keywords:    void, return
+//
+// A function is written as its return type, its name and its parameters,
+// with no parentheses:
+//
+//     int add int a, int b {
+//
+// `void` means "returns nothing". A function with no parameters is just
+// `void greet {`.
+
+int add int a, int b {
+	return a + b
+}
+
+void greet {
+	println "hello!"
+}
+
+void repeat str Word, int Times {
+	print Word
+	for int i = 1; i < Times; i++ {
+		print "", Word
+	}
+	println
+}
+
+// `return` leaves the function at once, from anywhere inside it.
+bool is_even int n {
+	if n % 2 == 0 {
+		return true
+	}
+	return false
+}
+
+// A function can call itself (recursion).
+long factorial int n {
+	if n <= 1 {
+		return 1
+	}
+	return n * factorial(n - 1)
+}
+
+// Functions can be used before they are defined: `later` comes at the end.
+// A *prototype* (the header with no body) may be given first if you like;
+// it must match the definition.
+int later int x
+
+int main {
+	// A call's arguments are everything after the function's name, to the
+	// end of the line. Parentheses just mark where they end.
+	greet
+	repeat "hip", 2
+	println add(2, 3)
+	println add 2, 3           // println(add(2, 3)): add takes the rest of the line
+
+	// Inside an expression a call also takes everything after it, up to the
+	// end of the line or the closing parenthesis around it. So when more
+	// follows, wrap the call, or just its arguments, in parentheses:
+	int Sum = (add 1, 2) + 3
+	int Same = add(1, 2) + 3   // parentheses around the arguments end it too
+	println "sum:", Sum, Same
+
+	// At the start of a statement, a parenthesis right after the name holds the
+	// call's arguments only if it holds all of them. Otherwise it is just
+	// the start of the first argument:
+	int a = 1, b = 2
+	println a + b * 2          // 5
+	println (a + b) * 2        // 6: prints (a + b) * 2
+	println(a + b) * 2         // 6 too: spaces make no difference
+	// println(a + b) alone holds everything and prints 3: it works, but the
+	// style is println a + b (cabby --style points it out)
+
+	println "4 even?", is_even(4), "7 even?", is_even(7)
+	println "10! =", factorial(10)
+	println later(20)
+
+	// Arguments are converted to the parameter's type when nothing is lost:
+	// an int to a long or a double is fine; a double to an int is not.
+	println factorial(5)
+}
+
+int later int x {
+	return x * 2 + 1
+}
+
+// A function with no parameters can be used without parentheses anywhere:
+// `int t = tick + 1` calls tick. (Cabby has no function values, so a
+// function's name can only mean calling it.)
+//
+// Try this:
+//  - Print `is_even 4 == true`. A comparison is a value like any other, so
+//    `4 == true` is worked out first and becomes is_even's argument. Then
+//    print `(is_even 4) == true`, which compares is_even's answer instead.
+//  - Write `int max int a, int b` and print max(3, 9).
+//  - Write `int fib int n` that returns the nth Fibonacci number
+//    recursively. How long does fib(32) take? Now try it compiled
+//    (`cabby -c 10-functions.cby`).
+
+// ---------------------------------------------------------------- output
+//> hello!
+//> hip hip
+//> 5
+//> 5
+//> sum: 6 6
+//> 5
+//> 6
+//> 6
+//> 4 even? true 7 even? false
+//> 10! = 3628800
+//> 41
+//> 120

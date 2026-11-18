@@ -1,0 +1,112 @@
+// events.hby — timers, and waiting for things to happen.
+//
+//     use events
+//
+//     object clock {
+//         timer Tick
+//         clock {
+//             Tick.on_tick show            calls show ...
+//             Tick.every time.seconds(1)   ... every second (Tick.after ...: once)
+//         }
+//         inner void show {
+//             println "tick"
+//         }
+//     }
+//
+//     int main {
+//         clock C
+//         events.run                       waits, calling handlers, until nothing
+//     }                                    is left to wait for
+//
+// `events.run` returns when no timer is running and no process with
+// handlers is still going; `events.stop` (in a handler) ends it sooner.
+// A gui or tui window's `run` waits in the same loop, so timers and
+// processes carry on while a window is open.
+//
+// The full reference is events.md, next to this file.
+
+use time
+
+// ---- the C side (the event loop in Cabby's runtime); use timer instead
+
+extern int cby_events_waiting void
+extern void cby_events_step int wait_ms
+
+// Waits for the next thing to happen (a timer, a line from a process or a
+// connection...), and calls its handlers: for a program with a loop of
+// its own, where events.run would wait for everything. It returns at once
+// when nothing is left to wait for.
+void events.step {
+	if cby_events_waiting() is not 0 {
+		cby_events_step -1
+	}
+}
+
+// true while there's something to wait for: a timer running, a process
+// or a connection with handlers, a server listening
+bool events.waiting {
+	return cby_events_waiting() is not 0
+}
+
+extern long cby_timer_new void
+extern void cby_timer_set long id, handler fire
+extern void cby_timer_start long id, long ms, int repeat
+extern void cby_timer_stop long id
+extern int cby_timer_running long id
+extern void cby_timer_free long id
+
+// ---- a timer
+
+object timer {
+	inner long Id
+	inner handler TickHandler
+
+	// calls h each time the timer goes off
+	void on_tick handler h {
+		TickHandler = h
+	}
+
+	// goes off every so often (Heat.every time.seconds(1)), until stopped
+	void every duration Wait {
+		open
+		cby_timer_start Id, Wait.whole_milliseconds, 1
+	}
+
+	// goes off once, after a while (Pop.after time.milliseconds(250))
+	void after duration Wait {
+		open
+		cby_timer_start Id, Wait.whole_milliseconds, 0
+	}
+
+	void stop {
+		if Id is not 0 {
+			cby_timer_stop Id
+		}
+	}
+
+	// true while it is waiting to go off
+	bool is_running const {
+		if Id is 0 {
+			return false
+		}
+		return cby_timer_running(Id) is not 0
+	}
+
+	// (the timer is made when it is first needed)
+	inner void open {
+		if Id is 0 {
+			Id = cby_timer_new
+			cby_timer_set Id, fire
+		}
+	}
+
+	inner void fire {
+		TickHandler.call
+	}
+
+	~timer {
+		if Id is not 0 {
+			cby_timer_free Id
+		}
+	}
+}

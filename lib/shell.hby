@@ -1,0 +1,86 @@
+// shell.hby — running commands, and environment variables.
+//
+//     use shell
+//
+//     str Today = shell.run "date +%A"             what the command printed
+//     int Status = shell.status "make test"        its exit status (0: it worked); its output shows
+//     str Home = shell.get "HOME"                  an environment variable
+//     shell.has "EDITOR"                           true if it is set
+//     shell.set "LANG", "C"                        for this program and the commands it runs
+//     shell.unset "LANG"
+//
+// Commands are run by /bin/sh, so pipes (|), redirections (>) and the
+// rest of the shell's language work in them. shell.run gives what the
+// command printed, without the line ends at the very end; what it prints
+// to stderr shows as usual. If the command fails (an exit status other
+// than 0), shell.run is a panic that says how; use shell.status for
+// commands that may fail. shell.get is a panic if the variable isn't set;
+// check first with shell.has.
+//
+// These are built into Cabby; this header turns them on. The full
+// reference is shell.md, next to this file. The current directory is in the
+// directories library (directories.current, directories.change_to).
+//
+// Two more ways to run something, written here: shell.run_with gives a
+// command input (its stdin); shell.run_program runs a program with its
+// arguments as a list, with no shell in between, so nothing in them needs
+// quoting (a file's name with spaces or quotes in it is just itself).
+//
+//     str Sorted = shell.run_with "sort", Names
+//     str Listed = shell.run_program {"ls", "-l", Folder}
+//     str Counted = shell.run_program_with {"wc", "-w"}, Text
+//     int Status = shell.program_status {"grep", "-q", Word, Name}
+
+use addresses
+
+extern long cby_shell_program str joined, int through_shell, str input, int has_input, int capture, int must_work
+extern void cby_shell_take address char dst
+extern int cby_shell_last_status void
+
+static str shell_taken long Length {
+	str Text = " ".repeat Length
+	address char Room = addresses.of_text Text
+	cby_shell_take Room
+	return Text
+}
+
+static str shell_joined const list str &Arguments {
+	if Arguments.length == 0 {
+		return ""
+	}
+	str Joined
+	for I in Arguments.length {
+		if Arguments[I].contains "\x1f" {
+			return "\x1f"
+		}
+		if I > 0 {
+			Joined += "\x1f"
+		}
+		Joined += Arguments[I]
+	}
+	return Joined
+}
+
+// what the command printed, given Input (its stdin): a panic if it fails,
+// as shell.run is
+str shell.run_with const str &Command, const str &Input {
+	return shell_taken cby_shell_program(Command, 1, Input, 1, 1, 1)
+}
+
+// what the program printed: the list's first is the program, the rest its
+// arguments, each as it is. A panic if it fails.
+str shell.run_program const list str &Arguments {
+	return shell_taken cby_shell_program(shell_joined(Arguments), 0, "", 0, 1, 1)
+}
+
+// the same, given Input (its stdin)
+str shell.run_program_with const list str &Arguments, const str &Input {
+	return shell_taken cby_shell_program(shell_joined(Arguments), 0, Input, 1, 1, 1)
+}
+
+// its exit status (0: it worked; 127: there's no such program); what it
+// prints goes straight to the screen
+int shell.program_status const list str &Arguments {
+	cby_shell_program shell_joined(Arguments), 0, "", 0, 0, 0
+	return cby_shell_last_status()
+}

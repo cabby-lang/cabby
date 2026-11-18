@@ -1,0 +1,132 @@
+// bluetooth-connect.cby — find Bluetooth devices nearby, choose one, and
+// pair with it and connect to it.
+//
+// Written by Thomas Paul Whalan, and tidied up for Cabby's examples.
+//
+//     cabby bluetooth-connect.cby
+//
+// A device paired long ago whose keys have gone stale (it was reset, or
+// paired with another computer since) won't connect: it offers to forget
+// it and pair again, as the system's own Bluetooth settings would.
+//
+// Earphones and speakers must be in pairing mode while it searches (most
+// flash a light: hold the power button, or the button on the case). On
+// Linux, sound to them needs PipeWire's Bluetooth support too (the
+// 'libspa-0.2-bluetooth' package on Debian; 'pipewire-pulse' on Arch):
+// without it, pairing works but connecting doesn't ("profile
+// unavailable").
+
+use bluetooth
+use time
+
+struct found {
+	str Name
+	str Address
+}
+
+// a name that's only its address written another way ("AA-BB-..."): none
+str name_of const bluetooth.device &D {
+	if D.name.replace("-", "") == D.address.replace(":", "") {
+		return ""
+	}
+	return D.name
+}
+
+bool pair_with bluetooth.device &D {
+	println "Pairing..."
+	if D.pair {
+		return true
+	}
+	println "It didn't pair:", bluetooth.error
+	return false
+}
+
+int main {
+	if !bluetooth.available {
+		println "There's no Bluetooth here (or its service isn't running)."
+		return 1
+	}
+	if !bluetooth.is_on {
+		print "Bluetooth is off. Turn it on? (Y/n) "
+		char Answer = read_char
+		if Answer == 'n' or Answer == 'N' {
+			return 1
+		}
+		if !bluetooth.turn_on {
+			println "It didn't turn on:", bluetooth.error
+			return 1
+		}
+	}
+
+	println "Searching for 10 seconds. Please wait..."
+	list found Devices
+	list bluetooth.device Heard = bluetooth.search time.seconds(10) else Why {
+		println "It couldn't search:", Why
+		return 1
+	}
+	for D in Heard {
+		Devices.add found{.Name = name_of(D), .Address = D.address}
+	}
+	if Devices.length == 0 {
+		println "Nothing was found. Is it in pairing mode?"
+		return 1
+	}
+
+	println "\n    Device name             Address"
+	for I in Devices.length {
+		str Name = Devices[I].Name.copy
+		if Name == "" {
+			Name = "(no name)"
+		}
+		println " " + (I + 1).text + ". " + Name + " ".repeat(24 - Name.length) + Devices[I].Address
+	}
+	str Input = input "Connect to which? "
+	int Choice = Input.to_int else 0
+	if Choice < 1 or Choice > Devices.length {
+		println "That isn't one of them."
+		return 2
+	}
+
+	str Address = Devices[Choice - 1].Address.copy
+	bluetooth.device Chosen = bluetooth.device_named Address
+	bool WasPaired = Chosen.paired
+	if !WasPaired and !pair_with(Chosen) {
+		return 3
+	}
+	println "Connecting..."
+	if Chosen.connect {
+		println "Connected to", Chosen.name
+		return 0
+	}
+	println "It didn't connect:", bluetooth.error
+	if !WasPaired {
+		return 3
+	}
+	// paired long ago, its keys may be stale (it was paired again with
+	// another computer, or reset): forgotten, and paired afresh
+	print "Forget it and pair again? (Y/n) "
+	char Again = read_char
+	if Again == 'n' or Again == 'N' {
+		return 3
+	}
+	if !Chosen.forget {
+		println "It couldn't be forgotten:", bluetooth.error
+		return 3
+	}
+	println "Forgotten. Searching for it again (pairing mode, please)..."
+	bluetooth.search time.seconds(10) else { }
+	bluetooth.device Fresh = bluetooth.device_named Address
+	if !Fresh.found {
+		println "It wasn't found again: is it in pairing mode?"
+		return 3
+	}
+	if !pair_with(Fresh) {
+		return 3
+	}
+	if !Fresh.connect {
+		println "It still didn't connect:", bluetooth.error
+		return 3
+	}
+	println "Connected to", Fresh.name
+	return 0
+}

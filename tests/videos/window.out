@@ -1,0 +1,23 @@
+pixel 60 100: #004080
+pixel 60 100: #184080
+pixel 300 100: #ff0000
+tick: 1000 true
+pixel 60 100: #684080
+pixel 300 100: #00ff00
+pixel 60 100: #104080
+pixel 300 100: #ff0000
+tick: 250 false
+pixel 60 100: #104080
+tick: 650 true
+tick: 1650 true
+tick: 2650 true
+ended 1 at 3000 playing: false
+pixel 60 100: #004080
+pixel 300 100: #ff0000
+tick: 400 true
+tick: 1400 true
+tick: 2400 true
+tick: 400 true
+ended 2 at 500 playing: true
+pixel 60 100: #284080
+pixel 60 100: #004080

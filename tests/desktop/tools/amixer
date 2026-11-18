@@ -1,0 +1,18 @@
+#!/bin/sh
+# a stand-in (run_desktop_tests.sh): there only when CABBY_HAVE names it
+case ",$CABBY_HAVE," in *",$(basename "$0"),"*) ;; *) exit 127 ;; esac
+S=$CABBY_TEST_STATE
+# ALSA's
+if [ "$1" = get ]; then
+	m=on; [ "$(cat "$S/muted")" = 1 ] && m=off
+	echo "Simple mixer control 'Master',0"
+	echo "  Capabilities: pvolume pswitch pswitch-joined"
+	echo "  Front Left: Playback 29491 [$(cat "$S/level")%] [-20.00dB] [$m]"
+	echo "  Front Right: Playback 29491 [$(cat "$S/level")%] [-20.00dB] [$m]"
+	exit 0
+fi
+case "$4" in
+mute) echo 1 > "$S/muted" ;;
+unmute) echo 0 > "$S/muted" ;;
+*%) echo "$4" | tr -d % > "$S/level" ;;
+esac

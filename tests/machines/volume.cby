@@ -1,0 +1,22 @@
+// The volume: read, changed, read back, and put back as it was.
+use volume
+
+int main {
+	if !volume.can_set {
+		println "volume can't be set here"
+		return 77
+	}
+	int Was = volume.level
+	int Want = 30
+	if Was == 30 {
+		Want = 40
+	}
+	volume.set Want
+	int Now = volume.level
+	volume.set Was
+	println "was", Was, "| set to", Want, "and read back", Now, "| put back to", volume.level
+	if Now < Want - 2 or Now > Want + 2 {
+		return 1
+	}
+	return 0
+}

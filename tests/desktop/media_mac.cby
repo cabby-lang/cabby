@@ -1,0 +1,11 @@
+// the media library, the Mac's way: the osascript stand-in plays
+// Spotify and Music, whichever CABBY_MAC_APPS says are open
+use media
+
+int main {
+	println "player: [" + media.player + "]", "playing:", media.playing
+	println media.title, "|", media.artist, "|", media.album
+	println "play_pause:", media.play_pause, "playing:", media.playing
+	println "next:", media.next
+	return 0
+}

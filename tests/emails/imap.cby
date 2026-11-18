@@ -1,0 +1,289 @@
+// A stand-in for an email server's mailboxes (IMAP), for
+// run_emails_tests.sh: it prints its port, lets "tom@example.com" in with
+// the password "secret" (anyone else turned down), and has three messages
+// in INBOX (made with emails.message, as any mail program would send
+// them), and an empty Archive. It answers what emails.mailbox asks:
+// LOGIN, LIST, SELECT, STATUS, UID SEARCH, UID FETCH (with the message as
+// a literal), UID STORE, UID MOVE, APPEND (a message as a literal, read
+// a line at a time), EXPUNGE and LOGOUT. It ends with the
+// test.
+use networks
+use events
+use emails
+use files
+
+object message {
+	long Uid
+	str Folder
+	str Raw
+	bool Seen
+	bool Flagged
+	bool Deleted
+	str From
+	str Subject
+}
+
+object imap {
+	networks.server S
+	list message Box
+	long NextUid
+	lookup long str Selected
+	// an APPEND's message, coming in: how many bytes are still to come
+	// (0: none; -1: it's all here, the line end after it next), and so far
+	long Pending
+	long PendingWho
+	str PendingTag
+	str PendingFolder
+	bool PendingSeen
+	str PendingRaw
+
+	void begin {
+		files.write "scales.txt", "C major: C D E F G A B C\n"
+		add "Ana Rossi <ana@example.com>", "Lesson on Friday", "Hi Tom,\n\nCan we move the lesson to four?\n\nAna", false
+		add "Bo <bo@example.com>", "Λόγος, and café", "Ἀρχὴ ἥμισυ παντός.", true
+		add "Ana Rossi <ana@example.com>", "The scales", "They're attached.", false
+		S.on_connect hello
+		S.on_line said
+		S.listen_here 0
+		println S.port
+		events.run
+	}
+
+	void add const str &From, const str &Subject, const str &Text, bool Seen {
+		emails.message M
+		M.set_from From
+		M.add_to "Tom <tom@example.com>"
+		M.set_subject Subject
+		M.set_text Text
+		if Subject == "The scales" {
+			M.attach "scales.txt"
+		}
+		NextUid += 1
+		message Each
+		Each.Uid = NextUid + 100
+		Each.Folder = "INBOX"
+		Each.Raw = M.text
+		Each.Seen = Seen
+		Each.From = From.copy
+		Each.Subject = Subject.copy
+		Box.add Each
+	}
+
+	void say long Who, const str &Line {
+		S.send_to Who, Line + "\r\n"
+	}
+
+	void hello {
+		Selected[S.from] = ""
+		say S.from, "* OK [CAPABILITY IMAP4rev1 MOVE] Cabby's stand-in ready"
+	}
+
+	void said {
+		long Who = S.from
+		str Line = S.line
+		if Pending != 0 and Who == PendingWho {
+			appending Line
+			return
+		}
+		long Space = Line.find " "
+		if Space < 0 {
+			return
+		}
+		str Tag = Line[to Space - 1]
+		str Rest = Line[Space + 1 to]
+		str Upper = Rest.upper
+		if Upper.starts_with "LOGIN " {
+			if Rest == "LOGIN \"tom@example.com\" \"secret\"" {
+				say Who, Tag + " OK LOGIN completed"
+			} else {
+				say Who, Tag + " NO [AUTHENTICATIONFAILED] Invalid credentials"
+			}
+		} else if Upper.starts_with "LIST " {
+			say Who, "* LIST (\\HasNoChildren) \"/\" \"INBOX\""
+			say Who, "* LIST (\\HasNoChildren) \"/\" \"Archive\""
+			say Who, "* LIST (\\Noselect \\HasChildren) \"/\" \"[Gmail]\""
+			say Who, Tag + " OK LIST completed"
+		} else if Upper.starts_with "SELECT " {
+			str Name = Rest[8 to Rest.length - 2]
+			if Name == "INBOX" or Name == "Archive" {
+				Selected[Who] = Name.copy
+				say Who, "* " + count(Name, false).text + " EXISTS"
+				say Who, Tag + " OK [READ-WRITE] SELECT completed"
+			} else {
+				say Who, Tag + " NO [NONEXISTENT] No such folder"
+			}
+		} else if Upper.starts_with "STATUS " {
+			long Quote = Rest.find "\" ("
+			str Name = Rest[8 to Quote - 1]
+			say Who, "* STATUS \"" + Name + "\" (MESSAGES " + count(Name, false).text + " UNSEEN " + count(Name, true).text + ")"
+			say Who, Tag + " OK STATUS completed"
+		} else if Upper.starts_with "UID SEARCH " {
+			str Criteria = Rest[11 to]
+			search Who, Tag, Criteria
+		} else if Upper.starts_with "UID FETCH " {
+			str After = Rest[10 to]
+			fetch Who, Tag, After[to After.find(" ") - 1].to_long
+		} else if Upper.starts_with "UID STORE " {
+			str Change = Rest[10 to]
+			store Who, Tag, Change
+		} else if Upper.starts_with "UID MOVE " {
+			str After = Rest[9 to]
+			long Gap = After.find " "
+			long Uid = After[to Gap - 1].to_long
+			str To = After[Gap + 2 to After.length - 2]
+			for I in Box.length {
+				if Box[I].Uid == Uid {
+					Box[I].Folder = To.copy
+				}
+			}
+			say Who, Tag + " OK MOVE completed"
+		} else if Upper.starts_with "APPEND " {
+			long Quote = Rest.find "\" ("
+			PendingFolder = Rest[8 to Quote - 1]
+			PendingSeen = Rest.contains "\\Seen"
+			long Open = Rest.find "{"
+			Pending = Rest[Open + 1 to Rest.length - 2].to_long
+			PendingWho = Who
+			PendingTag = Tag.copy
+			PendingRaw = ""
+			say Who, "+ Ready for the message"
+		} else if Upper == "EXPUNGE" {
+			for I in Box.length {
+				if Box[I].Deleted {
+					Box[I].Folder = ""   // (gone, for good)
+				}
+			}
+			say Who, Tag + " OK EXPUNGE completed"
+		} else if Upper == "LOGOUT" {
+			say Who, "* BYE logging out"
+			say Who, Tag + " OK LOGOUT completed"
+		} else {
+			say Who, Tag + " BAD not known here: " + Rest
+		}
+	}
+
+	// a line of an APPEND's message (each came with \r\n), or the line end
+	// after it
+	void appending const str &Line {
+		if Pending > 0 {
+			PendingRaw += Line + "\r\n"
+			Pending -= Line.length + 2
+			if Pending > 0 {
+				return
+			}
+			if Pending == 0 {
+				Pending = -1   // (the line end after it, next)
+				return
+			}
+		}
+		Pending = 0
+		NextUid += 1
+		message Each
+		Each.Uid = NextUid + 100
+		Each.Folder = PendingFolder.copy
+		Each.Raw = PendingRaw.copy
+		Each.Seen = PendingSeen
+		Each.Subject = "(saved)"
+		long Uid = Each.Uid
+		Box.add Each
+		say PendingWho, PendingTag + " OK [APPENDUID 1 " + Uid.text + "] APPEND completed"
+	}
+
+	long count const str &Folder, bool UnreadOnly const {
+		long N = 0
+		for M in Box {
+			if M.Folder == Folder and (!UnreadOnly or !M.Seen) {
+				N++
+			}
+		}
+		return N
+	}
+
+	void search long Who, const str &Tag, const str &What {
+		str Criteria = What.copy
+		if Criteria.starts_with "CHARSET UTF-8 " {
+			Criteria = Criteria[14 to]
+		}
+		str Found = "* SEARCH"
+		for M in Box {
+			if M.Folder == Selected[Who] and matches(M, Criteria) {
+				Found += " " + M.Uid.text
+			}
+		}
+		say Who, Found
+		say Who, Tag + " OK SEARCH completed"
+	}
+
+	bool matches const message &M, const str &Criteria const {
+		if Criteria == "ALL" {
+			return true
+		}
+		if Criteria == "UNSEEN" {
+			return !M.Seen
+		}
+		long Quote = Criteria.find "\""
+		str Words = Criteria[Quote + 1 to Criteria.length - 2]
+		if Criteria.starts_with "FROM " {
+			return M.From.contains Words
+		}
+		if Criteria.starts_with "SUBJECT " {
+			return M.Subject.contains Words
+		}
+		return M.Raw.contains Words
+	}
+
+	void fetch long Who, const str &Tag, long Uid {
+		str Answer
+		long Seq = 0
+		for M in Box {
+			if M.Folder == Selected[Who] {
+				Seq++
+				if M.Uid == Uid {
+					str Flags = ""
+					if M.Seen {
+						Flags = "\\Seen"
+					}
+					if M.Flagged {
+						if Flags is not "" {
+							Flags += " "
+						}
+						Flags += "\\Flagged"
+					}
+					str Head = "* " + Seq.text + " FETCH (UID " + Uid.text + " FLAGS (" + Flags + ") RFC822.SIZE "
+					Head += M.Raw.length.text + " BODY[] {" + M.Raw.length.text + "}\r\n"
+					Answer = Head + M.Raw + ")\r\n"
+				}
+			}
+		}
+		if Answer is not "" {
+			S.send_to Who, Answer
+		}
+		say Who, Tag + " OK FETCH completed"
+	}
+
+	void store long Who, const str &Tag, const str &What {
+		long Gap = What.find " "
+		long Uid = What[to Gap - 1].to_long
+		str Change = What[Gap + 1 to]
+		bool Adding = Change.starts_with "+"
+		for I in Box.length {
+			if Box[I].Uid == Uid {
+				if Change.contains "\\Seen" {
+					Box[I].Seen = Adding
+				}
+				if Change.contains "\\Flagged" {
+					Box[I].Flagged = Adding
+				}
+				if Change.contains "\\Deleted" {
+					Box[I].Deleted = Adding
+				}
+			}
+		}
+		say Who, Tag + " OK STORE completed"
+	}
+}
+
+int main {
+	imap I
+	I.begin
+}

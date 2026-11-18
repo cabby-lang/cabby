@@ -1,0 +1,50 @@
+// desktop.hby — what a desktop does, the same way on Linux and macOS:
+// notifications, and opening files and web addresses.
+//
+//     use desktop
+//
+//     desktop.notify "Backup", "All 2,341 files copied."
+//     desktop.open "https://cabby-lang.org"
+//
+// Linux: the desktop's notification server (over D-Bus) and xdg-open.
+// macOS: Notification Center (through osascript) and open. A program
+// needs nothing of its own for either.
+//
+// The full reference is desktop.md, next to this file.
+
+// ---- the C side (runtime/desktop.c)
+
+extern long cby_desktop_notify str app, str title, str body, long replaces
+extern int cby_desktop_open str what
+extern int cby_desktop_on_a_mac void
+
+// A notification, as the desktop shows them: true if it was shown
+// (false: nothing shows them, as on a computer with no notification
+// server running).
+bool desktop.notify const str &Title, const str &Body {
+	return cby_desktop_notify("Cabby", Title, Body, 0) is not 0
+}
+
+// A notification that can be changed where it is afterwards: its number,
+// for desktop.notify_again (0: it wasn't shown). On a Mac, where they
+// can't be changed, each is a new one.
+long desktop.notify_numbered const str &Title, const str &Body {
+	return cby_desktop_notify "Cabby", Title, Body, 0
+}
+
+// The notification Number (from notify_numbered), changed in place: a
+// progress "37%", say. Its number, which may be a new one.
+long desktop.notify_again long Number, const str &Title, const str &Body {
+	return cby_desktop_notify "Cabby", Title, Body, Number
+}
+
+// A file, a folder or a web address, opened in what the desktop opens it
+// with (a browser, the file manager, a picture viewer): true if it was.
+bool desktop.open const str &What {
+	return cby_desktop_open(What) is not 0
+}
+
+// true on a Mac, false on Linux: for the rare thing that has to differ
+bool desktop.on_a_mac {
+	return cby_desktop_on_a_mac is not 0
+}

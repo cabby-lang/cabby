@@ -1,0 +1,148 @@
+// Tutorial 65: Progress — a worker that says how it's going, and can stop
+//
+// Run it:      cabby 65-progress.cby
+// Or compile:  cabby -c 65-progress.cby && ./65-progress
+// Library:     use gui, use threads
+// Topics:      tell, on_message, message; ask_to_stop, stopping; a
+//              progress bar and a Cancel button
+//
+// Tutorial 64's window counted primes on a worker, and was told when it
+// was done. This one is told how it's going as well: the worker `tell`s
+// the window how far it's got, and the window's progress bar follows it.
+// And it can be canceled: the Cancel button asks the worker to stop,
+// and the worker, looking every so often, finishes early.
+//
+// While a worker works, its fields are its own, so neither of these is
+// done through them: a message is copied, so it's the window's once it's
+// sent, and asking to stop sets a flag that's the library's, not the
+// worker's.
+
+use gui
+use threads
+
+// ---- the job: counting the primes below a number, saying how it's going
+
+object prime_counter : threads.worker {
+	int Below                       // given
+	int Primes                      // worked out
+	bool Canceled                  // and whether it stopped early
+
+	void work {
+		Primes = 0
+		Canceled = false
+		long Said = 0                   // the last percent it told
+		for int N = 2; N < Below; N++ {
+			if N % 1000 is 0 {
+				if stopping {           // asked to stop: it finishes now
+					Canceled = true
+					return
+				}
+				long Percent = (long)N * 100 / Below
+				if Percent > Said {
+					Said = Percent
+					tell Percent.text   // "37": the window's now
+				}
+			}
+			if is_prime N {
+				Primes++
+			}
+		}
+	}
+
+	bool is_prime int N const {
+		for int D = 2; D * D <= N; D++ {
+			if N % D is 0 {
+				return false
+			}
+		}
+		return true
+	}
+}
+
+// ---- the window
+
+object counter_window : gui.window {
+	gui.entry Limit
+	gui.button Count
+	gui.button Cancel
+	gui.progress Bar
+	gui.label Answer
+	prime_counter Counter
+
+	void build {
+		set_title "Primes"
+		set_size 340, 200
+		add_label "Count the primes below:"
+		Limit = add_entry
+		gui.row Buttons = add_row
+		Count = Buttons.add_button "Count"
+		Cancel = Buttons.add_button "Cancel"
+		Count.on_click start_counting
+		Cancel.on_click cancel
+		Cancel.set_enabled false
+		Bar = add_progress
+		Answer = add_label ""
+		Counter.on_message show_progress    // each time it tells
+		Counter.on_done show_answer         // and once it's done
+	}
+
+	void start_counting {
+		if !Limit.text.is_number {
+			Answer.set_text "Type a number first."
+			return
+		}
+		Counter.Below = Limit.text.to_int
+		println "counting the primes below", Counter.Below
+		Counter.start
+		Count.set_enabled false
+		Cancel.set_enabled true
+		Bar.set_fraction 0.0
+		Answer.set_text "Counting..."
+	}
+
+	// each time the worker tells: how far it's got
+	void show_progress {
+		int Percent = Counter.message.to_int
+		Bar.set_fraction Percent / 100.0
+		Answer.set_text Percent.text + "%"
+	}
+
+	void cancel {
+		Counter.ask_to_stop             // it stops when it next looks
+		Answer.set_text "Stopping..."
+	}
+
+	void show_answer {
+		Count.set_enabled true
+		Cancel.set_enabled false
+		if Counter.Canceled {
+			Answer.set_text "Canceled."
+			println "canceled"
+			return
+		}
+		Bar.set_fraction 1.0
+		Answer.set_text Counter.Primes.text + " primes below " + Counter.Below.text
+		println Counter.Primes, "primes below", Counter.Below
+	}
+}
+
+int main {
+	counter_window W
+	W.run
+}
+
+// (For Cabby's test suite: a count to the end, then a long one, canceled
+// at once. "processes" waits until the worker's done.)
+// script: type 1 200000; click Count; processes; type 1 2000000000; click Count; click Cancel; processes; close
+//
+// Try this:
+//  - Type 20000000 and watch the bar; click Cancel part way.
+//  - Tell more than the percent: "37% (4000 primes so far)", and show it.
+//  - Close the window while it counts: dropping a worker asks it to stop
+//    too, and waits for it.
+
+// ---------------------------------------------------------------- output
+//> counting the primes below 200000
+//> 17984 primes below 200000
+//> counting the primes below 2000000000
+//> canceled

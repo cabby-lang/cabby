@@ -1,0 +1,300 @@
+// bytes.hby — bytes: a run of numbers from 0 to 255, for files that aren't text.
+//
+//     use bytes                                   (use files brings it too)
+//
+//     bytes Data = files.read_bytes "photo.png"
+//     println Data.length                         how many bytes
+//     println Data[0]                             137: one byte, an int from 0 to 255
+//     println Data.part(0, 4)                     89 50 4e 47 (bytes print in hexadecimal)
+//     Data[0] = 255                               change one
+//     Data.add 10                                 one more on the end
+//     int Width = Data.int_at_big 16              a 4-byte number inside, biggest byte first
+//     Data.add_int 640                            a 4-byte number on the end, smallest byte first
+//     str Text = Data.str                         the bytes as text
+//     bytes Raw = "Hello"                         text becomes bytes where bytes are wanted
+//     bytes Start = bytes.from_hex "89 50 4e 47"  written as they print
+//     println Data.dump                           16 a line, with where each line starts
+//
+// Numbers made of several bytes are stored in one of two orders: smallest
+// byte first (little-endian: what PCs use, and most formats), or biggest
+// byte first (big-endian: PNG, and networks). The plain methods use the
+// first; the ones ending _big, the second.
+//
+// The full reference is bytes.md, next to this file.
+
+use addresses
+
+// ---- the C side (in Cabby's runtime)
+
+extern long cby_bytes_new
+extern void cby_bytes_release long b
+extern long cby_bytes_length long b
+extern long cby_bytes_get long b, long i
+extern void cby_bytes_set long b, long i, long v
+extern void cby_bytes_add long b, long v
+extern void cby_bytes_add_bytes long b, long other
+extern long cby_bytes_part long b, long start, long count
+extern long cby_bytes_copy long b
+extern long cby_bytes_from_text str s, long length
+extern long cby_bytes_from_hex str s
+extern int cby_bytes_same long a, long b
+extern int cby_bytes_starts_with long a, long b
+extern long cby_bytes_find long a, long b, long from
+extern long cby_bytes_number_at long b, long at, long size, int big, int is_unsigned
+extern double cby_bytes_double_at long b, long at, int big
+extern void cby_bytes_put_number long b, long at, long size, int big, long v
+extern void cby_bytes_put_double long b, long at, int big, double d
+extern long cby_bytes_text long b, long what
+extern void cby_bytes_take_text address char dst
+
+// the text C has just made, as a str
+static str bytes_text_from_c long Length {
+	str Text = " ".repeat(Length)
+	if Length > 0 {
+		address char Room = addresses.of_text Text
+		cby_bytes_take_text Room
+	}
+	return Text
+}
+
+// ---- a run of bytes
+
+object bytes {
+	inner long Handle
+
+	bytes {
+		Handle = cby_bytes_new()
+	}
+
+	~bytes {
+		cby_bytes_release Handle
+	}
+
+	// (for the library's own functions: the value becomes these C bytes)
+	void adopt long Given {
+		cby_bytes_release Handle
+		Handle = Given
+	}
+
+	// (for libraries: these bytes, as their C side knows them)
+	long handle const {
+		return Handle
+	}
+
+	// ---- one byte: B[i] (and `for Byte in B`)
+
+	int item_at long Index const {
+		return (int)cby_bytes_get(Handle, Index)
+	}
+
+	void set_item_at long Index, int Value {
+		cby_bytes_set Handle, Index, Value
+	}
+
+	long length const {
+		return cby_bytes_length(Handle)
+	}
+
+	// one more byte on the end
+	void add int Value {
+		cby_bytes_add Handle, Value
+	}
+
+	// all of Other's bytes on the end
+	void add_bytes const bytes &Other {
+		cby_bytes_add_bytes Handle, Other.Handle
+	}
+
+	// Count bytes from Start, as bytes of their own
+	bytes part long Start, long Count const {
+		bytes P
+		P.adopt cby_bytes_part(Handle, Start, Count)
+		return P
+	}
+
+	bytes copy const {
+		bytes C
+		C.adopt cby_bytes_copy(Handle)
+		return C
+	}
+
+	// ---- comparing
+
+	bool same_as const bytes &Other const {
+		return cby_bytes_same(Handle, Other.Handle) != 0
+	}
+
+	bool starts_with const bytes &Other const {
+		return cby_bytes_starts_with(Handle, Other.Handle) != 0
+	}
+
+	// where Other's bytes first are, or -1
+	long find const bytes &Other const {
+		return cby_bytes_find(Handle, Other.Handle, 0)
+	}
+
+	long find_from const bytes &Other, long From const {
+		return cby_bytes_find(Handle, Other.Handle, From)
+	}
+
+	// ---- numbers inside, smallest byte first (little-endian)
+
+	int short_at long At const {
+		return (int)cby_bytes_number_at(Handle, At, 2, 0, 0)
+	}
+
+	int unsigned_short_at long At const {
+		return (int)cby_bytes_number_at(Handle, At, 2, 0, 1)
+	}
+
+	int int_at long At const {
+		return (int)cby_bytes_number_at(Handle, At, 4, 0, 0)
+	}
+
+	long unsigned_int_at long At const {
+		return cby_bytes_number_at(Handle, At, 4, 0, 1)
+	}
+
+	long long_at long At const {
+		return cby_bytes_number_at(Handle, At, 8, 0, 0)
+	}
+
+	double double_at long At const {
+		return cby_bytes_double_at(Handle, At, 0)
+	}
+
+	void set_short_at long At, long Value {
+		cby_bytes_put_number Handle, At, 2, 0, Value
+	}
+
+	void set_int_at long At, long Value {
+		cby_bytes_put_number Handle, At, 4, 0, Value
+	}
+
+	void set_long_at long At, long Value {
+		cby_bytes_put_number Handle, At, 8, 0, Value
+	}
+
+	void set_double_at long At, double Value {
+		cby_bytes_put_double Handle, At, 0, Value
+	}
+
+	void add_short long Value {
+		cby_bytes_put_number Handle, -1, 2, 0, Value
+	}
+
+	void add_int long Value {
+		cby_bytes_put_number Handle, -1, 4, 0, Value
+	}
+
+	void add_long long Value {
+		cby_bytes_put_number Handle, -1, 8, 0, Value
+	}
+
+	void add_double double Value {
+		cby_bytes_put_double Handle, -1, 0, Value
+	}
+
+	// ---- the same, biggest byte first (big-endian)
+
+	int short_at_big long At const {
+		return (int)cby_bytes_number_at(Handle, At, 2, 1, 0)
+	}
+
+	int unsigned_short_at_big long At const {
+		return (int)cby_bytes_number_at(Handle, At, 2, 1, 1)
+	}
+
+	int int_at_big long At const {
+		return (int)cby_bytes_number_at(Handle, At, 4, 1, 0)
+	}
+
+	long unsigned_int_at_big long At const {
+		return cby_bytes_number_at(Handle, At, 4, 1, 1)
+	}
+
+	long long_at_big long At const {
+		return cby_bytes_number_at(Handle, At, 8, 1, 0)
+	}
+
+	double double_at_big long At const {
+		return cby_bytes_double_at(Handle, At, 1)
+	}
+
+	void set_short_at_big long At, long Value {
+		cby_bytes_put_number Handle, At, 2, 1, Value
+	}
+
+	void set_int_at_big long At, long Value {
+		cby_bytes_put_number Handle, At, 4, 1, Value
+	}
+
+	void set_long_at_big long At, long Value {
+		cby_bytes_put_number Handle, At, 8, 1, Value
+	}
+
+	void set_double_at_big long At, double Value {
+		cby_bytes_put_double Handle, At, 1, Value
+	}
+
+	void add_short_big long Value {
+		cby_bytes_put_number Handle, -1, 2, 1, Value
+	}
+
+	void add_int_big long Value {
+		cby_bytes_put_number Handle, -1, 4, 1, Value
+	}
+
+	void add_long_big long Value {
+		cby_bytes_put_number Handle, -1, 8, 1, Value
+	}
+
+	void add_double_big double Value {
+		cby_bytes_put_double Handle, -1, 1, Value
+	}
+
+	// ---- as text
+
+	// in hexadecimal, a space between bytes: 89 50 4e 47 (what println shows)
+	str text const {
+		return bytes_text_from_c(cby_bytes_text(Handle, 0))
+	}
+
+	// the bytes as they are, as a str
+	str str_ const {
+		return bytes_text_from_c(cby_bytes_text(Handle, 1))
+	}
+
+	// a hex dump: 16 bytes a line, where each line starts, and the bytes
+	// that are letters
+	str dump const {
+		return bytes_text_from_c(cby_bytes_text(Handle, 2))
+	}
+}
+
+// ---- making bytes
+
+// a str's bytes; a str becomes bytes by itself where bytes are wanted
+// (bytes Raw = "Hello"), through this
+bytes bytes.from_str const str &Text {
+	bytes B
+	B.adopt cby_bytes_from_text(Text, Text.length)
+	return B
+}
+
+// bytes written in hexadecimal, as they print: "89 50 4e 47" (the
+// spaces can be left out)
+bytes bytes.from_hex const str &Hex {
+	bytes B
+	B.adopt cby_bytes_from_hex(Hex)
+	return B
+}
+
+// Count bytes, each Value
+bytes bytes.filled long Count, int Value {
+	bytes B
+	for i in Count {
+		B.add Value
+	}
+	return B
+}

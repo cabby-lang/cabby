@@ -1,0 +1,241 @@
+// Tutorial 69: A walking character — a small town
+//
+// Run it:      cabby 69-walking.cby
+// Or compile:  cabby -c 69-walking.cby && ./69-walking
+// Library:     use game
+// Topics:      add_sprite, animate, set_picture, a map of tiles, walking
+//              tile by tile, which way a character faces, reading a sign
+//
+// In the old handheld adventure games, the world is a grid of tiles, and
+// the hero walks from one tile to the next: a press of an arrow key starts
+// a step, and the step always finishes on a tile. While walking, the
+// hero's legs move: three pictures for each way they can face (standing,
+// left foot forward, right foot forward), shown in turn by `animate`.
+//
+// The town is a list of strings, a character for each tile: T a tree, ~
+// water, S a sign, = the path, f flowers, and . grass. Trees, water and
+// the sign are in the way. Walk up to the sign and press Space to read it.
+//
+// The pictures are in pictures/ next to this file (tools/make-town-pictures.py
+// draws them).
+
+use game
+
+const int TILE = 48                 // each tile's size, in pixels
+const int COLUMNS = 13              // the map's size, in tiles
+const int ROWS = 9
+const int SPEED = 3                 // pixels a frame: a step takes 48 / 3 = 16 frames
+const int LEG_TIME = 130            // milliseconds for each picture of the walk
+
+object town : game.window {
+	list str Map
+	game.sprite Hero
+	int Col                         // the tile the hero is on
+	int Row
+	str Facing                      // "down", "up", "left" or "right"
+	int Dx                          // the way the hero is stepping: -1, 0 or 1
+	int Dy
+	int StepsLeft                   // frames left of this step (0: standing on a tile)
+	bool Walking
+	bool Reading
+
+	void build {
+		Map = {
+			"TTTTTTTTTTTTT",
+			"T...f....~~~T",
+			"T.=====..~~~T",
+			"T.=S..=f....T",
+			"T.=...=====.T",
+			"Tf=.T.....=.T",
+			"T.=...f...=.T",
+			"T.=========.T",
+			"TTTTTTTTTTTTT"
+		}
+		set_title "Cabby Town"
+		set_size COLUMNS * TILE, ROWS * TILE
+		add_tiles
+		Col = 2
+		Row = 2
+		Facing = "down"
+		Hero = add_sprite "pictures/hero-down-1.png", middle_of(Col), middle_of(Row)
+		on_frame step
+		stage.on_draw draw_message
+	}
+
+	// one sprite for each tile; flowers and water move a little
+	void add_tiles {
+		for R in Map.length {
+			for C in Map[R].length {
+				char Tile = Map[R][C]
+				long X = middle_of C
+				long Y = middle_of R
+				if Tile == 'T' {
+					add_sprite "pictures/tile-tree.png", X, Y
+				} else if Tile == '~' {
+					game.sprite Water = add_sprite "pictures/tile-water-1.png", X, Y
+					Water.animate {"pictures/tile-water-1.png", "pictures/tile-water-2.png"}, 600
+				} else if Tile == 'f' {
+					game.sprite Flowers = add_sprite "pictures/tile-flowers-1.png", X, Y
+					Flowers.animate {"pictures/tile-flowers-1.png", "pictures/tile-flowers-2.png"}, 800
+				} else if Tile == 'S' {
+					add_sprite "pictures/tile-sign.png", X, Y
+				} else if Tile == '=' {
+					add_sprite "pictures/tile-path.png", X, Y
+				} else {
+					add_sprite "pictures/tile-grass.png", X, Y
+				}
+			}
+		}
+	}
+
+	long middle_of long Tile const {
+		return Tile * TILE + TILE / 2
+	}
+
+	bool is_free int C, int R const {
+		char Tile = Map[R][C]
+		return Tile != 'T' && Tile != '~' && Tile != 'S'
+	}
+
+	// ---- every frame
+
+	void step {
+		if Reading {
+			if key_press "space" {
+				Reading = false             // the message goes away
+			}
+			return
+		}
+		if StepsLeft > 0 {
+			// part of the way through a step: keep going
+			Hero.move Dx * SPEED, Dy * SPEED
+			StepsLeft--
+			if StepsLeft > 0 {
+				return
+			}
+			Col += Dx
+			Row += Dy
+			println "at", Col, Row
+		}
+
+		// on a tile: an arrow key held down starts the next step
+		str Way = ""
+		if key_hold "up" {
+			Way = "up"
+		} else if key_hold "down" {
+			Way = "down"
+		} else if key_hold "left" {
+			Way = "left"
+		} else if key_hold "right" {
+			Way = "right"
+		}
+		if Way == "" {
+			if Walking {
+				stand_still
+			}
+			if key_press "space" {
+				read_sign
+			}
+			return
+		}
+		walk Way
+	}
+
+	void walk str Way {
+		bool Turned = Way != Facing
+		Dx = 0
+		Dy = 0
+		if Way == "up" {
+			Dy = -1
+		} else if Way == "down" {
+			Dy = 1
+		} else if Way == "left" {
+			Dx = -1
+		} else {
+			Dx = 1
+		}
+		Facing = Way                        // (Way is moved into Facing: used last)
+		if !is_free(Col + Dx, Row + Dy) {
+			if Turned || Walking {
+				println "bump", Facing
+			}
+			stand_still                     // facing the way, but going nowhere
+			return
+		}
+		StepsLeft = TILE / SPEED
+		if Turned || !Walking {
+			// the walk's pictures: standing, one foot, standing, the other foot
+			str Name = "pictures/hero-" + Facing
+			Hero.animate {Name + "-1.png", Name + "-2.png", Name + "-1.png", Name + "-3.png"}, LEG_TIME
+			Walking = true
+		}
+	}
+
+	void stand_still {
+		Hero.set_picture "pictures/hero-" + Facing + "-1.png"
+		Walking = false
+	}
+
+	void read_sign {
+		int C = Col
+		int R = Row
+		if Facing == "up" {
+			R--
+		} else if Facing == "down" {
+			R++
+		} else if Facing == "left" {
+			C--
+		} else {
+			C++
+		}
+		if Map[R][C] == 'S' {
+			Reading = true
+			println "the sign says: Welcome to Cabby Town!"
+		}
+	}
+
+	// ---- over the sprites: the sign's message, in a box at the bottom
+
+	void draw_message {
+		if !Reading {
+			return
+		}
+		int Top = height - 90
+		stage.set_color "white"
+		stage.fill_rectangle 12, Top, width - 24, 78
+		stage.set_color "#2b2b38"
+		stage.set_line_width 4
+		stage.rectangle 12, Top, width - 24, 78
+		stage.set_font_size 22
+		stage.write 32, Top + 22, "Welcome to Cabby Town!"
+		stage.set_font_size 14
+		stage.write 32, Top + 52, "(Space to close)"
+	}
+}
+
+int main {
+	town t
+	t.run
+}
+
+// (Cabby's tests walk round the town:)
+// script: frames 10; tap right; frames 20; tap down; tap space; frames 10; tap space; hold right; frames 50; release right; frames 20; hold down; frames 60; release down; frames 20; close
+//
+// Try this:
+//  - Hold B to run: a SPEED of 6 instead of 3 (and LEG_TIME shorter).
+//  - Add a second sign, with a message of its own.
+//  - Make a door: a tile that, walked onto, moves the hero to another place
+//    on the map.
+
+// ---------------------------------------------------------------- output
+//> at 3 2
+//> bump down
+//> the sign says: Welcome to Cabby Town!
+//> at 4 2
+//> at 5 2
+//> at 6 2
+//> at 7 2
+//> at 7 3
+//> at 7 4
+//> at 7 5
+//> at 7 6

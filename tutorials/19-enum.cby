@@ -1,0 +1,69 @@
+// Tutorial 19: enum
+//
+// Run it:      cabby 19-enum.cby
+// Keywords:    enum
+//
+// An enum gives names to int constants. Each name is one more than the one
+// before, starting at 0, unless you give it a value.
+
+enum color {
+	RED              // 0
+	GREEN            // 1
+	BLUE             // 2
+}
+
+enum http_status {
+	OK = 200
+	CREATED          // 201
+	NOT_FOUND = 404
+	TEAPOT = 418
+}
+
+// An enum type can be used for variables and parameters. Its values are
+// ints underneath, so they print as numbers.
+str color_name color c {
+	switch c {
+		case RED:
+			return "red"
+		case GREEN:
+			return "green"
+		case BLUE:
+			return "blue"
+	}
+	return "unknown"
+}
+
+int main {
+	color c = GREEN
+	println c, color_name(c)
+
+	print "colors:"
+	for i in RED to BLUE {
+		print "", color_name(i)
+	}
+	println
+
+	println OK, CREATED, NOT_FOUND, TEAPOT
+
+	http_status s = NOT_FOUND
+	if s == NOT_FOUND {
+		println "page missing"
+	}
+
+	// An enum value is an int, so arithmetic works, and so does mixing with
+	// plain ints. (It keeps them simple, not strict.)
+	int Next = BLUE + 1
+	println "next would be", Next
+}
+
+// Try this:
+//  - Add YELLOW to color and make color_name handle it.
+//  - Give the enum names a gap (RED = 1, GREEN = 2, BLUE = 4) and use them
+//    as bit flags with | and &.
+
+// ---------------------------------------------------------------- output
+//> 1 green
+//> colors: red green blue
+//> 200 201 404 418
+//> page missing
+//> next would be 3

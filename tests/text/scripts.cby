@@ -1,0 +1,31 @@
+// (for run_text_tests.sh) a window of text in other scripts: each is laid
+// out as it's drawn, and CABBY_TEXT_ORDER writes down the order its
+// characters are shown in
+use gui
+
+object scripts : gui.window {
+	gui.canvas C
+
+	void build {
+		set_title "Scripts"
+		add_label "שלום עולם"
+		add_label "مرحبا بالعالم"
+		add_label "Hebrew in English: he said שלום לך twice."
+		add_label "عدد ١٢٣ and 2026 في السنة"
+		add_label "שלום (עולם)"
+		add_label "Cabby שלום, ok"
+		add_label "מחיר: -5.50 ש״ח"
+		add_label "Emoji: 🐈 ❤️"
+		C = add_canvas 300, 40
+		C.on_draw draw
+	}
+
+	void draw {
+		C.write 4, 4, "קטה 🐈 cat"
+	}
+}
+
+int main {
+	scripts S
+	S.run
+}

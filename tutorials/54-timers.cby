@@ -1,0 +1,107 @@
+// Tutorial 54: Timers — an egg timer
+//
+// Run it:      cabby 54-timers.cby
+// Library:     use gui
+// Topics:      every, after, stop_timers, progress bars
+//
+// A timer is a handler that is called by the clock instead of by a click:
+//
+//   every time.milliseconds(100), tick   calls tick every 100 milliseconds (10 times a second)
+//   after time.seconds(2), reset         calls reset once, 2 seconds from now
+//   stop_timers           stops all of this window's timers
+//
+// Timers belong to their window, like every handler: they only run while
+// the window is open, and they stop when it closes. Between ticks the
+// program sleeps, using no processor time.
+//
+// A clock that ticks isn't perfectly regular: a busy computer can call
+// `tick` a little late. So for anything that must be exact, count ticks as
+// this program does rather than adding up what you hoped the time was.
+
+use gui
+
+object egg_timer : gui.window {
+	gui.slider Seconds
+	gui.label TimeLeft
+	gui.progress Bar
+	gui.button Start
+	gui.button Stop
+	int Total                            // tenths of a second
+	int Left
+
+	void build {
+		set_title "Egg timer"
+		set_size 320, 220
+
+		add_label "Seconds:"
+		Seconds = add_slider 1, 60
+		Seconds.set_value 5
+		TimeLeft = add_label "Ready"
+		Bar = add_progress
+
+		gui.row Buttons = add_row
+		Start = Buttons.add_button "Start"
+		Stop = Buttons.add_button "Stop"
+		Start.on_click begin
+		Stop.on_click halt
+		Stop.set_enabled false
+	}
+
+	void begin {
+		Total = Seconds.value * 10
+		Left = Total
+		Start.set_enabled false
+		Stop.set_enabled true
+		Seconds.set_enabled false
+		Bar.set_fraction 0.0
+		every time.milliseconds(100), tick   // ten times a second
+	}
+
+	void tick {
+		Left--
+		Bar.set_fraction 1.0 - (double)Left / Total
+		TimeLeft.set_text ((Left + 9) / 10).text + " seconds left"
+		if Left > 0 && Left % 10 == 0 {
+			println Left / 10, "..."
+		}
+		if Left == 0 {
+			stop_timers
+			TimeLeft.set_text "Done!"
+			println "ding!"
+			after time.seconds(2), reset   // back to "Ready" in two seconds
+		}
+	}
+
+	void halt {
+		stop_timers
+		println "stopped"
+		reset
+	}
+
+	void reset {
+		TimeLeft.set_text "Ready"
+		Bar.set_fraction 0.0
+		Start.set_enabled true
+		Stop.set_enabled false
+		Seconds.set_enabled true
+	}
+}
+
+int main {
+	egg_timer t
+	t.run
+}
+
+// (For Cabby's test suite: a 2-second run to the end, then one stopped
+// early. The waits are generous, so a busy computer still passes.)
+// script: slide 1 2; click Start; wait 4000; click Start; wait 500; click Stop; close
+//
+// Try this:
+//  - Show minutes and seconds ("1:05") when the time is over a minute.
+//  - Add a "Pause" button: stop_timers without resetting, then Start
+//    carries on from `Left` instead of starting again.
+
+// ---------------------------------------------------------------- output
+//> 1 ...
+//> ding!
+//> stopped

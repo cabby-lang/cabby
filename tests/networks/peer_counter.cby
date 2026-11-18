@@ -1,0 +1,44 @@
+// (not a test of its own: the server tests/networks/two_programs.cby
+// talks to, started first by run_networks_tests.sh) A server that keeps a
+// count for each program connected: "add 5" adds, "total" says it, "quit"
+// ends the server.
+use networks
+use events
+
+object counter {
+	networks.server S
+	lookup long int Counts
+
+	void begin {
+		S.on_connect joined
+		S.on_line said
+		S.listen_here 0
+		println S.port                  // (the port, for the tests to find)
+		events.run
+	}
+
+	void joined {
+		Counts[S.from] = 0
+		S.reply "ready"
+	}
+
+	void said {
+		list str Words = S.line.split " "
+		if Words[0] is "add" {
+			Counts[S.from] += Words[1].to_int
+		} else if Words[0] is "total" {
+			S.reply "total " + Counts[S.from].text
+		} else if Words[0] is "quit" {
+			S.reply "goodbye"
+			S.close                     // (nothing left to wait for: events.run ends)
+		} else {
+			S.reply "what's '" + S.line + "'?"
+		}
+	}
+}
+
+int main {
+	counter C
+	C.begin
+	return 0
+}

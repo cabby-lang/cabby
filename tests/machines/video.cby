@@ -1,0 +1,28 @@
+// A video, played in a window with its sound: tutorial 67's test video,
+// or the file named after it.
+use videos
+use gui
+
+object player : gui.window {
+	videos.video Film
+
+	void build {
+		set_title "Cabby: a video with sound"
+		set_size 640, 420
+		gui.video Screen = add_video Film.source
+		Screen.show_controls
+		Film.play
+	}
+}
+
+int main int Argc, str Argv[] {
+	str Path = "../../tutorials/videos/colors.mkv"
+	if Argc > 1 {
+		Path = Argv[1].copy
+	}
+	player P
+	P.Film = videos.open Path
+	println Path + ":", P.Film.width, "by", P.Film.height, "| sound:", P.Film.has_sound, P.Film.sound_codec
+	P.run
+	return 0
+}

@@ -1,0 +1,4 @@
+// util.hby — declarations shared with example.cby. The definitions are in
+// util.cby, which `use local util` compiles in automatically.
+
+int clamp int x, int lo, int hi

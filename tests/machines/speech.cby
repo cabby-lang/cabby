@@ -1,0 +1,31 @@
+// Said aloud, saved as a file, and heard back by Whisper.
+use speech
+use files
+
+int main {
+	if !speech.can_speak {
+		println "nothing here speaks"
+		return 77
+	}
+	speech.say "Hello from Cabby"
+	if !speech.can_hear {
+		println "spoken; nothing here hears (whisper-cli, and a model: speech.get_model \"base.en\")"
+		return 77
+	}
+	str Path = "cabby-machine-hello.wav"
+	if !speech.save("Hello from Cabby", Path) {
+		println "it couldn't be saved as a file"
+		return 1
+	}
+	str Heard = speech.hear(Path).lower else Why {
+		println "it couldn't be heard:", Why
+		files.delete Path
+		return 1
+	}
+	files.delete Path
+	println "heard:", Heard
+	if !Heard.contains "hello" {
+		return 1
+	}
+	return 0
+}

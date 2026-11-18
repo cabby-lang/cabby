@@ -1,0 +1,179 @@
+// Tutorial 75: Recording — a recorder, with a meter and a click
+//
+// Run it:      cabby 75-recording.cby
+// Or compile:  cabby -c 75-recording.cby && ./75-recording
+// Library:     use sound, use gui
+// Topics:      sound.record, sound.inputs, a recording's level, seconds,
+//              play, trim_silence and save; recording along with a song
+//
+// A recorder for a microphone or an audio interface: choose the input,
+// press Record, play, press Stop. The bar shows how loud it's coming in.
+// Play listens to the take, and Save keeps it as a WAV file, at 24 bits.
+//
+// Tick Click, and a metronome plays while it records, at the tempo in
+// the box: a song of wood blocks, from tutorial 74. The recording starts
+// in time with it, so a take can go straight into a music program beside
+// the click, or a backing track, and line up. (Listen to the click in
+// headphones, so the microphone doesn't hear it too.)
+//
+// On a Mac, the first recording asks whether the terminal may use the
+// microphone: say OK.
+
+use gui
+use sound
+use time
+
+object recorder : gui.window {
+	gui.choice Inputs
+	gui.button RecordButton
+	gui.check Click
+	gui.number Tempo
+	gui.check Trim
+	gui.progress Meter
+	gui.label Status
+	sound.recording Take
+	bool HaveTake                   // (whether Take is one yet)
+	int Takes
+
+	void build {
+		set_title "Recorder"
+		set_size 420, 250
+		add_label "Record from:"
+		Inputs = add_choice
+		for Name in sound.inputs {
+			Inputs.add_option Name
+		}
+		gui.row Buttons = add_row
+		RecordButton = Buttons.add_button "Record"
+		RecordButton.on_click record_or_stop
+		gui.button PlayButton = Buttons.add_button "Play"
+		PlayButton.on_click play_take
+		gui.button SaveButton = Buttons.add_button "Save"
+		SaveButton.on_click ask_where
+		gui.row Options = add_row
+		Click = Options.add_check "Click"
+		Options.add_label "at"
+		Tempo = Options.add_number 40, 240
+		Tempo.set_value 90
+		Options.add_label "beats a minute"
+		Trim = add_check "Cut off the quiet at each end"
+		Meter = add_progress
+		Status = add_label "Ready."
+		every time.milliseconds(50), show_level
+	}
+
+	// ---- recording
+
+	void record_or_stop {
+		if HaveTake && Take.recording {
+			stop
+			return
+		}
+		if Click.checked {
+			play_click                  // the click first, then straight away
+		}
+		if Inputs.selected >= 0 {
+			Take = sound.record_from Inputs.text
+		} else {
+			Take = sound.record         // the computer's usual input
+		}
+		HaveTake = true
+		Takes++
+		RecordButton.set_text "Stop"
+	}
+
+	void stop {
+		Take.stop
+		sound.stop_midi                 // (the click)
+		RecordButton.set_text "Record"
+		Meter.set_fraction 0
+		str Cut = ""
+		if Trim.checked {
+			Cut = trimmed
+		}
+		str Said = "take " + Takes.text + ": " + tenths(Take.seconds) + " seconds" + Cut
+		Status.set_text Said
+		println Said
+	}
+
+	// the quiet cut off each end, and how much that was: " (0.6 cut off)"
+	str trimmed {
+		double Before = Take.seconds
+		Take.trim_silence
+		return " (" + tenths(Before - Take.seconds) + " cut off)"
+	}
+
+	// a metronome: a wood block a beat, a higher one on each bar's first,
+	// for ten minutes at most
+	void play_click {
+		sound.part Blocks
+		Blocks.set_instrument "drums"
+		for Beat in Tempo.value * 10 {
+			if Beat % 4 == 0 {
+				Blocks.note "E5", 1         // the high wood block
+			} else {
+				Blocks.note "F5", 1         // the low one
+			}
+		}
+		sound.song Metronome
+		Metronome.set_tempo Tempo.value
+		Metronome.add Blocks
+		Metronome.play
+	}
+
+	// every 50 milliseconds: the meter, and how long it is so far
+	void show_level {
+		if HaveTake && Take.recording {
+			Meter.set_fraction Take.level
+			Status.set_text "Recording: " + tenths(Take.seconds) + " seconds"
+		}
+	}
+
+	// "2.4", not "2.4000000001"
+	str tenths double Seconds const {
+		long Tenths = (long)(Seconds * 10 + 0.5)
+		return (Tenths / 10).text + "." + (Tenths % 10).text
+	}
+
+	// ---- listening, and keeping it
+
+	void play_take {
+		if HaveTake && !Take.recording {
+			Take.play
+		}
+	}
+
+	void ask_where {
+		if HaveTake && !Take.recording {
+			ask_save_file "take-" + Takes.text + ".wav", save_take
+		}
+	}
+
+	void save_take {
+		Take.save chosen_file
+		list str Parts = chosen_file.split "/"
+		Status.set_text "Saved " + Parts[Parts.length - 1] + "."
+		println "saved", Parts[Parts.length - 1]
+	}
+}
+
+int main {
+	recorder r
+	r.run
+}
+
+// (Cabby's tests record from a file instead of a microphone: a guitar,
+// plucked. They record it twice, with a click and the quiet cut off, and
+// save it:)
+// script: click Record; wait 200; click Stop; check Click; check Cut off the quiet at each end; click Record; wait 200; click Stop; click Play; click Save; pick /tmp/cabby-take-2.wav; close
+//
+// Try this:
+//  - Record in stereo: sound.set_recording_channels 2, before recording.
+//  - Save at 16 bits, as a CD is: sound.set_recording_bits 16.
+//  - Count in: a bar of clicks before the recording starts.
+//  - Play tutorial 74's blues while recording, and play along with it.
+
+// ---------------------------------------------------------------- output
+//> take 1: 2.4 seconds
+//> take 2: 1.8 seconds (0.6 cut off)
+//> saved cabby-take-2.wav

@@ -1,0 +1,18 @@
+// memory nothing holds any more is noted as it's lost, once per line
+use addresses
+for i in 3 {
+	address int Scores = addresses.allocate 10
+	Scores[0] = i
+}
+address int A = addresses.allocate 8
+address int Keep = A
+A = addresses.allocate 8
+addresses.free Keep
+A = addresses.allocate 9
+address int List = addresses.none
+for i in 100 {
+	address address int Node = addresses.allocate 2
+	Node[0] = (address int)List
+	List = (address int)Node
+}
+exit

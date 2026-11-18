@@ -1,0 +1,17 @@
+// reverse.cby — the implementation for reverse.hby (tutorial 36).
+
+use local reverse
+
+str reverse_str const str &Text {
+	str Out = Text.copy             // our own string to change; Text stays as it was
+	long n = Text.length
+	// Swap the first and last characters, then the second and the
+	// second-to-last, and so on. Stop halfway: going all the way would swap
+	// every pair back again.
+	for i in n / 2 {
+		char c = Out[i]
+		Out[i] = Out[n - 1 - i]         // the last character is at n - 1, not n
+		Out[n - 1 - i] = c
+	}
+	return Out                       // moved out to the caller: no copy
+}

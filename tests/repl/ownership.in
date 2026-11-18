@@ -1,0 +1,18 @@
+// ownership is checked across the whole session
+str a = "one"
+str b = a
+println a
+println b
+void take str s {
+	println "took", s
+}
+take b
+b
+b = "again"
+b
+int v = 1
+const int c = 2
+c = 3
+int &r = v
+r = 7
+v

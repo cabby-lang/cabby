@@ -1,0 +1,14 @@
+// the volume library, with stand-ins for wpctl, pactl, amixer and the
+// Mac's osascript (tools/: run_desktop_tests.sh says which are there)
+use volume
+
+int main {
+	println "level:", volume.level, "muted:", volume.muted, "can set:", volume.can_set
+	println "set:", volume.set(40), volume.level
+	println "up:", volume.up(15), volume.level
+	println "down past 0:", volume.down(80), volume.level
+	println "past 100:", volume.set(130), volume.level
+	println "mute:", volume.mute, volume.muted
+	println "unmute:", volume.unmute, volume.muted
+	return 0
+}

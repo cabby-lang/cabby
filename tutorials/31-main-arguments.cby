@@ -1,0 +1,59 @@
+// Tutorial 31: Command-line arguments and exit status
+//
+// Run it:      cabby 31-main-arguments.cby apple banana cherry
+// Or compile:  cabby -c 31-main-arguments.cby && ./31-main-arguments a b
+//
+// main can take the program's arguments: `int Argc, str Argv[]`.
+//   Argc     how many there are, counting the program's own name
+//   Argv[0]  the program's name; Argv[1] onwards are the arguments
+//
+// main's return value is the exit status. 0 means success; anything else
+// (up to 255) is an error code the shell can test: `echo $?` shows it, and
+// `if cabby prog.cby; then ...` uses it.
+//
+// Error messages go to stderr, not stdout: put `stderr` in front of a call
+// and everything it prints goes there (`stderr println "oops"`). On a
+// terminal both show, but `cabby prog.cby > out.txt` keeps errors on the
+// screen and out of the file.
+
+// (The next two comments are for Cabby's test suite, which runs every
+// tutorial and checks its output: they give the arguments to pass and the
+// exit status to expect.)
+// args: apple banana 42
+// exit: 0
+
+int main int Argc, str Argv[] {
+	println "got", Argc - 1, "arguments"
+	for int i = 1; i < Argc; i++ {
+		println " ", i, Argv[i]
+	}
+
+	if Argc < 2 {
+		stderr println "usage: give me some words"
+		return 1                   // non-zero: something went wrong
+	}
+
+	// Arguments are text. To use one as a number, check it with .is_int,
+	// then convert it with .to_int (tutorial 12).
+	int Total = 0
+	for int i = 1; i < Argc; i++ {
+		if Argv[i].is_int {
+			Total += Argv[i].to_int
+		}
+	}
+	println "numbers add up to", Total
+	return 0
+}
+
+// Try this:
+//  - Run it with no arguments, then type `echo $?`.
+//  - Run it with no arguments and `2> /dev/null` on the end: the usage
+//    message disappears, because it went to stderr.
+//  - Return the number of arguments as the exit status.
+
+// ---------------------------------------------------------------- output
+//> got 3 arguments
+//>   1 apple
+//>   2 banana
+//>   3 42
+//> numbers add up to 42

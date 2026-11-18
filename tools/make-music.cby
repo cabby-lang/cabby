@@ -1,0 +1,90 @@
+// make-music.cby: writes the music for Cabby Quest (tutorials 77 to 86,
+// and 82) as MIDI files, into tutorials/music/: a tune for the woods, one
+// for the town, one for the meadow, one for inside a house, one for the
+// rival, and one for a battle. Each is a melody and a bass line, made to
+// loop.
+//
+//     cabby tools/make-music.cby          (from Cabby's own folder)
+//
+// Notes are written as on a stave ("E5"), with how many beats each lasts
+// after a colon; "-" is a rest. Tutorial 74 shows how it's done.
+
+use sound
+use directories
+
+const str MUSIC = "tutorials/music/"
+
+// a tune: one instrument, at one volume, each note held for most of its time
+sound.part part_of const str &Instrument, double Volume, const str &Tune {
+	sound.part Part
+	Part.set_instrument Instrument
+	Part.set_volume Volume
+	Part.set_held 0.92
+	Part.notes Tune, 1
+	return Part
+}
+
+void save const str &Name, double Tempo, sound.part Melody, sound.part Bass {
+	sound.song Song
+	Song.set_tempo Tempo
+	Song.add Melody
+	Song.add Bass
+	Song.save MUSIC + Name + ".mid"
+	println Name + ".mid:", Song.beats, "beats, about", (int)(Song.seconds + 0.5), "seconds"
+}
+
+int main {
+	if !directories.exists "tutorials" {
+		println "make-music: run it from Cabby's own folder: cabby tools/make-music.cby"
+		return 1
+	}
+	directories.make MUSIC
+
+	// the woods: quiet, a flute over a harp, in A minor
+	str Tune = "A4 C5 E5:2  D5 C5 B4:2  A4 C5 E5 G5  F5:3 -"
+	Tune += "  E5 D5 C5:2  B4 C5 D5:2  C5 B4 A4 G#4  A4:3 -"
+	str Bass = "A2:2 E3:2  G2:2 D3:2  F2:2 C3:2  D2:2 A2:2"
+	Bass += "  C3:2 G2:2  G2:2 D3:2  F2:2 E2:2  A2:4"
+	save "woods", 84, part_of("flute", 0.47, Tune), part_of("harp", 0.41, Bass)
+
+	// the town: bright, a guitar and a bass, in C major
+	Tune = "C5:0.5 E5:0.5 G5 E5:0.5 C5:0.5  D5:0.5 F5:0.5 A5 G5"
+	Tune += "  E5:0.5 G5:0.5 C6 B5:0.5 A5:0.5  G5:2 - G4"
+	Tune += "  A4:0.5 C5:0.5 F5 E5:0.5 D5:0.5  G4:0.5 B4:0.5 D5 C5:0.5 B4:0.5"
+	Tune += "  C5:0.5 E5:0.5 G5:0.5 E5:0.5 F5 D5  C5:3 -"
+	Bass = "C3 G2 C3 G2  F2 C3 G2 D3  C3 E3 A2 E3  G2 D3 G2 B2"
+	Bass += "  F2 C3 F2 A2  G2 D3 G2 B2  C3 G2 F2 G2  C3:4"
+	save "town", 108, part_of("guitar", 0.52, Tune), part_of("bass", 0.47, Bass)
+
+	// the meadow: open and easy, a recorder over a guitar, in G major
+	Tune = "G4 B4 D5:2  E5 D5 B4:2  C5 E5 G5 E5  D5:3 -"
+	Tune += "  B4 D5 G5:2  F#5 E5 D5:2  C5 B4 A4 F#4  G4:3 -"
+	Bass = "G2:2 D3:2  E2:2 B2:2  C3:2 G2:2  D3:2 A2:2"
+	Bass += "  G2:2 D3:2  D2:2 A2:2  C3:2 D3:2  G2:4"
+	save "meadow", 96, part_of("recorder", 0.47, Tune), part_of("guitar", 0.41, Bass)
+
+	// Rufus, the rival: quick and pushing, a guitar with some bite, in E minor
+	Tune = "E5:0.5 E5:0.5 G5:0.5 E5:0.5 A5 G5  F#5:0.5 F#5:0.5 A5:0.5 F#5:0.5 B5 A5"
+	Tune += "  G5:0.5 F#5:0.5 E5:0.5 D5:0.5 E5 B4  E5:0.5 G5:0.5 B5:0.5 G5:0.5 E5 -"
+	Bass = "E2:0.5 E2:0.5 E3:0.5 E2:0.5 E2:0.5 E2:0.5 E3:0.5 E2:0.5"
+	Bass += "  D2:0.5 D2:0.5 D3:0.5 D2:0.5 D2:0.5 D2:0.5 D3:0.5 D2:0.5"
+	Bass += "  C2:0.5 C2:0.5 C3:0.5 C2:0.5 B1:0.5 B1:0.5 B2:0.5 B1:0.5"
+	Bass += "  E2:0.5 E2:0.5 E3:0.5 E2:0.5 E2 -"
+	save "rival", 144, part_of("overdriven guitar", 0.47, Tune), part_of("electric bass", 0.52, Bass)
+
+	// a battle (Cabby Quest, part 11): fast and urgent, a square-wave lead
+	// (General MIDI's 81) over a bass jumping octaves, in A minor
+	Tune = "A4:0.5 A4:0.5 C5:0.5 A4:0.5 E5 D5  C5:0.5 B4:0.5 A4:0.5 B4:0.5 C5 E5"
+	Tune += "  F5:0.5 E5:0.5 D5:0.5 C5:0.5 D5 B4  E5:0.5 D5:0.5 C5:0.5 B4:0.5 A4 -"
+	Bass = "A2:0.5 A3:0.5 A2:0.5 A3:0.5 A2:0.5 A3:0.5 A2:0.5 A3:0.5"
+	Bass += "  F2:0.5 F3:0.5 F2:0.5 F3:0.5 F2:0.5 F3:0.5 F2:0.5 F3:0.5"
+	Bass += "  D2:0.5 D3:0.5 D2:0.5 D3:0.5 D2:0.5 D3:0.5 D2:0.5 D3:0.5"
+	Bass += "  E2:0.5 E3:0.5 E2:0.5 E3:0.5 E2:0.5 E3:0.5 G#2:0.5 G#3:0.5"
+	save "battle", 160, part_of("81", 0.4, Tune), part_of("electric bass", 0.52, Bass)
+
+	// inside a house: slow, a music box over a piano
+	Tune = "E5 G5 C6 G5  F5 A5 C6:2  E5 G5 B5 G5  C6:3 -"
+	Bass = "C4:4  F3:4  G3:4  C4:4"
+	save "house", 72, part_of("music box", 0.41, Tune), part_of("piano", 0.3, Bass)
+	return 0
+}

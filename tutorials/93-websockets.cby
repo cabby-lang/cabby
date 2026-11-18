@@ -1,0 +1,149 @@
+// Tutorial 93: WebSockets — a live scoreboard
+//
+// Run it:      cabby 93-websockets.cby
+// Or compile:  cabby -c 93-websockets.cby && ./93-websockets
+// Library:     use networks (and threads, for the fans)
+// Topics:      wants_socket, accept_socket, on_message, on_socket_close,
+//              message, reply, send_message, send_message_to_all, sockets,
+//              close_socket; networks.open_socket, send, read_message
+//
+// A page asks for a page and is answered, and that's all until it asks
+// again. A WebSocket is a connection kept open: either end sends a message
+// whenever it likes. Here, a scoreboard: whoever's watching sees each goal
+// the moment it's scored, without asking.
+//
+// A browser's page would watch it (its script says `new
+// WebSocket("ws://localhost:8080/live")`); here two fans on a worker do,
+// so the program runs on its own.
+
+use networks
+use threads
+use events
+
+// ---- the scoreboard: a page, and its WebSockets
+
+object scoreboard {
+	networks.web_server Web
+	int Home
+	int Away
+	int Left                            // fans who've gone
+
+	void open {
+		Web.on_request answer
+		Web.on_message heard
+		Web.on_socket_close gone
+		Web.listen_here 0
+	}
+
+	void answer {
+		if Web.path is "/live" and Web.wants_socket {
+			long Who = Web.accept_socket       // a WebSocket from now on
+			Web.send_message Who, "welcome: " + score + ", " + Web.sockets.length.text + " watching"
+		} else {
+			Web.send_page "<h1>" + score + "</h1>"
+		}
+	}
+
+	str score const {
+		return "Home " + Home.text + " - " + Away.text + " Away"
+	}
+
+	// a fan with the scorer's job says who scored
+	void heard {
+		if Web.message is "goal home" {
+			Home++
+		} else if Web.message is "goal away" {
+			Away++
+		} else {
+			Web.reply "say 'goal home' or 'goal away'"
+			return
+		}
+		Web.send_message_to_all score     // everyone watching, at once
+	}
+
+	void gone {
+		Left++
+	}
+}
+
+// ---- two fans, on a worker: one keeps the score, both watch
+
+object fans : threads.worker {
+	long Port
+	list str Seen
+
+	void work {
+		str Live = "ws://localhost:" + Port.text + "/live"
+		networks.socket Scorer = networks.open_socket Live
+		see "scorer", Scorer
+		networks.socket Fan = networks.open_socket Live
+		see "fan", Fan
+		Scorer.send "goal home"
+		see "scorer", Scorer
+		see "fan", Fan
+		Scorer.send "goal away"
+		see "scorer", Scorer
+		see "fan", Fan
+		Scorer.send "offside!"
+		see "scorer", Scorer
+		Fan.close
+		Scorer.close
+	}
+
+	// waits for the next message, and keeps it
+	void see const str &Who, networks.socket &Socket {
+		if Socket.read_message {
+			Seen.add Who + " sees: " + Socket.message
+		}
+	}
+}
+
+object match {
+	scoreboard Board
+	fans Watching
+	timer Wait
+
+	void begin {
+		Board.open
+		Watching.Port = Board.Web.port
+		Watching.on_done finished
+		Watching.start
+		events.run
+	}
+
+	void finished {
+		for Line in Watching.Seen {
+			println Line
+		}
+		Wait.on_tick close              // a moment for the sockets' goodbyes
+		Wait.after time.milliseconds 200
+	}
+
+	void close {
+		println Board.Left, "fans left;", Board.Web.sockets.length, "still watching"
+		Board.Web.close
+	}
+}
+
+int main {
+	match M
+	M.begin
+}
+
+// Try this:
+//  - Change `listen_here 0` to `listen_here 8080`, take out the fans, and
+//    give the page a script that shows each message as it comes:
+//    `new WebSocket("ws://" + location.host + "/live").onmessage = ...`.
+//  - Keep the time of each goal, and send the newcomer every goal so far.
+//  - Let only the first fan score: `Web.from` says which socket a message
+//    came from; `close_socket` sends away one that tries anyway.
+
+// ---------------------------------------------------------------- output
+//> scorer sees: welcome: Home 0 - 0 Away, 1 watching
+//> fan sees: welcome: Home 0 - 0 Away, 2 watching
+//> scorer sees: Home 1 - 0 Away
+//> fan sees: Home 1 - 0 Away
+//> scorer sees: Home 1 - 1 Away
+//> fan sees: Home 1 - 1 Away
+//> scorer sees: say 'goal home' or 'goal away'
+//> 2 fans left; 0 still watching

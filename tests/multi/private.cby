@@ -1,0 +1,5 @@
+use local shapes
+
+int main {
+	return helper(1)
+}

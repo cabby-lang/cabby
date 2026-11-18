@@ -1,0 +1,26 @@
+// geometry.hby — the header for tutorial 33.
+//
+// A header (.hby) holds declarations other files need: types, and
+// prototypes of functions. The bodies live in geometry.cby, next to it,
+// which Cabby compiles in automatically when a program does
+// `use local geometry/geometry`.
+
+struct vec2 {
+	double x
+	double y
+}
+
+object polygon {
+	str Name
+	vec2 Points[4]
+	int Count
+
+	// A method body can live in the header; that's fine for small ones.
+	void add double x, double y {
+		Points[Count] = vec2{x, y}
+		Count++
+	}
+}
+
+double distance vec2 a, vec2 b
+double perimeter const polygon &p

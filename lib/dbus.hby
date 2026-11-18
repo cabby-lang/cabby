@@ -1,0 +1,509 @@
+// dbus.hby — D-Bus: how much of the Linux desktop talks. Notifications,
+// the battery, Bluetooth, media players and the network all answer
+// calls on it, and send signals when something changes.
+//
+//     use dbus
+//
+//     dbus.bus Bus = dbus.session
+//     json Level = Bus.property("org.freedesktop.UPower",
+//         "/org/freedesktop/UPower/devices/DisplayDevice",
+//         "org.freedesktop.UPower.Device", "Percentage")
+//
+// Answers come back as json values (use json is brought in with it):
+// `Answer[0].str`, `Props["Percentage"].double`.
+//
+// The full reference is dbus.md, next to this file.
+
+use addresses
+use json
+
+// ---- the C side (runtime/dbus.c); use the objects below instead
+
+extern long cby_dbus_session void
+extern long cby_dbus_system void
+extern long cby_dbus_try_session void
+extern void cby_dbus_close long bus
+extern long cby_dbus_message_new str dest, str path, str iface, str member
+extern void cby_dbus_message_free long msg
+extern void cby_dbus_add_str long msg, str s
+extern void cby_dbus_add_path long msg, str s
+extern void cby_dbus_add_bool long msg, int b
+extern void cby_dbus_add_byte long msg, long v
+extern void cby_dbus_add_int long msg, long v
+extern void cby_dbus_add_uint long msg, long v
+extern void cby_dbus_add_long long msg, long v
+extern void cby_dbus_add_ulong long msg, long v
+extern void cby_dbus_add_double long msg, double v
+extern void cby_dbus_add_file long msg, long fd
+extern void cby_dbus_close_file long fd
+extern void cby_dbus_set_property long bus, str path, str iface, str name, long value
+extern void cby_dbus_begin_list long msg, str t
+extern void cby_dbus_end_list long msg
+extern void cby_dbus_begin_lookup long msg, str k, str v
+extern void cby_dbus_end_lookup long msg
+extern void cby_dbus_begin_variant long msg, str t
+extern void cby_dbus_end_variant long msg
+extern void cby_dbus_begin_struct long msg
+extern void cby_dbus_end_struct long msg
+extern long cby_dbus_call long bus, long msg
+extern long cby_dbus_try_call long bus, long msg
+extern void cby_dbus_on_signal long bus, handler h
+extern void cby_dbus_listen long bus, str iface, str member
+extern long cby_dbus_signal_args long bus
+extern long cby_dbus_text long id, long what
+extern void cby_dbus_take_text address char dst
+extern long cby_dbus_signal_new str path, str iface, str member
+extern long cby_dbus_answer_new void
+extern void cby_dbus_serve long bus, str path
+extern void cby_dbus_on_call long bus, handler h
+extern int cby_dbus_own_name long bus, str name
+extern void cby_dbus_reply long bus, long msg
+extern void cby_dbus_fail long bus, str name, str text
+extern void cby_dbus_send long bus, long msg
+extern long cby_dbus_call_args long bus
+extern void cby_dbus_describe long bus, str path, str xml
+
+static str dbus_text long Id, long What {
+	long Length = cby_dbus_text Id, What
+	str Text = " ".repeat Length
+	if Length > 0 {
+		address char Room = addresses.of_text Text
+		cby_dbus_take_text Room
+	}
+	return Text
+}
+
+// ---- a message: a method call, and the values that go with it
+
+object dbus.message {
+	long Id
+
+	// (made by dbus.method_call)
+	void begin const str &Service, const str &Path, const str &Interface, const str &Method {
+		cby_dbus_message_free Id
+		Id = cby_dbus_message_new Service, Path, Interface, Method
+	}
+
+	// (made by dbus.signal_message and dbus.answer)
+	void adopt long Given {
+		cby_dbus_message_free Id
+		Id = Given
+	}
+
+	~dbus.message {
+		cby_dbus_message_free Id
+	}
+
+	long id const {
+		return Id
+	}
+
+	// Values, in order, each its own D-Bus type: what the method's
+	// documentation says it takes ("susssasa{sv}i" is a str, a uint, three
+	// strs, a list of strs, a lookup of strs to variants, then an int).
+	void add_str const str &S {
+		cby_dbus_add_str Id, S
+	}
+
+	void add_path const str &P {             // an object's path ("o")
+		cby_dbus_add_path Id, P
+	}
+
+	void add_bool bool B {
+		cby_dbus_add_bool Id, (int)B
+	}
+
+	void add_byte long N {                   // "y"
+		cby_dbus_add_byte Id, N
+	}
+
+	void add_int long N {                    // "i": 32 bits
+		cby_dbus_add_int Id, N
+	}
+
+	void add_uint long N {                   // "u": 32 bits, not below 0
+		cby_dbus_add_uint Id, N
+	}
+
+	void add_long long N {                   // "x": 64 bits
+		cby_dbus_add_long Id, N
+	}
+
+	void add_ulong long N {                  // "t"
+		cby_dbus_add_ulong Id, N
+	}
+
+	void add_double double D {               // "d"
+		cby_dbus_add_double Id, D
+	}
+
+	// an open file ("h"), by its number: the message carries a copy, and
+	// the program keeps its own
+	void add_file long Fd {
+		cby_dbus_add_file Id, Fd
+	}
+
+	// a list of strs ("as"), in one go
+	void add_strs const list str &Items {
+		cby_dbus_begin_list Id, "s"
+		for S in Items {
+			cby_dbus_add_str Id, S
+		}
+		cby_dbus_end_list Id
+	}
+
+	// A list ("a"): its items' type ("s", "u", "(si)"...), then the items,
+	// then end_list. An empty list is begun and ended at once.
+	void begin_list const str &Type {
+		cby_dbus_begin_list Id, Type
+	}
+
+	void end_list {
+		cby_dbus_end_list Id
+	}
+
+	// A lookup ("a{sv}"): the keys' type and the values', then a key and
+	// its value, a key and its value..., then end_lookup.
+	void begin_lookup const str &KeyType, const str &ValueType {
+		cby_dbus_begin_lookup Id, KeyType, ValueType
+	}
+
+	void end_lookup {
+		cby_dbus_end_lookup Id
+	}
+
+	// A variant ("v"): a value that says its own type. Begun with the
+	// type, then the one value, then end_variant.
+	void begin_variant const str &Type {
+		cby_dbus_begin_variant Id, Type
+	}
+
+	void end_variant {
+		cby_dbus_end_variant Id
+	}
+
+	// A struct ("(...)"): its values in order, then end_struct.
+	void begin_struct {
+		cby_dbus_begin_struct Id
+	}
+
+	void end_struct {
+		cby_dbus_end_struct Id
+	}
+
+	// The types given so far, as D-Bus writes them ("su"), to compare
+	// with what the method wants.
+	str signature const {
+		return dbus_text Id, 6
+	}
+}
+
+// A call of Method, on the object at Path, in Service: its values are
+// added to it, then it's sent with the bus's `call`.
+dbus.message dbus.method_call const str &Service, const str &Path, const str &Interface, const str &Method {
+	dbus.message M
+	M.begin Service, Path, Interface, Method
+	return M
+}
+
+// A signal, from the object at Path: its values are added to it, then
+// it's sent with the bus's `send`.
+dbus.message dbus.signal_message const str &Path, const str &Interface, const str &Name {
+	dbus.message M
+	M.adopt cby_dbus_signal_new(Path, Interface, Name)
+	return M
+}
+
+// The answer to a call being handled (in an on_call handler): its values
+// are added to it, then it's given with the bus's `reply`.
+dbus.message dbus.answer {
+	dbus.message M
+	M.adopt cby_dbus_answer_new
+	return M
+}
+
+// A value on its own, for a property (Bus.set_property): add one value
+// to it, of any type, as to a message.
+dbus.message dbus.value {
+	dbus.message M
+	M.adopt cby_dbus_answer_new
+	return M
+}
+
+// A file a message brought (a value of type "h", which comes as its
+// number: logind's Inhibit gives one), closed when it's no longer needed.
+void dbus.close_file long Fd {
+	cby_dbus_close_file Fd
+}
+
+// ---- a connection to a bus
+
+object dbus.bus {
+	long Id
+	handler SignalHandler
+	handler CallHandler
+
+	// (made by dbus.session and dbus.system)
+	void open long Given {
+		Id = Given
+	}
+
+	// true when there's a bus (only dbus.try_session's can be without one)
+	bool is_open const {
+		return Id is not 0
+	}
+
+	~dbus.bus {
+		cby_dbus_close Id
+	}
+
+	// Sends M, and waits for the answer: its values, as a json list
+	// (`Answer[0]`). A call that doesn't work is a panic, saying why
+	// ("org.freedesktop.DBus.Error.ServiceUnknown: ...").
+	json call const dbus.message &M {
+		json Answer
+		Answer.adopt cby_dbus_call(Id, M.id)
+		return Answer
+	}
+
+	// The same, without the panic: `error` says why ("" when it worked),
+	// and the answer is then an empty list.
+	json try_call const dbus.message &M {
+		json Answer
+		Answer.adopt cby_dbus_try_call(Id, M.id)
+		return Answer
+	}
+
+	// why the last try_call didn't work, or ""
+	str error const {
+		return dbus_text Id, 1
+	}
+
+	// One property of an object (org.freedesktop.DBus.Properties.Get).
+	json property const str &Service, const str &Path, const str &Interface, const str &Name {
+		dbus.message M = dbus.method_call Service, Path, "org.freedesktop.DBus.Properties", "Get"
+		M.add_str Interface
+		M.add_str Name
+		json Answer = call M
+		return Answer[0]
+	}
+
+	// All of an interface's properties, as a lookup by name (GetAll).
+	json properties const str &Service, const str &Path, const str &Interface {
+		dbus.message M = dbus.method_call Service, Path, "org.freedesktop.DBus.Properties", "GetAll"
+		M.add_str Interface
+		json Answer = call M
+		return Answer[0]
+	}
+
+	// Asks the bus for the signals Name from Interface (either "" for
+	// any): "org.freedesktop.Notifications", "NotificationClosed".
+	void listen const str &Interface, const str &Name {
+		cby_dbus_listen Id, Interface, Name
+	}
+
+	// Calls h for each signal listened for: from a window's or a game's
+	// own loop, or events.run, between their other events. h is a method
+	// of the object the bus is part of, as a button's handler is; in it,
+	// `signal` is the signal's values (a json list), and `signal_name`
+	// says which it is.
+	void on_signal handler h {
+		SignalHandler = h
+		cby_dbus_on_signal Id, say_signal
+	}
+
+	// (what the C side calls, for each signal)
+	void say_signal {
+		SignalHandler.call
+	}
+
+	// In an on_signal handler: the signal's values (a json list), and
+	// where it came from.
+	json signal const {
+		json Values
+		Values.adopt cby_dbus_signal_args(Id)
+		return Values
+	}
+
+	str signal_name const {                  // "NotificationClosed"
+		return dbus_text Id, 5
+	}
+
+	str signal_interface const {
+		return dbus_text Id, 4
+	}
+
+	str signal_path const {
+		return dbus_text Id, 3
+	}
+
+	str signal_sender const {                // its unique name, ":1.17"
+		return dbus_text Id, 2
+	}
+
+	// this connection's own unique name on the bus (":1.42")
+	str name const {
+		return dbus_text Id, 0
+	}
+
+	// ---- objects of the program's own, for others to call
+
+	// A well-known name, for others to find this program by
+	// ("org.example.Thing"): true if it's this program's now, false if
+	// another program has it.
+	bool own_name const str &Name {
+		return cby_dbus_own_name(Id, Name) is not 0
+	}
+
+	// Calls to the object at Path ("/org/example/Thing") go to the
+	// on_call handler.
+	void serve const str &Path {
+		cby_dbus_serve Id, Path
+	}
+
+	// What the object at Path has, for tools that ask (d-feet, busctl
+	// introspect, and libraries that look before they call): its
+	// <interface> elements, in D-Bus's XML. (It serves Path, too.)
+	void describe const str &Path, const str &Xml {
+		cby_dbus_describe Id, Path, Xml
+	}
+
+	// A property of an object served, set to Value (a dbus.value with one
+	// value in it): Get and GetAll are answered with it from then on, and
+	// those listening are told it changed (PropertiesChanged), as a media
+	// player tells a bar what's playing.
+	void set_property const str &Path, const str &Interface, const str &Name, const dbus.message &Value {
+		cby_dbus_set_property Id, Path, Interface, Name, Value.id
+	}
+
+	// the same, for a str, a whole number ("i"), a double or a bool
+	void set_str_property const str &Path, const str &Interface, const str &Name, const str &Value {
+		dbus.message V = dbus.value
+		V.add_str Value
+		set_property Path, Interface, Name, V
+	}
+
+	void set_int_property const str &Path, const str &Interface, const str &Name, long Value {
+		dbus.message V = dbus.value
+		V.add_int Value
+		set_property Path, Interface, Name, V
+	}
+
+	void set_double_property const str &Path, const str &Interface, const str &Name, double Value {
+		dbus.message V = dbus.value
+		V.add_double Value
+		set_property Path, Interface, Name, V
+	}
+
+	void set_bool_property const str &Path, const str &Interface, const str &Name, bool Value {
+		dbus.message V = dbus.value
+		V.add_bool Value
+		set_property Path, Interface, Name, V
+	}
+
+	// Calls h for each call to an object served, from the program's loop,
+	// as on_signal's handler is. In h, `call_name` is the method called and
+	// `call_values` its values; `reply` answers, or `fail` says why not.
+	// (Not answered by either, it's answered with nothing.)
+	void on_call handler h {
+		CallHandler = h
+		cby_dbus_on_call Id, say_call
+	}
+
+	// (what the C side calls, for each call)
+	void say_call {
+		CallHandler.call
+	}
+
+	// In an on_call handler: the call's values (a json list), and what it is.
+	json call_values const {
+		json Values
+		Values.adopt cby_dbus_call_args(Id)
+		return Values
+	}
+
+	str call_name const {                    // the method: "Hello"
+		return dbus_text Id, 10
+	}
+
+	str call_interface const {
+		return dbus_text Id, 9
+	}
+
+	str call_path const {                    // the object called
+		return dbus_text Id, 8
+	}
+
+	str call_sender const {                  // who called: ":1.17"
+		return dbus_text Id, 7
+	}
+
+	// The answer to the call being handled (made with dbus.answer).
+	void reply const dbus.message &Answer {
+		cby_dbus_reply Id, Answer.id
+	}
+
+	// The call being handled doesn't work: an error's name
+	// ("org.example.Error.NotFound") and why, for the caller.
+	void fail const str &Name, const str &Why {
+		cby_dbus_fail Id, Name, Why
+	}
+
+	// Sends a signal (made with dbus.signal_message) to everyone listening.
+	void send const dbus.message &Signal {
+		cby_dbus_send Id, Signal.id
+	}
+}
+
+// The session bus: the desktop's own (notifications, media players).
+dbus.bus dbus.session {
+	dbus.bus B
+	B.open cby_dbus_session
+	return B
+}
+
+// The session bus, or none when there isn't one (a computer with no
+// desktop running, a Mac): then B.is_open is false, and calls on it
+// don't work, without a panic (try_call's error says so).
+dbus.bus dbus.try_session {
+	dbus.bus B
+	B.open cby_dbus_try_session
+	return B
+}
+
+// The system bus: the computer's (the battery, the network, Bluetooth).
+dbus.bus dbus.system {
+	dbus.bus B
+	B.open cby_dbus_system
+	return B
+}
+
+// A desktop notification, as notify-send shows one. Its number can be
+// given to dbus.notify_again, to change it where it is.
+long dbus.notify const str &Title, const str &Body {
+	return dbus_notify 0, Title, Body
+}
+
+// The notification Number (from dbus.notify) changed in place: a progress
+// "37%", say, rather than a new one each time.
+long dbus.notify_again long Number, const str &Title, const str &Body {
+	return dbus_notify Number, Title, Body
+}
+
+static long dbus_notify long Replaces, const str &Title, const str &Body {
+	dbus.bus Bus = dbus.session
+	dbus.message M = dbus.method_call("org.freedesktop.Notifications", "/org/freedesktop/Notifications",
+		"org.freedesktop.Notifications", "Notify")
+	M.add_str "Cabby"                        // the app's name
+	M.add_uint Replaces
+	M.add_str ""                             // its icon
+	M.add_str Title
+	M.add_str Body
+	M.begin_list "s"                         // actions: none
+	M.end_list
+	M.begin_lookup "s", "v"                  // hints: none
+	M.end_lookup
+	M.add_int -1                             // how long: the desktop's own choice
+	json Answer = Bus.call M
+	return Answer[0].long
+}

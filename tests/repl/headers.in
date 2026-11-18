@@ -1,0 +1,8 @@
+// use and C functions
+use standard
+use math
+printf "%d items\n", 3
+sqrt(16.0)
+abs(-5)
+use nothere
+#use standard.hby

@@ -1,0 +1,17 @@
+// the speech library, with stand-ins for espeak-ng, espeak, spd-say and
+// a Mac's say (tools/: run_desktop_tests.sh says which are there)
+use speech
+
+int main {
+	println "can speak:", speech.can_speak, "voices:", speech.voices
+	println "said:", speech.say("Hello there.")
+	speech.speaker Latin
+	Latin.set_language "la"
+	Latin.set_rate 140
+	println "said:", Latin.say("Gallia est omnis divisa in partes tres.")
+	speech.speaker French
+	French.set_language "fr"
+	println "said:", French.say("Bonjour.")
+	println "saved:", Latin.save("Arma virumque cano.", "aeneid.wav")
+	return 0
+}

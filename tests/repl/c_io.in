@@ -1,0 +1,8 @@
+// C's printing, mixed with Cabby's own, comes out in order
+use standard
+int num = "42".to_int
+num
+printf "num = %d", num
+print ' '
+println "and more"
+printf "printf line\n"

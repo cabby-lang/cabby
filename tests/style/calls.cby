@@ -1,0 +1,28 @@
+// Calls written with parentheses they don't need, and some that need them.
+
+int area int Width, int Height {
+	return Width * Height
+}
+
+int roll {
+	return 4
+}
+
+void show int N {
+	println N
+}
+
+int main {
+	int A = area(2, 3)
+	int B = area(2, 3) + 1
+	int C = roll()
+	A = area(4, 5)
+	show(A)
+	show A
+	if area(1, 1) == 1 {
+		println "one"
+	}
+	println "area:", area(2, 2), B, C
+	show(-A)
+	return area(1, 2)
+}

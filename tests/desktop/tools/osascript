@@ -1,0 +1,28 @@
+#!/bin/sh
+# a stand-in (run_desktop_tests.sh): there only when CABBY_HAVE names it
+case ",$CABBY_HAVE," in *",$(basename "$0"),"*) ;; *) exit 127 ;; esac
+S=$CABBY_TEST_STATE
+# the Mac's AppleScript, as much of it as the libraries ask: osascript -e Script
+s=$2
+case "$s" in
+"output volume of (get volume settings)") cat "$S/level" ;;
+"output muted of (get volume settings)") [ "$(cat "$S/muted")" = 1 ] && echo true || echo false ;;
+"set volume output volume "*) echo "${s#set volume output volume }" > "$S/level" ;;
+"set volume output muted true") echo 1 > "$S/muted" ;;
+"set volume output muted false") echo 0 > "$S/muted" ;;
+"application \""*"\" is running")
+	app=${s#application \"}; app=${app%%\"*}
+	case ",$CABBY_MAC_APPS," in *",$app,"*) echo true ;; *) echo false ;; esac ;;
+"tell application \""*)
+	app=${s#tell application \"}; app=${app%%\"*}; what=${s#*\" to }
+	echo "$app: $what" >> "$S/told"
+	case "$what" in
+	"player state as text") cat "$S/$app.state" 2> /dev/null || echo stopped ;;
+	"name of current track") echo "Clair de Lune ($app)" ;;
+	"artist of current track") echo "Claude Debussy" ;;
+	"album of current track") echo "Suite bergamasque" ;;
+	playpause) if [ "$(cat "$S/$app.state" 2> /dev/null)" = playing ]; then echo paused; else echo playing; fi > "$S/$app.state.new"; mv "$S/$app.state.new" "$S/$app.state" ;;
+	*) ;;
+	esac ;;
+*) exit 1 ;;
+esac

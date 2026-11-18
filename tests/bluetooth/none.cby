@@ -1,0 +1,10 @@
+// The bluetooth library where there's no BlueZ (no system bus): it says
+// so, without a panic.
+//> available: false, on: false, devices: 0
+//> turned on: false (there's no Bluetooth here (BlueZ, on the system bus))
+use bluetooth
+
+int main {
+	println "available: " + bluetooth.available.text + ", on: " + bluetooth.is_on.text + ", devices:", bluetooth.devices.length
+	println "turned on: " + bluetooth.turn_on.text + " (" + bluetooth.error + ")"
+}

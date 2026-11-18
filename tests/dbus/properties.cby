@@ -1,0 +1,81 @@
+// Properties of an object of the program's own, answered by themselves:
+// a worker (as another program would) gets one, all of them, and one
+// that isn't there, and tries to set one; a change is heard, as
+// PropertiesChanged, on another connection.
+//> ours: true
+//> worker heard: Playing | Playing, 0.5, true, [Ana, Bruno] | org.freedesktop.DBus.Error.UnknownProperty | org.freedesktop.DBus.Error.PropertyReadOnly
+//> changed: org.cabby.Player PlaybackStatus Paused
+//> done
+use dbus
+use events
+use threads
+
+object asker : threads.worker {
+	str Heard
+
+	void work {
+		dbus.bus Bus = dbus.session
+		Heard = Bus.property("org.cabby.Player", "/org/cabby/Player", "org.cabby.Player", "PlaybackStatus").str
+		json All = Bus.properties("org.cabby.Player", "/org/cabby/Player", "org.cabby.Player")
+		Heard += " | " + All["PlaybackStatus"].str + ", " + All["Volume"].double.text + ", " + All["CanPlay"].bool.text
+		Heard += ", [" + All["Artists"][0].str + ", " + All["Artists"][1].str + "]"
+		dbus.message Get = dbus.method_call("org.cabby.Player", "/org/cabby/Player", "org.freedesktop.DBus.Properties", "Get")
+		Get.add_str "org.cabby.Player"
+		Get.add_str "Nothing"
+		Bus.try_call Get
+		Heard += " | " + Bus.error.split(":")[0]
+		dbus.message Set = dbus.method_call("org.cabby.Player", "/org/cabby/Player", "org.freedesktop.DBus.Properties", "Set")
+		Set.add_str "org.cabby.Player"
+		Set.add_str "Volume"
+		Set.begin_variant "d"
+		Set.add_double 1.0
+		Set.end_variant
+		Bus.try_call Set
+		Heard += " | " + Bus.error.split(":")[0]
+	}
+}
+
+object player {
+	dbus.bus Bus
+	dbus.bus Ear
+	asker Asker
+
+	void begin {
+		Bus = dbus.session
+		Ear = dbus.session
+		println "ours:", Bus.own_name("org.cabby.Player")
+		Bus.serve "/org/cabby/Player"
+		Bus.set_str_property "/org/cabby/Player", "org.cabby.Player", "PlaybackStatus", "Playing"
+		Bus.set_double_property "/org/cabby/Player", "org.cabby.Player", "Volume", 0.5
+		Bus.set_bool_property "/org/cabby/Player", "org.cabby.Player", "CanPlay", true
+		dbus.message Artists = dbus.value
+		Artists.add_strs {"Ana", "Bruno"}
+		Bus.set_property "/org/cabby/Player", "org.cabby.Player", "Artists", Artists
+		Ear.listen "org.freedesktop.DBus.Properties", "PropertiesChanged"
+		Ear.on_signal changed
+		Asker.on_done asked
+		Asker.start
+		events.run
+		println "done"
+	}
+
+	void asked {
+		println "worker heard:", Asker.Heard
+		Bus.set_str_property "/org/cabby/Player", "org.cabby.Player", "PlaybackStatus", "Paused"
+		Bus.set_str_property "/org/cabby/Player", "org.cabby.Player", "PlaybackStatus", "Paused"
+	}
+
+	void changed {
+		json Values = Ear.signal
+		for Name in Values[1].keys {
+			println "changed:", Values[0].str, Name, Values[1][Name].str
+		}
+		events.stop
+	}
+}
+
+int main {
+	player P
+	P.begin
+	return 0
+}

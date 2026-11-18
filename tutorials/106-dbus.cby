@@ -1,0 +1,63 @@
+// Tutorial 106: D-Bus — talking to the desktop's own programs
+//
+// Run it:      cabby 106-dbus.cby
+// Or compile:  cabby -c 106-dbus.cby && ./106-dbus
+// Library:     use dbus
+// Topics:      dbus.try_session, dbus.session, dbus.system, is_open, error;
+//              dbus.method_call, add_str, call, try_call; property,
+//              properties; (in the chapter) signals, and objects of your
+//              own
+//
+// On Linux, the desktop's programs talk to each other over D-Bus: the
+// notifications, the music players, the battery (UPower), the network
+// (NetworkManager), Bluetooth (BlueZ). Each is a *service* on a *bus*,
+// with *objects* that have *methods* to call and *properties* to read.
+// The desktop, media and bluetooth libraries are written in Cabby over
+// this one; it's here for everything else.
+//
+// The session bus is the desktop's, the system bus the computer's. This
+// program asks the session bus which services are on it, and who shows
+// notifications. A computer without a desktop has no session bus: it says
+// so, rather than failing.
+
+use dbus
+
+int main {
+	dbus.bus Bus = dbus.try_session
+	if !Bus.is_open {
+		println "There's no session bus here:", Bus.error
+		return 0
+	}
+	dbus.message Names = dbus.method_call "org.freedesktop.DBus", "/org/freedesktop/DBus", "org.freedesktop.DBus", "ListNames"
+	json All = Bus.try_call Names
+	int Services = 0
+	for Name in All[0] {
+		if !Name.str.starts_with(":") {          // (":1.17" is a program's own number)
+			Services++
+			println "  " + Name.str
+		}
+	}
+	println "Services on the session bus:", Services
+	dbus.message Who = dbus.method_call "org.freedesktop.DBus", "/org/freedesktop/DBus", "org.freedesktop.DBus", "GetNameOwner"
+	Who.add_str "org.freedesktop.Notifications"
+	json Owner = Bus.try_call Who
+	if Bus.error is "" {
+		println "Notifications are shown by", Owner[0].str
+	} else {
+		println "Nothing shows notifications:", Bus.error
+	}
+}
+
+// Try this:
+//  - Read the battery's percentage from the system bus (dbus.system):
+//    Bus.property "org.freedesktop.UPower",
+//    "/org/freedesktop/UPower/devices/DisplayDevice",
+//    "org.freedesktop.UPower.Device", "Percentage".
+//  - Be told when a notification is closed: Bus.listen for
+//    "NotificationClosed" (see the chapter).
+
+// ---------------------------------------------------------------- output
+// output varies: what one computer said (a session bus of its own, with nothing on it yet)
+//>   org.freedesktop.DBus
+//> Services on the session bus: 1
+//> Nothing shows notifications: org.freedesktop.DBus.Error.NameHasNoOwner: Could not get owner of name 'org.freedesktop.Notifications': no such name

@@ -1,0 +1,166 @@
+// directories.hby — what is in a directory, and making and changing them.
+//
+//     use directories
+//
+//     list str Names = directories.list "photos"       the names in it, sorted
+//     list str All = directories.all_files "photos"    every file below it, as paths from it
+//     directories.exists "photos"                      true if a directory is there
+//     directories.make "backup/2026"                   and any missing directory above it
+//     directories.remove "backup/2026"                 it must be empty
+//     directories.rename "backup", "archive"
+//     str Here = directories.current                   the directory the program is in
+//     directories.change_to "photos"
+//     str Home = directories.home                      your home directory
+//
+// Anything that goes wrong is a panic that says why; check first with
+// directories.exists when a directory might not be there. Files in
+// directories are read and written with the files library.
+//
+// These are built into Cabby; this header turns them on. The full
+// reference is directories.md, next to this file.
+//
+// A directory can also be held, in a `directory`: opened once, and closed
+// when it's dropped, as a file is. It's the same directory however it's
+// renamed or moved, and wherever the program changes directory to; what's
+// in it is reached from it, by name, rather than by a path.
+//
+//     directory Photos = directories.open "photos"
+//     while Photos.next {                           one entry at a time
+//         println Photos.name, Photos.is_file(Photos.name)
+//     }
+//     str Notes = Photos.read "notes.txt"
+//     Photos.write "seen.txt", "yes"
+//     println Photos.path                            where it is now
+
+use addresses
+
+extern long cby_dir_open str path, long inside
+extern void cby_dir_close long id
+extern long cby_dir_path long id
+extern int cby_dir_next long id
+extern void cby_dir_rewind long id
+extern long cby_dir_name long id
+extern int cby_dir_kind long id, str name
+extern long cby_dir_size long id, str name
+extern long cby_dir_changed long id, str name
+extern long cby_dir_names long id
+extern long cby_dir_listed long i
+extern long cby_dir_read long id, str name
+extern void cby_dir_write long id, str name, str text, long length, int add
+extern void cby_dir_make long id, str name
+extern void cby_dir_remove long id, str name
+extern void cby_dir_rename long id, str from, str into
+extern void cby_os_take address char dst
+
+static str directories_given long Length {
+	str Text = " ".repeat Length
+	address char Room = addresses.of_text Text
+	cby_os_take Room
+	return Text
+}
+
+object directory {
+	long Id
+
+	// where it is now, as a full path (wherever it's been moved to)
+	str path const {
+		return directories_given cby_dir_path(Id)
+	}
+
+	// the next thing in it (true), or false at the end: its name is then
+	// `name`. "." and ".." are left out, and they come in no order
+	// (`names` gives them sorted).
+	bool next {
+		return cby_dir_next(Id) != 0
+	}
+
+	// the name `next` stopped at
+	str name const {
+		return directories_given cby_dir_name(Id)
+	}
+
+	// back to the start, for `next`
+	void rewind {
+		cby_dir_rewind Id
+	}
+
+	// the names of everything in it, sorted
+	list str names const {
+		list str Names
+		for I in cby_dir_names(Id) {
+			Names.add directories_given(cby_dir_listed(I))
+		}
+		return Names
+	}
+
+	// whether something called Name is in it
+	bool has const str &Name const {
+		return cby_dir_kind(Id, Name) != 0
+	}
+
+	bool is_file const str &Name const {
+		return cby_dir_kind(Id, Name) == 1
+	}
+
+	bool is_directory const str &Name const {
+		return cby_dir_kind(Id, Name) == 2
+	}
+
+	// a file's size, in bytes
+	long size const str &Name const {
+		return cby_dir_size Id, Name
+	}
+
+	// when it was last changed: seconds since 1970 (as time.now is)
+	long changed const str &Name const {
+		return cby_dir_changed Id, Name
+	}
+
+	// the path of something in it, from where it is now
+	str path_of const str &Name const {
+		return path + "/" + Name
+	}
+
+	// a file in it, read whole
+	str read const str &Name const {
+		return directories_given cby_dir_read(Id, Name)
+	}
+
+	// a file in it, written (made if it isn't there)
+	void write const str &Name, const str &Text {
+		cby_dir_write Id, Name, Text, Text.length, 0
+	}
+
+	// a file in it, added to
+	void add_to const str &Name, const str &Text {
+		cby_dir_write Id, Name, Text, Text.length, 1
+	}
+
+	// a directory in it, made
+	void make const str &Name {
+		cby_dir_make Id, Name
+	}
+
+	// a file in it, or an empty directory, removed
+	void remove const str &Name {
+		cby_dir_remove Id, Name
+	}
+
+	void rename const str &From, const str &Into {
+		cby_dir_rename Id, From, Into
+	}
+
+	// a directory in it, held as one of its own
+	directory open_inside const str &Name const {
+		return directory{.Id = cby_dir_open(Name, Id)}
+	}
+
+	~directory {
+		cby_dir_close Id
+	}
+}
+
+// the directory at Path, held open (a panic if there isn't one)
+directory directories.open const str &Path {
+	return directory{.Id = cby_dir_open(Path, 0)}
+}

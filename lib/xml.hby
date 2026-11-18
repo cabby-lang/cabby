@@ -1,0 +1,46 @@
+// xml.hby — reading XML documents, and making them.
+//
+//     use xml
+//
+//     xml Feed = xml.read files.read "news.rss"   the document's top element
+//     for Story in Feed.find_all "item" {
+//         println Story.find("title").text, Story.find("link").text
+//     }
+//
+//     element Note = xml.element "note"            building
+//     Note.set_attribute "id", "7"
+//     element To = xml.element "to"
+//     To.add_text "Ada"
+//     Note.add To
+//     println Note.pretty
+//
+// XML is read strictly: a mistake is a panic that says where ("line 3,
+// column 12: expected </item>"); check first with xml.can_read when it
+// might not be right. Elements are found with CSS selectors, as in html:
+// "item title", "channel > title", "book[lang='en']".
+//
+// The full reference is xml.md, next to this file.
+
+use markup
+
+// a whole XML document: its top element
+object xml : element {
+}
+
+// the document in Text; XML with a mistake is a panic that says where
+xml xml.read const str &Text {
+	xml Doc
+	Doc.adopt cby_markup_read(Text, 0)
+	return Doc
+}
+
+bool xml.can_read const str &Text {
+	return cby_markup_can_read(Text) != 0
+}
+
+// a new element, to build with: xml.element "note"
+element xml.element const str &Tag {
+	element E
+	E.adopt cby_markup_new(Tag, 0)
+	return E
+}

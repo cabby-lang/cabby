@@ -1,0 +1,228 @@
+// videos.hby — video files: what's in them (their size, length, frame
+// rate, sound), a picture from any moment in them, their sound saved on
+// its own, and playing them in a window (with use gui).
+//
+//     use gui
+//     use videos
+//
+//     videos.video Film = videos.open "lesson.mp4"
+//     println Film.width, "by", Film.height, "for", Film.length, "seconds"
+//
+//     gui.video Screen = Window.add_video Film.source
+//     Screen.show_controls
+//     Film.play
+//
+// Decoded with FFmpeg's libraries, the same way on Linux and macOS: MP4,
+// MKV, WebM, MOV, AVI, and whatever else FFmpeg reads. The full reference
+// is videos.md, next to this file.
+
+use images
+
+// ---- the C side (runtime/videos.c); use the objects below instead
+
+extern long cby_videos_open str path, int panics
+extern char cby_videos_char long i
+extern void cby_videos_close long id
+extern long cby_videos_source long id
+extern long cby_videos_number long id, long what
+extern double cby_videos_seconds long id, long what
+extern long cby_videos_text long id, long what
+extern void cby_videos_play long id
+extern void cby_videos_pause long id
+extern int cby_videos_playing long id
+extern void cby_videos_seek long id, double seconds
+extern long cby_videos_ends long id
+extern void cby_videos_set_looping long id, int yes
+extern int cby_videos_looping long id
+extern void cby_videos_set_volume long id, double level
+extern double cby_videos_volume long id
+extern long cby_videos_picture_at long id, double seconds
+extern int cby_videos_save_sound long id, str path
+extern long cby_videos_ffmpeg void
+
+str videos_handed long Length {
+	str s
+	for i in Length {
+		s += cby_videos_char i
+	}
+	return s
+}
+
+// ---- a video
+
+// A video file, opened: what's in it, and playing it. It plays in a
+// window (gui's add_video, given its source); its position moves on by the
+// window's clock.
+object videos.video {
+	inner long Id
+
+	~videos.video {
+		cby_videos_close Id
+	}
+
+	// (made by videos.open)
+	void set_up long Number {
+		Id = Number
+	}
+
+	// its picture's size, in pixels (0 for a sound file)
+	int width const {
+		return (int)cby_videos_number(Id, 0)
+	}
+
+	int height const {
+		return (int)cby_videos_number(Id, 1)
+	}
+
+	// how long it is, in seconds
+	double length const {
+		return cby_videos_seconds Id, 0
+	}
+
+	// pictures a second: 25, 29.97, 30, 60 (0 for a sound file)
+	double frame_rate const {
+		return cby_videos_seconds Id, 1
+	}
+
+	// whether it has a picture, and sound
+	bool has_picture const {
+		return cby_videos_number(Id, 2) != 0
+	}
+
+	bool has_sound const {
+		return cby_videos_number(Id, 3) != 0
+	}
+
+	// how its picture and sound are kept: "h264", "hevc", "vp9", "av1";
+	// "aac", "opus", "mp3" ("" for none)
+	str picture_codec const {
+		return videos_handed cby_videos_text(Id, 0)
+	}
+
+	str sound_codec const {
+		return videos_handed cby_videos_text(Id, 1)
+	}
+
+	// its title, if the file has one ("" if not)
+	str title const {
+		return videos_handed cby_videos_text(Id, 2)
+	}
+
+	// the kind of file: "mov,mp4,m4a,3gp,3g2,mj2", "matroska,webm", "avi"
+	// (as FFmpeg names it)
+	str kind const {
+		return videos_handed cby_videos_text(Id, 3)
+	}
+
+	// the file it was opened from
+	str path const {
+		return videos_handed cby_videos_text(Id, 4)
+	}
+
+	// ---- playing it (in a window: gui's add_video)
+
+	void play const {
+		cby_videos_play Id
+	}
+
+	void pause const {
+		cby_videos_pause Id
+	}
+
+	// playing, if paused; paused, if playing
+	void play_pause const {
+		if playing {
+			pause
+		} else {
+			play
+		}
+	}
+
+	bool playing const {
+		return cby_videos_playing(Id) != 0
+	}
+
+	// where it's got to, in seconds
+	double position const {
+		return cby_videos_seconds Id, 2
+	}
+
+	// to there, in seconds (playing on from there, if it was playing)
+	void seek double Seconds const {
+		cby_videos_seek Id, Seconds
+	}
+
+	// back to the start
+	void rewind const {
+		cby_videos_seek Id, 0
+	}
+
+	// true once it's played to its end (and stopped there)
+	bool ended const {
+		return !playing and cby_videos_ends(Id) > 0 and position >= length - 0.001
+	}
+
+	// played again from the start each time it ends
+	void set_looping bool Yes const {
+		int Is = 0
+		if Yes {
+			Is = 1
+		}
+		cby_videos_set_looping Id, Is
+	}
+
+	bool looping const {
+		return cby_videos_looping(Id) != 0
+	}
+
+	// how loud, from 0 (silent) to 100 (as it is: to begin with)
+	void set_volume int Level const {
+		cby_videos_set_volume Id, Level / 100.0
+	}
+
+	int volume const {
+		return (int)(cby_videos_volume(Id) * 100 + 0.5)
+	}
+
+	// ---- its pictures and sound
+
+	// The picture at that time, in seconds: a thumbnail, or a frame to
+	// look at (use images). It moves the video there.
+	images.picture picture_at double Seconds const {
+		return images.picture{.Id = cby_videos_picture_at(Id, Seconds)}
+	}
+
+	// its sound, all of it, saved as a WAV file (for the sound library, or
+	// an editor): false if it has none, or the file couldn't be written
+	bool save_sound const str &Path const {
+		return cby_videos_save_sound(Id, Path) != 0
+	}
+
+	// what a window shows: for gui's add_video
+	long source const {
+		return cby_videos_source Id
+	}
+}
+
+// A video file, opened: a panic if it isn't there, or isn't a video (or
+// sound) file FFmpeg can read; videos.can_open checks first.
+videos.video videos.open const str &Path {
+	videos.video V
+	V.set_up cby_videos_open(Path, 1)
+	return V
+}
+
+// whether it's a video (or sound) file that can be opened
+bool videos.can_open const str &Path {
+	long Id = cby_videos_open Path, 0
+	if Id == 0 {
+		return false
+	}
+	cby_videos_close Id
+	return true
+}
+
+// the version of FFmpeg's libraries it's using: "7.1"
+str videos.ffmpeg_version {
+	return videos_handed cby_videos_ffmpeg()
+}

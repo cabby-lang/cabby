@@ -1,0 +1,258 @@
+// images.hby — pictures in memory: drawn on a pixel at a time or in
+// shapes, read from and saved to files, shown on a window's canvas, and
+// made by a worker, to hand to the main program whole.
+//
+//     use images
+//
+//     images.picture P = images.new 320, 200      transparent, to begin with
+//     P.fill_with "midnightblue"
+//     P.set_color "gold"
+//     P.fill_circle 160, 100, 40
+//     P.set_pixel_rgb 10, 10, 255, 0, 0          one pixel, red
+//     P.save "sun.png"                            a PNG (or .jpg, .bmp)
+//     images.picture Photo = images.load "cat.jpg"
+//
+//     Canvas.picture 0, 0, P                       shown on a gui canvas
+//     tell_picture P                               from a worker: moved to
+//                                                  the main program, whole
+//
+// Positions are in pixels from the top left corner, y counting down, as a
+// canvas's are. What's drawn replaces what was there; `draw` puts one
+// picture on another, letting what's see-through in it show through.
+//
+// The full reference is images.md, next to this file.
+
+// ---- the C side (runtime/images.c)
+
+extern long cby_image_new long width, long height
+extern long cby_image_load str path
+extern void cby_image_save long id, str path
+extern long cby_image_copy long id
+extern void cby_image_free long id
+extern long cby_image_width long id
+extern long cby_image_height long id
+extern void cby_image_set_color long id, str color
+extern void cby_image_fill_with long id, str color
+extern void cby_image_set_pixel long id, long x, long y
+extern void cby_image_set_pixel_rgb long id, long x, long y, long r, long g, long b
+extern long cby_image_pixel long id, long x, long y
+extern void cby_image_fill_rectangle long id, long x, long y, long w, long h
+extern void cby_image_rectangle long id, long x, long y, long w, long h
+extern void cby_image_line long id, long x1, long y1, long x2, long y2
+extern void cby_image_fill_circle long id, long x, long y, long r
+extern void cby_image_circle long id, long x, long y, long r
+extern void cby_image_draw long id, long other, long x, long y
+extern long cby_image_scaled long id, long w, long h
+extern long cby_image_cropped long id, long x, long y, long w, long h
+extern long cby_image_turned long id, double degrees
+extern long cby_image_mirrored long id, long upside_down
+extern long cby_image_gray long id
+extern long cby_image_blurred long id, long radius
+extern void cby_image_set_font str name, double size
+extern void cby_image_text long id, double x, double y, str text
+extern double cby_image_text_width str text
+
+// A picture: its pixels, in memory. It's moved, not copied, as a list is:
+// `copy` gives a second one.
+object images.picture {
+	long Id
+
+	// its size, in pixels
+	int width const {
+		return (int)cby_image_width(Id)
+	}
+
+	int height const {
+		return (int)cby_image_height(Id)
+	}
+
+	// the color for what's drawn next: "red", "steelblue", "#3366cc",
+	// "rgba(0, 0, 0, 0.5)" (black to begin with)
+	void set_color const str &Color {
+		cby_image_set_color Id, Color
+	}
+
+	// every pixel one color (the color for drawing stays as it was)
+	void fill_with const str &Color {
+		cby_image_fill_with Id, Color
+	}
+
+	// one pixel, in the color for drawing (outside the picture: nothing)
+	void set_pixel int X, int Y {
+		cby_image_set_pixel Id, X, Y
+	}
+
+	// one pixel, from its red, green and blue, 0 to 255 each: the quickest
+	// way to fill a picture a pixel at a time, as a fractal is
+	void set_pixel_rgb int X, int Y, int Red, int Green, int Blue {
+		cby_image_set_pixel_rgb Id, X, Y, Red, Green, Blue
+	}
+
+	// a pixel's color, as 0xRRGGBBAA (0 outside the picture): red is
+	// Color / 0x1000000, and how opaque it is, Color % 256
+	long pixel int X, int Y const {
+		return cby_image_pixel(Id, X, Y)
+	}
+
+	// a pixel's red, green and blue, from 0 to 255
+	int red int X, int Y const {
+		return (int)(cby_image_pixel(Id, X, Y) / 16777216 % 256)
+	}
+
+	int green int X, int Y const {
+		return (int)(cby_image_pixel(Id, X, Y) / 65536 % 256)
+	}
+
+	int blue int X, int Y const {
+		return (int)(cby_image_pixel(Id, X, Y) / 256 % 256)
+	}
+
+	// shapes, in the color for drawing, a pixel wide (fill_: filled in)
+	void line int X1, int Y1, int X2, int Y2 {
+		cby_image_line Id, X1, Y1, X2, Y2
+	}
+
+	void rectangle int X, int Y, int Width, int Height {
+		cby_image_rectangle Id, X, Y, Width, Height
+	}
+
+	void fill_rectangle int X, int Y, int Width, int Height {
+		cby_image_fill_rectangle Id, X, Y, Width, Height
+	}
+
+	void circle int X, int Y, int Radius {
+		cby_image_circle Id, X, Y, Radius
+	}
+
+	void fill_circle int X, int Y, int Radius {
+		cby_image_fill_circle Id, X, Y, Radius
+	}
+
+	// another picture drawn on this one, its top left corner at X, Y
+	void draw const images.picture &Other, int X, int Y {
+		cby_image_draw Id, Other.Id, X, Y
+	}
+
+	// ---- text
+
+	// Text, in the color for drawing, its top left corner at X, Y ("\n"
+	// between lines), in the font images.set_font chose ("Sans", 16 pixels
+	// high, to begin with).
+	void text int X, int Y, const str &Text {
+		cby_image_text Id, X, Y, Text
+	}
+
+	// ---- changed copies: each a new picture, this one left as it is
+	//     Photo = Photo.scaled_to_fit 800, 800
+
+	// at a new size, in pixels: smoothly, every pixel counted when it's
+	// made smaller
+	images.picture scaled int Width, int Height const {
+		return images.picture{.Id = cby_image_scaled(Id, Width, Height)}
+	}
+
+	// as big as fits in Width by Height, keeping its shape (never made
+	// bigger than it is)
+	images.picture scaled_to_fit int Width, int Height const {
+		double Across = (double)Width / width
+		double Down = (double)Height / height
+		double By = Across
+		if Down < By {
+			By = Down
+		}
+		if By > 1 {
+			By = 1
+		}
+		return scaled_by By
+	}
+
+	// so many times as big: 0.5 is half its size, 2 twice
+	images.picture scaled_by double Times const {
+		int Wide = (int)(width * Times + 0.5)
+		int High = (int)(height * Times + 0.5)
+		if Wide < 1 {
+			Wide = 1
+		}
+		if High < 1 {
+			High = 1
+		}
+		return scaled(Wide, High)
+	}
+
+	// a part of it: the rectangle at X, Y (what of it is inside the
+	// picture)
+	images.picture cropped int X, int Y, int Width, int Height const {
+		return images.picture{.Id = cby_image_cropped(Id, X, Y, Width, Height)}
+	}
+
+	// turned clockwise by so many degrees: 90 a quarter turn, 180 upside
+	// down. Any other angle makes it bigger, to hold the corners, with
+	// what's outside see-through.
+	images.picture turned double Degrees const {
+		return images.picture{.Id = cby_image_turned(Id, Degrees)}
+	}
+
+	// as in a mirror, left to right; and upside down (top to bottom)
+	images.picture mirrored const {
+		return images.picture{.Id = cby_image_mirrored(Id, 0)}
+	}
+
+	images.picture flipped const {
+		return images.picture{.Id = cby_image_mirrored(Id, 1)}
+	}
+
+	// in grays, as light as each color looks
+	images.picture gray const {
+		return images.picture{.Id = cby_image_gray(Id)}
+	}
+
+	// blurred, by about so many pixels
+	images.picture blurred int Radius const {
+		return images.picture{.Id = cby_image_blurred(Id, Radius)}
+	}
+
+	// saved as a file: a PNG, or (by the name) a JPEG (.jpg) or a BMP (.bmp)
+	void save const str &Path const {
+		cby_image_save Id, Path
+	}
+
+	// a second picture, the same as this one
+	images.picture copy const {
+		return images.picture{.Id = cby_image_copy(Id)}
+	}
+
+	// true for a picture with nothing in it: one handed on with
+	// tell_picture, or never made
+	bool is_empty const {
+		return Id is 0
+	}
+
+	~picture {
+		if Id is not 0 {
+			cby_image_free Id
+		}
+	}
+}
+
+// a new picture, every pixel transparent
+images.picture images.new int Width, int Height {
+	return images.picture{.Id = cby_image_new(Width, Height)}
+}
+
+// a picture from a file: PNG, JPEG, BMP or GIF (its first frame)
+images.picture images.load const str &Path {
+	return images.picture{.Id = cby_image_load(Path)}
+}
+
+// The font text is written in, from then on: a font of the computer's by
+// name ("Sans", "Serif", "Monospace", "Serif Bold", "DejaVu Sans"), or a
+// font's file ("fonts/Garamond.ttf"); Size is its height, in pixels.
+void images.set_font const str &Name, double Size {
+	cby_image_set_font Name, Size
+}
+
+// how wide text would be, in pixels, in the font set: for putting it in
+// the middle
+int images.text_width const str &Text {
+	return (int)(cby_image_text_width(Text) + 0.5)
+}

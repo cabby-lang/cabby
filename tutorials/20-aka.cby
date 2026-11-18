@@ -1,0 +1,52 @@
+// Tutorial 20: aka, another name for a type
+//
+// Run it:      cabby 20-aka.cby
+// Keywords:    aka
+//
+// aka gives an existing type a second name: the type, then aka, then the
+// new name ("unsigned long, also known as size_t"). It doesn't make a new
+// type: the two names are interchangeable. It's useful to say what a
+// number *means*, or to give a long type a short name. (C writes this
+// with typedef.)
+
+unsigned long aka size_t
+double aka celsius
+int aka matrix[2][2]            // an array type gets a name too
+unsigned char aka byte
+
+celsius to_celsius double Fahrenheit {
+	return (Fahrenheit - 32.0) * 5.0 / 9.0
+}
+
+int trace const matrix &m {
+	return m[0][0] + m[1][1]
+}
+
+int main {
+	celsius Body = to_celsius 98.6
+	println "98.6F is", Body, "C"
+
+	size_t Count = 3
+	println "count:", Count, "size:", sizeof(size_t)
+
+	matrix m = {{1, 2}, {3, 4}}
+	println "trace:", trace(m)
+
+	byte b = 200
+	println "byte:", (int)b
+
+	// Because an aka name is only another name, mixing is fine:
+	double Plain = Body
+	println Plain == Body
+}
+
+// Try this:
+//  - Give a struct a second name: `point aka position`, after declaring
+//    `struct point`, and use both names.
+
+// ---------------------------------------------------------------- output
+//> 98.6F is 37.0 C
+//> count: 3 size: 8
+//> trace: 5
+//> byte: 200
+//> true

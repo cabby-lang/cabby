@@ -1,0 +1,93 @@
+// files.hby — reading and writing files.
+//
+//     use files
+//
+//     str Text = files.read "notes.txt"          the whole file
+//     list str Lines = files.lines "data.csv"     one str per line, without line ends
+//     files.write "out.txt", Text                 the file becomes Text (made if new)
+//     files.append "log.txt", "started\n"         Text goes on the end (made if new)
+//     files.exists "notes.txt"                    true if a file (not a directory) is there
+//     files.size "notes.txt"                      its size in bytes, as a long
+//     files.copy "a.txt", "b.txt"                 b.txt becomes a copy of a.txt
+//     files.rename "b.txt", "old/b.txt"           a new name, or a new place
+//     files.delete "b.txt"
+//
+//     bytes Data = files.read_bytes "photo.png"   a file that isn't text: its bytes
+//     files.write_bytes "copy.png", Data          the file becomes Data
+//     files.append_bytes "log.dat", Data          Data goes on the end
+//
+//     file F = files.open_to_change "save.dat"    to read and write anywhere in it
+//     F.move_to 16                                go to byte 16 (0 is the start)
+//     bytes Header = F.read_bytes 8               the next 8 bytes (fewer at the end)
+//     F.write_bytes Header                        writes over what's there
+//     println F.position, F.size                  where it is, and how long the file is
+//     F.move_to_end
+//
+// Anything that goes wrong is a panic that says why ("can't read
+// 'notes.txt': no such file or directory"); check first with files.exists
+// when a file might not be there. Directories have their own library,
+// directories.
+//
+// Most of these are built into Cabby; this header turns them on, and adds
+// those for bytes. The full reference is files.md, next to this file.
+
+use bytes
+
+// ---- the C side (in Cabby's runtime)
+
+extern long cby_files_read_bytes str path
+extern void cby_files_write_bytes str path, long b, int append
+extern long cby_file_read_bytes long handle, long count
+extern void cby_file_write_bytes long handle, long b
+extern long cby_file_size long handle
+extern long cby_file_position long handle
+extern void cby_file_move_to long handle, long position
+extern void cby_file_move_to_end long handle
+
+// ---- whole files
+
+bytes files.read_bytes const str &Path {
+	bytes B
+	B.adopt cby_files_read_bytes(Path)
+	return B
+}
+
+void files.write_bytes const str &Path, const bytes &Data {
+	cby_files_write_bytes Path, Data.handle, 0
+}
+
+void files.append_bytes const str &Path, const bytes &Data {
+	cby_files_write_bytes Path, Data.handle, 1
+}
+
+// ---- an open file
+
+// up to Count bytes from where the file is; fewer at the end, none after it
+bytes file.read_bytes const file &F, long Count {
+	bytes B
+	B.adopt cby_file_read_bytes(F.handle, Count)
+	return B
+}
+
+void file.write_bytes const file &F, const bytes &Data {
+	cby_file_write_bytes F.handle, Data.handle
+}
+
+// where the next read or write happens: how many bytes from the start
+long file.position const file &F {
+	return cby_file_position(F.handle)
+}
+
+// goes to byte Position (0 is the start; F.size, the end)
+void file.move_to const file &F, long Position {
+	cby_file_move_to F.handle, Position
+}
+
+void file.move_to_end const file &F {
+	cby_file_move_to_end F.handle
+}
+
+// how many bytes the file has now
+long file.size const file &F {
+	return cby_file_size(F.handle)
+}

@@ -1,0 +1,8 @@
+// What's playing (start some music first).
+use media
+
+int main {
+	println "player:", media.player, "| playing:", media.playing
+	println "title:", media.title, "| artist:", media.artist
+	return 0
+}

@@ -1,0 +1,32 @@
+// functions: defined, called bare or in expressions, echoed, replaced
+int add int a, int b {
+	return a + b
+}
+add 2, 3
+add(4, 5) * 2
+void greet str who {
+	println "hello,", who
+}
+greet "Ada"
+int add int a, int b {
+	return a + b + 100
+}
+add 2, 3
+int add int a {
+	return a
+}
+add 2, 3
+void hello
+{
+	println "allman"
+}
+hello
+int counter {
+	static int n = 0
+	n++
+	return n
+}
+counter
+counter
+int main {
+}

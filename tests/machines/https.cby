@@ -1,0 +1,15 @@
+// A real web site, over HTTPS.
+use networks
+
+int main {
+	str Page = networks.download "https://example.com" else Why {
+		println "it failed:", Why
+		return 1
+	}
+	if !Page.contains "Example Domain" {
+		println "it came, but not what was expected"
+		return 1
+	}
+	println "fetched example.com over HTTPS"
+	return 0
+}

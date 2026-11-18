@@ -1,0 +1,43 @@
+// A world for run_world_tests.sh to look at: every shape, a picture on
+// the ground (a checkerboard, made here), the sun, a lamp, and text.
+use world
+use images
+
+object scene : world.window {
+	void build {
+		set_size 320, 240
+		images.picture Checks = images.new(16, 16)
+		for Y in 16 {
+			for X in 16 {
+				if (X / 8 + Y / 8) % 2 == 0 {
+					Checks.set_pixel_rgb X, Y, 255, 255, 255
+				} else {
+					Checks.set_pixel_rgb X, Y, 90, 90, 90
+				}
+			}
+		}
+		Checks.save "checks.png"
+		world.shape Ground = add_plane 30, 30, "lightgreen", 0, 0, 0
+		Ground.set_picture "checks.png"
+		Ground.set_picture_size 2
+		world.shape Crate = add_box 1, 1, 1, "orange", -1.5, 0.5, 0
+		Crate.set_angle 30
+		add_ball 0.6, "royalblue", 0.3, 0.6, 0.5
+		add_cylinder 0.4, 1.6, "slategray", 2, 0.8, -1
+		add_cone 0.6, 1.2, "firebrick", -0.5, 0.6, -2.5
+		add_lamp 0.3, 1.8, 1.5, "yellow", 4
+		world.text Label = add_text "Hello", 8, 6
+		Label.set_color "black"
+		point_camera_at 0, 0.5, 0
+		on_frame step
+	}
+
+	void step {
+	}
+}
+
+int main {
+	scene S
+	S.run
+	println "frames:", S.frame
+}

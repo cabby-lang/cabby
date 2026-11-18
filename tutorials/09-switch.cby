@@ -1,0 +1,94 @@
+// Tutorial 9: switch
+//
+// Run it:      cabby 09-switch.cby
+// Keywords:    switch, case, default, break
+//
+// switch picks a `case` by an integer (or char, or enum) value.
+// Execution "falls through" from one case into the next unless a `break`
+// stops it. `default` catches every value no case names.
+//
+// Layout: the case labels are indented one tab inside the switch, and the
+// statements under them one tab more.
+
+void day_name int d {
+	switch d {
+		case 0:
+			println "Sunday"
+			break
+		case 6:
+			println "Saturday"
+			break
+		default:
+			println "a weekday"
+	}
+}
+
+void kind char c {
+	switch c {
+		case 'a':
+		case 'e':
+		case 'i':
+		case 'o':
+		case 'u':
+			println c, "is a vowel"     // several cases share these lines
+			break
+		case ' ':
+			println "a space"
+			break
+		default:
+			println c, "is something else"
+	}
+}
+
+int main {
+	day_name 0
+	day_name 3
+	day_name 6
+
+	kind 'e'
+	kind 'z'
+	kind ' '
+
+	// Fall-through on purpose: each level gets its own message and every
+	// message below it.
+	int Level = 2
+	switch Level {
+		case 3:
+			println "gold"
+		case 2:
+			println "silver"
+		case 1:
+			println "bronze"
+	}
+
+	// Stacked labels again, this time on a computed value.
+	for n in 1 to 4 {
+		switch n % 4 {
+			case 1:
+			case 3:
+				println n, "odd"
+				break
+			default:
+				println n, "even"
+		}
+	}
+}
+
+// Try this:
+//  - Remove the first `break` in day_name and call `day_name 0`. What
+//    prints, and why?
+//  - Add a `case 1:` for "Monday".
+
+// ---------------------------------------------------------------- output
+//> Sunday
+//> a weekday
+//> Saturday
+//> e is a vowel
+//> z is something else
+//> a space
+//> silver
+//> bronze
+//> 1 odd
+//> 2 even
+//> 3 odd
+//> 4 even

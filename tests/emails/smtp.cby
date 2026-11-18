@@ -1,0 +1,103 @@
+// A stand-in for an email server (SMTP), for run_emails_tests.sh: it
+// prints its port, takes messages as a server does (logged in as
+// "tom@example.com" with the password "secret", anything else turned
+// down), and writes each it's given, with who it's from and to, to
+// received.eml. It ends with the test.
+use networks
+use events
+use files
+
+object smtp {
+	networks.server S
+	lookup long bool Reading      // each connection: in the middle of DATA
+	lookup long str Mail          // what's come in DATA so far
+	lookup long str Envelope      // MAIL FROM and RCPT TO
+	lookup long bool Asked        // AUTH PLAIN said: the login comes next
+
+	void begin {
+		S.on_connect hello
+		S.on_line said
+		S.listen_here 0
+		println S.port
+		events.run
+	}
+
+	void say long Who, const str &Line {
+		S.send_to Who, Line + "\r\n"
+	}
+
+	void hello {
+		Reading[S.from] = false
+		Mail[S.from] = ""
+		Envelope[S.from] = ""
+		Asked[S.from] = false
+		say S.from, "220 test.example.com ESMTP Cabby's stand-in"
+	}
+
+	void said {
+		long Who = S.from
+		str Line = S.line
+		if Reading[Who] {
+			if Line == "." {
+				Reading[Who] = false
+				files.write "received.eml", Envelope[Who] + "\n" + Mail[Who]
+				say Who, "250 OK: queued"
+			} else {
+				if Line.starts_with ".." {
+					Line = Line[1 to]   // (a line starting with a dot, sent doubled)
+				}
+				Mail[Who] += Line + "\n"
+			}
+			return
+		}
+		str Upper = Line.upper
+		if Asked[Who] {
+			Asked[Who] = false
+			login Who, Line
+			return
+		}
+		if Upper.starts_with "EHLO" {
+			say Who, "250-test.example.com"
+			say Who, "250-AUTH PLAIN LOGIN"
+			say Who, "250 8BITMIME"
+		} else if Upper == "AUTH PLAIN" {
+			Asked[Who] = true
+			say Who, "334 "
+		} else if Upper.starts_with "AUTH PLAIN " {
+			str Given = Line[11 to]
+			login Who, Given
+		} else if Upper.starts_with "MAIL FROM:" {
+			Envelope[Who] = "from " + Line[10 to]
+			say Who, "250 OK"
+		} else if Upper.starts_with "RCPT TO:" {
+			Envelope[Who] += ", to " + Line[8 to]
+			say Who, "250 OK"
+		} else if Upper == "DATA" {
+			Reading[Who] = true
+			Mail[Who] = ""
+			say Who, "354 End data with <CR><LF>.<CR><LF>"
+		} else if Upper == "QUIT" {
+			say Who, "221 Bye"
+			S.close_connection Who
+		} else if Upper == "RSET" or Upper == "NOOP" {
+			say Who, "250 OK"
+		} else {
+			say Who, "502 Command not implemented"
+		}
+	}
+
+	// "\0login\0password", in base64: AHRvbUBleGFtcGxlLmNvbQBzZWNyZXQ= is
+	// the right one
+	void login long Who, const str &Given {
+		if Given == "AHRvbUBleGFtcGxlLmNvbQBzZWNyZXQ=" {
+			say Who, "235 2.7.0 Authentication successful"
+		} else {
+			say Who, "535 5.7.8 Authentication credentials invalid"
+		}
+	}
+}
+
+int main {
+	smtp Server
+	Server.begin
+}

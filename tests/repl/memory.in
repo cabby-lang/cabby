@@ -1,0 +1,10 @@
+// memory by hand: checked, and blocks never given back are listed at the end
+use addresses
+address int A = addresses.allocate 8
+A = addresses.allocate 8
+addresses.free A
+A[0]
+address int B = addresses.allocate 2
+B = addresses.reallocate B, 4
+addresses.free B
+exit

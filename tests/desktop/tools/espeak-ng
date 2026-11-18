@@ -1,0 +1,14 @@
+#!/bin/sh
+# a stand-in (run_desktop_tests.sh) for the programs that speak: espeak-ng,
+# espeak, spd-say and a Mac's say, each a link to this: there only when
+# CABBY_HAVE names it, and saying what it was asked, and what it read,
+# into the test's state
+me=$(basename "$0")
+case ",$CABBY_HAVE," in *",$me,"*) ;; *) exit 127 ;; esac
+case "$*" in
+--version) echo "$me 1.52"; exit 0 ;;
+--voices) printf 'Pty Language       Age/Gender VoiceName          File                 Other Languages\n 5  en-gb           --/M      English_(Great_Britain) gmw/en           (en 2)\n 5  grc             --/M      Greek_(Ancient)    grk/grc\n 5  la              --/M      Latin              itc/la\n'; exit 0 ;;
+-L) printf 'NAME                 LANGUAGE   VARIANT\nEnglish_(Great_Britain) en-gb      none\nLatin                la         none\n'; exit 0 ;;
+"-v ?") printf 'Daniel              en_GB    # Hello! My name is Daniel.\nEddy (English (US)) en_US    # Hello! My name is Eddy.\nAmélie              fr_CA    # Bonjour, je m'"'"'appelle Amélie.\n'; exit 0 ;;
+esac
+{ printf '%s' "$me"; for a in "$@"; do printf ' [%s]' "$a"; done; echo; printf '  read: %s\n' "$(cat)"; } >> "$CABBY_TEST_STATE/admin.log"

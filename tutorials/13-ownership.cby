@@ -1,0 +1,105 @@
+// Tutorial 13: Ownership — moves and drops
+//
+// Run it:      cabby 13-ownership.cby
+//
+// This is the heart of Cabby. There's no garbage collector and no free():
+//
+//   1. Every value has exactly one owner (a variable, a field, an array
+//      slot).
+//   2. Plain values — numbers, bool, char, enums, and structs or arrays of
+//      them — are COPIED when assigned or passed.
+//   3. Everything else — str, objects — is MOVED: the old owner gives it up
+//      and can't use it any more (until it's given a new value).
+//   4. When an owner goes out of scope (the end of its block), whatever it
+//      still owns is DROPPED: freed, after running its destructor if it
+//      has one.
+//
+// All of this is checked before the program runs. A use after a move is
+// an error, not a crash.
+//
+// To *see* drops happening, this tutorial uses an object with a
+// destructor, `~ticket`, which prints a line when a ticket is dropped.
+// Objects come properly in tutorial 22; for now just read `ticket` as
+// "a value that announces when it's freed".
+
+object ticket {
+	str Holder
+	~ticket {
+		println "  (dropped", Holder, "ticket)"
+	}
+}
+
+// Taking a ticket by value: the caller's ticket moves into `t`, and is
+// dropped when this function ends.
+void use_up ticket t {
+	println "using", t.Holder, "ticket"
+}
+
+// Returning a value moves it out to the caller.
+ticket issue str Who {
+	ticket t = {.Holder = Who}
+	return t
+}
+
+int main {
+	println "1. copies"
+	int a = 5
+	int b = a          // a copy: a is still 5
+	b++
+	println a, b
+
+	println "2. moves"
+	ticket First = issue "Ann"
+	ticket Second = First          // moved: `First` is now empty
+	println Second.Holder, "has the ticket"
+	// println First.Holder        // error: use of moved value 'First'
+
+	println "3. moving into a function"
+	use_up Second                  // moved into use_up, dropped at its end
+	println "back in main"
+
+	println "4. dropped at the end of a block"
+	if true {
+		ticket Local = issue "Bo"
+		println "inside the block"
+	}                              // `Local` dropped here
+	println "after the block"
+
+	println "5. giving a variable a new value drops the old one"
+	ticket t = issue "Cy"
+	t = issue "Di"                // Cy's ticket is dropped first
+	println "t now belongs to", t.Holder
+
+	println "6. a moved-from variable can be filled again"
+	First = issue "Ed"
+	println "first is back:", First.Holder
+
+	println "end of main"
+}                                  // remaining owners dropped, newest first
+
+// Try this:
+//  - Uncomment `println First.Holder` in step 2. Read the error and note.
+//  - Move `ticket Local` out of the if block to before it. When is it
+//    dropped now?
+
+// ---------------------------------------------------------------- output
+//> 1. copies
+//> 5 6
+//> 2. moves
+//> Ann has the ticket
+//> 3. moving into a function
+//> using Ann ticket
+//>   (dropped Ann ticket)
+//> back in main
+//> 4. dropped at the end of a block
+//> inside the block
+//>   (dropped Bo ticket)
+//> after the block
+//> 5. giving a variable a new value drops the old one
+//>   (dropped Cy ticket)
+//> t now belongs to Di
+//> 6. a moved-from variable can be filled again
+//> first is back: Ed
+//> end of main
+//>   (dropped Di ticket)
+//>   (dropped Ed ticket)

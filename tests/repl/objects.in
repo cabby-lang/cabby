@@ -1,0 +1,35 @@
+// objects, inheritance, virtual calls, destructors at exit
+object animal {
+	str name
+	void speak {
+		println name, "makes a sound"
+	}
+	~animal {
+		println "goodbye", name
+	}
+}
+object dog : animal {
+	void speak {
+		println name, "barks"
+	}
+}
+dog d = {.name = "Rex"}
+animal &a = d
+a.speak
+void talk animal &x {
+	x.speak
+}
+talk d
+struct pt {
+	int x
+	int y
+}
+pt p = {3, 4}
+p.x * p.y
+enum color {
+	RED
+	GREEN = 5
+}
+GREEN
+animal cat = {.name = "Tom"}
+cat.speak

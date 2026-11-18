@@ -1,0 +1,89 @@
+// signals (run_os_tests.sh): caught and told to a handler from the event
+// loop, checked for in a loop, ignored; and sent to another program
+use os
+use events
+use time
+use processes
+
+object test {
+	os.signals Signals
+	timer Step
+	int At
+
+	void begin {
+		Signals.on_signal signalled
+		Signals.catch "interrupt"
+		Signals.catch "terminate"
+		Step.on_tick next
+		Step.every time.milliseconds(50)
+		events.run
+	}
+
+	void next {
+		At++
+		if At == 1 {
+			os.send_signal os.pid, "interrupt"     // as Ctrl+C would
+		} else if At == 2 {
+			os.send_signal os.pid, "terminate"
+		} else {
+			Step.stop
+		}
+	}
+
+	void signalled {
+		println "caught:", Signals.signal, "and carrying on"
+	}
+}
+
+int main {
+	test T
+	T.begin
+
+	// without a handler: asked about, in a loop
+	os.catch_signal "user2"
+	println "before:", os.got_signal("user2")
+	os.send_signal os.pid, "user2"
+	int Turns = 0
+	while !os.got_signal("user2") and Turns < 100 {
+		time.sleep time.milliseconds(10)
+		Turns++
+	}
+	println "after: it came"
+	println "asked again:", os.got_signal("user2")
+
+	// ignored: nothing happens
+	os.ignore_signal "hangup"
+	os.send_signal os.pid, "hangup"
+	time.sleep time.milliseconds(50)
+	println "still here, after a hangup"
+
+	// another program, stopped by its number
+	process Sleeper
+	Sleeper.start "exec sleep 30"
+	time.sleep time.milliseconds(200)
+	list os.program Found = os.programs_named "sleep"
+	long Pid = 0
+	for P in Found {
+		if P.parent_pid == os.pid {
+			Pid = P.pid
+			println "found sleep:", P.command, P.user is not ""
+			println "stopped:", P.stop
+		}
+	}
+	Sleeper.wait
+	println "it's gone:", Pid > 0 and !os.running(Pid)
+
+	println "no such signal:", os.send_signal(os.pid, "nonsense")
+	return 0
+}
+
+// panic: there's no signal called 'nonsense'
+//> caught: interrupt and carrying on
+//> caught: terminate and carrying on
+//> before: false
+//> after: it came
+//> asked again: false
+//> still here, after a hangup
+//> found sleep: sleep 30 true
+//> stopped: true
+//> it's gone: true

@@ -1,0 +1,71 @@
+// volume.hby — the speakers' volume, the same way on Linux and macOS.
+//
+//     use volume
+//
+//     println "volume:", volume.level, "muted:", volume.muted
+//     volume.set 40                 from 0 (silent) to 100
+//     volume.up 10
+//     volume.mute
+//
+// Linux: PipeWire's wpctl, or PulseAudio's pactl, or ALSA's amixer,
+// whichever the computer has. macOS: its own volume settings (through
+// osascript). It's the default speakers' (or headphones') volume: the
+// one the volume keys change.
+//
+// The full reference is volume.md, next to this file.
+
+// ---- the C side (runtime/desktop.c)
+
+extern long cby_volume_read long what
+extern int cby_volume_set long level
+extern int cby_volume_set_muted long yes
+
+// how loud, from 0 to 100 (-1: it couldn't be found out)
+int volume.level {
+	return (int)cby_volume_read(0)
+}
+
+// true if it's muted
+bool volume.muted {
+	return cby_volume_read(1) is 1
+}
+
+// sets how loud, from 0 to 100 (less than 0 is 0, more than 100 is 100):
+// true if it was set
+bool volume.set int Level {
+	return cby_volume_set(Level) is not 0
+}
+
+// louder by Amount (out of 100): true if it was set
+bool volume.up int Amount {
+	int Now = volume.level
+	if Now < 0 {
+		return false
+	}
+	return volume.set(Now + Amount)
+}
+
+// quieter by Amount
+bool volume.down int Amount {
+	int Now = volume.level
+	if Now < 0 {
+		return false
+	}
+	return volume.set(Now - Amount)
+}
+
+// silent, keeping the level for unmute: true if it was done
+bool volume.mute {
+	return cby_volume_set_muted(1) is not 0
+}
+
+// back to the level it was
+bool volume.unmute {
+	return cby_volume_set_muted(0) is not 0
+}
+
+// true if it can be read and set here: there's something to set it with
+// (wpctl, pactl or amixer on Linux)
+bool volume.can_set {
+	return volume.level >= 0
+}

@@ -1,0 +1,9 @@
+Cabby שלום, ok => Cabby םולש, ok
+Emoji: 🐈 ❤️ => Emoji: 🐈 ❤️
+Hebrew in English: he said שלום לך twice. => Hebrew in English: he said ךל םולש twice.
+מחיר: -5.50 ש״ח => ח״ש 5.50- :ריחמ
+קטה 🐈 cat => cat 🐈 הטק
+שלום (עולם) => )םלוע( םולש
+שלום עולם => םלוע םולש
+عدد ١٢٣ and 2026 في السنة => ةنسلا يف and 2026 ١٢٣ ددع
+مرحبا بالعالم => ملاعلاب ابحرم

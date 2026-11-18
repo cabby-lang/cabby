@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mime-info xmlns="http://www.freedesktop.org/standards/shared-mime-info">
+  <mime-type type="text/x-cabby">
+    <comment>Cabby program</comment>
+    <sub-class-of type="text/plain"/>
+    <glob pattern="*.cby"/>
+    <icon name="text-x-cabby"/>
+  </mime-type>
+  <mime-type type="text/x-cabby-header">
+    <comment>Cabby header</comment>
+    <sub-class-of type="text/plain"/>
+    <glob pattern="*.hby"/>
+    <icon name="text-x-cabby-header"/>
+  </mime-type>
+</mime-info>

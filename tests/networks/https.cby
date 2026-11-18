@@ -1,0 +1,60 @@
+// Encrypted connections (tests/networks/peer_https.cby): HTTPS pages,
+// wss:// WebSockets and encrypted connections to a line server, with a
+// certificate the peer made; not trusted until it's trusted
+// peer: peer_https.cby
+//> before it's trusted: false false
+//> page: <p>a page, encrypted: /hello</p>
+//> status: 200
+//> wss: welcome, encrypted
+//> wss: HELLO, SECURELY
+//> lines: true HELLO
+//> lines: AGAIN
+//> by hand: HTTP/1.1 200 OK
+//> plain, to an encrypted port: false
+//> stopped: stopping
+use networks
+use shell
+
+int main {
+	list str Ports = shell.get("CABBY_TEST_PEER").split " "
+	long Web = Ports[0].to_long
+	long Lines = Ports[1].to_long
+	str At = "localhost:" + Web.text
+
+	// made by the peer for itself: no one trusts it yet
+	println "before it's trusted:", networks.can_reach("https://" + At + "/"), networks.can_connect_encrypted("localhost", Lines)
+	networks.trust_certificate "cert.pem"
+
+	println "page:", networks.download("https://" + At + "/hello")
+	println "status:", networks.status("https://" + At + "/")
+
+	networks.socket Live = networks.open_socket "wss://" + At + "/chat"
+	Live.read_message
+	println "wss:", Live.message
+	Live.send "hello, securely"
+	Live.read_message
+	println "wss:", Live.message
+	Live.close
+
+	networks.connection Talk = networks.connect_encrypted "localhost", Lines
+	Talk.send_line "hello"
+	Talk.read_line
+	println "lines:", Talk.encrypted, Talk.line
+	Talk.send_line "again"
+	Talk.read_line
+	println "lines:", Talk.line
+	Talk.close
+
+	// HTTP, written out by hand, over an encrypted connection: HTTPS is just that
+	networks.connection Hand = networks.connect_encrypted "127.0.0.1", Web
+	Hand.send "GET /hand HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n"
+	Hand.read_line
+	println "by hand:", Hand.line
+	Hand.close
+
+	// what isn't encrypted gets nothing from it
+	println "plain, to an encrypted port:", networks.can_reach("http://" + At + "/")
+
+	println "stopped:", networks.download("https://" + At + "/stop")
+	return 0
+}

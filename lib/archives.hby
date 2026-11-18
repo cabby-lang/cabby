@@ -1,0 +1,164 @@
+// archives.hby — zip files, tar files (and .tar.gz, .tar.xz), and gzipped
+// or xz files.
+//
+//     use archives
+//
+//     archives.make "lessons.zip", {"lessons", "notes.txt"}    a folder and a file
+//     archives.make "backup.tar.gz", {"lessons"}               the same, as a .tar.gz
+//     archives.unpack "lessons.zip", "unpacked"                everything, into a folder
+//     list str Inside = archives.list "lessons.zip"            what's in it
+//     str Notes = archives.read "lessons.zip", "notes.txt"     one file, as text
+//     archives.compress "big.log"                              big.log.gz, beside it
+//     archives.decompress "big.log.gz"                         big.log again
+//     archives.compress_xz "big.log"                           big.log.xz: smaller, slower
+//     archives.make_with_password "private.zip", {"diary.txt"}, Password
+//     archives.unpack_with_password "private.zip", "out", Password
+//
+// The kind of archive made is by its name: .zip, .tar, .tar.gz (.tgz) or
+// .tar.xz (.txz). A zip can have a password: its files are kept with
+// AES-256, as WinZip and 7-Zip keep them.
+// What's read is known by what's in it, whatever it's called. Unpacking
+// never writes outside the folder it's given: a name inside that would
+// (one starting with /, or with ..) is a panic.
+//
+// The full reference is archives.md, next to this file.
+
+use addresses
+
+// ---- the C side (runtime/archives.c)
+
+extern void cby_archives_start str archive
+extern void cby_archives_add str path
+extern void cby_archives_end void
+extern long cby_archives_list str archive
+extern void cby_archives_unpack str archive, str folder
+extern long cby_archives_read str archive, str name
+extern void cby_archives_compress str path, str dest
+extern void cby_archives_decompress str path, str dest
+extern long cby_archives_result_length long i
+extern void cby_archives_take long i, address char dst
+
+// what C has just found, as a list
+static list str archives_results long Count {
+	list str Found
+	for I in Count {
+		str Text = " ".repeat(cby_archives_result_length(I))
+		if Text.length > 0 {
+			address char Room = addresses.of_text Text
+			cby_archives_take I, Room
+		}
+		Found.add Text
+	}
+	return Found
+}
+
+extern void cby_archives_set_password str password
+extern int cby_archives_locked str archive
+
+// an archive of files and folders (a folder: everything in it), named in
+// it as they're written here ("lessons/ada.txt"); the kind by its name
+void archives.make const str &Archive, const list str &Paths {
+	cby_archives_set_password ""
+	cby_archives_start Archive
+	for Path in Paths {
+		cby_archives_add Path
+	}
+	cby_archives_end
+}
+
+// everything in the archive, into the folder (made if it isn't there)
+void archives.unpack const str &Archive, const str &Folder {
+	cby_archives_set_password ""
+	cby_archives_unpack Archive, Folder
+}
+
+// A zip with a password: each file encrypted with AES-256 (WinZip's way,
+// which 7-Zip, WinZip and most zip programs read), and checked as it's
+// read, so a wrong password, or a file that's been changed, is a panic
+// that says so. The names of what's in it can be read without it.
+void archives.make_with_password const str &Archive, const list str &Paths, const str &Password {
+	archives_need_password Password
+	cby_archives_set_password Password
+	cby_archives_start Archive
+	for Path in Paths {
+		cby_archives_add Path
+	}
+	cby_archives_end
+	cby_archives_set_password ""
+}
+
+// everything in a zip with a password, into the folder: WinZip's AES, or
+// the old ZipCrypto that `zip -e` makes
+void archives.unpack_with_password const str &Archive, const str &Folder, const str &Password {
+	archives_need_password Password
+	cby_archives_set_password Password
+	cby_archives_unpack Archive, Folder
+	cby_archives_set_password ""
+}
+
+// one file from a zip with a password, as text
+str archives.read_with_password const str &Archive, const str &Name, const str &Password {
+	archives_need_password Password
+	cby_archives_set_password Password
+	cby_archives_read Archive, Name
+	cby_archives_set_password ""
+	return archives_results(1)[0].copy
+}
+
+// true if anything in the archive is kept with a password
+bool archives.needs_password const str &Archive {
+	return cby_archives_locked(Archive) != 0
+}
+
+static void archives_need_password const str &Password {
+	if Password == "" {
+		cby_archives_panic "a password can't be empty"
+	}
+}
+
+// the names of what's in it, in order; a folder's end with /
+list str archives.list const str &Archive {
+	return archives_results(cby_archives_list(Archive))
+}
+
+// one file from inside, as text (any bytes), without unpacking the rest
+str archives.read const str &Archive, const str &Name {
+	cby_archives_set_password ""
+	cby_archives_read Archive, Name
+	return archives_results(1)[0].copy
+}
+
+// a file gzipped, as Path.gz beside it (the file stays as it is)
+void archives.compress const str &Path {
+	cby_archives_compress Path, Path + ".gz"
+}
+
+// a file squeezed with xz, as Path.xz beside it: smaller than gzip's,
+// though slower to make
+void archives.compress_xz const str &Path {
+	cby_archives_compress Path, Path + ".xz"
+}
+
+// a gzipped or xz file back as it was: "big.log.gz" (or "big.log.xz") as
+// "big.log"
+void archives.decompress const str &Path {
+	if !Path.ends_with(".gz") and !Path.ends_with(".xz") {
+		archives_not_gz Path
+	}
+	cby_archives_decompress Path, Path[0 to Path.length - 4]
+}
+
+// (the same, to another name: xz if it ends with .xz, gzip otherwise)
+void archives.compress_to const str &Path, const str &To {
+	cby_archives_compress Path, To
+}
+
+void archives.decompress_to const str &Path, const str &To {
+	cby_archives_decompress Path, To
+}
+
+extern void cby_archives_panic str why
+
+static void archives_not_gz const str &Path {
+	cby_archives_panic "'" + Path + "' doesn't end with .gz or .xz: decompress_to says what to call it"
+}

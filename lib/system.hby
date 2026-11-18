@@ -1,0 +1,82 @@
+// system.hby — what computer a program is running on, the same way on
+// Linux and macOS.
+//
+//     use system
+//
+//     println system.name             Debian GNU/Linux 13 (trixie), or macOS 15.1
+//     println system.hostname         its name on the network: "mini"
+//     println system.processors, "processors,", system.memory / 1024 / 1024 / 1024, "GB"
+//     if system.kind is "macos" { ... }
+//
+// The full reference is system.md, next to this file.
+
+use addresses
+
+// ---- the C side (runtime/desktop.c)
+
+extern long cby_system_text long what
+extern long cby_system_number long what
+extern int cby_system_set_hostname str name
+extern void cby_desktop_take_text address char dst
+
+static str system_text long What {
+	long Length = cby_system_text(What)
+	str Text = " ".repeat(Length)
+	address char Room = addresses.of_text Text
+	cby_desktop_take_text Room
+	return Text
+}
+
+// "linux" or "macos"
+str system.kind {
+	return system_text(0)
+}
+
+// its name on the network ("mini", not "mini.local")
+str system.hostname {
+	return system_text(1)
+}
+
+// Changes its name on the network (it needs the administrator: sudo):
+// true if it was changed. Linux: hostnamectl. macOS: scutil, its three
+// names (the network's, Bonjour's ".local" one, and the one Finder shows).
+bool system.set_hostname const str &Name {
+	return cby_system_set_hostname(Name) is not 0
+}
+
+// the system's name and version: "Debian GNU/Linux 13 (trixie)", "Arch
+// Linux", "macOS 15.1"
+str system.name {
+	return system_text(2)
+}
+
+// just the version: "13", "15.1" ("" for a Linux that has none, like Arch)
+str system.version {
+	return system_text(3)
+}
+
+// the kernel's version: "6.12.48-amd64", or a Mac's Darwin "24.1.0"
+str system.kernel {
+	return system_text(4)
+}
+
+// the kind of processor: "x86_64", "aarch64" (Linux on ARM), "arm64" (a
+// Mac's Apple processor)
+str system.machine {
+	return system_text(5)
+}
+
+// how many processors (cores) it has: how many workers can run at once
+int system.processors {
+	return (int)cby_system_number(0)
+}
+
+// its memory, in bytes
+long system.memory {
+	return cby_system_number(1)
+}
+
+// how long since it was turned on, in seconds
+long system.uptime {
+	return cby_system_number(2)
+}

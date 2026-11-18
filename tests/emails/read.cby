@@ -1,0 +1,78 @@
+// reading a mailbox (IMAP) on a stand-in server (tests/emails/imap.cby):
+// its folders, counts, unread messages, what's in them, searches,
+// marking, moving and deleting
+use emails
+use shell
+use files
+
+int main {
+	long Port = shell.get("CABBY_TEST_PEER").to_long
+	emails.mailbox Wrong = emails.mailbox_at "localhost", "tom@example.com", "guess"
+	Wrong.set_port Port
+	Wrong.set_unencrypted
+	println "wrong password:", Wrong.can_connect, Wrong.error
+
+	emails.mailbox Mail = emails.mailbox_at "localhost", "tom@example.com", "secret"
+	Mail.set_port Port
+	Mail.set_unencrypted
+	println "folders:", Mail.folders
+	println "messages:", Mail.count, "unread:", Mail.unread_count
+
+	for M in Mail.unread {
+		println "--", M.number, M.from_name, "<" + M.from_address + ">", "|", M.subject, "| read:", M.read
+		println M.text
+		if M.attachments > 0 {
+			println "attached:", M.attachment_name(0), M.attachment_type(0), M.attachment_size(0)
+			M.save_attachment 0, "got-scales.txt"
+			println "saved:", files.read("got-scales.txt")
+		}
+	}
+
+	list emails.received Latest = Mail.latest 1
+	println "latest:", Latest[0].subject
+	emails.received Greek = Mail.message 102
+	println "by number:", Greek.subject, "|", Greek.text, "| to:", Greek.sent_to, "| read:", Greek.read
+	println "from ana:", Mail.from("ana").length, "subject:", Mail.with_subject("scales").length, "containing:", Mail.containing("four").length
+
+	println "mark read:", Mail.mark_read(101), Mail.unread_count
+	println "flag:", Mail.flag(103), Mail.message(103).flagged
+	println "move:", Mail.move(103, "Archive"), Mail.count
+	println "delete:", Mail.delete(101), Mail.count
+	Mail.open_folder "Archive"
+	println "in", Mail.folder + ":", Mail.count, Mail.all[0].subject
+
+	emails.message Draft
+	Draft.set_from "Tom <tom@example.com>"
+	Draft.add_to "Ana Rossi <ana@example.com>"
+	Draft.set_subject "Re: Lesson on Friday"
+	Draft.set_text "Four is fine.\nSee you then."
+	println "saved:", Mail.save(Draft, "Archive"), Mail.save_unread(Draft, "Archive"), Mail.count, Mail.unread_count
+	list emails.received Saved = Mail.latest 1
+	println "saved one:", Saved[0].subject, "|", Saved[0].text.replace("\n", " / "), "| read:", Saved[0].read
+	return 0
+}
+
+//> wrong password: false the mailbox said: [AUTHENTICATIONFAILED] Invalid credentials
+//> folders: [INBOX, Archive]
+//> messages: 3 unread: 2
+//> -- 101 Ana Rossi <ana@example.com> | Lesson on Friday | read: false
+//> Hi Tom,
+//>
+//> Can we move the lesson to four?
+//>
+//> Ana
+//> -- 103 Ana Rossi <ana@example.com> | The scales | read: false
+//> They're attached.
+//> attached: scales.txt text/plain 25
+//> saved: C major: C D E F G A B C
+//>
+//> latest: The scales
+//> by number: Λόγος, and café | Ἀρχὴ ἥμισυ παντός. | to: Tom <tom@example.com> | read: true
+//> from ana: 2 subject: 1 containing: 1
+//> mark read: true 1
+//> flag: true true
+//> move: true 2
+//> delete: true 1
+//> in Archive: 1 The scales
+//> saved: true true 3 2
+//> saved one: Re: Lesson on Friday | Four is fine. / See you then. | read: false

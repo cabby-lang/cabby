@@ -1,0 +1,64 @@
+// Tutorial 101: The desktop — notifications, opening things, and file kinds
+//
+// Run it:      cabby 101-desktop.cby show
+// Or compile:  cabby -c 101-desktop.cby && ./101-desktop show
+// Library:     use desktop, use mime
+// Topics:      desktop.notify, notify_numbered, notify_again, desktop.open,
+//              desktop.on_a_mac; mime.of_name, of_file, is_image, is_text,
+//              is_audio, is_video
+//
+// A program can ask the desktop to show a notification (the box that
+// slides in at a corner), and to open a file or a web page in whatever
+// opens it, as a double-click does. And `mime` says what kind of file
+// something is: by its name, or by what's in it.
+//
+// Notifications and opening things happen on the screen, so they're only
+// done when asked: `cabby 101-desktop.cby show`. Without it (as the tests
+// run it), the program only says what kinds its files are.
+
+use desktop
+use mime
+use files
+use time
+
+int main int Argc, str Argv[] {
+	files.write "cabby-notes.txt", "milk, eggs, bread"
+	files.write "cabby-data.json", "{\"milk\": 2}"
+	list str Names = {"cabby-notes.txt", "cabby-data.json", "song.mp3", "film.mkv", "photo.jpeg", "draft.odt"}
+	for Name in Names {
+		println Name.pad_right(18), mime.of_name(Name)
+	}
+	println "by what's in them:", mime.of_file("cabby-notes.txt"), mime.of_file("cabby-data.json")
+	println "text:", mime.is_text("cabby-notes.txt"), mime.is_text("cabby-data.json"), "| a picture:", mime.is_image("cabby-notes.txt")
+	println "a folder is:", mime.of_file("."), "| nothing at all:", "[" + mime.of_file("nowhere.txt") + "]"
+
+	if Argc > 1 and Argv[1] is "show" {
+		long Number = desktop.notify_numbered "Copying", "0%"
+		for Done in 1 to 4 {
+			time.sleep time.milliseconds(500)
+			desktop.notify_again Number, "Copying", (Done * 25).text + "%"
+		}
+		desktop.notify "Cabby", "All copied."
+		desktop.open "cabby-notes.txt"           // in the text editor
+		desktop.open "https://www.example.com"   // in the browser
+		println "shown, and opened (on a Mac:", desktop.on_a_mac.text + ")"
+	}
+	files.delete "cabby-notes.txt"
+	files.delete "cabby-data.json"
+}
+
+// Try this:
+//  - Notify when a long job (a loop of a few seconds) is done.
+//  - List a folder's files, each with its kind, and count the pictures.
+//  - Open a `mailto:` address: desktop.open "mailto:ana@example.com".
+
+// ---------------------------------------------------------------- output
+//> cabby-notes.txt    text/plain
+//> cabby-data.json    application/json
+//> song.mp3           audio/mpeg
+//> film.mkv           video/x-matroska
+//> photo.jpeg         image/jpeg
+//> draft.odt          application/vnd.oasis.opendocument.text
+//> by what's in them: text/plain application/json
+//> text: true true | a picture: false
+//> a folder is: inode/directory | nothing at all: []

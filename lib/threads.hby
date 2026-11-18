@@ -1,0 +1,176 @@
+// threads.hby — work done on a thread of its own, while the rest of the
+// program carries on.
+//
+//     use threads
+//
+//     object word_counter : threads.worker {
+//         str Text                    what it's given, before it starts
+//         long Words                  and what it works out
+//
+//         void work {                 this runs on the worker's own thread
+//             Words = Text.split(" ").length
+//         }
+//     }
+//
+//     word_counter Counter
+//     Counter.Text = files.read "book.txt"
+//     Counter.start                   off it goes; the program carries on
+//     ...
+//     Counter.wait                    until it's done
+//     println Counter.Words
+//
+// While it works, a worker is its thread's: the rest of the program can
+// only ask whether it's done, or wait for it (anything else is a panic,
+// saying so), so two threads never change the same thing. Dropping a
+// worker waits for it first.
+//
+// The full reference is threads.md, next to this file.
+
+use addresses
+use images
+
+// ---- the C side (runtime/threads.c); use the object below instead
+
+extern long cby_thread_new void
+extern void cby_thread_start long id, handler work, int has_done, handler done, int has_message, handler deliver
+extern void cby_thread_tell long id, str text
+extern void cby_thread_tell_picture long id, long picture
+extern long cby_thread_take_picture long id
+extern int cby_thread_message_is_picture long id
+extern long cby_thread_message_length long id
+extern void cby_thread_message_take long id, address char dst
+extern void cby_thread_ask_to_stop long id
+extern int cby_thread_stopping long id
+extern void cby_thread_wait long id
+extern int cby_thread_is_done long id
+extern void cby_thread_free long id
+extern long cby_thread_cores void
+
+// ---- a worker
+
+object threads.worker {
+	long Id
+	handler DoneHandler
+	handler MessageHandler
+
+	// Yours: what it does, on its own thread. (A worker's own fields, and
+	// what's in them, are all it should use: they're what's its.)
+	void work {
+	}
+
+	// Starts `work`, on a thread of its own; the program carries on.
+	void start {
+		if Id is 0 {
+			Id = cby_thread_new
+		}
+		cby_thread_start Id, work, DoneHandler.is_set, say_done, MessageHandler.is_set, say_message
+	}
+
+	// Calls h once it's done: from a window's or a game's own loop (or
+	// events.run, or `wait`), between its other events, so the program
+	// carries on meanwhile. h is a method of yours, as a button's is.
+	// Before `start`.
+	void on_done handler h {
+		DoneHandler = h
+	}
+
+	// (what the C side calls, once it's done)
+	void say_done {
+		DoneHandler.call
+	}
+
+	// Calls h for each line `tell` sends, in order, as on_done calls its
+	// handler: `message` is the line. Before `start`.
+	void on_message handler h {
+		MessageHandler = h
+	}
+
+	// (what the C side calls, for each message)
+	void say_message {
+		MessageHandler.call
+	}
+
+	// From inside `work`: a line for the on_message handler ("40%", a
+	// result as it's found). It's copied, so it's no longer the worker's.
+	// With no handler, it isn't kept.
+	void tell const str &Text {
+		if Id is not 0 {
+			cby_thread_tell Id, Text
+		}
+	}
+
+	// From inside `work`: a picture for the on_message handler, moved to
+	// the main program as it is, however big (nothing is copied): the
+	// worker's picture is empty afterwards. A picture drawn as it's worked
+	// out (a fractal, a chart), shown by a window as it comes.
+	void tell_picture images.picture Picture {
+		if Id is not 0 {
+			cby_thread_tell_picture Id, Picture.Id
+			Picture.Id = 0
+		}
+	}
+
+	// In the on_message handler: true if what was sent is a picture
+	bool has_picture {
+		return Id is not 0 && cby_thread_message_is_picture(Id) is not 0
+	}
+
+	// In the on_message handler: the picture just sent, now the main
+	// program's (empty if it wasn't a picture, or has been taken already)
+	images.picture picture {
+		long Taken = 0
+		if Id is not 0 {
+			Taken = cby_thread_take_picture(Id)
+		}
+		return images.picture{.Id = Taken}
+	}
+
+	// In the on_message handler: the line just sent ("" for a picture).
+	str message {
+		str Text
+		if Id is not 0 {
+			Text = " ".repeat(cby_thread_message_length(Id))
+			if Text.length > 0 {
+				address char Room = addresses.of_text Text
+				cby_thread_message_take Id, Room
+			}
+		}
+		return Text
+	}
+
+	// Asks it to stop: `work` sees `stopping`, and can finish early.
+	// (It isn't made to: what it's in the middle of, it finishes.)
+	void ask_to_stop {
+		if Id is not 0 {
+			cby_thread_ask_to_stop Id
+		}
+	}
+
+	// Inside `work`: true once it's been asked to stop.
+	bool stopping {
+		return Id is not 0 && cby_thread_stopping(Id) is not 0
+	}
+
+	// Waits until it's done.
+	void wait {
+		if Id is not 0 {
+			cby_thread_wait Id
+		}
+	}
+
+	// true once it's done (or before it's started), without waiting
+	bool is_done {
+		return Id is 0 || cby_thread_is_done(Id) is not 0
+	}
+
+	~threads.worker {
+		if Id is not 0 {
+			cby_thread_free Id
+		}
+	}
+}
+
+// How many cores the computer has: how many workers can work at once.
+int threads.cores {
+	return (int)cby_thread_cores()
+}

@@ -1,0 +1,35 @@
+// progress for a big download, saved to a file as it comes
+//> progress said: true ending at 3000000 of 3000000 (1.0)
+//> saved: 3000000 bytes
+//> a 404 leaves nothing: 404 false
+use networks
+use shell
+use files
+
+object fetcher {
+	networks.request R
+	int Said
+	long Last
+
+	void begin {
+		R = networks.request_to shell.get("CABBY_TEST_SERVER") + "/big?n=3000000"
+		R.on_progress went
+		R.save_to "progress-test.bin"
+		println "progress said:", Said >= 1, "ending at", Last, "of", R.total, "(" + R.fraction.text + ")"
+		println "saved:", files.size("progress-test.bin"), "bytes"
+		files.delete "progress-test.bin"
+		networks.request None = networks.request_to shell.get("CABBY_TEST_SERVER") + "/nothing"
+		println "a 404 leaves nothing:", None.save_to("progress-test.bin"), files.exists("progress-test.bin")
+	}
+
+	void went {
+		Said += 1
+		Last = R.received
+	}
+}
+
+int main {
+	fetcher F
+	F.begin
+	return 0
+}

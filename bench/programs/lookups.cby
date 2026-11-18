@@ -1,0 +1,30 @@
+int main {
+	int n = @N@
+	int Half = n / 2
+	lookup int int Counts
+	for i in n {
+		int K = i * 7 % Half
+		if Counts.contains(K) {
+			Counts[K] += 1
+		} else {
+			Counts[K] = 1
+		}
+	}
+	long Sum = 0
+	for K, V in Counts {
+		Sum += K * V
+	}
+	for i in Half / 2 {
+		Counts.remove i * 2
+	}
+	lookup str int Words
+	for i in n / 10 {
+		str W = "w" + (i % 1000).text
+		if Words.contains(W) {
+			Words[W] += 1
+		} else {
+			Words[W] = 1
+		}
+	}
+	println Counts.length, Sum, Words.length, Words["w7"]
+}

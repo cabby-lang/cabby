@@ -1,0 +1,837 @@
+// world.hby — 3D: a window looking into a world of shapes, lit by the sun
+// and lamps, seen by a camera; frames, keys and timers as in a game.
+//
+//     use world
+//
+//     object spinner : world.window {
+//         world.shape Cube
+//
+//         void build {
+//             set_title "Spinner"
+//             add_plane 20, 20, "forestgreen", 0, 0, 0     // the ground
+//             Cube = add_box 1, 1, 1, "orange", 0, 1, 0
+//             on_frame step
+//         }
+//
+//         void step {                          // 60 times a second
+//             Cube.turn 1                       // a degree a frame
+//             if key_hold "up" {
+//                 Cube.move_forward 0.05
+//             }
+//         }
+//     }
+//
+//     int main {
+//         spinner S
+//         S.run
+//     }
+//
+// Distances are in metres. y is up; a shape's position is its middle. The
+// camera starts at 0, 1.6, 6 (standing, a few steps back), looking along
+// -z, which is "forward" for a shape too: turn turns it round, and
+// move_forward moves it the way it faces. Angles are in degrees.
+//
+// Underneath is OpenGL, through SDL 3; nothing here needs it. Under a test
+// script, or where there's no OpenGL, Cabby draws the world itself.
+//
+// The full reference is world.md, next to this file.
+
+use time
+
+// ---- the C side (runtime/world.c); use the objects below instead
+
+extern long cby_world_window_new void
+extern void cby_world_set_title long win, str title
+extern void cby_world_set_size long win, int width, int height
+extern int cby_world_width long win
+extern int cby_world_height long win
+extern void cby_world_set_background long win, str color
+extern void cby_world_run long win
+extern void cby_world_close long win
+extern void cby_world_show_message long win, str text
+extern void cby_world_add_shortcut long win, str keys, handler h
+extern char cby_world_text_char long i
+extern void cby_world_on_frame long win, handler h
+extern void cby_world_on_click long win, handler h
+extern void cby_world_on_mouse_move long win, handler h
+extern void cby_world_on_key long win, handler h
+extern long cby_world_key_length long win
+extern long cby_world_frame long win
+extern void cby_world_set_paused long win, int on
+extern int cby_world_paused long win
+extern void cby_world_every long win, int ms, int repeat, handler h
+extern void cby_world_stop_timers long win
+extern int cby_world_key_press long win, str name
+extern int cby_world_key_hold long win, str name
+extern int cby_world_key_release long win, str name
+extern int cby_world_key_held_for long win, str name
+extern int cby_world_mouse_x long win
+extern int cby_world_mouse_y long win
+extern double cby_world_mouse_moved_x long win
+extern double cby_world_mouse_moved_y long win
+extern void cby_world_lock_mouse long win, int on
+extern int cby_world_mouse_locked long win
+extern long cby_world_shape_at_mouse long win
+extern int cby_world_random int low, int high
+
+extern void cby_world_set_sun long win, double x, double y, double z
+extern void cby_world_set_sun_color long win, str color
+extern void cby_world_set_ambient long win, str color
+extern long cby_world_lamp_new long win, double x, double y, double z, str color, double reach
+extern void cby_world_lamp_move_to long lamp, double x, double y, double z
+extern void cby_world_lamp_set_color long lamp, str color
+extern void cby_world_lamp_set_reach long lamp, double reach
+extern void cby_world_lamp_remove long lamp
+extern double cby_world_lamp_x long lamp
+extern double cby_world_lamp_y long lamp
+extern double cby_world_lamp_z long lamp
+
+extern long cby_world_add_box long win, double w, double h, double d, str color, double x, double y, double z
+extern long cby_world_add_ball long win, double r, str color, double x, double y, double z
+extern long cby_world_add_plane long win, double w, double d, str color, double x, double y, double z
+extern long cby_world_add_cylinder long win, double r, double h, str color, double x, double y, double z
+extern long cby_world_add_cone long win, double r, double h, str color, double x, double y, double z
+extern long cby_world_add_model long win, str path, double x, double y, double z
+extern void cby_world_shape_play long shape, str name, int loop
+extern void cby_world_shape_stop_animation long shape
+extern void cby_world_shape_set_animation_speed long shape, double speed
+extern int cby_world_shape_animation_count long shape
+extern long cby_world_shape_animation_name long shape, int i
+extern long cby_world_shape_playing long shape
+extern double cby_world_shape_animation_time long shape
+extern long cby_world_shape_world long shape
+extern double cby_world_shape_x long shape
+extern double cby_world_shape_y long shape
+extern double cby_world_shape_z long shape
+extern double cby_world_shape_angle long shape
+extern double cby_world_shape_tilt long shape
+extern double cby_world_shape_roll long shape
+extern double cby_world_shape_scale long shape
+extern int cby_world_shape_visible long shape
+extern int cby_world_shape_removed long shape
+extern void cby_world_shape_move_to long shape, double x, double y, double z
+extern void cby_world_shape_move long shape, double dx, double dy, double dz
+extern void cby_world_shape_move_forward long shape, double distance
+extern void cby_world_shape_move_sideways long shape, double distance
+extern void cby_world_shape_set_angle long shape, double degrees
+extern void cby_world_shape_turn long shape, double degrees
+extern void cby_world_shape_set_tilt long shape, double degrees
+extern void cby_world_shape_tilt_by long shape, double degrees
+extern void cby_world_shape_set_roll long shape, double degrees
+extern void cby_world_shape_roll_by long shape, double degrees
+extern void cby_world_shape_set_scale long shape, double scale
+extern void cby_world_shape_set_size long shape, double w, double h, double d
+extern void cby_world_shape_set_visible long shape, int on
+extern void cby_world_shape_remove long shape
+extern void cby_world_shape_set_color long shape, str color
+extern void cby_world_shape_set_picture long shape, str path
+extern void cby_world_shape_set_picture_size long shape, double metres
+extern void cby_world_shape_set_group long shape, str group
+extern long cby_world_shape_group_length long shape
+extern int cby_world_shape_touches long shape, long other
+extern double cby_world_shape_distance_to long shape, long other
+extern double cby_world_shape_top long shape
+extern double cby_world_shape_bottom long shape
+extern int cby_world_find long win, long touching, str group
+extern long cby_world_found int i
+
+extern long cby_world_text_new long win, str text, double x, double y
+extern void cby_world_text_set long text, str s
+extern long cby_world_text_length long text
+extern void cby_world_text_move_to long text, double x, double y
+extern void cby_world_text_set_color long text, str color
+extern void cby_world_text_set_size long text, double size
+extern void cby_world_text_set_visible long text, int on
+extern void cby_world_text_remove long text
+
+extern void cby_world_move_camera_to long win, double x, double y, double z
+extern void cby_world_move_camera long win, double dx, double dy, double dz
+extern void cby_world_camera_forward long win, double distance
+extern void cby_world_camera_sideways long win, double distance
+extern void cby_world_point_camera_at long win, double x, double y, double z
+extern void cby_world_turn_camera long win, double yaw, double pitch
+extern void cby_world_set_camera_angle long win, double yaw, double pitch
+extern void cby_world_set_field_of_view long win, double degrees
+extern void cby_world_follow long win, long shape, double distance, double height
+extern double cby_world_camera_x long win
+extern double cby_world_camera_y long win
+extern double cby_world_camera_z long win
+extern double cby_world_camera_angle long win
+extern double cby_world_camera_tilt long win
+
+// ---- shapes: what's in the world
+
+// A box, ball, plane, cylinder or cone. Its position is its middle, in
+// metres; its angle turns it round, as a person turns (counterclockwise
+// seen from above), and at 0 it faces -z.
+object world.shape {
+	long Id
+
+	double x const {
+		return cby_world_shape_x Id
+	}
+
+	double y const {
+		return cby_world_shape_y Id
+	}
+
+	double z const {
+		return cby_world_shape_z Id
+	}
+
+	// puts its middle there
+	void move_to double X, double Y, double Z const {
+		cby_world_shape_move_to Id, X, Y, Z
+	}
+
+	// moves it by that much each way
+	void move double Dx, double Dy, double Dz const {
+		cby_world_shape_move Id, Dx, Dy, Dz
+	}
+
+	// moves it the way it faces (flat: up and down stay as they are)
+	void move_forward double Distance const {
+		cby_world_shape_move_forward Id, Distance
+	}
+
+	// moves it to its right (a negative distance: its left)
+	void move_sideways double Distance const {
+		cby_world_shape_move_sideways Id, Distance
+	}
+
+	// ---- turning, in degrees
+
+	// which way it faces, round y: 0 to 360
+	double angle const {
+		return cby_world_shape_angle Id
+	}
+
+	void set_angle double Degrees const {
+		cby_world_shape_set_angle Id, Degrees
+	}
+
+	// turns it round, to its left (a negative angle: to its right)
+	void turn double Degrees const {
+		cby_world_shape_turn Id, Degrees
+	}
+
+	// its nose up (or down, below 0), round its own x
+	double tilt const {
+		return cby_world_shape_tilt Id
+	}
+
+	void set_tilt double Degrees const {
+		cby_world_shape_set_tilt Id, Degrees
+	}
+
+	void tilt_by double Degrees const {
+		cby_world_shape_tilt_by Id, Degrees
+	}
+
+	// leaning over sideways, round the way it faces
+	double roll const {
+		return cby_world_shape_roll Id
+	}
+
+	void set_roll double Degrees const {
+		cby_world_shape_set_roll Id, Degrees
+	}
+
+	void roll_by double Degrees const {
+		cby_world_shape_roll_by Id, Degrees
+	}
+
+	// ---- how it looks
+
+	// bigger or smaller: 2 is twice the size (1 to begin with)
+	double scale const {
+		return cby_world_shape_scale Id
+	}
+
+	void set_scale double Scale const {
+		cby_world_shape_set_scale Id, Scale
+	}
+
+	// its width, height and depth, in metres (a ball's are its diameter)
+	void set_size double Width, double Height, double Depth const {
+		cby_world_shape_set_size Id, Width, Height, Depth
+	}
+
+	// a color: "orange", "#336699"
+	void set_color const str &Color const {
+		cby_world_shape_set_color Id, Color
+	}
+
+	// a picture on it (PNG, JPEG, BMP or GIF): on each side of a box, round
+	// a ball or cylinder, over a plane. Its color tints it ("white": none).
+	void set_picture const str &Picture const {
+		cby_world_shape_set_picture Id, Picture
+	}
+
+	// the picture repeated, each copy this many metres across (grass on a
+	// field, tiles on a floor); 0: once, stretched over it
+	void set_picture_size double Metres const {
+		cby_world_shape_set_picture_size Id, Metres
+	}
+
+	bool visible const {
+		return cby_world_shape_visible(Id) != 0
+	}
+
+	void set_visible bool On const {
+		cby_world_shape_set_visible Id, On
+	}
+
+	// takes it out of the world
+	void remove const {
+		cby_world_shape_remove Id
+	}
+
+	bool removed const {
+		return cby_world_shape_removed(Id) != 0
+	}
+
+	// ---- groups and touching
+
+	// a name for shapes of a kind ("coins", "walls"), for sprites_in
+	void set_group const str &Group const {
+		cby_world_shape_set_group Id, Group
+	}
+
+	str group const {
+		str s
+		for i in cby_world_shape_group_length Id {
+			s += cby_world_text_char i
+		}
+		return s
+	}
+
+	// true when the two overlap (their boxes do: the box round each, as it
+	// stands)
+	bool touches const world.shape &Other const {
+		return cby_world_shape_touches(Id, Other.Id) != 0
+	}
+
+	// how far its middle is from the other's, in metres
+	double distance_to const world.shape &Other const {
+		return cby_world_shape_distance_to Id, Other.Id
+	}
+
+	// the height of its top, and of its bottom: to stand something on it
+	double top const {
+		return cby_world_shape_top Id
+	}
+
+	double bottom const {
+		return cby_world_shape_bottom Id
+	}
+
+	// ---- a model's animations (as Blender's actions are called)
+
+	// plays one over and over: Hero.play "Walk" (playing it already, it
+	// goes on, rather than from the start)
+	void play const str &Name const {
+		cby_world_shape_play Id, Name, 1
+	}
+
+	// plays one once, to its end, where it stays
+	void play_once const str &Name const {
+		cby_world_shape_play Id, Name, 0
+	}
+
+	// back to how it was made
+	void stop_animation const {
+		cby_world_shape_stop_animation Id
+	}
+
+	// 1 as made, 2 twice as fast, 0.5 slower, -1 backwards
+	void set_animation_speed double Speed const {
+		cby_world_shape_set_animation_speed Id, Speed
+	}
+
+	// what it's playing now ("" if nothing, or a play_once has ended)
+	str playing const {
+		str s
+		for i in cby_world_shape_playing Id {
+			s += cby_world_text_char i
+		}
+		return s
+	}
+
+	// how far through it, in seconds
+	double animation_time const {
+		return cby_world_shape_animation_time Id
+	}
+
+	// the animations it has, by name
+	list str animations const {
+		list str Names
+		for i in cby_world_shape_animation_count Id {
+			str s
+			for k in cby_world_shape_animation_name Id, i {
+				s += cby_world_text_char k
+			}
+			Names.add s
+		}
+		return Names
+	}
+
+	// the same shape: true for two names for one
+	bool same_as const world.shape &Other const {
+		return Id == Other.Id
+	}
+}
+
+// ---- lamps: light from a place, falling off with distance
+
+object world.lamp {
+	long Id
+
+	double x const {
+		return cby_world_lamp_x Id
+	}
+
+	double y const {
+		return cby_world_lamp_y Id
+	}
+
+	double z const {
+		return cby_world_lamp_z Id
+	}
+
+	void move_to double X, double Y, double Z const {
+		cby_world_lamp_move_to Id, X, Y, Z
+	}
+
+	void set_color const str &Color const {
+		cby_world_lamp_set_color Id, Color
+	}
+
+	// how far its light goes, in metres
+	void set_reach double Metres const {
+		cby_world_lamp_set_reach Id, Metres
+	}
+
+	void remove const {
+		cby_world_lamp_remove Id
+	}
+}
+
+// ---- writing over the world: a score, a message
+
+// Text in front of everything, X, Y pixels from the window's top left
+// corner, staying there as the camera moves.
+object world.text {
+	long Id
+
+	void set_text const str &Text const {
+		cby_world_text_set Id, Text
+	}
+
+	str text const {
+		str s
+		for i in cby_world_text_length Id {
+			s += cby_world_text_char i
+		}
+		return s
+	}
+
+	void move_to double X, double Y const {
+		cby_world_text_move_to Id, X, Y
+	}
+
+	// "white" to begin with
+	void set_color const str &Color const {
+		cby_world_text_set_color Id, Color
+	}
+
+	// its height, in pixels (20 to begin with)
+	void set_size double Size const {
+		cby_world_text_set_size Id, Size
+	}
+
+	void set_visible bool On const {
+		cby_world_text_set_visible Id, On
+	}
+
+	void remove const {
+		cby_world_text_remove Id
+	}
+}
+
+// ---- the window
+
+object world.window {
+	long Win
+	bool Built
+
+	// Override this to add the world's shapes and handlers.
+	void build {
+	}
+
+	void set_title const str &Title {
+		open
+		cby_world_set_title Win, Title
+	}
+
+	// the window's size to begin with, in pixels (800 by 600); it can be
+	// made bigger, and the world is seen wider
+	void set_size int Width, int Height {
+		open
+		cby_world_set_size Win, Width, Height
+	}
+
+	int width const {
+		return cby_world_width Win
+	}
+
+	int height const {
+		return cby_world_height Win
+	}
+
+	// the sky: a color ("skyblue" to begin with)
+	void set_background const str &Color {
+		open
+		cby_world_set_background Win, Color
+	}
+
+	// shows a message, with an OK button
+	void show_message const str &Text {
+		open
+		cby_world_show_message Win, Text
+	}
+
+	// calls h when these keys are pressed: "P", "F5", "Ctrl+S"
+	void add_shortcut const str &Keys, handler h {
+		open
+		cby_world_add_shortcut Win, Keys, h
+	}
+
+	// closes the window, ending run
+	void close {
+		if Win != 0 {
+			cby_world_close Win
+		}
+	}
+
+	// ---- shapes: each at X, Y, Z (its middle)
+
+	// a box Width across (x), Height high (y) and Depth deep (z)
+	world.shape add_box double Width, double Height, double Depth, const str &Color, double X, double Y, double Z {
+		open
+		return world.shape{.Id = cby_world_add_box(Win, Width, Height, Depth, Color, X, Y, Z)}
+	}
+
+	world.shape add_ball double Radius, const str &Color, double X, double Y, double Z {
+		open
+		return world.shape{.Id = cby_world_add_ball(Win, Radius, Color, X, Y, Z)}
+	}
+
+	// flat, facing up: the ground, a floor, a table top
+	world.shape add_plane double Width, double Depth, const str &Color, double X, double Y, double Z {
+		open
+		return world.shape{.Id = cby_world_add_plane(Win, Width, Depth, Color, X, Y, Z)}
+	}
+
+	// standing up, Height high
+	world.shape add_cylinder double Radius, double Height, const str &Color, double X, double Y, double Z {
+		open
+		return world.shape{.Id = cby_world_add_cylinder(Win, Radius, Height, Color, X, Y, Z)}
+	}
+
+	// its point up, Height high
+	world.shape add_cone double Radius, double Height, const str &Color, double X, double Y, double Z {
+		open
+		return world.shape{.Id = cby_world_add_cone(Win, Radius, Height, Color, X, Y, Z)}
+	}
+
+	// a model made in Blender, exported as glTF (a .glb file, or .gltf with
+	// its .bin and pictures beside it), with its colors, pictures and
+	// animations. X, Y, Z is where its origin goes (where Blender's was:
+	// for a character, usually its feet); it faces -z, as shapes do.
+	world.shape add_model const str &Path, double X, double Y, double Z {
+		open
+		return world.shape{.Id = cby_world_add_model(Win, Path, X, Y, Z)}
+	}
+
+	// every shape in a group, in the order they were added ("" for all)
+	list world.shape shapes_in const str &Group const {
+		list world.shape Found
+		int Count = cby_world_find(Win, 0, Group)
+		for i in Count {
+			Found.add world.shape{.Id = cby_world_found(i)}
+		}
+		return Found
+	}
+
+	// the shapes in a group (or all, "") that this one touches
+	list world.shape touching const world.shape &Shape, const str &Group const {
+		list world.shape Found
+		int Count = cby_world_find(Win, Shape.Id, Group)
+		for i in Count {
+			Found.add world.shape{.Id = cby_world_found(i)}
+		}
+		return Found
+	}
+
+	// text over the world, its top left corner X, Y pixels from the
+	// window's: add_text "Score: 0", 10, 10
+	world.text add_text const str &Text, double X, double Y {
+		open
+		return world.text{.Id = cby_world_text_new(Win, Text, X, Y)}
+	}
+
+	// ---- light
+
+	// which way the sunlight goes: 0, -1, 0 is straight down (it starts
+	// coming down from behind the camera's left)
+	void set_sun double X, double Y, double Z {
+		open
+		cby_world_set_sun Win, X, Y, Z
+	}
+
+	// its color: "white" is bright, "black" no sun (night)
+	void set_sun_color const str &Color {
+		open
+		cby_world_set_sun_color Win, Color
+	}
+
+	// the light everywhere, even in the shade: "#59596a" to begin with
+	void set_ambient const str &Color {
+		open
+		cby_world_set_ambient Win, Color
+	}
+
+	// a lamp at X, Y, Z, its light reaching that many metres
+	world.lamp add_lamp double X, double Y, double Z, const str &Color, double Reach {
+		open
+		return world.lamp{.Id = cby_world_lamp_new(Win, X, Y, Z, Color, Reach)}
+	}
+
+	// ---- the camera
+
+	void move_camera_to double X, double Y, double Z {
+		open
+		cby_world_move_camera_to Win, X, Y, Z
+	}
+
+	void move_camera double Dx, double Dy, double Dz {
+		open
+		cby_world_move_camera Win, Dx, Dy, Dz
+	}
+
+	// forward the way it looks, and to its right: walking (flat)
+	void camera_forward double Distance {
+		open
+		cby_world_camera_forward Win, Distance
+	}
+
+	void camera_sideways double Distance {
+		open
+		cby_world_camera_sideways Win, Distance
+	}
+
+	// turns the camera to look at that place
+	void point_camera_at double X, double Y, double Z {
+		open
+		cby_world_point_camera_at Win, X, Y, Z
+	}
+
+	// turns it: left (or right, below 0), and up (or down)
+	void turn_camera double Left, double Up {
+		open
+		cby_world_turn_camera Win, Left, Up
+	}
+
+	// which way it looks: its angle round (as a shape's) and up or down
+	void set_camera_angle double Angle, double Tilt {
+		open
+		cby_world_set_camera_angle Win, Angle, Tilt
+	}
+
+	double camera_x const {
+		return cby_world_camera_x Win
+	}
+
+	double camera_y const {
+		return cby_world_camera_y Win
+	}
+
+	double camera_z const {
+		return cby_world_camera_z Win
+	}
+
+	double camera_angle const {
+		return cby_world_camera_angle Win
+	}
+
+	double camera_tilt const {
+		return cby_world_camera_tilt Win
+	}
+
+	// how wide it sees, in degrees from top to bottom (60 to begin with)
+	void set_field_of_view double Degrees {
+		open
+		cby_world_set_field_of_view Win, Degrees
+	}
+
+	// keeps the camera Distance metres behind the shape and Height above
+	// it, looking at it, as it moves and turns; moving the camera stops it
+	void follow const world.shape &Shape, double Distance, double Height const {
+		cby_world_follow cby_world_shape_world(Shape.Id), Shape.Id, Distance, Height
+	}
+
+	// ---- frames
+
+	// calls h every frame, 60 times a second
+	void on_frame handler h {
+		open
+		cby_world_on_frame Win, h
+	}
+
+	long frame const {
+		return cby_world_frame Win
+	}
+
+	// stops the frames (and timers) until resume
+	void pause {
+		open
+		cby_world_set_paused Win, 1
+	}
+
+	void resume {
+		open
+		cby_world_set_paused Win, 0
+	}
+
+	bool paused const {
+		return cby_world_paused(Win) != 0
+	}
+
+	// ---- timers, counted in frames: they wait while the world is paused
+
+	void every duration Wait, handler h {
+		open
+		int Ms = (int)Wait.whole_milliseconds
+		cby_world_every Win, Ms, 1, h
+	}
+
+	void after duration Wait, handler h {
+		open
+		int Ms = (int)Wait.whole_milliseconds
+		cby_world_every Win, Ms, 0, h
+	}
+
+	void stop_timers {
+		open
+		cby_world_stop_timers Win
+	}
+
+	// ---- keys: "left", "space", "w", "enter", "f1" ...
+
+	bool key_press const str &Key const {
+		return cby_world_key_press(Win, Key) != 0
+	}
+
+	bool key_hold const str &Key const {
+		return cby_world_key_hold(Win, Key) != 0
+	}
+
+	bool key_release const str &Key const {
+		return cby_world_key_release(Win, Key) != 0
+	}
+
+	int key_held_for const str &Key const {
+		return cby_world_key_held_for Win, Key
+	}
+
+	// calls h for each key pressed; `key` says which ("a", " ", "left")
+	void on_key handler h {
+		open
+		cby_world_on_key Win, h
+	}
+
+	str key const {
+		str s
+		for i in cby_world_key_length Win {
+			s += cby_world_text_char i
+		}
+		return s
+	}
+
+	// ---- the mouse
+
+	// calls h when the window is clicked (mouse_x and mouse_y say where)
+	void on_click handler h {
+		open
+		cby_world_on_click Win, h
+	}
+
+	void on_mouse_move handler h {
+		open
+		cby_world_on_mouse_move Win, h
+	}
+
+	int mouse_x const {
+		return cby_world_mouse_x Win
+	}
+
+	int mouse_y const {
+		return cby_world_mouse_y Win
+	}
+
+	// true if there's a shape under the mouse; shape_at_mouse is it
+	bool mouse_on_shape const {
+		return cby_world_shape_at_mouse(Win) != 0
+	}
+
+	world.shape shape_at_mouse const {
+		return world.shape{.Id = cby_world_shape_at_mouse(Win)}
+	}
+
+	// the mouse hidden and kept in the window, for looking round as in a
+	// first-person game; mouse_moved_x and mouse_moved_y are how far it
+	// moved this frame. Escape lets it go.
+	void lock_mouse bool On {
+		open
+		cby_world_lock_mouse Win, On
+	}
+
+	bool mouse_locked const {
+		return cby_world_mouse_locked(Win) != 0
+	}
+
+	double mouse_moved_x const {
+		return cby_world_mouse_moved_x Win
+	}
+
+	double mouse_moved_y const {
+		return cby_world_mouse_moved_y Win
+	}
+
+	// ---- random numbers
+
+	// a whole number from From to To, both included
+	int random int From, int To const {
+		return cby_world_random From, To
+	}
+
+	// ---- running
+
+	// shows the window and runs the world, until the window is closed
+	void run {
+		open
+		if !Built {
+			Built = true
+			build
+		}
+		cby_world_run Win
+	}
+
+	// (the window is made when it is first needed)
+	void open {
+		if Win == 0 {
+			Win = cby_world_window_new
+		}
+	}
+}

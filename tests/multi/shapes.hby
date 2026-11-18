@@ -1,0 +1,11 @@
+// shapes.hby — shared declarations; shapes.cby holds the definitions.
+use local util
+
+object circle {
+	double r
+	double area const {
+		return 3.14159 * r * r
+	}
+}
+
+int twice int x

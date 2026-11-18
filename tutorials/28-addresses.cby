@@ -1,0 +1,78 @@
+// Tutorial 28: Addresses
+//
+// Run it:      cabby 28-addresses.cby
+// Or compile:  cabby -c 28-addresses.cby && ./28-addresses
+// Library:     use addresses
+// Topics:      address int, addresses.of, .value, stepping, [i], C
+//              functions that take and give pointers
+//
+// An address says where a value is in memory. Everyday Cabby doesn't need
+// them: borrows, lists and objects do the same jobs with every check in
+// place. Addresses are for the layer underneath: C functions that work
+// with pointers, and devices at fixed places in memory.
+//
+// Cabby can't check an address before the program runs, which is why it
+// needs `use addresses`. Run a program like this one with `cabby` first:
+// the interpreter checks addresses of Cabby's own values as it goes.
+
+use addresses
+
+struct reading {
+	int Sensor
+	double Value
+}
+
+// C's strtol reads a number from text, and says where it stopped through
+// an address of an address (C's char **).
+extern long strtol address char Text, address address char Stop, int Base
+
+// Every reading through one address, stepping along.
+double average address reading First, int Count {
+	double Total = 0.0
+	for i in Count {
+		Total += First[i].Value
+	}
+	return Total / Count
+}
+
+int main {
+	// A variable, through its address.
+	int Count = 5
+	address int A = addresses.of Count
+	A.value += 10
+	println "Count is now", Count
+
+	// An array of structs: an address steps whole values along.
+	reading Readings[3] = {{1, 20.5}, {2, 21.5}, {3, 22.0}}
+	address reading R = addresses.of Readings
+	println "second sensor:", (R + 1).value.Sensor, "average:", average(R, 3)
+	address reading Last = addresses.of Readings[2]
+	println Last - R, "readings apart"
+
+	// C reading numbers out of text, one after another.
+	char Text[12] = {'1', '2', ' ', '3', '4', ' ', '5', '6', '\0', '\0', '\0', '\0'}
+	address char Here = addresses.of Text
+	address char Stop = Here
+	long Sum = 0
+	until Here[0] is '\0' {
+		Sum += strtol Here, addresses.of(Stop), 10
+		Here = Stop
+	}
+	println "sum of the numbers:", Sum
+
+	// No address at all.
+	address int Nowhere = addresses.none
+	println "nowhere is none:", Nowhere.is_none
+}
+
+// Try this:
+//  - Read Readings[3] through R (one past the end), with `cabby` and then
+//    compiled. Compare what happens.
+//  - Write `void swap address int A, address int B` that swaps two ints.
+
+// ---------------------------------------------------------------- output
+//> Count is now 15
+//> second sensor: 2 average: 21.333333333333332
+//> 2 readings apart
+//> sum of the numbers: 102
+//> nowhere is none: true

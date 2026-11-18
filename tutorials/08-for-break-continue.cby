@@ -1,0 +1,150 @@
+// Tutorial 8: for loops, break and continue
+//
+// Run it:      cabby 08-for-break-continue.cby
+// Keywords:    for, in, to, down, by, break, continue
+//
+// Most loops count, and Cabby's counting loop says so directly:
+//
+//     for i in 5                0, 1, 2, 3, 4        (5 numbers, from 0)
+//     for i in 1 to 5           1, 2, 3, 4, 5        (both ends included)
+//     for i in 5 down to 1      5, 4, 3, 2, 1
+//     for i in 0 to 20 by 5     0, 5, 10, 15, 20
+//
+// The loop declares its counter for you, and it exists only inside the
+// loop. The counter is read-only: the loop does the counting.
+
+int main {
+	// `print "", i` prints a space and then i, so each number gets a
+	// space in front of it.
+	print "in 5:"
+	for i in 5 {
+		print "", i
+	}
+	println
+
+	print "1 to 5:"
+	for i in 1 to 5 {
+		print "", i
+	}
+	println
+
+	print "down:"
+	for i in 10 down to 1 by 3 {
+		print "", i
+	}
+	println
+
+	// `for i in n` is the loop for array indexes: 0 up to n - 1.
+	int Scores[4] = {7, 9, 4, 8}
+	int Total = 0
+	for i in 4 {
+		Total += Scores[i]
+	}
+	println "total:", Total
+
+	// Loops inside loops: a times table.
+	for Row in 1 to 3 {
+		print Row, "x:"
+		for Col in 1 to 4 {
+			print "", Row * Col
+		}
+		println
+	}
+
+	// The counter's type comes from the range ('a' to 'e' counts in char),
+	// or you can name it.
+	for c in 'a' to 'e' {
+		print c
+	}
+	println
+	print "longs:"
+	for long Big in 3 {
+		print "", Big * 1000000000
+	}
+	println
+
+	// continue: skip the rest of this turn and go on with the next.
+	print "odd:"
+	for i in 1 to 9 {
+		if i % 2 == 0 {
+			continue
+		}
+		print "", i
+	}
+	println
+
+	// break: leave the loop straight away.
+	int First = 0
+	for i in 2 to 1000 {
+		if i * i > 200 {
+			First = i
+			break
+		}
+	}
+	println "first square above 200:", First, "squared"
+
+	// Primes below 30, with a loop inside a loop and both break and continue.
+	print "primes:"
+	for n in 2 to 29 {
+		bool Prime = true
+		for d in 2 to n - 1 {
+			if d * d > n {
+				break
+			}
+			if n % d == 0 {
+				Prime = false
+				break       // break leaves only the innermost loop
+			}
+		}
+		if !Prime {
+			continue
+		}
+		print "", n
+	}
+	println
+
+	// The three-part for is there for loops that don't just count:
+	//
+	//     for start; condition; step {
+	//
+	// (the only place Cabby uses semicolons). For example, doubling:
+	print "powers of 2:"
+	for int p = 1; p <= 100; p *= 2 {
+		print "", p
+	}
+	println
+
+	// Any part may be left out. `for ;; {` loops forever, until a break.
+	int Tries = 0
+	for ;; {
+		Tries++
+		if Tries == 4 {
+			break
+		}
+	}
+	println Tries, "tries"
+}
+
+// Try this:
+//  - Assign to the counter inside a `for i in` loop. Read the error.
+//  - Count down to zero with an unsigned counter:
+//    `for unsigned i in 3 down to 0`. It stops at 0 instead of wrapping round.
+//  - Print the times table up to 10 x 10.
+//  - Print every number from 1 to 30, but "fizz" for multiples of 3, "buzz"
+//    for multiples of 5 and "fizzbuzz" for both.
+
+// ---------------------------------------------------------------- output
+//> in 5: 0 1 2 3 4
+//> 1 to 5: 1 2 3 4 5
+//> down: 10 7 4 1
+//> total: 28
+//> 1 x: 1 2 3 4
+//> 2 x: 2 4 6 8
+//> 3 x: 3 6 9 12
+//> abcde
+//> longs: 0 1000000000 2000000000
+//> odd: 1 3 5 7 9
+//> first square above 200: 15 squared
+//> primes: 2 3 5 7 11 13 17 19 23 29
+//> powers of 2: 1 2 4 8 16 32 64
+//> 4 tries

@@ -1,0 +1,3 @@
+// What app.cby prints, read by run_accessibility_tests.sh (the Salve and
+// the button are the reader's doing).
+//> app: said SALVE, LIVIA!

@@ -1,0 +1,148 @@
+// Tutorial 72: Sound — a keyboard to play
+//
+// Run it:      cabby 72-sound.cby
+// Or compile:  cabby -c 72-sound.cby && ./72-sound
+// Library:     use sound (and use game, to draw the keys and read the
+//              computer's keyboard)
+// Topics:      sound.start_note, sound.stop_note, sound.play_notes,
+//              sound.play_chord, sound.set_instrument, notes by name
+//
+// The sound library plays sound files, notes and MIDI files. Notes are
+// named as on a stave: "C4" is middle C, "A4" the A above it; a sharp is
+// written with # and a flat with b ("F#4", "Bb3").
+//
+// This is an octave of a keyboard, played with the computer's keys:
+//
+//      W E   T Y U         the black keys
+//     A S D F G H J K      the white keys, C4 up to C5
+//
+// A note sounds while its key is held, like a real keyboard:
+// sound.start_note when the key goes down, sound.stop_note when it comes
+// up. 1 to 4 change the instrument; Space plays a scale, and C a chord.
+//
+// The instruments come from the computer's SoundFont, if it has one (on
+// Arch: soundfont-fluid; on Debian: fluid-soundfont-gm). Without one,
+// Cabby's own simple synthesizer plays every instrument the same way.
+
+use game
+use sound
+
+const int WHITE_WIDTH = 60
+const int WHITE_HEIGHT = 220
+const int BLACK_WIDTH = 36
+const int BLACK_HEIGHT = 130
+const int TOP = 60
+
+object keyboard : game.window {
+	list str Keys                   // the computer's key for each note
+	list str Notes                  // and the note it plays
+	list game.sprite Pictures       // the piano key it lights up
+	list bool Black
+	list str Instruments
+
+	void build {
+		set_title "Keyboard"
+		set_size 8 * WHITE_WIDTH + 40, TOP + WHITE_HEIGHT + 30
+		set_background "#30343f"
+		Instruments = {"piano", "guitar", "violin", "flute"}
+
+		// the white keys, then the black ones over them
+		add_key "a", "C4", 0, false
+		add_key "s", "D4", 1, false
+		add_key "d", "E4", 2, false
+		add_key "f", "F4", 3, false
+		add_key "g", "G4", 4, false
+		add_key "h", "A4", 5, false
+		add_key "j", "B4", 6, false
+		add_key "k", "C5", 7, false
+		add_key "w", "C#4", 1, true
+		add_key "e", "D#4", 2, true
+		add_key "t", "F#4", 4, true
+		add_key "y", "G#4", 5, true
+		add_key "u", "A#4", 6, true
+
+		on_frame step
+		stage.on_draw draw_words
+	}
+
+	// a piano key: white ones side by side; a black one between two white ones
+	void add_key const str &Key, const str &Note, int Place, bool IsBlack {
+		double X = 20 + Place * WHITE_WIDTH + WHITE_WIDTH / 2
+		game.sprite Picture
+		if IsBlack {
+			X -= WHITE_WIDTH / 2
+			Picture = add_rectangle BLACK_WIDTH, BLACK_HEIGHT, "black", X, TOP + BLACK_HEIGHT / 2
+		} else {
+			Picture = add_rectangle WHITE_WIDTH - 4, WHITE_HEIGHT, "ivory", X, TOP + WHITE_HEIGHT / 2
+		}
+		Keys.add Key.copy
+		Notes.add Note.copy
+		Pictures.add Picture
+		Black.add IsBlack
+	}
+
+	// ---- every frame: keys down start notes, keys up stop them
+
+	void step {
+		for i in Keys.length {
+			if key_press Keys[i] {
+				sound.start_note Notes[i]
+				Pictures[i].set_color "gold"
+				println "play", Notes[i]
+			}
+			if key_release Keys[i] {
+				sound.stop_note Notes[i]
+				if Black[i] {
+					Pictures[i].set_color "black"
+				} else {
+					Pictures[i].set_color "ivory"
+				}
+			}
+		}
+		for i in Instruments.length {
+			long Number = i + 1
+			if key_press Number.text {
+				sound.set_instrument Instruments[i]
+				println "instrument:", Instruments[i]
+			}
+		}
+		if key_press "space" {
+			sound.play_notes "C4 D4 E4 F4 G4 A4 B4 C5", 250
+			println "a scale"
+		}
+		if key_press "c" {
+			sound.play_chord {"C4", "E4", "G4", "C5"}, 1200
+			println "a chord"
+		}
+	}
+
+	void draw_words {
+		stage.set_color "white"
+		stage.set_font_size 15
+		stage.write 20, 14, "Keys A to K and W to U play.   1 piano  2 guitar  3 violin  4 flute"
+		stage.write 20, 34, "Space: a scale.   C: a chord."
+	}
+}
+
+int main {
+	keyboard k
+	k.run
+}
+
+// (Cabby's tests play a little, without a sound device:)
+// script: frames 5; tap a; tap d; tap g; frames 10; tap 3; hold k; frames 20; release k; tap space; tap c; frames 10; close
+//
+// Try this:
+//  - Add a second octave, with Z X C V ... for the notes below.
+//  - Show the note's name on the key while it's held (stage.write).
+//  - Record what's played (the notes and the frame each started on), and
+//    play it back with R.
+
+// ---------------------------------------------------------------- output
+//> play C4
+//> play E4
+//> play G4
+//> instrument: violin
+//> play C5
+//> a scale
+//> a chord

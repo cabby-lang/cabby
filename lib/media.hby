@@ -1,0 +1,283 @@
+// media.hby — what's playing (in Spotify, a browser, VLC, Music...), and
+// the play, pause, next and previous buttons, the same way on Linux and
+// macOS.
+//
+//     use media
+//
+//     if media.playing {
+//         println media.title, "by", media.artist, "in", media.player
+//     }
+//     media.play_pause
+//     media.next
+//
+// Linux: any player that speaks MPRIS over D-Bus, which nearly all do
+// (Spotify, Firefox and Chromium, VLC, mpv with mpv-mpris, Rhythmbox,
+// Elisa...); with more than one, the one playing. macOS: Spotify and the
+// Music app, through AppleScript (the first time, macOS asks whether the
+// program may control them).
+//
+// The full reference is media.md, next to this file.
+
+use addresses
+use dbus
+
+// ---- the C side (runtime/desktop.c)
+
+extern int cby_desktop_on_a_mac void
+extern long cby_desktop_apple str script
+extern void cby_desktop_take_text address char dst
+
+// ---- a Mac's: Spotify and Music, by AppleScript
+
+static str media_apple const str &Script {
+	long Length = cby_desktop_apple(Script)
+	str Text = " ".repeat(Length)
+	address char Room = addresses.of_text Text
+	cby_desktop_take_text Room
+	return Text
+}
+
+// what App says to Command: "tell application "Music" to Command"
+static str media_tell const str &App, const str &Command {
+	return media_apple("tell application \"" + App + "\" to " + Command)
+}
+
+// the app that's playing, or else one that's paused (the buttons are
+// for it), or else the first one open ("" for none); only an app that's
+// open is asked anything (asking one that isn't would open it)
+static str media_mac_player {
+	str Paused = ""
+	str First = ""
+	for App in "Spotify,Music".split(",") {
+		if media_apple("application \"" + App + "\" is running") is "true" {
+			str State = media_tell(App, "player state as text")
+			if State is "playing" {
+				return App.copy
+			}
+			if State is "paused" and Paused is "" {
+				Paused = App.copy
+			}
+			if First is "" {
+				First = App.copy
+			}
+		}
+	}
+	if Paused is not "" {
+		return Paused
+	}
+	return First
+}
+
+// ---- Linux's: MPRIS, over D-Bus
+
+static const str MPRIS = "org.mpris.MediaPlayer2"
+static const str MPRIS_PATH = "/org/mpris/MediaPlayer2"
+
+// one of the player's properties (a "" json str when it doesn't say)
+static json media_property dbus.bus &Bus, const str &Service, const str &Interface, const str &Name {
+	dbus.message M = dbus.method_call Service, MPRIS_PATH, "org.freedesktop.DBus.Properties", "Get"
+	M.add_str Interface
+	M.add_str Name
+	json Answer = Bus.try_call M
+	if Answer.length is 0 {
+		return json.read("\"\"")
+	}
+	return Answer[0]
+}
+
+// the player's name on the bus (org.mpris.MediaPlayer2.spotify): the one
+// playing, or else one that's paused, or else the first by name ("" for
+// none)
+static str media_linux_player dbus.bus &Bus {
+	if not Bus.is_open {
+		return ""
+	}
+	dbus.message Names = dbus.method_call("org.freedesktop.DBus", "/org/freedesktop/DBus",
+		"org.freedesktop.DBus", "ListNames")
+	json All = Bus.try_call Names
+	if All.length is 0 {
+		return ""
+	}
+	str Paused = ""
+	str First = ""
+	for Name in All[0] {
+		str Service = Name.str
+		if Service.starts_with(MPRIS + ".") {
+			str Status = media_property(Bus, Service, MPRIS + ".Player", "PlaybackStatus").str_or("")
+			if Status is "Playing" {
+				return Service
+			}
+			if Status is "Paused" and (Paused is "" or Service < Paused) {
+				Paused = Service.copy
+			}
+			if First is "" or Service < First {
+				First = Service.copy
+			}
+		}
+	}
+	if Paused is not "" {
+		return Paused
+	}
+	return First
+}
+
+// a piece of what's playing, from the player's Metadata: "xesam:title"
+static str media_linux_about const str &Key {
+	dbus.bus Bus = dbus.try_session
+	str Service = media_linux_player(Bus)
+	if Service is "" {
+		return ""
+	}
+	json About = media_property(Bus, Service, MPRIS + ".Player", "Metadata")
+	if not About.is_lookup or not About.has(Key) {
+		return ""
+	}
+	json Value = About.item(Key)
+	if Value.is_list {
+		// (xesam:artist is a list: a song can have more than one)
+		str Joined = ""
+		for One in Value {
+			if Joined is not "" {
+				Joined = Joined + ", "
+			}
+			Joined = Joined + One.str_or("")
+		}
+		return Joined
+	}
+	return Value.str_or("")
+}
+
+// tells the player Method (PlayPause, Next...): true if there was one to
+// tell, and it did
+static bool media_linux_press const str &Method {
+	dbus.bus Bus = dbus.try_session
+	str Service = media_linux_player(Bus)
+	if Service is "" {
+		return false
+	}
+	dbus.message M = dbus.method_call Service, MPRIS_PATH, MPRIS + ".Player", Method
+	Bus.try_call M
+	return Bus.error is ""
+}
+
+// on a Mac, tells the player Command ("playpause", "next track")
+static bool media_mac_press const str &Command {
+	str App = media_mac_player
+	if App is "" {
+		return false
+	}
+	media_tell App, Command
+	return true
+}
+
+static str media_mac_about const str &What {
+	str App = media_mac_player
+	if App is "" {
+		return ""
+	}
+	return media_tell(App, What + " of current track")
+}
+
+// ---- the same on both
+
+// the player's name: "Spotify", "Firefox", "VLC media player", "Music"
+// ("" when there's none open)
+str media.player {
+	if cby_desktop_on_a_mac is not 0 {
+		return media_mac_player
+	}
+	dbus.bus Bus = dbus.try_session
+	str Service = media_linux_player(Bus)
+	if Service is "" {
+		return ""
+	}
+	str Name = media_property(Bus, Service, MPRIS, "Identity").str_or("")
+	if Name is "" {
+		// (its name on the bus: org.mpris.MediaPlayer2.vlc, or .firefox.instance_1_23)
+		Name = Service[MPRIS.length + 1 to Service.length - 1]
+		long Dot = Name.find "."
+		if Dot > 0 {
+			Name = Name[0 to Dot - 1]
+		}
+	}
+	return Name
+}
+
+// true while something's playing (not paused or stopped)
+bool media.playing {
+	if cby_desktop_on_a_mac is not 0 {
+		str App = media_mac_player
+		return App is not "" and media_tell(App, "player state as text") is "playing"
+	}
+	dbus.bus Bus = dbus.try_session
+	str Service = media_linux_player(Bus)
+	if Service is "" {
+		return false
+	}
+	return media_property(Bus, Service, MPRIS + ".Player", "PlaybackStatus").str_or("") is "Playing"
+}
+
+// the song's (or video's) title ("" when nothing's playing, or it
+// doesn't say)
+str media.title {
+	if cby_desktop_on_a_mac is not 0 {
+		return media_mac_about("name")
+	}
+	return media_linux_about("xesam:title")
+}
+
+// who it's by (more than one: "Ana, Bruno")
+str media.artist {
+	if cby_desktop_on_a_mac is not 0 {
+		return media_mac_about("artist")
+	}
+	return media_linux_about("xesam:artist")
+}
+
+// the album it's from
+str media.album {
+	if cby_desktop_on_a_mac is not 0 {
+		return media_mac_about("album")
+	}
+	return media_linux_about("xesam:album")
+}
+
+// play if it's paused, pause if it's playing: true if there was a player
+// to tell
+bool media.play_pause {
+	if cby_desktop_on_a_mac is not 0 {
+		return media_mac_press("playpause")
+	}
+	return media_linux_press("PlayPause")
+}
+
+bool media.play {
+	if cby_desktop_on_a_mac is not 0 {
+		return media_mac_press("play")
+	}
+	return media_linux_press("Play")
+}
+
+bool media.pause {
+	if cby_desktop_on_a_mac is not 0 {
+		return media_mac_press("pause")
+	}
+	return media_linux_press("Pause")
+}
+
+// the next song
+bool media.next {
+	if cby_desktop_on_a_mac is not 0 {
+		return media_mac_press("next track")
+	}
+	return media_linux_press("Next")
+}
+
+// the one before (most players go back to the start of this one first,
+// if it's a few seconds in)
+bool media.previous {
+	if cby_desktop_on_a_mac is not 0 {
+		return media_mac_press("previous track")
+	}
+	return media_linux_press("Previous")
+}

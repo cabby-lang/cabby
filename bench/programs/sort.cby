@@ -1,0 +1,40 @@
+int Xs[@N@]
+
+void quicksort int a[], int Lo, int Hi {
+	if Lo >= Hi {
+		return
+	}
+	int Pivot = a[(Lo + Hi) / 2]
+	int i = Lo, j = Hi
+	while i <= j {
+		while a[i] < Pivot {
+			i++
+		}
+		while a[j] > Pivot {
+			j--
+		}
+		if i <= j {
+			int t = a[i]
+			a[i] = a[j]
+			a[j] = t
+			i++
+			j--
+		}
+	}
+	quicksort a, Lo, j
+	quicksort a, i, Hi
+}
+
+int main {
+	long Seed = 42
+	for i in Xs.length {
+		Seed = (Seed * 1103515245 + 12345) % 2147483648
+		Xs[i] = (int)(Seed % 1000000)
+	}
+	quicksort Xs, 0, (int)Xs.length - 1
+	long Check = 0
+	for i in Xs.length {
+		Check = (Check * 31 + Xs[i]) % 1000000007
+	}
+	println Check
+}

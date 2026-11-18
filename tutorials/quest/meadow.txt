@@ -1,0 +1,58 @@
+// The meadow, east of Cabby Town, where the road to the coast begins.
+//
+// The map comes first, a character for each tile:
+//   T  a tree        ~  water       S  a sign        =  the path
+//   f  flowers       .  grass       H  a house's wall
+//   D  a house's door (the house is drawn there; it can be walked into
+//      if a way out starts there)
+//   #  a wall        ,  the floor   O  an oven       b  a table
+//   M  a doormat
+// Then, after a line of ---, what else is here, a line each:
+//   music <name>                             music/<name>.mid, round and round
+//   sign <col>,<row> <what it says>
+//   way <col>,<row> <area> <col>,<row>       step there, and you're in that
+//                                            area, on that tile
+//   person <col>,<row> <name> <facing> [wanders]
+//                                            pictures/<name>-down.png and so
+//                                            on; "wanders": walks about
+//   item <col>,<row> <name>                  pictures/item-<name>.png, to pick up
+//   join <side> <area> <along>               that area is beyond this one's
+//                                            edge (north, south, east or
+//                                            west), its first tile <along>
+//                                            tiles along this one's edge
+//   name <words>                             the area's name, shown on arriving
+//   watch <col>,<row> <who>                  stepping there makes <who>
+//                                            notice the hero (once)
+//   sees <who> <tiles>                       <who> sees the hero that many
+//                                            tiles in front of them (once)
+//   rival <col>,<row> <facing>               Rufus, there until he's met the hero
+// An area joined on to the north or south should be as wide as this one,
+// and one to the east or west as tall: an area at a corner, next door to
+// two areas next door, is placed beside each, and they should agree (the
+// game says so, if they don't).
+// Columns and rows count from 0, at the top left.
+TTTTTTTTTTTTTTTTTTTT
+T....f.......f.....T
+T..f.....TT......f.T
+T........TT........T
+T.f..~~~.......f...T
+T....~~~...........T
+T........f.....TT..T
+=================STT
+.......f...........T
+T..TT........f.....T
+T..TT....~~~.......T
+T........~~~...f...T
+T.f................T
+T.......f.....TT...T
+T..............f...T
+TTTTTTTTTTTTTTTTTTTT
+---
+name The Meadow
+music meadow
+join west town 0
+rival 13,7 left
+sees rival 5
+watch 1,7 rival
+watch 1,8 rival
+sign 17,7 East: the road to the coast. (It's closed for now.)

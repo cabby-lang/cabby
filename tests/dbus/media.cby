@@ -1,0 +1,19 @@
+// the media library against two players (tests/dbus/service.py's): one
+// paused, which the buttons are for, and one stopped
+//> player: Cabby Test Player playing: false
+//> First Song | Ana, Bruno | The Album
+//> play_pause: true playing: true
+//> next: true Second Song | Cleo
+//> previous: true First Song
+//> pause: true playing: false
+use media
+
+int main {
+	println "player:", media.player, "playing:", media.playing
+	println media.title, "|", media.artist, "|", media.album
+	println "play_pause:", media.play_pause, "playing:", media.playing
+	println "next:", media.next, media.title, "|", media.artist
+	println "previous:", media.previous, media.title
+	println "pause:", media.pause, "playing:", media.playing
+	return 0
+}

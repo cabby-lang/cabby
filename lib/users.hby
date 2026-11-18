@@ -1,0 +1,194 @@
+// users.hby — who's running a program, and the computer's other users,
+// the same way on Linux and macOS.
+//
+//     use users
+//
+//     println "Hello,", users.full_name          Hello, Ada Lovelace
+//     println users.name, users.id, users.home     ada 1000 /home/ada
+//     if users.in_group "wheel" { ... }
+//     println users.home_of("root")                /root (a Mac's: /var/root)
+//     users.make "ada", "Ada Lovelace", Password   a new user (with sudo)
+//     users.add_to_group "ada", "audio"
+//
+// The full reference is users.md, next to this file.
+
+use addresses
+
+// ---- the C side (runtime/desktop.c)
+
+extern long cby_users_text str who, long what
+extern long cby_users_id str who
+extern void cby_desktop_take_text address char dst
+
+static str users_text const str &Who, long What {
+	long Length = cby_users_text(Who, What)
+	str Text = " ".repeat(Length)
+	address char Room = addresses.of_text Text
+	cby_desktop_take_text Room
+	return Text
+}
+
+static list str users_lines const str &Text {
+	list str Lines
+	if Text is not "" {
+		Lines = Text.split "\n"
+	}
+	return Lines
+}
+
+// the login name of whoever runs the program: "ada"
+str users.name {
+	return users_text("", 0)
+}
+
+// their full name, "Ada Lovelace" ("" if none was given)
+str users.full_name {
+	return users_text("", 1)
+}
+
+// their home folder
+str users.home {
+	return users_text("", 2)
+}
+
+// their shell: "/bin/bash", "/bin/zsh"
+str users.shell {
+	return users_text("", 3)
+}
+
+// their number (uid): 0 is root, the administrator
+int users.id {
+	return (int)cby_users_id("")
+}
+
+// true when it's root: the administrator (as under sudo)
+bool users.is_root {
+	return users.id is 0
+}
+
+// the groups they're in, by name: "wheel", "audio", "staff"...
+list str users.groups {
+	return users_lines(users_text("", 4))
+}
+
+// true if they're in Group
+bool users.in_group const str &Group {
+	for Name in users.groups {
+		if Name is Group {
+			return true
+		}
+	}
+	return false
+}
+
+// true if the computer has a user called Name
+bool users.exists const str &Name {
+	return Name is not "" and cby_users_id(Name) >= 0
+}
+
+// someone else's full name ("" if there's no such user)
+str users.full_name_of const str &Name {
+	if Name is "" {
+		return ""
+	}
+	return users_text(Name, 1)
+}
+
+// someone else's home folder ("" if there's no such user)
+str users.home_of const str &Name {
+	if Name is "" {
+		return ""
+	}
+	return users_text(Name, 2)
+}
+
+// someone else's number (-1 if there's no such user)
+int users.id_of const str &Name {
+	if Name is "" {
+		return -1
+	}
+	return (int)cby_users_id(Name)
+}
+
+// the groups someone else is in (none if there's no such user)
+list str users.groups_of const str &Name {
+	list str None
+	if Name is "" {
+		return None
+	}
+	return users_lines(users_text(Name, 4))
+}
+
+// ---- making users and groups, and changing them: these need the
+// administrator (sudo cabby prog.cby), and are a panic without
+
+extern void cby_users_make str name, str full, str password, int admin
+extern void cby_users_set_password str name, str password
+extern void cby_users_remove str name, int keep_home
+extern void cby_users_make_group str group
+extern void cby_users_remove_group str group
+extern void cby_users_join str name, str group, int join
+extern long cby_users_all long what
+
+// A new user, who can log in: their login name ("ada": small letters,
+// digits, _ and -), full name ("Ada Lovelace") and password, with a home
+// folder of their own.
+void users.make const str &Name, const str &FullName, const str &Password {
+	cby_users_make Name, FullName, Password, 0
+}
+
+// the same, as an administrator: in the group that may use sudo (sudo on
+// Debian, wheel on Arch; on a Mac, admin)
+void users.make_admin const str &Name, const str &FullName, const str &Password {
+	cby_users_make Name, FullName, Password, 1
+}
+
+// a new password for a user
+void users.set_password const str &Name, const str &Password {
+	cby_users_set_password Name, Password
+}
+
+// a user gone, and their home folder with them
+void users.remove const str &Name {
+	cby_users_remove Name, 0
+}
+
+// a user gone, their home folder kept (to be looked through, or saved)
+void users.remove_keeping_home const str &Name {
+	cby_users_remove Name, 1
+}
+
+// a new group, with no one in it
+void users.make_group const str &Group {
+	cby_users_make_group Group
+}
+
+void users.remove_group const str &Group {
+	cby_users_remove_group Group
+}
+
+// someone put in a group, or taken out of it
+void users.add_to_group const str &Name, const str &Group {
+	cby_users_join Name, Group, 1
+}
+
+void users.remove_from_group const str &Name, const str &Group {
+	cby_users_join Name, Group, 0
+}
+
+// everyone who can log in (not the system's own users), by login name
+list str users.all {
+	return users_lines(users_given(cby_users_all(0)))
+}
+
+// every group, by name
+list str users.all_groups {
+	return users_lines(users_given(cby_users_all(1)))
+}
+
+static str users_given long Length {
+	str Text = " ".repeat(Length)
+	address char Room = addresses.of_text Text
+	cby_desktop_take_text Room
+	return Text
+}

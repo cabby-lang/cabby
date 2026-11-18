@@ -1,0 +1,6 @@
+#!/bin/sh
+# a stand-in for modprobe (run_linux_tests.sh): it says what it was asked,
+# and fails for a module called "nonexistent", as the real one would
+echo "modprobe $*" >> "$CABBY_TEST_STATE/log"
+for a in "$@"; do [ "$a" = nonexistent ] && { echo "modprobe: FATAL: Module nonexistent not found" >&2; exit 1; }; done
+exit 0

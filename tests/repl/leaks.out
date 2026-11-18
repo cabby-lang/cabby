@@ -1,0 +1,8 @@
+note: memory allocated in 'address int Scores = addresses.allocate 10' (40 bytes) was lost before that line ran again: nothing holds its address any more, and it was never given back
+  (each line is noted once; the end of the program lists every block never given back)
+note: memory allocated in 'A = addresses.allocate 8' (32 bytes) was lost in 'A = addresses.allocate 9': nothing holds its address any more, and it was never given back
+note: 105 blocks from addresses.allocate never given back (1788 bytes):
+  120 bytes in 3 blocks allocated in 'address int Scores = addresses.allocate 10'
+  32 bytes allocated in 'A = addresses.allocate 8'
+  36 bytes allocated in 'A = addresses.allocate 9'
+  1600 bytes in 100 blocks allocated in 'address address int Node = addresses.allocate 2'

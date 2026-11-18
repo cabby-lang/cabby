@@ -1,0 +1,57 @@
+// Tutorial 105: Bluetooth — what's nearby, and what's paired
+//
+// Run it:      cabby 105-bluetooth.cby
+// Or compile:  cabby -c 105-bluetooth.cby && ./105-bluetooth
+// Library:     use bluetooth
+// Topics:      bluetooth.available, is_on, visible, error; devices, and each
+//              one's name, address, kind, paired, connected, trusted,
+//              battery, strength; search (and, in the chapter: pair,
+//              connect, disconnect, forget)
+//
+// The computer's Bluetooth, and the devices it knows: headphones,
+// keyboards, phones. This program lists them, and what each is doing. It
+// doesn't search (that takes ten seconds) unless asked: `cabby
+// 105-bluetooth.cby search`. Pairing and connecting are in the chapter,
+// and in `examples/bluetooth-connect.cby`.
+//
+// On Linux it's BlueZ, which every desktop has (the `bluetooth` service);
+// on a Mac, the Mac's own, which can look but not pair yet.
+
+use bluetooth
+use time
+
+int main int Argc, str Argv[] {
+	if !bluetooth.available {
+		println "No Bluetooth here:", bluetooth.error
+		return 0
+	}
+	println "Bluetooth is on:", bluetooth.is_on, "| others can see this computer:", bluetooth.visible
+	if Argc > 1 and Argv[1] is "search" {
+		println "Searching for 10 seconds..."
+		bluetooth.search time.seconds(10) else Why {
+			println "It couldn't search:", Why
+		}
+	}
+	for D in bluetooth.devices {
+		str State = "known"
+		if D.connected {
+			State = "connected"
+		} else if D.paired {
+			State = "paired"
+		}
+		str Battery = ""
+		if D.battery >= 0 {
+			Battery = ", battery " + D.battery.text + "%"
+		}
+		println D.name, "(" + D.kind + ", " + D.address + "):", State + Battery
+	}
+}
+
+// Try this:
+//  - Say which device is heard most strongly (D.strength is nearest 0).
+//  - Connect to your headphones by name (bluetooth.device_named, then
+//    connect), and print bluetooth.error if it doesn't.
+
+// ---------------------------------------------------------------- output
+// output varies: what one computer said (one with no Bluetooth)
+//> No Bluetooth here: there's no Bluetooth here (BlueZ, on the system bus)

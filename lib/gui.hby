@@ -1,0 +1,976 @@
+// gui.hby — windows and everything in them.
+//
+//     use gui
+//
+//     object greeter : gui.window {
+//         gui.label Message
+//         void build {
+//             set_title "Hello"
+//             Message = add_label "Nobody has clicked yet"
+//             gui.button Button = add_button "Click me"
+//             Button.on_click clicked
+//         }
+//         void clicked {
+//             Message.set_text "Thank you!"
+//         }
+//     }
+//
+//     int main {
+//         greeter g
+//         g.run
+//     }
+//
+// A window's things stack top to bottom in the order they are added; a
+// row (add_row) puts things side by side, and a column (add_column) stacks
+// them inside a row. `run` shows the window, calls handlers as things
+// happen, and returns when the window is closed.
+//
+// The full reference is gui.md, next to this file.
+
+use time
+use images
+//
+// Underneath is GTK 4 (through libcabbygui), but nothing here needs it.
+
+// ---- the C side (runtime/gui.c); use the objects below instead
+
+extern long cby_gui_window_new void
+extern long cby_gui_window_box long win
+extern void cby_gui_window_set_title long win, str title
+extern void cby_gui_window_set_size long win, int width, int height
+extern void cby_gui_window_run long win
+extern void cby_gui_window_close long win
+extern void cby_gui_window_destroy long win
+extern long cby_gui_add_label long box, str text
+extern long cby_gui_add_button long box, str text
+extern long cby_gui_add_entry long box
+extern long cby_gui_add_row long box
+extern long cby_gui_add_column long box
+extern long cby_gui_add_check long box, str text
+extern long cby_gui_add_choice long box
+extern long cby_gui_add_text_area long box
+extern long cby_gui_add_list long box
+extern long cby_gui_add_slider long box, int min, int max
+extern long cby_gui_add_progress long box
+extern long cby_gui_add_image long box, str path
+extern void cby_gui_add_separator long box
+extern void cby_gui_set_text long widget, str text
+extern long cby_gui_text_length long widget
+extern char cby_gui_text_char long widget, long i
+extern void cby_gui_set_enabled long widget, int on
+extern void cby_gui_set_description long widget, str text
+extern void cby_gui_set_visible long widget, int on
+extern void cby_gui_set_text_color long widget, str color
+extern void cby_gui_set_background long widget, str color
+extern void cby_gui_window_on_key long win, handler h
+extern long cby_gui_window_key_length long win
+extern char cby_gui_window_key_char long win, long i
+extern void cby_gui_set_min_size long widget, int width, int height
+extern int cby_gui_check_get long widget
+extern void cby_gui_check_set long widget, int on
+extern void cby_gui_choice_add long widget, str text
+extern int cby_gui_selected long widget
+extern void cby_gui_select long widget, int index
+extern int cby_gui_count long widget
+extern void cby_gui_list_add long widget, str text
+extern void cby_gui_list_clear long widget
+extern void cby_gui_text_area_set_editable long widget, int on
+extern int cby_gui_slider_get long widget
+extern void cby_gui_slider_set long widget, int value
+extern void cby_gui_progress_set long widget, double fraction
+extern void cby_gui_image_set long widget, str path
+extern long cby_gui_add_video long box, long source
+extern void cby_gui_video_controls long widget, int show
+extern void cby_gui_video_on_end long widget, handler h
+extern void cby_gui_on_click long widget, handler h
+extern void cby_gui_on_change long widget, handler h
+extern void cby_gui_on_enter long widget, handler h
+extern void cby_gui_on_toggle long widget, handler h
+extern void cby_gui_on_select long widget, handler h
+extern void cby_gui_every long win, int ms, handler h
+extern void cby_gui_after long win, int ms, handler h
+extern void cby_gui_stop_timers long win
+extern void cby_gui_show_message long win, str text
+extern void cby_gui_ask long win, str question, handler h
+extern void cby_gui_ask_open_file long win, handler h
+extern void cby_gui_ask_save_file long win, str suggested, handler h
+extern long cby_gui_chosen_length long win
+extern char cby_gui_chosen_char long win, long i
+extern long cby_gui_add_canvas long box, int width, int height
+extern int cby_gui_canvas_width long canvas
+extern int cby_gui_canvas_height long canvas
+extern void cby_gui_canvas_on_draw long canvas, handler h
+extern void cby_gui_canvas_redraw long canvas
+extern void cby_gui_canvas_set_color long canvas, str color
+extern void cby_gui_canvas_fill_with long canvas, str color
+extern void cby_gui_canvas_set_line_width long canvas, double width
+extern void cby_gui_canvas_set_font_size long canvas, double size
+extern void cby_gui_canvas_set_font long canvas, str font
+extern void cby_gui_canvas_line long canvas, double x1, double y1, double x2, double y2
+extern void cby_gui_canvas_rectangle long canvas, double x, double y, double w, double h, int filled
+extern void cby_gui_canvas_ellipse long canvas, double x, double y, double rx, double ry, int filled
+extern void cby_gui_canvas_arc long canvas, double x, double y, double r, double start, double finish
+extern void cby_gui_canvas_corner long canvas, double x, double y
+extern void cby_gui_canvas_polygon long canvas, int filled, long numbers
+extern void cby_gui_canvas_text long canvas, double x, double y, str text
+extern void cby_gui_canvas_image long canvas, double x, double y, str path
+extern void cby_gui_canvas_picture long canvas, double x, double y, long picture
+extern void cby_gui_canvas_save long canvas, str path
+extern int cby_gui_canvas_mouse_x long canvas
+extern int cby_gui_canvas_mouse_y long canvas
+extern long cby_gui_canvas_key_length long canvas
+extern void cby_gui_canvas_on_click long canvas, handler h
+extern void cby_gui_canvas_on_mouse_move long canvas, handler h
+extern void cby_gui_canvas_on_key long canvas, handler h
+extern long cby_gui_add_menu long win, str title
+extern long cby_gui_menu_add_item long menu, str text, str keys, handler h
+extern void cby_gui_menu_add_separator long menu
+extern void cby_gui_menu_item_set_enabled long item, int on
+extern void cby_gui_add_shortcut long win, str keys, handler h
+extern long cby_gui_add_tabs long box
+extern long cby_gui_tabs_add_tab long tabs, str title
+extern long cby_gui_add_scrolling_column long box
+extern long cby_gui_add_table long box
+extern void cby_gui_table_heading long table, str heading
+extern void cby_gui_table_row_start long table
+extern void cby_gui_table_row_cell long table, str text
+extern void cby_gui_table_row_end long table
+extern void cby_gui_table_set_cell long table, int row, int column, str text
+extern long cby_gui_table_cell_length long table, int row, int column
+extern char cby_gui_table_cell_char long table, long i
+extern void cby_gui_table_remove_row long table, int row
+extern void cby_gui_table_clear long table
+extern int cby_gui_table_rows long table
+extern int cby_gui_table_columns long table
+extern long cby_gui_add_number long box, int min, int max
+extern int cby_gui_number_get long number
+extern void cby_gui_number_set long number, int value
+extern long cby_gui_add_color_button long box
+extern long cby_gui_color_length long button
+extern void cby_gui_color_set long button, str color
+extern long cby_gui_add_font_button long box
+extern long cby_gui_font_length long button
+extern void cby_gui_font_set long button, str font
+
+// ---- widgets: what goes in a window
+
+// Everything that can be put in a window.
+object gui.widget {
+	long Id
+
+	// The text it shows: a label's words, a button's or check box's label,
+	// what is typed in a text box or text area, or the chosen entry of a
+	// drop-down or list.
+	void set_text const str &Text {
+		cby_gui_set_text Id, Text
+	}
+
+	str text const {
+		str s
+		for i in cby_gui_text_length Id {
+			s += cby_gui_text_char Id, i
+		}
+		return s
+	}
+
+	// Grayed out and not usable (false), or usable again (true).
+	void set_enabled bool On {
+		cby_gui_set_enabled Id, On
+	}
+
+	// Hidden (false), or shown again (true). Hidden things take no space.
+	void set_visible bool On {
+		cby_gui_set_visible Id, On
+	}
+
+	// What a screen reader says it is, when its text doesn't say: a
+	// picture ("The Cabby logo"), or a canvas ("The board"). A text box
+	// is already read with the label before it.
+	void set_description const str &Text {
+		cby_gui_set_description Id, Text
+	}
+
+	// The color its text is written in: "darkred", "#3366cc" (as for a
+	// canvas's set_color); "" for the usual again.
+	void set_text_color const str &Color {
+		cby_gui_set_text_color Id, Color
+	}
+
+	// The color behind it ("" for the usual again).
+	void set_background const str &Color {
+		cby_gui_set_background Id, Color
+	}
+
+	// The smallest size it may be, in pixels (-1: no minimum that way).
+	void set_min_size int Width, int Height {
+		cby_gui_set_min_size Id, Width, Height
+	}
+}
+
+// A line of text.
+object gui.label : gui.widget {
+}
+
+// A button. `b.on_click save` calls the window's method `save` when it
+// is clicked.
+object gui.button : gui.widget {
+	void on_click handler h {
+		cby_gui_on_click Id, h
+	}
+}
+
+// A one-line text box. `text` is what is typed in it.
+object gui.entry : gui.widget {
+	// calls h whenever the text changes
+	void on_change handler h {
+		cby_gui_on_change Id, h
+	}
+	// calls h when Enter is pressed in the box
+	void on_enter handler h {
+		cby_gui_on_enter Id, h
+	}
+}
+
+// A check box with a label: on or off.
+object gui.check : gui.widget {
+	bool checked const {
+		return cby_gui_check_get(Id) != 0
+	}
+	void set_checked bool On {
+		cby_gui_check_set Id, On
+	}
+	// calls h each time it is ticked or unticked
+	void on_toggle handler h {
+		cby_gui_on_toggle Id, h
+	}
+}
+
+// A drop-down list: one choice out of several. The first option added is
+// chosen to begin with; `text` is the chosen option.
+object gui.choice : gui.widget {
+	void add_option const str &Text {
+		cby_gui_choice_add Id, Text
+	}
+	// the chosen option, counting from 0 (-1 if there are none)
+	int selected const {
+		return cby_gui_selected Id
+	}
+	void set_selected int Index {
+		cby_gui_select Id, Index
+	}
+	int count const {
+		return cby_gui_count Id
+	}
+	// calls h each time a different option is chosen
+	void on_change handler h {
+		cby_gui_on_change Id, h
+	}
+}
+
+// Several lines of text, with a scroll bar when needed. `text` is all of
+// it, with "\n" between the lines.
+object gui.text_area : gui.widget {
+	// calls h whenever the text changes
+	void on_change handler h {
+		cby_gui_on_change Id, h
+	}
+	// false: the text can be read and copied but not changed
+	void set_editable bool On {
+		cby_gui_text_area_set_editable Id, On
+	}
+}
+
+// A list of items to pick from, with a scroll bar when needed. `text` is
+// the selected item.
+object gui.list : gui.widget {
+	void add_item const str &Text {
+		cby_gui_list_add Id, Text
+	}
+	void clear {
+		cby_gui_list_clear Id
+	}
+	int count const {
+		return cby_gui_count Id
+	}
+	// the selected item, counting from 0 (-1 if none is)
+	int selected const {
+		return cby_gui_selected Id
+	}
+	void set_selected int Index {
+		cby_gui_select Id, Index
+	}
+	// calls h each time the selection changes
+	void on_select handler h {
+		cby_gui_on_select Id, h
+	}
+}
+
+// A slider for choosing a whole number between two limits.
+object gui.slider : gui.widget {
+	int value const {
+		return cby_gui_slider_get Id
+	}
+	void set_value int v {
+		cby_gui_slider_set Id, v
+	}
+	// calls h each time the value changes
+	void on_change handler h {
+		cby_gui_on_change Id, h
+	}
+}
+
+// A bar showing how much of something is done.
+object gui.progress : gui.widget {
+	// from 0.0 (nothing) to 1.0 (all done)
+	void set_fraction double Done {
+		cby_gui_progress_set Id, Done
+	}
+}
+
+// A picture from a file (PNG, JPEG, SVG ...), scaled to fit its space.
+object gui.image : gui.widget {
+	void set_file const str &Path {
+		cby_gui_image_set Id, Path
+	}
+}
+
+// A video playing (use videos): Window.add_video Film.source. Its picture
+// fills its space, keeping its shape; the video itself plays, pauses and
+// seeks (Film.play). A click on it plays or pauses it; with it chosen,
+// space does too, and left and right go back and on five seconds.
+object gui.video : gui.widget {
+	// a play button, the time, and a track to go to any place along
+	void show_controls {
+		cby_gui_video_controls Id, 1
+	}
+
+	void hide_controls {
+		cby_gui_video_controls Id, 0
+	}
+
+	// h runs each time it comes to its end
+	void on_end handler h {
+		cby_gui_video_on_end Id, h
+	}
+}
+
+// A drawing area. Its on_draw handler draws it, whenever it needs drawing
+// and after redraw; the drawing methods work only while that handler runs.
+// Positions are in pixels from the top left corner, y counting down. Each
+// drawing starts on white, in black, with lines 1 pixel wide.
+object gui.canvas : gui.widget {
+	// calls h to draw the canvas
+	void on_draw handler h {
+		cby_gui_canvas_on_draw Id, h
+	}
+
+	// draws it again (calls on_draw's handler), to show what has changed
+	void redraw {
+		cby_gui_canvas_redraw Id
+	}
+
+	// its size, in pixels, as it was added
+	int width const {
+		return cby_gui_canvas_width Id
+	}
+
+	int height const {
+		return cby_gui_canvas_height Id
+	}
+
+	// ---- drawing (in on_draw's handler)
+
+	// the color for what's drawn next: "red", "steelblue", "#3366cc"
+	void set_color const str &Color {
+		cby_gui_canvas_set_color Id, Color
+	}
+
+	// the whole canvas in one color (the color for drawing stays as it was)
+	void fill_with const str &Color {
+		cby_gui_canvas_fill_with Id, Color
+	}
+
+	void set_line_width double Width {
+		cby_gui_canvas_set_line_width Id, Width
+	}
+
+	// the size of text, in pixels (14 to begin with)
+	void set_font_size double Size {
+		cby_gui_canvas_set_font_size Id, Size
+	}
+
+	// the font for text, as a font button gives it: "Serif Bold 16" (its
+	// size in pixels; "Sans 14" to begin with)
+	void set_font const str &Font {
+		cby_gui_canvas_set_font Id, Font
+	}
+
+	void line double X1, double Y1, double X2, double Y2 {
+		cby_gui_canvas_line Id, X1, Y1, X2, Y2
+	}
+
+	// X, Y is the top left corner
+	void rectangle double X, double Y, double Width, double Height {
+		cby_gui_canvas_rectangle Id, X, Y, Width, Height, 0
+	}
+
+	void fill_rectangle double X, double Y, double Width, double Height {
+		cby_gui_canvas_rectangle Id, X, Y, Width, Height, 1
+	}
+
+	// X, Y is the center
+	void circle double X, double Y, double Radius {
+		cby_gui_canvas_ellipse Id, X, Y, Radius, Radius, 0
+	}
+
+	void fill_circle double X, double Y, double Radius {
+		cby_gui_canvas_ellipse Id, X, Y, Radius, Radius, 1
+	}
+
+	void ellipse double X, double Y, double Across, double Down {
+		cby_gui_canvas_ellipse Id, X, Y, Across, Down, 0
+	}
+
+	void fill_ellipse double X, double Y, double Across, double Down {
+		cby_gui_canvas_ellipse Id, X, Y, Across, Down, 1
+	}
+
+	// part of a circle, From and To in degrees as on a clock: 0 at the top,
+	// going clockwise
+	void arc double X, double Y, double Radius, double From, double To {
+		cby_gui_canvas_arc Id, X, Y, Radius, From, To
+	}
+
+	// corners as x, y, x, y ...: {10, 10, 90, 10, 50, 80} is a triangle
+	void polygon const list double &Corners {
+		corners Corners
+		cby_gui_canvas_polygon Id, 0, Corners.length
+	}
+
+	void fill_polygon const list double &Corners {
+		corners Corners
+		cby_gui_canvas_polygon Id, 1, Corners.length
+	}
+
+	// text, its top left corner at X, Y
+	void write double X, double Y, const str &Text {
+		cby_gui_canvas_text Id, X, Y, Text
+	}
+
+	// a picture from a file, its top left corner at X, Y
+	void image double X, double Y, const str &Path {
+		cby_gui_canvas_image Id, X, Y, Path
+	}
+
+	// a picture in memory (use images), its top left corner at X, Y: one
+	// shown again unchanged costs next to nothing, so a picture a worker
+	// draws can be shown on every redraw
+	void picture double X, double Y, const images.picture &Picture {
+		cby_gui_canvas_picture Id, X, Y, Picture.Id
+	}
+
+	// what on_draw draws, saved as a PNG picture
+	void save const str &Path {
+		cby_gui_canvas_save Id, Path
+	}
+
+	// ---- the mouse and keys
+
+	// calls h when the canvas is clicked; mouse_x and mouse_y say where
+	void on_click handler h {
+		cby_gui_canvas_on_click Id, h
+	}
+
+	// calls h each time the mouse moves over the canvas
+	void on_mouse_move handler h {
+		cby_gui_canvas_on_mouse_move Id, h
+	}
+
+	// calls h when a key is pressed in the canvas (after it's been clicked,
+	// or Tab has moved to it); key says which
+	void on_key handler h {
+		cby_gui_canvas_on_key Id, h
+	}
+
+	int mouse_x const {
+		return cby_gui_canvas_mouse_x Id
+	}
+
+	int mouse_y const {
+		return cby_gui_canvas_mouse_y Id
+	}
+
+	// the key last pressed, as read_key names it: "a", " ", "up", "enter"
+	str key const {
+		str s
+		for i in cby_gui_canvas_key_length Id {
+			s += cby_gui_text_char Id, i
+		}
+		return s
+	}
+
+	inner void corners const list double &Corners {
+		for i in Corners.length / 2 {
+			cby_gui_canvas_corner Id, Corners[2 * i], Corners[2 * i + 1]
+		}
+	}
+}
+
+// Pages one at a time, each chosen by its tab along the top. Each page is
+// a column to fill: Pages.add_tab "General" gives the first. `text` is the
+// tab being shown.
+object gui.tabs : gui.widget {
+	// a page, with its tab, at the end; fill it like a window
+	gui.column add_tab const str &Title {
+		return gui.column{.Box = cby_gui_tabs_add_tab(Id, Title)}
+	}
+
+	// the tab being shown, counting from 0
+	int selected const {
+		return cby_gui_selected Id
+	}
+
+	void set_selected int Index {
+		cby_gui_select Id, Index
+	}
+
+	int count const {
+		return cby_gui_count Id
+	}
+
+	// calls h each time a different tab is shown
+	void on_change handler h {
+		cby_gui_on_change Id, h
+	}
+}
+
+// Rows and columns of text, with a heading over each column. Clicking a
+// heading sorts the rows by it (numbers as numbers); rows still count from
+// 0 in the order they were added, whatever order they're shown in. `text`
+// is the selected row's first cell.
+object gui.table : gui.widget {
+	// a row at the end: one str for each column
+	void add_row const list str &Cells {
+		cby_gui_table_row_start Id
+		for Cell in Cells {
+			cby_gui_table_row_cell Id, Cell
+		}
+		cby_gui_table_row_end Id
+	}
+
+	// one cell's text: its row (from 0, in the order added) and column
+	str cell int Row, int Column const {
+		str s
+		for i in cby_gui_table_cell_length Id, Row, Column {
+			s += cby_gui_table_cell_char Id, i
+		}
+		return s
+	}
+
+	void set_cell int Row, int Column, const str &Text {
+		cby_gui_table_set_cell Id, Row, Column, Text
+	}
+
+	// takes a row out (the rows after it move up one)
+	void remove_row int Row {
+		cby_gui_table_remove_row Id, Row
+	}
+
+	// takes every row out (the headings stay)
+	void clear {
+		cby_gui_table_clear Id
+	}
+
+	// how many rows
+	int count const {
+		return cby_gui_table_rows Id
+	}
+
+	int columns const {
+		return cby_gui_table_columns Id
+	}
+
+	// the selected row (-1 if none is)
+	int selected const {
+		return cby_gui_selected Id
+	}
+
+	void set_selected int Row {
+		cby_gui_select Id, Row
+	}
+
+	// calls h each time the selection changes
+	void on_select handler h {
+		cby_gui_on_select Id, h
+	}
+}
+
+// A box for a whole number between two limits, with buttons to make it
+// one more or one less; it can be typed in too.
+object gui.number : gui.widget {
+	int value const {
+		return cby_gui_number_get Id
+	}
+
+	// (this calls on_change's handler too)
+	void set_value int v {
+		cby_gui_number_set Id, v
+	}
+
+	// calls h each time the number changes
+	void on_change handler h {
+		cby_gui_on_change Id, h
+	}
+}
+
+// A button showing a color; clicking it lets the person choose another.
+object gui.color_button : gui.widget {
+	// the color chosen, as "#rrggbb": ready for a canvas's set_color
+	str color const {
+		str s
+		for i in cby_gui_color_length Id {
+			s += cby_gui_text_char Id, i
+		}
+		return s
+	}
+
+	// "steelblue", "#3366cc" ... (black to begin with)
+	void set_color const str &Color {
+		cby_gui_color_set Id, Color
+	}
+
+	// calls h each time a color is chosen
+	void on_change handler h {
+		cby_gui_on_change Id, h
+	}
+}
+
+// A button showing a font; clicking it lets the person choose another.
+object gui.font_button : gui.widget {
+	// the font chosen, its name and size: "Serif Bold 14"
+	str font const {
+		str s
+		for i in cby_gui_font_length Id {
+			s += cby_gui_text_char Id, i
+		}
+		return s
+	}
+
+	// "Sans 12" to begin with
+	void set_font const str &Font {
+		cby_gui_font_set Id, Font
+	}
+
+	// calls h each time a font is chosen
+	void on_change handler h {
+		cby_gui_on_change Id, h
+	}
+}
+
+// ---- menus: a window's menu bar
+
+// One menu on the menu bar ("File", "Edit"), from the window's add_menu.
+object gui.menu {
+	long Id
+
+	// an item that calls h when it's chosen; Keys is its keyboard shortcut,
+	// such as "Ctrl+O" or "F5" ("" for none)
+	gui.menu_item add_item const str &Text, const str &Keys, handler h {
+		return gui.menu_item{.Id = cby_gui_menu_add_item(Id, Text, Keys, h)}
+	}
+
+	// a line between items, to group them
+	void add_separator {
+		cby_gui_menu_add_separator Id
+	}
+}
+
+// An item in a menu.
+object gui.menu_item {
+	long Id
+
+	// false: grayed out, and it (and its shortcut) can't be used
+	void set_enabled bool On {
+		cby_gui_menu_item_set_enabled Id, On
+	}
+}
+
+// ---- containers: windows, rows and columns
+
+// Something that holds widgets: a window, or a row or column inside one.
+object gui.container {
+	long Box
+
+	// where new widgets go
+	long target {
+		return Box
+	}
+
+	// The color of the text of everything in it (unless something has a
+	// color of its own); "" for the usual again.
+	void set_text_color const str &Color {
+		cby_gui_set_text_color target, Color
+	}
+
+	// The color behind everything in it: the whole row, column or window.
+	void set_background const str &Color {
+		cby_gui_set_background target, Color
+	}
+
+	gui.label add_label const str &Text {
+		return gui.label{.Id = cby_gui_add_label(target, Text)}
+	}
+
+	gui.button add_button const str &Text {
+		return gui.button{.Id = cby_gui_add_button(target, Text)}
+	}
+
+	gui.entry add_entry {
+		return gui.entry{.Id = cby_gui_add_entry(target)}
+	}
+
+	gui.check add_check const str &Text {
+		return gui.check{.Id = cby_gui_add_check(target, Text)}
+	}
+
+	gui.choice add_choice {
+		return gui.choice{.Id = cby_gui_add_choice(target)}
+	}
+
+	gui.text_area add_text_area {
+		return gui.text_area{.Id = cby_gui_add_text_area(target)}
+	}
+
+	gui.list add_list {
+		return gui.list{.Id = cby_gui_add_list(target)}
+	}
+
+	gui.slider add_slider int Min, int Max {
+		return gui.slider{.Id = cby_gui_add_slider(target, Min, Max)}
+	}
+
+	gui.progress add_progress {
+		return gui.progress{.Id = cby_gui_add_progress(target)}
+	}
+
+	gui.image add_image const str &Path {
+		return gui.image{.Id = cby_gui_add_image(target, Path)}
+	}
+
+	// a video (use videos), given its source: add_video Film.source
+	gui.video add_video long Source {
+		return gui.video{.Id = cby_gui_add_video(target, Source)}
+	}
+
+	// a drawing area of this many pixels
+	gui.canvas add_canvas int Width, int Height {
+		return gui.canvas{.Id = cby_gui_add_canvas(target, Width, Height)}
+	}
+
+	// a dividing line
+	void add_separator {
+		cby_gui_add_separator target
+	}
+
+	// a row: what is added to it goes side by side
+	gui.row add_row {
+		return gui.row{.Box = cby_gui_add_row(target)}
+	}
+
+	// a column: what is added to it stacks top to bottom (useful inside a row)
+	gui.column add_column {
+		return gui.column{.Box = cby_gui_add_column(target)}
+	}
+
+	// a column that scrolls, when what's in it doesn't fit
+	gui.column add_scrolling_column {
+		return gui.column{.Box = cby_gui_add_scrolling_column(target)}
+	}
+
+	// a box for a whole number from Min to Max (it starts at Min)
+	gui.number add_number int Min, int Max {
+		return gui.number{.Id = cby_gui_add_number(target, Min, Max)}
+	}
+
+	// a button to choose a color with
+	gui.color_button add_color_button {
+		return gui.color_button{.Id = cby_gui_add_color_button(target)}
+	}
+
+	// a button to choose a font with
+	gui.font_button add_font_button {
+		return gui.font_button{.Id = cby_gui_add_font_button(target)}
+	}
+
+	// a table, with these headings over its columns
+	gui.table add_table const list str &Headings {
+		gui.table T = gui.table{.Id = cby_gui_add_table(target)}
+		for Heading in Headings {
+			cby_gui_table_heading T.Id, Heading
+		}
+		return T
+	}
+
+	// tabs: pages shown one at a time (add_tab gives each one)
+	gui.tabs add_tabs {
+		return gui.tabs{.Id = cby_gui_add_tabs(target)}
+	}
+}
+
+object gui.row : gui.container {
+}
+
+object gui.column : gui.container {
+}
+
+// A window. Make your own window object from it and fill it in `build`,
+// which `run` calls; or add things to a gui.window directly and run it.
+object gui.window : gui.container {
+	long Win
+	bool Built
+
+	// Override this to add the window's contents and handlers.
+	void build {
+	}
+
+	void set_title const str &Title {
+		open
+		cby_gui_window_set_title Win, Title
+	}
+
+	void set_size int Width, int Height {
+		open
+		cby_gui_window_set_size Win, Width, Height
+	}
+
+	// Shows the window and handles what happens in it, until it is closed.
+	void run {
+		open
+		if !Built {
+			Built = true
+			build
+		}
+		cby_gui_window_run Win
+	}
+
+	void close {
+		if Win != 0 {
+			cby_gui_window_close Win
+		}
+	}
+
+	// ---- timers: they run while the window is open
+
+	// calls h every so often: every time.seconds(1), tick
+	void every duration Wait, handler h {
+		open
+		int Ms = (int)Wait.whole_milliseconds
+		cby_gui_every Win, Ms, h
+	}
+
+	// calls h once, after a while: after time.seconds(2), reset
+	void after duration Wait, handler h {
+		open
+		int Ms = (int)Wait.whole_milliseconds
+		cby_gui_after Win, Ms, h
+	}
+
+	// stops every timer this window has
+	void stop_timers {
+		open
+		cby_gui_stop_timers Win
+	}
+
+	// ---- menus and shortcuts
+
+	// a menu on the window's menu bar, which appears with the first one
+	gui.menu add_menu const str &Title {
+		open
+		return gui.menu{.Id = cby_gui_add_menu(Win, Title)}
+	}
+
+	// calls h when these keys are pressed anywhere in the window:
+	// "Ctrl+S", "Ctrl+Shift+Z", "Alt+X", "F5"
+	void add_shortcut const str &Keys, handler h {
+		open
+		cby_gui_add_shortcut Win, Keys, h
+	}
+
+	// calls h when a key is pressed that nothing in the window uses: not
+	// typed into a text box, nor a shortcut, nor Tab (the arrow keys come
+	// here too, once there's an on_key). `key` says which.
+	void on_key handler h {
+		open
+		cby_gui_window_on_key Win, h
+	}
+
+	// the key on_key was called for, named as read_key names keys: a
+	// character as itself ("q", "Q", " "), the others by name ("up",
+	// "enter", "escape", "f5", "ctrl+s")
+	str key const {
+		str s
+		for i in cby_gui_window_key_length Win {
+			s += cby_gui_window_key_char Win, i
+		}
+		return s
+	}
+
+	// ---- dialogs
+
+	// shows a message with an OK button
+	void show_message const str &Text {
+		open
+		cby_gui_show_message Win, Text
+	}
+
+	// asks a yes-or-no question; calls h if the answer is yes
+	void ask const str &Question, handler h {
+		open
+		cby_gui_ask Win, Question, h
+	}
+
+	// lets the person choose a file to open; calls h with chosen_file set
+	// (not called if they cancel)
+	void ask_open_file handler h {
+		open
+		cby_gui_ask_open_file Win, h
+	}
+
+	// lets the person choose where to save, suggesting a file name; calls h
+	// with chosen_file set (not called if they cancel)
+	void ask_save_file const str &Suggested, handler h {
+		open
+		cby_gui_ask_save_file Win, Suggested, h
+	}
+
+	// the full path of the file the last file dialog chose
+	str chosen_file const {
+		str s
+		if Win == 0 {
+			return s
+		}
+		for i in cby_gui_chosen_length Win {
+			s += cby_gui_chosen_char Win, i
+		}
+		return s
+	}
+
+	long target {
+		open
+		return Box
+	}
+
+	// (the window is made when it is first needed)
+	void open {
+		if Win == 0 {
+			Win = cby_gui_window_new
+			Box = cby_gui_window_box Win
+		}
+	}
+
+	~window {
+		if Win != 0 {
+			cby_gui_window_destroy Win
+		}
+	}
+}

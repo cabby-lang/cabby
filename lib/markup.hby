@@ -1,0 +1,210 @@
+// markup.hby — what html and xml share: the element. Use html or xml
+// rather than this header itself.
+//
+// An element is a tag with attributes and what's inside it, text and more
+// elements: <a href="https://cabby.dev">Cabby</a>. A whole page (html) or
+// document (xml) is an element too, so everything here works on it.
+//
+// The full references are html.md and xml.md, next to this file.
+
+use addresses
+
+// ---- the C side (in Cabby's runtime)
+
+extern long cby_markup_read str text, long is_html
+extern int cby_markup_can_read str text
+extern long cby_markup_new str tag, long is_html
+extern void cby_markup_release long node
+extern int cby_markup_is_missing long node
+extern long cby_markup_find long node, str selector
+extern long cby_markup_find_all long node, str selector
+extern long cby_markup_found long i
+extern long cby_markup_child_count long node
+extern long cby_markup_child long node, long i
+extern long cby_markup_parent long node
+extern int cby_markup_has_attribute long node, str name
+extern long cby_markup_attribute long node, str name, long must
+extern void cby_markup_set_attribute long node, str name, str value
+extern void cby_markup_remove_attribute long node, str name
+extern long cby_markup_attribute_count long node
+extern long cby_markup_attribute_name long node, long i
+extern void cby_markup_add long node, long child
+extern void cby_markup_add_text long node, str text
+extern void cby_markup_clear long node
+extern void cby_markup_remove long node
+extern long cby_markup_copy long node
+extern long cby_markup_text long node, long what
+extern void cby_markup_take address char dst
+
+// the text C has just made, as a str
+static str markup_text_from_c long Length {
+	str Text = " ".repeat(Length)
+	if Length > 0 {
+		address char Room = addresses.of_text Text
+		cby_markup_take Room
+	}
+	return Text
+}
+
+// ---- an element
+
+object element {
+	inner long Node
+
+	~element {
+		if Node != 0 {
+			cby_markup_release Node
+		}
+	}
+
+	// (for the libraries' own functions: the element becomes this C node)
+	void adopt long Given {
+		if Node != 0 {
+			cby_markup_release Node
+		}
+		Node = Given
+	}
+
+	// ---- finding what's inside, with CSS selectors: "a", ".price",
+	// "#prices", "li.price", "ul li", "ul > li", "a[href]"
+
+	// the first element inside that matches (using it is a panic if none
+	// does: check with .is_missing)
+	element find const str &Selector const {
+		element Found
+		Found.adopt cby_markup_find(Node, Selector)
+		return Found
+	}
+
+	// every element inside that matches, in the order they appear
+	list element find_all const str &Selector const {
+		list element All
+		long Count = cby_markup_find_all(Node, Selector)
+		for i in Count {
+			element E
+			E.adopt cby_markup_found(i)
+			All.add E
+		}
+		return All
+	}
+
+	// the elements directly inside (not text)
+	list element children const {
+		list element Kids
+		long Count = cby_markup_child_count(Node)
+		for i in Count {
+			element E
+			E.adopt cby_markup_child(Node, i)
+			Kids.add E
+		}
+		return Kids
+	}
+
+	// the element this is inside
+	element parent const {
+		element P
+		P.adopt cby_markup_parent(Node)
+		return P
+	}
+
+	// true for what a find didn't find
+	bool is_missing const {
+		return cby_markup_is_missing(Node) != 0
+	}
+
+	// ---- what it is
+
+	// its tag's name: "a", "li"
+	str tag const {
+		return markup_text_from_c(cby_markup_text(Node, 0))
+	}
+
+	// all the text inside, as a person reads it (spaces tidied); also what
+	// println shows
+	str text const {
+		return markup_text_from_c(cby_markup_text(Node, 1))
+	}
+
+	// all the text inside, exactly as it is
+	str raw_text const {
+		return markup_text_from_c(cby_markup_text(Node, 4))
+	}
+
+	// ---- attributes: href="...", class="..."
+
+	str attribute const str &Name const {
+		return markup_text_from_c(cby_markup_attribute(Node, Name, 1))
+	}
+
+	str attribute_or const str &Name, const str &Default const {
+		long Length = cby_markup_attribute(Node, Name, 0)
+		if Length < 0 {
+			return Default.copy
+		}
+		return markup_text_from_c(Length)
+	}
+
+	bool has_attribute const str &Name const {
+		return cby_markup_has_attribute(Node, Name) != 0
+	}
+
+	// the names of all its attributes, in order
+	list str attributes const {
+		list str Names
+		long Count = cby_markup_attribute_count(Node)
+		for i in Count {
+			Names.add markup_text_from_c(cby_markup_attribute_name(Node, i))
+		}
+		return Names
+	}
+
+	void set_attribute const str &Name, const str &Value {
+		cby_markup_set_attribute Node, Name, Value
+	}
+
+	void remove_attribute const str &Name {
+		cby_markup_remove_attribute Node, Name
+	}
+
+	// ---- building
+
+	// an element goes inside this one, at the end (moved here from
+	// wherever it was)
+	void add element Child {
+		cby_markup_add Node, Child.Node
+	}
+
+	// text goes inside, at the end; < and & are written safely for you
+	void add_text const str &Text {
+		cby_markup_add_text Node, Text
+	}
+
+	// everything inside is taken out
+	void clear {
+		cby_markup_clear Node
+	}
+
+	// takes this element out of the one it's inside
+	void remove {
+		cby_markup_remove Node
+	}
+
+	// ---- as text
+
+	// written out as HTML or XML, as it came (or as it was built)
+	str markup const {
+		return markup_text_from_c(cby_markup_text(Node, 2))
+	}
+
+	// written out with each element on a line of its own, indented
+	str pretty const {
+		return markup_text_from_c(cby_markup_text(Node, 3))
+	}
+
+	// a copy of its own, inside nothing
+	element copy const {
+		element C
+		C.adopt cby_markup_copy(Node)
+		return C
+	}
+}

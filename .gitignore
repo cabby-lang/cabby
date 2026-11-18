@@ -1,0 +1,22 @@
+# what building makes
+/cabby
+/build/
+/build-debug/
+/bench/build/
+*.o
+*.d
+/lib/libcabby*
+/lib/*.link
+/lib/gtk.hby
+/lib/tgame.hby
+/lib/sdlgui.hby
+__pycache__/
+
+# what the packaging scripts and machine checks leave
+/packaging/*/out/
+/machine-results.txt
+
+# compiled tutorials and examples, and what they save
+/tutorials/[0-9]*-*
+!/tutorials/[0-9]*-*.cby
+*.ll

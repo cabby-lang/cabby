@@ -1,0 +1,17 @@
+int main {
+	int n = @N@
+	list int Values
+	for i in n {
+		Values.add i * 7 % 1000
+	}
+	long Sum = 0
+	for v in Values {
+		Sum += v
+	}
+	list str Words = "alpha beta gamma delta epsilon".split(" ")
+	long Letters = 0
+	for i in n / 100 {
+		Letters += Words.join(",").length
+	}
+	println Values.length, Sum, Values.find(999), Letters
+}

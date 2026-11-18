@@ -1,0 +1,98 @@
+// The bluetooth library, against the stand-in for BlueZ (bluez.cby), for
+// run_bluetooth_tests.sh.
+//> available: true, on: false
+//> turned on: true, on: true
+//> known: Headphones (AA:BB:CC:00:00:01, audio-headset), Keyboard (AA:BB:CC:00:00:02, input-keyboard), Far Speaker (AA:BB:CC:00:00:04, audio-card)
+//> heard: Headphones -48, Keyboard -60, Phone -71, Far Speaker -90
+//> paired with the headphones: true, trusted: true
+//> connected: true, battery 80
+//> told: Headphones connected
+//> paired with the keyboard: true, code 482913
+//> the far speaker: paired true, connected false, why: Page Timeout
+//> no such device: false
+//> paired: Headphones, Keyboard, Far Speaker; connected: Headphones
+//> disconnected: true, connected: false
+//> told: Headphones disconnected
+//> forgot the keyboard: true; known now: 3
+//> told: a device gone
+//> visible: true
+use bluetooth
+use events
+
+object tester {
+	bluetooth.watcher Watcher
+	int Told
+
+	void run {
+		Watcher.on_change told
+		println "available: " + bluetooth.available.text + ", on: " + bluetooth.is_on.text
+		println "turned on: " + bluetooth.turn_on.text + ", on: " + bluetooth.is_on.text
+		str Known
+		for D in bluetooth.devices {
+			if Known != "" {
+				Known += ", "
+			}
+			Known += D.name + " (" + D.address + ", " + D.kind + ")"
+		}
+		println "known:", Known
+		str Heard
+		for D in bluetooth.search time.milliseconds(50) {
+			if Heard != "" {
+				Heard += ", "
+			}
+			Heard += D.name + " " + D.strength.text
+		}
+		println "heard:", Heard
+		bluetooth.device Phones = bluetooth.device_named "Headphones"
+		println "paired with the headphones: " + Phones.pair.text + ", trusted: " + Phones.trusted.text
+		println "connected: " + Phones.connect.text + ", battery", Phones.battery
+		settle
+		bluetooth.device Keys = bluetooth.device_named "AA:BB:CC:00:00:02"
+		println "paired with the keyboard: " + Keys.pair.text + ", code " + bluetooth.code
+		bluetooth.device Far = bluetooth.device_named "Far Speaker"
+		bool Paired = Far.pair
+		println "the far speaker: paired " + Paired.text + ", connected " + Far.connect.text + ", why: " + bluetooth.error
+		println "no such device:", bluetooth.device_named("Toaster").found
+		str P
+		for D in bluetooth.paired_devices {
+			if P != "" {
+				P += ", "
+			}
+			P += D.name
+		}
+		str C
+		for D in bluetooth.connected_devices {
+			C += D.name
+		}
+		println "paired: " + P + "; connected: " + C
+		println "disconnected: " + Phones.disconnect.text + ", connected: " + Phones.connected.text
+		settle
+		println "forgot the keyboard: " + Keys.forget.text + "; known now:", bluetooth.devices.length
+		settle
+		println "visible:", bluetooth.set_visible(true) and bluetooth.visible
+	}
+
+	// what's been told, told now (from the event loop)
+	void settle {
+		for I in 20 {
+			cby_events_step 5
+		}
+	}
+
+	void told {
+		bluetooth.device D = Watcher.device
+		str Name = D.name
+		if !D.found {
+			Name = "a device"
+		}
+		if Watcher.what == "connected" or Watcher.what == "disconnected" or Watcher.what == "gone" {
+			println "told:", Name, Watcher.what
+		}
+	}
+}
+
+int main {
+	tester T
+	T.run
+	return 0
+}

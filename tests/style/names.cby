@@ -1,0 +1,63 @@
+// One of each kind of name, right and wrong: `cabby --style` must report
+// exactly the wrong ones (see names.out).
+
+const int DAYS_PER_WEEK = 7
+const int days_per_month = 30
+int Counter
+int counter_two
+
+struct point {
+	int x
+	int y2
+	int XPos
+	int z_pos
+}
+
+struct BadType {
+	int Value
+}
+
+enum color {
+	RED
+	green
+}
+
+object shape_maker {
+	int Size
+	int area const {
+		return Size * Size
+	}
+	int GetArea const {
+		return area
+	}
+}
+
+int do_this int DateOfBirth, int i, int date_of_birth, int HTTPCode, int ID {
+	int UrlPath = 1
+	int ABC = 2
+	int n = 3
+	const int LIMIT = 4
+	const int Weeks = 5
+	point Spot = {1, 2}
+	const point &View = Spot
+	for Row in 2 {
+		n++
+	}
+	for count in 2 {
+		n++
+	}
+	if n > 100 {
+		goto Done_here
+	}
+	Done_here:
+	return n + UrlPath + ABC + LIMIT + Weeks + View.x
+}
+
+int DoThat {
+	return 1
+}
+
+int main {
+	shape_maker s = {2}
+	return do_this(1, 2, 3, 4, 5) + DoThat + s.GetArea - DAYS_PER_WEEK - days_per_month - Counter - counter_two
+}

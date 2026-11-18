@@ -1,0 +1,58 @@
+// (not a test of its own: the WebSocket server tests/networks/sockets.cby
+// talks to, started first by run_networks_tests.sh) A page at /, and
+// WebSockets at /chat: each message is said back in capitals, "all: ..."
+// goes to everyone, "bye" closes it from here, and "stop" ends it all.
+use networks
+use events
+
+object chat {
+	networks.web_server Web
+	int Closed
+
+	void begin {
+		Web.on_request answer
+		Web.on_message heard
+		Web.on_socket_close gone
+		Web.listen_here 0
+		println Web.port                // (the port, for the tests to find)
+		events.run
+	}
+
+	void answer {
+		if Web.path == "/chat" and Web.wants_socket {
+			long Who = Web.accept_socket
+			Web.send_message Who, "welcome, " + Web.sockets.length.text + " here"
+		} else if Web.path == "/chat" {
+			Web.send_status 400, "This is for WebSockets."
+		} else {
+			Web.send_page "<p>a page, as usual</p>"
+		}
+	}
+
+	void heard {
+		str Said = Web.message
+		if Said == "bye" {
+			Web.reply "goodbye"
+			Web.close_socket Web.from
+		} else if Said == "stop" {
+			Web.reply "stopping, after " + Closed.text + " closed"
+			Web.close
+		} else if Said.starts_with "all: " {
+			str Rest = Said[5 to]
+			Web.send_message_to_all Rest
+		} else if Web.message_is_binary {
+			Web.reply "bytes: " + Said.length.text
+		} else {
+			Web.reply Said.upper
+		}
+	}
+
+	void gone {
+		Closed++
+	}
+}
+
+int main {
+	chat C
+	C.begin
+}
