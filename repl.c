@@ -230,6 +230,16 @@ static bool map_loc(int file, int line, int col, DiagPos *out)
 	return true;
 }
 
+/* the tabs the session put in front of a line of its text (a statement's,
+ * inside main), for the parser's indentation messages */
+static int tabs_added(int file, int line)
+{
+	DiagPos p;
+	if (!map_loc(file, line, 1, &p) || p.strip <= 0)
+		return 0;
+	return p.strip;
+}
+
 /* Errors are always shown; warnings only for the input being entered, so
  * earlier inputs' warnings are not repeated every time. */
 static bool filter(DiagLevel level, int file, int line)
@@ -1356,6 +1366,19 @@ static char *auto_indent(const char *text)
 	const char *nl = strchr(last, '\n');
 	if (nl)
 		e = nl;
+	/* a comment at the end doesn't count: `if x > 0 {    // why` opens */
+	int len = (int)(e - last);
+	if (len > 0) {
+		unsigned char *cls = malloc((size_t)len);
+		bool in_comment = hl_comment_open_at(text, last);
+		hl_classify(last, len, cls, &in_comment);
+		for (int i = 0; i < len; i++)
+			if (cls[i] == HL_COMMENT && !(i > 0 && cls[i - 1] == HL_COMMENT)) {
+				e = last + i;
+				break;
+			}
+		free(cls);
+	}
 	while (e > last && (e[-1] == ' ' || e[-1] == '\t' || e[-1] == '\r'))
 		e--;
 	const char *b = skip_ws(last);
@@ -1797,6 +1820,7 @@ static void *session_thread(void *arg)
 	(void)arg;
 	R.IS = isession_new();
 	diag_set_mapper(map_loc);
+	parser_tabs_added = tabs_added;
 	diag_set_filter(filter);
 	R.current = -1;
 	resync();   /* the empty session: an empty main */
@@ -1862,6 +1886,7 @@ int repl_main(const char *const *lib_dirs)
 		gen_free(R.table);
 	gen_free(R.cur);
 	diag_set_mapper(NULL);
+	parser_tabs_added = NULL;
 	diag_set_filter(NULL);
 	return R.status;
 }

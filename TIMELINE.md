@@ -79,6 +79,7 @@ the patch number with fixes alone.
 | 0.33.3 | 19 November | in the interactive session, a block comment's lines start ` * `, as in Vim |
 | 0.34.0 | 19 November | `close_to`, and a warning for `==` on rounded floating-point numbers; chapter 6's comparisons and logic in two tables |
 | 0.35.0 | 19 November | `use screens`, `use mouse` and `use keyboard`: the monitors, the pointer and cursor, and the layouts, each desktop's way; chapter 107 |
+| 0.35.1 | 19 November | the interactive session: a comment after `{` no longer stops the next line's indent, and indentation messages count only the tabs typed |
 
 ---
 
@@ -1354,6 +1355,15 @@ the patch number with fixes alone.
   keyboard.md.
 - Tested against stand-ins for each desktop's programs, and a stand-in
   Mutter written in Cabby on a session bus of the test's own.
+
+*Version 0.35.1:*
+
+- **From the read-through together**, in the interactive session:
+  - `if Count > 0 {    // why` opened its block, but the next line wasn't
+    indented for it: the comment hid the `{`.
+  - "this line should be indented by 2 tabs, not 1" counted the tab the
+    session puts in front of each statement (they're inside `main`):
+    it counts only the tabs typed now ("by 1 tab, not 0").
 
 ## Along the way (dates not recorded)
 
