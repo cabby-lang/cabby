@@ -17,6 +17,7 @@
 #include <netinet/in.h>
 #include <netinet/tcp.h>
 #include <poll.h>
+#include <pthread.h>
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -72,10 +73,17 @@ typedef struct {
 	void *tls;             /* its certificate (an SSL_CTX: tls.h), for HTTPS; NULL: none */
 } Server;
 
-static Conn **conns;
-static int64_t nconns;
-static Server **servers;
-static int64_t nservers;
+/* The connections and servers, by number. A worker's thread opens
+ * connections while the main thread's event loop accepts them, so the
+ * tables never move (one growing with realloc could be freed under the
+ * other's feet), and a slot is claimed with `slots` held. */
+#define CONN_MOST 65536
+#define SERVER_MOST 1024
+static Conn *conns[CONN_MOST];
+static _Atomic int64_t nconns;
+static Server *servers[SERVER_MOST];
+static _Atomic int64_t nservers;
+static pthread_mutex_t slots = PTHREAD_MUTEX_INITIALIZER;
 
 static Conn *conn(int64_t id)
 {
@@ -106,14 +114,18 @@ static int64_t new_conn(int fd, int64_t server_id)
 	Conn *c = calloc(1, sizeof *c);
 	c->fd = fd;
 	c->server = server_id;
+	pthread_mutex_lock(&slots);
 	int64_t i = 0;
 	while (i < nconns && conns[i])
 		i++;
-	if (i == nconns) {
-		conns = realloc(conns, sizeof *conns * (size_t)(nconns + 1));
-		nconns++;
+	if (i == CONN_MOST) {
+		pthread_mutex_unlock(&slots);
+		rt_panic(NULL, 0, 0, "too many connections open at once (%d)", CONN_MOST);
 	}
 	conns[i] = c;
+	if (i == nconns)
+		nconns++;
+	pthread_mutex_unlock(&slots);
 	/* (no SIGPIPE when the other end has gone: a write just fails) */
 #ifdef SO_NOSIGPIPE
 	int one = 1;
@@ -611,14 +623,18 @@ int64_t cby_server_listen(int64_t port, int here_only)
 	s->fd = fd;
 	s->fd2 = fd2;
 	s->port = port_of(fd);
+	pthread_mutex_lock(&slots);
 	int64_t i = 0;
 	while (i < nservers && servers[i])
 		i++;
-	if (i == nservers) {
-		servers = realloc(servers, sizeof *servers * (size_t)(nservers + 1));
-		nservers++;
+	if (i == SERVER_MOST) {
+		pthread_mutex_unlock(&slots);
+		rt_panic(NULL, 0, 0, "too many servers at once (%d)", SERVER_MOST);
 	}
 	servers[i] = s;
+	if (i == nservers)
+		nservers++;
+	pthread_mutex_unlock(&slots);
 	s->watch = cby_events_watch(fd, accept_one, (void *)(intptr_t)((i + 1) * 2));
 	if (fd2 >= 0)
 		s->watch2 = cby_events_watch(fd2, accept_one, (void *)(intptr_t)((i + 1) * 2 + 1));
@@ -711,13 +727,9 @@ __attribute__((destructor)) static void connections_end(void)
 {
 	for (int64_t i = 0; i < nservers; i++)
 		cby_server_close(i + 1);
-	free(servers);
-	servers = NULL;
 	nservers = 0;
 	for (int64_t i = 0; i < nconns; i++)
 		cby_conn_free(i + 1);
-	free(conns);
-	conns = NULL;
 	nconns = 0;
 	free(error_text);
 	error_text = NULL;   /* (objects of the program's dropped after this find none) */

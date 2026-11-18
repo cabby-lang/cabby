@@ -1,4 +1,5 @@
 #include "rt.h"
+#include <pthread.h>
 
 #include <math.h>
 #include <setjmp.h>
@@ -3015,10 +3016,14 @@ typedef struct EvWatch {
 	bool quiet;           /* (it doesn't keep events.run waiting: os's signals) */
 } EvWatch;
 
-static EvTimer *ev_timers;
-static int ev_ntimers;
-static EvWatch *ev_watches;
-static int ev_nwatches;
+/* (tables that never move, as a worker may add to them while the main
+ * thread's loop goes through them; a slot is claimed with ev_slots held) */
+#define EV_MOST 4096
+static EvTimer ev_timers[EV_MOST];
+static _Atomic int ev_ntimers;
+static EvWatch ev_watches[EV_MOST];
+static _Atomic int ev_nwatches;
+static pthread_mutex_t ev_slots = PTHREAD_MUTEX_INITIALIZER;
 static bool ev_stopping;
 
 static int64_t now_ms(void)
@@ -3030,16 +3035,20 @@ static int64_t now_ms(void)
 
 int64_t cby_timer_new(void)
 {
-	for (int i = 0; i < ev_ntimers; i++)
-		if (!ev_timers[i].used) {
-			memset(&ev_timers[i], 0, sizeof ev_timers[i]);
-			ev_timers[i].used = true;
-			return i + 1;
-		}
-	ev_timers = rt_realloc(ev_timers, sizeof *ev_timers * (size_t)(ev_ntimers + 1));
-	memset(&ev_timers[ev_ntimers], 0, sizeof *ev_timers);
-	ev_timers[ev_ntimers].used = true;
-	return ++ev_ntimers;
+	pthread_mutex_lock(&ev_slots);
+	int i = 0;
+	while (i < ev_ntimers && ev_timers[i].used)
+		i++;
+	if (i == EV_MOST) {
+		pthread_mutex_unlock(&ev_slots);
+		rt_panic(NULL, 0, 0, "too many timers at once (%d)", EV_MOST);
+	}
+	memset(&ev_timers[i], 0, sizeof ev_timers[i]);
+	ev_timers[i].used = true;
+	if (i == ev_ntimers)
+		ev_ntimers++;
+	pthread_mutex_unlock(&ev_slots);
+	return i + 1;
 }
 
 static EvTimer *ev_timer(int64_t id)
@@ -3080,14 +3089,19 @@ void cby_timer_free(int64_t id)
 /* Watching a file (a pipe): fn(data) when there is something to read */
 static int watch_with(int fd, void (*fn)(void *data), void *data, bool quiet)
 {
-	for (int i = 0; i < ev_nwatches; i++)
-		if (!ev_watches[i].used) {
-			ev_watches[i] = (EvWatch){ true, fd, fn, data, quiet };
-			return i + 1;
-		}
-	ev_watches = rt_realloc(ev_watches, sizeof *ev_watches * (size_t)(ev_nwatches + 1));
-	ev_watches[ev_nwatches] = (EvWatch){ true, fd, fn, data, quiet };
-	return ++ev_nwatches;
+	pthread_mutex_lock(&ev_slots);
+	int i = 0;
+	while (i < ev_nwatches && ev_watches[i].used)
+		i++;
+	if (i == EV_MOST) {
+		pthread_mutex_unlock(&ev_slots);
+		rt_panic(NULL, 0, 0, "too many files watched at once (%d)", EV_MOST);
+	}
+	ev_watches[i] = (EvWatch){ true, fd, fn, data, quiet };
+	if (i == ev_nwatches)
+		ev_nwatches++;
+	pthread_mutex_unlock(&ev_slots);
+	return i + 1;
 }
 
 int cby_events_watch(int fd, void (*fn)(void *data), void *data) { return watch_with(fd, fn, data, false); }

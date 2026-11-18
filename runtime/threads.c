@@ -342,7 +342,15 @@ void cby_thread_start(int64_t id, void *work_obj, void *work_fn, int has_done, v
 	atomic_fetch_add(&working, 1);
 	pthread_mutex_unlock(&table);
 	w->joined = false;
-	atomic_store(&gil_on, true);
+	/* The lock is off until the first worker: until then the main thread
+	 * runs without taking it, though it counts as holding it. Turning it
+	 * on, the thread starting the worker takes it for real first, or the
+	 * worker would take it at once and both would run together. */
+	if (!atomic_load(&gil_on)) {
+		if (gil_held)
+			gil_lock();
+		atomic_store(&gil_on, true);
+	}
 	pthread_attr_t attr;
 	pthread_attr_init(&attr);
 	pthread_attr_setstacksize(&attr, WORKER_STACK);
