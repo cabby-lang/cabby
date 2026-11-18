@@ -1,6 +1,6 @@
 # The Cabby Manual
 
-*For Cabby 0.33.3 (2026-11-19).*
+*For Cabby 0.34.0 (2026-11-19).*
 
 A book for learning Cabby one idea at a time, and a reference to come back
 to afterwards.
@@ -751,7 +751,7 @@ println 0.1, 2.5, 100.0, 1e20, 1e-7
 Most decimal fractions can't be stored exactly in binary, so arithmetic on
 them is very slightly off:
 
-<!-- main -->
+<!-- warning-main: two that look the same may not be exactly equal -->
 ```cabby
 println 0.1 + 0.2, 0.1 + 0.2 == 0.3
 ```
@@ -760,33 +760,61 @@ println 0.1 + 0.2, 0.1 + 0.2 == 0.3
 0.30000000000000004 false
 ```
 
-This is true in every language that uses the computer's floating point. Don't
-compare floating-point results with `==`; check that they're close instead.
-`abs` gives a number without its sign (it's built in, and works on every
-kind of number, so it's C's `fabs` and `fabsf` in one), so the gap between
-two numbers is `abs(A - B)`:
+This is true in every language that uses the computer's floating point, and
+Cabby warns about that `==` when it checks the program:
+
+```text
+warning: floating-point numbers are rounded, so two that look the same may not be exactly equal; use 'close_to A, B'
+```
+
+#### Close enough
+
+Don't compare floating-point results with `==`; check that they're close
+instead. `close_to A, B` is true when `A` and `B` are the same but for
+rounding:
 
 <!-- main -->
 ```cabby
 double D = 0.1 + 0.2
-float F = 0.1f + 0.2f
-println D == 0.3, abs(D - 0.3) < 0.000000001
-println F == 0.3f, abs(F - 0.3f) < 0.0001f
-println abs(-2.5), abs(-2.5f)
+float F = 1.0f / 3.0f
+println close_to(D, 0.3), close_to(F * 3.0f, 1.0f), close_to(D, 0.31)
+println close_to(1e20, 1e20 + 1e5), close_to(0.000000000001, 0.0)
+println close_to(2.5, 2.6, 0.2), close_to(2.5, 2.8, 0.2)
 ```
 
 ```text
-false true
+true true false
 true true
-2.5 2.5
+true false
 ```
 
-How close is close enough depends on the type. A `double` keeps about 15
-significant digits, so for numbers near 1 a gap under `0.000000001` is
-safe; a `float` keeps only about 7, so it needs a looser limit, like
-`0.0001f`. (Here `0.1f + 0.2f` happens to round to exactly the `float`
-nearest 0.3, but another sum might not.) For big numbers, scale the limit
-with them: `abs(A - B) < 0.000000001 * abs(B)`.
+On its own, `close_to` asks for the two to be the same to about 9
+significant digits (5 for two `float`s, which keep only about 7), so it
+works for numbers of any size: `1e20` and `1e20 + 1e5` differ by a
+hundred thousand, but only in the 16th digit. Near zero there are no
+digits to compare, so anything within `0.000000000001` of zero (for
+`float`s, `0.000001`) is close to zero. A third number sets the limit
+instead: `close_to A, B, 0.2` is true when they're no more than 0.2 apart.
+
+The warning comes when a side of `==` or `!=` is arithmetic or a decimal
+with a fraction, like `0.3`, which binary can't hold exactly. Comparing
+with a whole number (`D == 0.0`), or two variables (`Old == New`), is left
+alone, since that's often meant exactly: a value that was set rather than
+worked out.
+
+`abs` gives a number without its sign (it's built in, and works on every
+kind of number, so it's C's `fabs` and `fabsf` in one). `abs(A - B)` is
+the gap between two numbers, for a test of your own:
+
+<!-- main -->
+```cabby
+double D = 0.1 + 0.2
+println abs(D - 0.3) < 0.000000001, abs(-2.5), abs(-2.5f)
+```
+
+```text
+true 2.5 2.5
+```
 
 #### Integers and doubles together
 
@@ -843,7 +871,8 @@ inf -inf NaN
 
 * `double` (about 16 digits) is the default; `float` (about 7) uses an `f`
   suffix.
-* Floating-point results are rarely exact; don't test them with `==`.
+* Floating-point results are rarely exact; don't test them with `==`, but
+  with `close_to A, B` (or `close_to A, B, Limit`). `abs` drops a sign.
 * `7 / 2` is integer division even when stored in a `double`.
 * Casts to integers truncate and saturate; float division by zero gives
   `inf` or `NaN`.
@@ -984,12 +1013,22 @@ else {
 
 #### Comparisons and logic
 
-| Comparison | Meaning | Logic | Meaning |
-|---|---|---|---|
-| `a == b` | equal | `a && b` | both true |
-| `a != b` | not equal | `a \|\| b` | at least one true |
-| `a < b`, `a <= b` | less (or equal) | `!a` | not |
-| `a > b`, `a >= b` | greater (or equal) | | |
+Comparisons give `true` or `false`:
+
+| Comparison | Meaning |
+|---|---|
+| `a == b` | equal |
+| `a != b` | not equal |
+| `a < b`, `a <= b` | less (or equal) |
+| `a > b`, `a >= b` | greater (or equal) |
+
+Logic joins them, or turns one around:
+
+| Logic | Meaning |
+|---|---|
+| `a && b` | both true |
+| `a \|\| b` | at least one true |
+| `!a` | not |
 
 <!-- main -->
 ```cabby

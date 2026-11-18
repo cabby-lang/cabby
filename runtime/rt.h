@@ -221,6 +221,7 @@ void cby_frame_enter(RtFrame *f);
 void rt_random_seed(int64_t seed);
 int64_t rt_random_int(int64_t lo, int64_t hi);
 double rt_random_double(double lo, double hi);
+int32_t rt_close_to(double a, double b, double limit, int32_t how);
 int rt_text_decimals(char *buf, size_t size, double v, int64_t places);
 int rt_text_decimals_int(char *buf, size_t size, int64_t v, bool is_signed, int64_t places);
 void rt_try_push(RtTry *t);

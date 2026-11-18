@@ -2367,6 +2367,11 @@ static Value eval_str_builtin(Interp *I, Expr *e)
 			return v;
 		return v_int(norm((int64_t)(0 - (uint64_t)v.as.i), e->ty));
 	}
+	case BUILTIN_CLOSE_TO: {
+		double a = eval(I, args->items[0]).as.f, b = eval(I, args->items[1]).as.f;
+		double limit = args->len > 2 ? eval(I, args->items[2]).as.f : 0;
+		return v_bool(rt_close_to(a, b, limit, (e->as.call.close_floats ? 1 : 0) | (args->len > 2 ? 2 : 0)));
+	}
 	case BUILTIN_RANDOM: {
 		Value a = eval(I, args->items[0]), b = eval(I, args->items[1]);
 		if (e->ty->kind == TY_FLOAT)

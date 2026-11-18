@@ -20,6 +20,8 @@
 #                          output, `screen` commands included
 #   <!-- main -->          statements: run inside `int main { }`; the next
 #                          ``` block is the output
+#   <!-- warning-main: TEXT -->  the same, but checking must warn, with TEXT
+#                          in the warning (the output block is stdout alone)
 #   <!-- check -->         a whole program that must pass `cabby --check`
 #   <!-- error: TEXT -->   a whole program that must fail to check, with
 #                          TEXT in the message
@@ -43,7 +45,7 @@ trap 'rm -rf "$work"' EXIT
 # Split the marked examples out into numbered files.
 awk -v dir="$work" '
 	function flush_block() { close(file) }
-	/^<!-- (run|both|input|main|check|error|error-main|panic|gui|tui)(: .*)? -->$/ {
+	/^<!-- (run|both|input|main|warning-main|check|error|error-main|panic|gui|tui)(: .*)? -->$/ {
 		m = $0
 		sub(/^<!-- /, "", m); sub(/ -->$/, "", m)
 		kind = m; text = ""
@@ -62,10 +64,10 @@ awk -v dir="$work" '
 			print pending > (dir "/" n ".kind"); close(dir "/" n ".kind")
 			print pending_line > (dir "/" n ".line"); close(dir "/" n ".line")
 			printf "%s", pending_text > (dir "/" n ".text"); close(dir "/" n ".text")
-			wrap = (pending == "main" || pending == "error-main")
+			wrap = (pending == "main" || pending == "warning-main" || pending == "error-main")
 			if (wrap) print "int main {" > file
 			inblock = 1; mode = wrap ? "wrap" : "plain"
-			want_output = (pending == "run" || pending == "both" || pending == "input" || pending == "main" || pending == "panic" || pending == "gui" || pending == "tui") ? n : 0
+			want_output = (pending == "run" || pending == "both" || pending == "input" || pending == "main" || pending == "warning-main" || pending == "panic" || pending == "gui" || pending == "tui") ? n : 0
 			pending = ""
 			next
 		}
@@ -88,7 +90,7 @@ awk -v dir="$work" '
 	END {
 		for (i = 1; i <= n; i++) {
 			k = ""; getline k < (dir "/" i ".kind")
-			if (k == "main" || k == "error-main") print "}" >> (dir "/" i ".cby")
+			if (k == "main" || k == "warning-main" || k == "error-main") print "}" >> (dir "/" i ".cby")
 		}
 	}
 ' "$MANUAL"
@@ -119,7 +121,7 @@ for kindfile in $(ls *.kind 2>/dev/null | sort -n); do
 	src="$n.cby"
 	# Examples refer to the tutorial folders (use local geometry/...).
 	case "$kind" in
-	run|both|input|main|panic|gui|tui)
+	run|both|input|main|warning-main|panic|gui|tui)
 		if [ ! -f "$n.expect" ]; then
 			report "$n" "no output block after it"
 			continue
@@ -162,6 +164,13 @@ for kindfile in $(ls *.kind 2>/dev/null | sort -n); do
 		status=$?
 		# a virtual display's own chatter is not the program's
 		grep -vE 'libEGL|DRI3|session bus|dbus|Unrecognized value.*gl-disable|GDK_DEBUG=help|^$' "$n.err.raw" > "$n.err"
+		if [ "$kind" = warning-main ]; then
+			if ! grep -q "warning: .*$(cat "$n.text")" "$n.err"; then
+				report "$n" "expected a warning with \"$(cat "$n.text")\"" "$(cat "$n.err")"
+				continue
+			fi
+			grep -v "warning: \|^    " "$n.err" > "$n.err.rest"; mv "$n.err.rest" "$n.err"
+		fi
 		if [ "$kind" = panic ]; then
 			if [ $status -ne 101 ] || ! grep -qF -- "$(cat "$n.text")" "$n.err"; then
 				report "$n" "expected a panic with \"$(cat "$n.text")\", got status $status" "$(cat "$n.err")"

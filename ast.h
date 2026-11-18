@@ -219,6 +219,7 @@ struct Expr {
 			int slot;             /* sema: vtable slot, -1 if none */
 			unsigned checked_args; /* sema: arguments checked already, a bit each (a type's method: bit 0) */
 			bool worker_check;     /* sema: a worker's method, from outside it: not while it works */
+			bool close_floats;     /* sema: close_to of two floats (a float's limits) */
 		} call;
 
 		struct {

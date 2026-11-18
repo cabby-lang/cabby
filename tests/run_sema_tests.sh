@@ -2,6 +2,7 @@
 # Semantic/ownership tests. Splits tests/sema_cases.cby on "### name" lines
 # and runs `cabby --check` on each case.
 #   // expect: ok             — must check cleanly
+#   // expect: quiet          — must check cleanly, with no warnings either
 #   // expect: <substring>    — must fail with output containing <substring>
 #   // expect: warning: <text> — must check cleanly, warning with <text>
 #   // errors: N              — (optional) exact number of errors
@@ -31,6 +32,8 @@ while read -r name; do
 	ok=1
 	if [[ "$expect" == "ok" ]]; then
 		[[ $rc -eq 0 && $n -eq 0 ]] || ok=0
+	elif [[ "$expect" == "quiet" ]]; then
+		[[ $rc -eq 0 && -z "$out" ]] || ok=0
 	elif [[ "$expect" == "warning: "* ]]; then
 		[[ $rc -eq 0 && $n -eq 0 && "$out" == *"$expect"* ]] || ok=0
 	else

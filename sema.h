@@ -193,6 +193,7 @@ typedef enum {
 	BUILTIN_READ_KEY,    /* read_key       ()       -> str: one key, without Enter ("a", "up", "enter") */
 	BUILTIN_RECOVERED,   /* (an else block's Why) ()  -> str: the message of the panic it caught */
 	BUILTIN_ABS,         /* abs x          (x)      -> x's type, without its sign */
+	BUILTIN_CLOSE_TO,    /* close_to a, b[, limit]  -> bool: the same but for rounding */
 	BUILTIN_RANDOM,      /* random a to b  (a, b)   -> a whole number from a to b, or a double from a up to b */
 	BUILTIN_RANDOM_SEED, /* random_seed n  (n)      -> void: random's numbers from then on, the same each time */
 	BUILTIN_EXIT,        /* exit status    (s)      -> void: the program ends, its files written out */

@@ -1085,7 +1085,7 @@ static int complete_word(const char *line, int pos, int *start, char ***items)
 			"continue", "return", "goto", "sizeof", "const", "static", "list", "lookup", "object", "struct",
 			"union", "enum", "aka", "is", "not", "and", "or", "until", "inner", "use", "true", "false", "self", "int", "long", "short", "char", "float",
 			"double", "bool", "str", "void", "unsigned", "signed", "print", "println", "input", "read_line",
-			"end_of_input", "read_char", "read_key", "stdout", "stderr", "exit", "abs", "random", "random_seed", "cabby", NULL,
+			"end_of_input", "read_char", "read_key", "stdout", "stderr", "exit", "abs", "close_to", "random", "random_seed", "cabby", NULL,
 		};
 		cand_add_all(&c, words);
 		static const char *const libs[] = { "files", "directories", "shell", "processes", "events", "addresses", "time", "dates", "json", "bytes", "networks", "html", "xml", "gui", "gtk", "tui", "game", "tgame", "world", "sound", "bluetooth", "emails", "secrets", "volume", "brightness", "printing", "speech", "system", "videos", "os", "linux", NULL };
