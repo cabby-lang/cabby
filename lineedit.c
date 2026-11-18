@@ -442,6 +442,15 @@ static void refresh(Line *L, const char *prompt)
 	free(out);
 }
 
+/* the line is tabs, then " * ", and nothing else */
+static bool comment_leader_only(const Line *L)
+{
+	int i = 0;
+	while (i < L->len && L->buf[i] == '\t')
+		i++;
+	return L->len - i == 3 && memcmp(L->buf + i, " * ", 3) == 0;
+}
+
 static bool all_tabs(const Line *L)
 {
 	for (int i = 0; i < L->len; i++)
@@ -580,6 +589,10 @@ LeStatus le_read(LineEditor *le, const char *prompt, const char *prefill, bool a
 		default:
 			if (c >= 32) {
 				if (c == '}' && auto_dedent && !le->pasting && L.pos == L.len && all_tabs(&L))
+					line_delete(&L, L.len - 1, L.len);
+				/* a comment's leader (space, star, space), then a slash:
+				 * the space goes, closing the comment as Vim does */
+				if (c == '/' && auto_dedent && !le->pasting && L.pos == L.len && comment_leader_only(&L))
 					line_delete(&L, L.len - 1, L.len);
 				char ch = (char)c;
 				line_insert(&L, &ch, 1);

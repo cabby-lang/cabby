@@ -15,7 +15,7 @@ cabby --check     prog.cby              type- and ownership-check only
 cabby --style     prog.cby              list names and calls that don't follow STYLE.md
 cabby --dump-ast  prog.cby              print the syntax tree
 cabby --dump-tokens prog.cby            print the token stream
-cabby --version                         which Cabby this is: "Cabby 0.33.2 (2026-11-19)"
+cabby --version                         which Cabby this is: "Cabby 0.33.3 (2026-11-19)"
 cabby --license                         Cabby's license (MIT)
 ```
 
@@ -1149,7 +1149,7 @@ Run `cabby` with no file to type Cabby a piece at a time:
 
 ```
 $ cabby
-Cabby 0.33.2 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
+Cabby 0.33.3 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
 Cabby comes with ABSOLUTELY NO WARRANTY, under the MIT License; "cabby.license" for details.
 >>> int add int a, int b {
 ... 	return a + b
@@ -1203,9 +1203,12 @@ changes it, e.g. `CABBY_COLORS="comment=36:keyword=1;33"`.
 **Several lines.** When an input is not finished — a `{` is still open, a
 parenthesis is unclosed, a `/*` comment has no `*/` yet, or a line is a
 header like `if x > 0` waiting for its `{` — the prompt changes to `...` and
-the next line is indented for you with tabs; typing `}` removes one tab. An `if` waits for one more line in
-case an `else` follows: press Enter on an empty line to run it (or simply
-type the next statement); after a final `else` block it runs at once.
+the next line is indented for you with tabs; typing `}` removes one tab. In
+a `/*` comment that begins its line, each next line starts ` * `, as in Vim,
+and typing `/` straight after that closes the comment. An `if` waits for one
+more line in case an `else` follows: press Enter on an empty line to run it
+(or simply type the next statement); after a final `else` block it runs at
+once.
 
 **Tab completion.** Right after a name or a dot, Tab completes: `files.`
 lists the files library's functions, `Rex.` the fields and methods of the
