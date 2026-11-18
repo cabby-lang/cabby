@@ -7788,7 +7788,7 @@ object shouter {
 		S.on_connect came
 		S.on_line heard
 		S.listen_here 0                 // 0: any free port
-		C = networks.connect "localhost", S.port
+		C = networks.connect "127.0.0.1", S.port      // (this computer, by its IPv4 address)
 		C.on_line answered
 		C.send_line "hello"
 		C.send_line "goodbye"
@@ -9170,7 +9170,10 @@ int main {
 	files.write "cabby-big.txt", Text
 	archives.compress "cabby-big.txt"
 	archives.compress_xz "cabby-big.txt"
-	println files.size("cabby-big.txt"), files.size("cabby-big.txt.gz"), files.size("cabby-big.txt.xz")
+	long Plain = files.size "cabby-big.txt"
+	long Gzipped = files.size "cabby-big.txt.gz"
+	long Xzed = files.size "cabby-big.txt.xz"
+	println "gzip:", Gzipped * 100 / Plain, "% of it; xz:", Xzed * 100 / Plain, "%"
 	archives.compress_to "cabby-big.txt", "cabby-small.xz"
 	archives.decompress_to "cabby-small.xz", "cabby-back.txt"
 	println files.read("cabby-back.txt") == files.read("cabby-big.txt")
@@ -9183,7 +9186,7 @@ int main {
 ```
 
 ```text
-185382 78648 40064
+gzip: 42 % of it; xz: 21 %
 true
 ```
 
