@@ -77,6 +77,7 @@ the patch number with fixes alone.
 | 0.33.1 | 19 November | the interactive session: a `/*` comment carries on until its `*/`, and why `print` looks different there |
 | 0.33.2 | 19 November | chapter 4 shows how to check that two floating-point numbers are close, with `abs` |
 | 0.33.3 | 19 November | in the interactive session, a block comment's lines start ` * `, as in Vim |
+| 0.34.0 | 19 November | `close_to`, and a warning for `==` on rounded floating-point numbers; chapter 6's comparisons and logic in two tables |
 
 ---
 
@@ -1317,6 +1318,22 @@ the patch number with fixes alone.
 - In the interactive session, the lines of a `/*` comment that begins
   its line start ` * `, so the stars line up as they do in Vim, and a `/`
   typed straight after that closes the comment (` */`).
+
+*Version 0.34.0:*
+
+- **`close_to A, B`**, built in: true when two numbers are the same but
+  for rounding, to about 9 significant digits (5 for two `float`s), with
+  anything within 1e-12 (1e-6) of zero close to zero. `close_to A, B,
+  Limit` is true when they're no more than `Limit` apart.
+- **A warning for `==` and `!=`** on floating-point numbers when one side
+  is arithmetic or a decimal with a fraction (`0.1 + 0.2 == 0.3`), which
+  suggests `close_to`. Building closeness into `==` itself was thought
+  about and left out: no one limit suits every size of number, and an
+  `==` that isn't exact breaks lookups, sorting and `A == B == C`
+  reasoning.
+- Chapter 4 has "Close enough", and the manual's tests a
+  `<!-- warning-main: TEXT -->` marker; chapter 6's table of comparisons
+  and logic is two tables.
 
 ## Along the way (dates not recorded)
 

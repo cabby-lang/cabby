@@ -3295,6 +3295,26 @@ int64_t rt_random_int(int64_t lo, int64_t hi)
 }
 
 /* a double from lo up to (not including) hi */
+/* close_to: how's 1 bit says a and b were floats, its 2 bit that a limit
+ * was given. With one, within `limit` of each other (a limit below 0: never);
+ * otherwise the same to about 9 significant digits (a float's, 5), or both
+ * within 1e-12 (1e-6) of zero. NaN is close to nothing. */
+int32_t rt_close_to(double a, double b, double limit, int32_t how)
+{
+	bool floats = how & 1;
+	if (a == b)
+		return 1;   /* and infinities */
+	double gap = fabs(a - b);
+	if (gap != gap)
+		return 0;
+	if (how & 2)
+		return gap <= limit;
+	double rel = floats ? 1e-5 : 1e-9, near0 = floats ? 1e-6 : 1e-12;
+	double big = fabs(a) > fabs(b) ? fabs(a) : fabs(b);
+	double allowed = rel * big;
+	return gap <= (allowed > near0 ? allowed : near0);
+}
+
 double rt_random_double(double lo, double hi)
 {
 	double u = (double)(rnd_next() >> 11) * 0x1.0p-53;

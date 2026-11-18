@@ -15,7 +15,7 @@ cabby --check     prog.cby              type- and ownership-check only
 cabby --style     prog.cby              list names and calls that don't follow STYLE.md
 cabby --dump-ast  prog.cby              print the syntax tree
 cabby --dump-tokens prog.cby            print the token stream
-cabby --version                         which Cabby this is: "Cabby 0.33.3 (2026-11-19)"
+cabby --version                         which Cabby this is: "Cabby 0.34.0 (2026-11-19)"
 cabby --license                         Cabby's license (MIT)
 ```
 
@@ -245,10 +245,12 @@ number in it; `+` itself only joins strings and chars. A number's
 `Price.text 2` is `"4.50"`, `(2.0 / 3).text 3` is `"0.667"`, `7.text 2`
 is `"7.00"`.
 
-**abs, random and exit** are Cabby's own, with no header:
+**abs, close_to, random and exit** are Cabby's own, with no header:
 
 ```
 abs -7                    // 7: any number, without its sign, in its own type
+close_to 0.1 + 0.2, 0.3   // true: the same but for rounding (and see below)
+close_to A, B, 0.01       // true when A and B are no more than 0.01 apart
 int Roll = random 1 to 6  // a whole number from 1 to 6, each as likely
 double R = random 0.0 to 1.0   // a double from 0 up to (not including) 1
 random_seed 42            // the same numbers after this every time (for tests, replays)
@@ -261,8 +263,15 @@ from the system's own random numbers, so each run differs unless
 (`secrets.random_number` is for what no one must guess). `exit` writes
 out what's printed and what open files hold, then ends at once:
 destructors don't run, as when `main` returns from inside a call they
-would. A program or header with its own `abs`, `random` or `exit` (C's,
-from `use standard`) uses that instead.
+would. A program or header with its own `abs`, `close_to`, `random` or
+`exit` (C's, from `use standard`) uses that instead.
+
+`close_to A, B` asks for the two to be the same to about 9 significant
+digits (5 when both are `float`s), and takes anything within 1e-12 of zero
+(1e-6 for `float`s) as close to zero. Since floating-point numbers are
+rounded, `==` or `!=` with arithmetic or a decimal with a fraction on one
+side (`0.1 + 0.2 == 0.3`, `D == 0.3`) warns and suggests `close_to`;
+comparing with a whole number (`D == 0.0`) or two variables doesn't.
 
 **stderr.** `print` and `println` write to stdout. Put `stderr` in front of
 a call to send everything that call prints (including what the functions it
@@ -1149,7 +1158,7 @@ Run `cabby` with no file to type Cabby a piece at a time:
 
 ```
 $ cabby
-Cabby 0.33.3 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
+Cabby 0.34.0 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
 Cabby comes with ABSOLUTELY NO WARRANTY, under the MIT License; "cabby.license" for details.
 >>> int add int a, int b {
 ... 	return a + b

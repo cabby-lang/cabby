@@ -67,7 +67,8 @@ int main {
   `NaN` and `-inf`, as floating point does (manual chapter 4).
 * **The last digit can differ** between systems for some functions: with
   glibc, `cbrt 27.0` is 3.0000000000000004, not exactly 3. Compare
-  results with a small tolerance rather than `==`.
+  results with `close_to` (built in) rather than `==`:
+  `close_to cbrt(27.0), 3.0` is true.
 * These are the system's own math routines, tuned over decades; most
   languages' math libraries call the same ones underneath.
 

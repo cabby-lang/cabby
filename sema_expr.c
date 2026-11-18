@@ -1,4 +1,5 @@
 /* sema_expr.c — stage 3, expressions: typing, conversions, borrows. */
+#include <math.h>
 #include "sema_int.h"
 #include "diag.h"
 #include "runtime/rt.h"
@@ -783,6 +784,33 @@ static void sign_compare_warning(Checker *C, Expr *e, Expr *l, Expr *r, Type *co
 	}
 }
 
+/* A side of `==` that rounding is likely to have touched: a decimal with a
+ * fraction (0.3, which binary can't hold exactly), or floating-point
+ * arithmetic. Whole numbers (0.0, 1.0) and plain variables are left alone,
+ * since comparing those exactly is often what's meant. */
+static bool rounded_side(Expr *e)
+{
+	while (e->kind == EXPR_CAST && e->as.cast.implicit)
+		e = e->as.cast.value;
+	if (e->kind == EXPR_UNARY && e->as.unary.op == UN_NEG)
+		e = e->as.unary.operand;
+	if (e->kind == EXPR_FLOAT)
+		return e->as.float_lit.value != floor(e->as.float_lit.value);
+	if (e->kind == EXPR_BINARY && e->ty && e->ty->kind == TY_FLOAT) {
+		BinaryOp b = e->as.binary.op;
+		return b == BIN_ADD || b == BIN_SUB || b == BIN_MUL || b == BIN_DIV || b == BIN_MOD;
+	}
+	return false;
+}
+
+static void float_equal_warning(Expr *e, BinaryOp op, Expr *l, Expr *r, Type *common)
+{
+	if (common->kind != TY_FLOAT || !(rounded_side(l) || rounded_side(r)))
+		return;
+	sema_warning(e->loc, "floating-point numbers are rounded, so two that look the same may not be exactly "
+		     "equal; use %s", op == BIN_EQ ? "'close_to A, B'" : "'!close_to(A, B)'");
+}
+
 static Type *check_address_binary(Checker *C, Expr *e, BinaryOp op, Expr **lp, Expr **rp, Type *lt, Type *rt);
 
 /* What `lt op rt` gives when a kind is involved, or NULL if it can't be
@@ -911,6 +939,7 @@ static Type *check_binary(Checker *C, Expr *e)
 		if (type_is_arith(lt) && type_is_arith(rt)) {
 			Type *c = type_common(lt, rt);
 			sign_compare_warning(C, e, *lp, *rp, c);
+			float_equal_warning(e, op, *lp, *rp, c);
 			convert_to(C, lp, c);
 			convert_to(C, rp, c);
 			return &t_bool;
@@ -1731,6 +1760,34 @@ static Type *check_address_binary(Checker *C, Expr *e, BinaryOp op, Expr **lp, E
 	return &t_error;
 }
 
+/* close_to A, B (, Limit): numbers of any kind, made doubles; whether A
+ * and B were both floats picks the default limits (call->as.call.flag) */
+static Type *check_close_to(Checker *C, Expr *call)
+{
+	ExprVec *args = &call->as.call.args;
+	Type *ts_[3] = { NULL, NULL, NULL };
+	for (int i = 0; i < args->len; i++)
+		ts_[i < 3 ? i : 2] = check_expr(C, &args->items[i], CTX_VALUE, NULL);
+	if (args->len != 2 && args->len != 3) {
+		sema_error(call->loc, "'close_to' takes two numbers, and a limit if you like: 'close_to A, B' or "
+			   "'close_to A, B, 0.001'");
+		return &t_error;
+	}
+	for (int i = 0; i < args->len; i++) {
+		if (is_err(ts_[i]))
+			return &t_error;
+		if (!type_is_arith(ts_[i]) || ts_[i]->kind == TY_BOOL) {
+			sema_error(args->items[i]->loc, "'close_to' takes numbers, not '%s'", ts(ts_[i]));
+			return &t_error;
+		}
+	}
+	bool floats = ts_[0]->kind == TY_FLOAT && ts_[0]->bits == 32 && ts_[1]->kind == TY_FLOAT && ts_[1]->bits == 32;
+	call->as.call.close_floats = floats;
+	for (int i = 0; i < args->len; i++)
+		convert_to(C, &args->items[i], &t_double);
+	return &t_bool;
+}
+
 /* abs, random, random_seed and exit: Cabby's own, for any number */
 static Type *check_number_builtin(Checker *C, Expr *call, Builtin b)
 {
@@ -1803,6 +1860,8 @@ static Type *check_builtin(Checker *C, Expr *call, Builtin b)
 		return &t_str;
 	if (b == BUILTIN_ABS || b == BUILTIN_RANDOM || b == BUILTIN_RANDOM_SEED || b == BUILTIN_EXIT)
 		return check_number_builtin(C, call, b);
+	if (b == BUILTIN_CLOSE_TO)
+		return check_close_to(C, call);
 	if (b == BUILTIN_READ_LINE || b == BUILTIN_END_OF_INPUT || b == BUILTIN_READ_CHAR || b == BUILTIN_READ_KEY) {
 		const char *name = b == BUILTIN_READ_LINE ? "read_line" : b == BUILTIN_READ_CHAR ? "read_char"
 				   : b == BUILTIN_READ_KEY ? "read_key" : "end_of_input";
@@ -2844,7 +2903,8 @@ static Type *check_call(Checker *C, Expr **ep)
 				handled = true;
 			}
 		} else if ((b = find_builtin(name)) &&
-			   !((b == BUILTIN_ABS || b == BUILTIN_RANDOM || b == BUILTIN_RANDOM_SEED || b == BUILTIN_EXIT) &&
+			   !((b == BUILTIN_ABS || b == BUILTIN_CLOSE_TO || b == BUILTIN_RANDOM || b == BUILTIN_RANDOM_SEED ||
+			      b == BUILTIN_EXIT) &&
 			     (g = find_global(C, name, callee->loc)) && g->kind == GN_FN)) {
 			/* (abs, random and exit are Cabby's own unless the program, or a
 			 * header it uses, such as standard, has its own) */

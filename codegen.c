@@ -1914,6 +1914,22 @@ static Op gen_str_builtin(CG *G, Expr *e, Op *sret)
 			store(G, t, r, *sret, false);
 		return r;
 	}
+	case BUILTIN_CLOSE_TO: {
+		Op a = gen_val(G, args->items[0]), b = gen_val(G, args->items[1]);
+		const char *limit = "0.0";
+		Op l;
+		if (args->len > 2) {
+			l = gen_val(G, args->items[2]);
+			limit = l.s;
+		}
+		Op c = tmp(G), r = tmp(G);
+		emit(G, "%s = call i32 @rt_close_to(double %s, double %s, double %s, i32 %d)", c.s, a.s, b.s, limit,
+		     (e->as.call.close_floats ? 1 : 0) | (args->len > 2 ? 2 : 0));
+		emit(G, "%s = icmp ne i32 %s, 0", r.s, c.s);
+		if (sret)
+			store(G, &t_bool, r, *sret, false);
+		return r;
+	}
 	case BUILTIN_RANDOM: {
 		Type *t = e->ty;
 		Op a = gen_val(G, args->items[0]), b = gen_val(G, args->items[1]), r = tmp(G);
@@ -3662,6 +3678,7 @@ static const char *runtime_decls_rest =
 	"declare void @cby_try_failed(ptr)\n"
 	"declare void @cby_recovered(ptr)\n"
 	"declare double @rt_random_double(double, double)\n"
+	"declare i32 @rt_close_to(double, double, double, i32)\n"
 	"declare i64 @rt_random_int(i64, i64)\n"
 	"declare void @rt_random_seed(i64)\n"
 	"declare void @cby_exit(i32) noreturn\n"

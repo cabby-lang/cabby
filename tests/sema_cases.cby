@@ -2950,3 +2950,54 @@ int main {
 	Squares.add P
 	return 0
 }
+
+### warn_float_equal_to_a_fraction
+// expect: warning: floating-point numbers are rounded, so two that look the same may not be exactly equal; use 'close_to A, B'
+int main {
+	double D = 0.1 + 0.2
+	println D == 0.3
+}
+
+### warn_float_arithmetic_not_equal
+// expect: warning: floating-point numbers are rounded, so two that look the same may not be exactly equal; use '!close_to(A, B)'
+int main {
+	float F = 0.5f
+	println F * 3.0f != 1.5f
+}
+
+### warn_float_is_a_fraction
+// expect: warning: floating-point numbers are rounded, so two that look the same may not be exactly equal; use 'close_to A, B'
+int main {
+	double D = 0.25
+	println D is -0.3
+}
+
+### quiet_float_equal_to_whole_numbers_and_variables
+// expect: quiet
+int main {
+	double D = 0.1 + 0.2, E = D
+	float F = 2.0f
+	println D == 0.0, D != 1.0, D == E, F == 2.0f, D == 3, close_to(D, 0.3), D < 0.3
+}
+
+### err_close_to_needs_two_numbers
+// expect: 'close_to' takes two numbers, and a limit if you like
+int main {
+	println close_to(0.3)
+}
+
+### err_close_to_takes_numbers
+// expect: 'close_to' takes numbers, not 'str'
+int main {
+	println close_to("0.3", 0.3)
+}
+
+### ok_close_to_of_a_programs_own
+// expect: quiet
+bool close_to int A, int B {
+	return A - B < 2 and B - A < 2
+}
+int main {
+	println close_to(3, 4)
+}
+

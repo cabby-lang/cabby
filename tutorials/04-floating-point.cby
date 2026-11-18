@@ -1,7 +1,7 @@
 // Tutorial 4: float and double
 //
 // Run it:      cabby 04-floating-point.cby
-// Keywords:    float, double
+// Keywords:    float, double (and the built-in close_to)
 //
 // `double` is a 64-bit floating-point number (about 16 significant
 // digits) and the default for literals like 1.5. `float` is 32-bit (about
@@ -16,8 +16,10 @@ int main {
 	// Cabby prints the shortest form that reads back as the same number.
 	println 0.1, 2.5, 1e20, 100.0
 
-	// The classic surprise: 0.1 + 0.2 isn't exactly 0.3 in binary.
-	println 0.1 + 0.2, 0.1 + 0.2 == 0.3
+	// The classic surprise: 0.1 + 0.2 isn't exactly 0.3 in binary. So
+	// test results with close_to, which allows for rounding, not ==.
+	double Sum = 0.1 + 0.2
+	println Sum, close_to(Sum, 0.3), close_to(Sum, 0.31)
 
 	// An integer mixed with a double becomes a double...
 	println 7 / 2, 7 / 2.0
@@ -41,6 +43,7 @@ int main {
 }
 
 // Try this:
+//  - Print `Sum == 0.3`, and read what Cabby says about it.
 //  - Print `FromFloat`. Why isn't it exactly 0.3333333333333333?
 //  - What does `(long)2.5e9` print? And `(int)2.5e9`?
 
@@ -48,7 +51,7 @@ int main {
 //> 0.3333333333333333
 //> 0.33333334
 //> 0.1 2.5 1e+20 100.0
-//> 0.30000000000000004 false
+//> 0.30000000000000004 true false
 //> 3 3.5
 //> 3.0 3.5
 //> 0.33333334

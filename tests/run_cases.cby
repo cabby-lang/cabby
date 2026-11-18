@@ -3451,6 +3451,23 @@ int main {
 	return 0
 }
 
+### close_to_floats_and_doubles
+//> true true false
+//> true true true false
+//> true false false
+//> false true
+int main {
+	double D = 0.1 + 0.2
+	float F = 1.0f / 3.0f
+	println close_to(D, 0.3), close_to(F * 3.0f, 1.0f), close_to(D, 0.31)
+	double Zero = 0.0
+	double Inf = 1.0 / Zero
+	println close_to(1e20, 1e20 + 1e5), close_to(0.000000000001, 0.0), close_to(Inf, Inf), close_to(Zero / Zero, Zero / Zero)
+	println close_to(2.5, 2.6, 0.2), close_to(2.5, 2.8, 0.2), close_to(0.00001, 0.0)
+	println close_to(0.33333f, F), close_to(5, 5.0000000001)
+	return 0
+}
+
 ### html_raw_text_is_as_it_is
 //> [Mind   the gap.] [x  y]
 //> Mind the gap.

@@ -26,7 +26,7 @@ syn keyword cabbyBoolean       true false
 syn keyword cabbyReserved      cement auto typedef extended quadruple
 syn keyword cabbySelf          self
 syn keyword cabbyOperator      sizeof is not and or
-syn keyword cabbyBuiltin       print println input read_line read_char read_key end_of_input stdout stderr abs random random_seed exit
+syn keyword cabbyBuiltin       print println input read_line read_char read_key end_of_input stdout stderr abs close_to random random_seed exit
 syn keyword cabbyTodo          contained TODO FIXME XXX NOTE
 
 " use standard / use local path/name

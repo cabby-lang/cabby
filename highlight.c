@@ -18,7 +18,7 @@ static const char *const types[] = {
 };
 static const char *const constants[] = { "true", "false", NULL };
 static const char *const functions[] = {
-	"print", "println", "input", "read_line", "read_char", "read_key", "end_of_input", "stdout", "stderr", "abs", "random", "random_seed", "exit", NULL,
+	"print", "println", "input", "read_line", "read_char", "read_key", "end_of_input", "stdout", "stderr", "abs", "close_to", "random", "random_seed", "exit", NULL,
 };
 /* members of strings, numbers, lists and lookups: shown after a '.' */
 static const char *const members[] = {

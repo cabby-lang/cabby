@@ -51,6 +51,7 @@ Builtin find_builtin(const char *name)
 	if (strcmp(name, "read_key") == 0) return BUILTIN_READ_KEY;
 	if (strcmp(name, " why") == 0) return BUILTIN_RECOVERED;
 	if (strcmp(name, "abs") == 0) return BUILTIN_ABS;
+	if (strcmp(name, "close_to") == 0) return BUILTIN_CLOSE_TO;
 	if (strcmp(name, "random") == 0) return BUILTIN_RANDOM;
 	if (strcmp(name, "random_seed") == 0) return BUILTIN_RANDOM_SEED;
 	if (strcmp(name, "exit") == 0) return BUILTIN_EXIT;
@@ -307,8 +308,9 @@ static bool add_name(Checker *C, GlobalName g)
 		return false;
 	}
 	Builtin b = find_builtin(g.name);
-	if (b && b != BUILTIN_ABS && b != BUILTIN_RANDOM && b != BUILTIN_RANDOM_SEED && b != BUILTIN_EXIT) {
-		/* (those four give way to a program's own, or a header's: standard's abs and exit) */
+	if (b && b != BUILTIN_ABS && b != BUILTIN_CLOSE_TO && b != BUILTIN_RANDOM && b != BUILTIN_RANDOM_SEED &&
+	    b != BUILTIN_EXIT) {
+		/* (those five give way to a program's own, or a header's: standard's abs and exit) */
 		sema_error(g.loc, "'%s' is a built-in function", g.name);
 		return false;
 	}
