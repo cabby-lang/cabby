@@ -1380,6 +1380,12 @@ the patch number with fixes alone.
     than one thread at once.
   - Found with ThreadSanitizer, which is clean on tutorials 63, 91 to
     94 now; tutorial 93 ran 300 times without a fault.
+- **The MIDI test keyboard's notes, now and then lost** (tutorial 76,
+  "0 notes" on GitHub's Linux): `play_through` starts the test's file
+  playing, which is read as fast as it can be, and its notes came before
+  the next line's `on_note`, so they were told to no one. The test's file
+  keeps its notes for the handler (a real keyboard's notes from before a
+  handler still aren't told: no one could play them that soon).
 
 *Version 0.36.0:*
 

@@ -959,7 +959,11 @@ static void got(Input *in, Msg m, int64_t frame)
 		}
 		pthread_mutex_unlock(&outs_lock);
 	}
-	if (!in->telling)
+	/* A keyboard's notes from before a handler was given aren't told. The
+	 * test's file is read as fast as it can be, maybe before the program's
+	 * next line gives on_note (play_through starts it): its notes are kept
+	 * for the handler, as a person couldn't play them that soon. */
+	if (!in->telling && in->kind != 3)
 		return;
 	pthread_mutex_lock(&in->qlock);
 	if (in->qn == in->qcap) {
