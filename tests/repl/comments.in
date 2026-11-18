@@ -1,0 +1,11 @@
+/* A block comment,
+that carries on
+over three lines */
+int x = 4 /* one inside
+a line */ + 1
+x
+/* on one line */ x * 2
+// a line comment /* that opens nothing
+x + 1
+str S = "/* in a string"
+S

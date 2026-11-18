@@ -16225,9 +16225,9 @@ Session saved to adding.cby
 * **Everything is checked together.** After each input the whole session is
   checked again as one program, so a string you moved three inputs ago is
   still moved. An input that fails to check is reported and forgotten.
-* **Several lines.** While a `{`, `(` or `[` is open, or after a line like
-  `if x > 0` that needs its `{`, the prompt becomes `...` and the next line
-  is indented for you. Typing `}` removes a tab. After an `if` block, press
+* **Several lines.** While a `{`, `(`, `[` or `/*` comment is open, or
+  after a line like `if x > 0` that needs its `{`, the prompt becomes `...`
+  and the next line is indented for you. Typing `}` removes a tab. After an `if` block, press
   Enter on an empty line to run it (or type the next statement), since an
   `else` might follow; after a final `else` block it runs straight away.
 * **Redefining a function** replaces it, if every earlier input that calls

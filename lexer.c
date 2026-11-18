@@ -137,6 +137,7 @@ static void skip_trivia(Lexer *L, bool cross_lines)
 				L->cur++;
 			}
 			if (!*L->cur) {
+				L->open_comment = true;
 				int save_line = L->line;
 				const char *save_ls = L->line_start;
 				L->line = start_line;
