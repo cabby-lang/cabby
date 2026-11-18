@@ -74,6 +74,7 @@ the patch number with fixes alone.
 | 0.31.0 | 18 November | `pad_left`, `pad_right` and `centered`; a number too big for a `long` is an `unsigned long`; the manual says which Cabby it's for |
 | 0.32.0 | 18 November | sixteen new chapters (91 to 106): servers, a web server, WebSockets, encryption, email, the computer, and the desktop; one field read while another is lent |
 | 0.33.0 | 18 November | a read-through: changing files in place after bytes, every chapter with "In short" and "Try this", links and appendices put right |
+| 0.33.1 | 19 November | the interactive session: a `/*` comment carries on until its `*/`, and why `print` looks different there |
 
 ---
 
@@ -1291,6 +1292,17 @@ the patch number with fixes alone.
     Notification Center); "parentheses", not "bracket".
 - Comparing two `bytes` (or anything else with `same_as`) with `==`
   says to use `.same_as`.
+
+*Version 0.33.1:*
+
+- **From the read-through together:**
+  - In the interactive session, a `/*` comment left open carries on, with
+    the `...` prompt, until its `*/` (it was an error), and the lines
+    inside it are colored as a comment.
+  - The session starts a new line before each prompt, so a `print` typed
+    a line at a time looks different there than in a program. "How to
+    read this book", Chapter 1, Appendix B and the READMEs say so, and
+    that lines typed between `{` and `}` run as one input.
 
 ## Along the way (dates not recorded)
 
