@@ -30,7 +30,7 @@ static str users_text const str &Who, long What {
 
 static list str users_lines const str &Text {
 	list str Lines
-	if Text is not "" {
+	if Text != "" {
 		Lines = Text.split "\n"
 	}
 	return Lines
@@ -63,7 +63,7 @@ int users.id {
 
 // true when it's root: the administrator (as under sudo)
 bool users.is_root {
-	return users.id is 0
+	return users.id == 0
 }
 
 // the groups they're in, by name: "wheel", "audio", "staff"...
@@ -74,7 +74,7 @@ list str users.groups {
 // true if they're in Group
 bool users.in_group const str &Group {
 	for Name in users.groups {
-		if Name is Group {
+		if Name == Group {
 			return true
 		}
 	}
@@ -83,12 +83,12 @@ bool users.in_group const str &Group {
 
 // true if the computer has a user called Name
 bool users.exists const str &Name {
-	return Name is not "" and cby_users_id(Name) >= 0
+	return Name != "" && cby_users_id(Name) >= 0
 }
 
 // someone else's full name ("" if there's no such user)
 str users.full_name_of const str &Name {
-	if Name is "" {
+	if Name == "" {
 		return ""
 	}
 	return users_text(Name, 1)
@@ -96,7 +96,7 @@ str users.full_name_of const str &Name {
 
 // someone else's home folder ("" if there's no such user)
 str users.home_of const str &Name {
-	if Name is "" {
+	if Name == "" {
 		return ""
 	}
 	return users_text(Name, 2)
@@ -104,7 +104,7 @@ str users.home_of const str &Name {
 
 // someone else's number (-1 if there's no such user)
 int users.id_of const str &Name {
-	if Name is "" {
+	if Name == "" {
 		return -1
 	}
 	return (int)cby_users_id(Name)
@@ -113,7 +113,7 @@ int users.id_of const str &Name {
 // the groups someone else is in (none if there's no such user)
 list str users.groups_of const str &Name {
 	list str None
-	if Name is "" {
+	if Name == "" {
 		return None
 	}
 	return users_lines(users_text(Name, 4))

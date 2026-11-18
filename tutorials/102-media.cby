@@ -18,7 +18,7 @@
 use media
 
 int main int Argc, str Argv[] {
-	if media.player is "" {
+	if media.player == "" {
 		println "Nothing is playing music just now."
 		return 0
 	}
@@ -29,13 +29,13 @@ int main int Argc, str Argv[] {
 	println media.player, "is", State + ":", media.title, "by", media.artist, "from", media.album
 	if Argc > 1 {
 		str Asked = Argv[1].copy
-		if Asked is "next" {
+		if Asked == "next" {
 			media.next
-		} else if Asked is "back" {
+		} else if Asked == "back" {
 			media.previous
-		} else if Asked is "pause" {
+		} else if Asked == "pause" {
 			media.pause
-		} else if Asked is "play" {
+		} else if Asked == "play" {
 			media.play
 		} else {
 			media.play_pause

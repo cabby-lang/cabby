@@ -23,9 +23,9 @@ object mutter {
 	}
 
 	void answer {
-		if Bus.call_name is "GetCurrentState" {
+		if Bus.call_name == "GetCurrentState" {
 			Bus.reply current_state
-		} else if Bus.call_name is "ApplyMonitorsConfig" {
+		} else if Bus.call_name == "ApplyMonitorsConfig" {
 			apply Bus.call_values
 		} else {
 			Bus.fail "org.freedesktop.DBus.Error.UnknownMethod", "no " + Bus.call_name
@@ -122,7 +122,7 @@ object mutter {
 	json monitor const str &Connector {
 		json Monitors = State["monitors"]
 		for long I = 0; I < Monitors.length; I++ {
-			if Monitors.item_at(I)["connector"].str_ is Connector {
+			if Monitors.item_at(I)["connector"].str_ == Connector {
 				return Monitors.item_at(I).copy
 			}
 		}
@@ -132,7 +132,7 @@ object mutter {
 	long monitor_at const str &Connector {
 		json Monitors = State["monitors"]
 		for long I = 0; I < Monitors.length; I++ {
-			if Monitors.item_at(I)["connector"].str_ is Connector {
+			if Monitors.item_at(I)["connector"].str_ == Connector {
 				return I
 			}
 		}
@@ -162,7 +162,7 @@ object mutter {
 				bool Found = false
 				json Modes = State["monitors"].item_at(At)["modes"]
 				for long M = 0; M < Modes.length; M++ {
-					if Modes.item_at(M).item_at(0).str_ is Mode {
+					if Modes.item_at(M).item_at(0).str_ == Mode {
 						Found = true
 						bool Fits = false
 						json Scales = Modes.item_at(M).item_at 5
@@ -200,7 +200,7 @@ object mutter {
 			for long L = 0; L < Given.length; L++ {
 				json Pairs = Given.item_at(L).item_at 5
 				for long K = 0; K < Pairs.length; K++ {
-					if Pairs.item_at(K).item_at(0).str_ is Connector {
+					if Pairs.item_at(K).item_at(0).str_ == Connector {
 						Wanted = Pairs.item_at(K).item_at(1).str_
 					}
 				}
@@ -208,7 +208,7 @@ object mutter {
 			json Modes = Monitors.item_at(I)["modes"]
 			for long M = 0; M < Modes.length; M++ {
 				json Mode = Modes.item_at M
-				Mode.set_item_at 6, json.from_bool(Mode.item_at(0).str_ is Wanted)
+				Mode.set_item_at 6, json.from_bool(Mode.item_at(0).str_ == Wanted)
 				Modes.set_item_at M, Mode
 			}
 			json Mon = Monitors.item_at I

@@ -147,7 +147,7 @@ object prime_counter : threads.worker {
 	...
 	void work {
 		for int N = 2; N < Below; N++ {
-			if N % 1000 is 0 {
+			if N % 1000 == 0 {
 				if stopping {           // asked to stop
 					return
 				}

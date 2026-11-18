@@ -158,16 +158,11 @@ uses is `static`.
   purpose, and then say so: `// falls through`.
 * **Conditions say what they mean:** `if Count > 0`, rather than relying on
   a number being true (`if Count`).
-* **Conditions in words are Cabby's own style:** `is`, `is not`, `and`,
-  `or` and `not`, as in `if Name is "Ada" and not Locked`. They read the
-  way you'd say them, and `is` can't be mistyped as an assignment the way
-  `==` can. The symbols (`==`, `!=`, `&&`, `||`, `!`) are fine too,
-  especially in code that stays close to C; but keep to one or the other
-  in a file, rather than mixing them. Words take the place of
-  programmers' symbols only: `<`, `>`, `<=` and `>=` are the math
-  everyone knows, and stay as they are (`if Age >= 18 and not Banned`).
+* **Write the opposite comparison rather than turning one round:**
+  `if Tries != 0` rather than `if !(Tries == 0)`, and `Age < 18` rather
+  than `!(Age >= 18)`.
 * **Use `until` when the loop waits for something to become true:**
-  `until end_of_input`, `do { ... } until Guess is Secret`, rather than
+  `until end_of_input`, `do { ... } until Guess == Secret`, rather than
   `while !end_of_input`. Keep `while` when the condition says why to go
   on.
 
@@ -220,7 +215,7 @@ object basket {
 		double Total = 0.0
 		for i in Count {
 			double Cost = Items[i].Price * Items[i].Quantity
-			if Items[i].Kind is not FOOD {
+			if Items[i].Kind != FOOD {
 				Cost += Cost * TAX_RATE
 			}
 			Total += Cost
@@ -229,7 +224,7 @@ object basket {
 	}
 
 	bool is_empty const {
-		return Count is 0
+		return Count == 0
 	}
 }
 

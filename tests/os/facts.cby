@@ -10,7 +10,7 @@ int main {
 	for D in Disks {
 		if D.path == "/" {
 			Root = true
-			println "/:", D.size > 0, D.free <= D.size, D.used <= D.size, D.device is not "", D.kind is not ""
+			println "/:", D.size > 0, D.free <= D.size, D.used <= D.size, D.device != "", D.kind != ""
 		}
 	}
 	println "a disk at /:", Root
@@ -18,7 +18,7 @@ int main {
 
 	// processors and memory
 	double Busy = os.cpu_use
-	println "processors:", Busy >= 0 and Busy <= 100
+	println "processors:", Busy >= 0 && Busy <= 100
 	bool AddsUp = os.memory_used + os.memory_available <= os.memory_total + 4096
 	println "memory:", os.memory_total == system.memory, os.memory_used > 0, os.memory_available > 0, AddsUp
 	println "swap:", os.swap_used <= os.swap_total
@@ -30,7 +30,7 @@ int main {
 	for P in os.programs {
 		if P.pid == os.pid {
 			Me = true
-			println "me:", P.parent_pid == os.parent_pid, P.memory > 0, P.cpu_seconds >= 0, P.user is not "", P.running
+			println "me:", P.parent_pid == os.parent_pid, P.memory > 0, P.cpu_seconds >= 0, P.user != "", P.running
 		}
 	}
 	println "found myself:", Me

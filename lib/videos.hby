@@ -159,7 +159,7 @@ object videos.video {
 
 	// true once it's played to its end (and stopped there)
 	bool ended const {
-		return !playing and cby_videos_ends(Id) > 0 and position >= length - 0.001
+		return !playing && cby_videos_ends(Id) > 0 && position >= length - 0.001
 	}
 
 	// played again from the start each time it ends

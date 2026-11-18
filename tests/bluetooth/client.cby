@@ -69,7 +69,7 @@ object tester {
 		settle
 		println "forgot the keyboard: " + Keys.forget.text + "; known now:", bluetooth.devices.length
 		settle
-		println "visible:", bluetooth.set_visible(true) and bluetooth.visible
+		println "visible:", bluetooth.set_visible(true) && bluetooth.visible
 	}
 
 	// what's been told, told now (from the event loop)
@@ -85,7 +85,7 @@ object tester {
 		if !D.found {
 			Name = "a device"
 		}
-		if Watcher.what == "connected" or Watcher.what == "disconnected" or Watcher.what == "gone" {
+		if Watcher.what == "connected" || Watcher.what == "disconnected" || Watcher.what == "gone" {
 			println "told:", Name, Watcher.what
 		}
 	}

@@ -26,7 +26,7 @@ object site {
 			J["method"] = json.read "\"" + Web.method + "\""
 			J["has name"] = json.read Web.has_query_value("name").text
 			Web.send_json J
-		} else if Web.path == "/form" and Web.method == "POST" {
+		} else if Web.path == "/form" && Web.method == "POST" {
 			Web.send_text "got " + Web.form_value("who") + ", cookie " + Web.cookie("seen")
 		} else if Web.path == "/echo" {
 			json Sent = Web.body_json

@@ -164,7 +164,7 @@ use linux
 int main {
 	linux.service Ssh = linux.service_named "ssh"
 	println Ssh.description + ":", Ssh.active, Ssh.enabled
-	if !Ssh.running and !Ssh.start {
+	if !Ssh.running && !Ssh.start {
 		println "it needs the administrator: sudo"
 	}
 	for S in linux.services {

@@ -4,8 +4,8 @@ use system
 
 int main {
 	println system.kind, "|", system.name, "|", system.version
-	println "hostname:", system.hostname is not "" and not system.hostname.contains(".local")
-	println "kernel:", system.kernel is not "", "machine:", system.machine is not ""
+	println "hostname:", system.hostname != "" && !system.hostname.contains(".local")
+	println "kernel:", system.kernel != "", "machine:", system.machine != ""
 	println "processors:", system.processors >= 1, "memory:", system.memory > 1000000, "uptime:", system.uptime >= 0
 	return 0
 }

@@ -79,7 +79,7 @@ object smtp {
 		} else if Upper == "QUIT" {
 			say Who, "221 Bye"
 			S.close_connection Who
-		} else if Upper == "RSET" or Upper == "NOOP" {
+		} else if Upper == "RSET" || Upper == "NOOP" {
 			say Who, "250 OK"
 		} else {
 			say Who, "502 Command not implemented"

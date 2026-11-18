@@ -86,13 +86,13 @@ str bluetooth_said long Bus {
 
 bool bluetooth_worked {
 	long Bus = cby_bluetooth_bus
-	return Bus != 0 and bluetooth_said(Bus) == ""
+	return Bus != 0 && bluetooth_said(Bus) == ""
 }
 
 json bluetooth_objects {
 	dbus.message M = dbus.method_call "org.bluez", "/", "org.freedesktop.DBus.ObjectManager", "GetManagedObjects"
 	json Answer = bluetooth_call M
-	if !Answer.is_list or Answer.length == 0 {
+	if !Answer.is_list || Answer.length == 0 {
 		json Nothing
 		return Nothing
 	}
@@ -201,7 +201,7 @@ str bluetooth.error {
 		return "there's no Bluetooth here (BlueZ, on the system bus)"
 	}
 	str Said = bluetooth_said Bus   // (first: what's asked next would change it)
-	if Said == "" and bluetooth_adapter == "" {
+	if Said == "" && bluetooth_adapter == "" {
 		return "there's no Bluetooth adapter (or BlueZ isn't running)"
 	}
 	if Said.contains "org.freedesktop.DBus.Error.ServiceUnknown" {
@@ -275,7 +275,7 @@ object bluetooth.device {
 	// (a Mac's: pair 0, connect 1, disconnect 2, forget 3)
 	bool mac_do int What {
 		bool Worked = cby_bluetooth_mac_do(Address, What) != 0
-		if Worked and What != 3 and cby_bluetooth_mac_find(Address) > 0 {
+		if Worked && What != 3 && cby_bluetooth_mac_find(Address) > 0 {
 			fill_mac 0
 		}
 		return Worked
@@ -336,7 +336,7 @@ object bluetooth.device {
 			return
 		}
 		json All = bluetooth_objects
-		if All.is_lookup and All.has(Path) {
+		if All.is_lookup && All.has(Path) {
 			str At = Path.copy
 			fill At, All[At]
 		}
@@ -466,13 +466,13 @@ list bluetooth.device bluetooth_devices int Which {
 		}
 		bluetooth.device D
 		D.fill Path, All[Path]
-		if Which == 1 and !D.paired or Which == 2 and !D.connected or Which == 3 and D.strength == 0 {
+		if Which == 1 && !D.paired || Which == 2 && !D.connected || Which == 3 && D.strength == 0 {
 			continue
 		}
 		long At = Found.length
 		if Which == 3 {
 			At = 0
-			while At < Found.length and Found[At].strength >= D.strength {
+			while At < Found.length && Found[At].strength >= D.strength {
 				At++
 			}
 		}
@@ -502,7 +502,7 @@ bluetooth.device bluetooth.device_named const str &Name {
 	if bluetooth_mac {
 		for I in cby_bluetooth_mac_list 0 {
 			D.fill_mac I
-			if D.name == Name or D.address == Name {
+			if D.name == Name || D.address == Name {
 				return D
 			}
 		}
@@ -516,7 +516,7 @@ bluetooth.device bluetooth.device_named const str &Name {
 	for Path in All.keys {
 		if All[Path].has "org.bluez.Device1" {
 			D.fill Path, All[Path]
-			if D.name == Name or D.address == Name {
+			if D.name == Name || D.address == Name {
 				return D
 			}
 		}
@@ -624,7 +624,7 @@ object bluetooth.watcher {
 			return D
 		}
 		json All = bluetooth_objects
-		if All.is_lookup and All.has(Path) {
+		if All.is_lookup && All.has(Path) {
 			str At = Path.copy
 			D.fill At, All[At]
 		}
@@ -689,7 +689,7 @@ object bluetooth.watcher {
 		json Values = Bus.signal
 		str Name = Bus.signal_name
 		if Name == "PropertiesChanged" {
-			if !Bus.signal_path.contains("/dev_") or Values[0].str_or("") != "org.bluez.Device1" and Values[0].str_or("") != "org.bluez.Battery1" {
+			if !Bus.signal_path.contains("/dev_") || Values[0].str_or("") != "org.bluez.Device1" && Values[0].str_or("") != "org.bluez.Battery1" {
 				return
 			}
 			Path = Bus.signal_path
@@ -720,7 +720,7 @@ object bluetooth.watcher {
 				What = "strength"
 				Changed.call
 			}
-		} else if Name == "InterfacesAdded" or Name == "InterfacesRemoved" {
+		} else if Name == "InterfacesAdded" || Name == "InterfacesRemoved" {
 			str At = Values[0].str_or ""
 			bool Device = false
 			if Name == "InterfacesAdded" {

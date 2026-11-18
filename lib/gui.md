@@ -659,11 +659,11 @@ object viewer : gui.window {
 	}
 
 	void pressed {
-		if key is "right" {
+		if key == "right" {
 			At += 1
-		} else if key is "left" and At > 0 {
+		} else if key == "left" && At > 0 {
 			At -= 1
-		} else if key is "q" or key is "Q" {
+		} else if key == "q" || key == "Q" {
 			close
 		}
 		Shown.set_text "photo " + (At + 1).text

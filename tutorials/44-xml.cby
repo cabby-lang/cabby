@@ -36,7 +36,7 @@ int main {
 	for Story in Feed.find_all "item" {
 		element Author = Story.find "dc:creator"
 		str By = "nobody named"
-		if not Author.is_missing {
+		if !Author.is_missing {
 			By = Author.text
 		}
 		println " ", Story.find("title"), "(by", By + ")"
@@ -45,7 +45,7 @@ int main {
 	// ---- picking by what's inside
 	int Libraries = 0
 	for Category in Feed.find_all "item category" {
-		if Category.text is "libraries" {
+		if Category.text == "libraries" {
 			Libraries++
 		}
 	}

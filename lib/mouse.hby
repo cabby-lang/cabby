@@ -40,7 +40,7 @@ static str mouse_run const str &Line {
 }
 
 static bool mouse_do const str &Line {
-	return mouse_run(Line) is not "\x1e"
+	return mouse_run(Line) != "\x1e"
 }
 
 // ---- Sway's: swaymsg's list of inputs
@@ -51,7 +51,7 @@ static json mouse_sway_input const str &Type {
 	if json.can_read Said {
 		json All = json.read Said
 		for long I = 0; I < All.length; I++ {
-			if All.item_at(I)["type"].str_or("") is Type {
+			if All.item_at(I)["type"].str_or("") == Type {
 				return All.item_at(I).copy
 			}
 		}
@@ -60,7 +60,7 @@ static json mouse_sway_input const str &Type {
 }
 
 static bool mouse_sway_set const str &Type, const str &Setting, const str &Value {
-	return mouse_sway_input(Type)["type"].str_or("") is Type and
+	return mouse_sway_input(Type)["type"].str_or("") == Type &&
 	mouse_do("swaymsg\x1finput\x1ftype:" + Type + "\x1f" + Setting + "\x1f" + Value)
 }
 
@@ -72,11 +72,11 @@ static str mouse_sway_cursor int Which {
 		for Line in json.read(Said)["config"].str_or("").split "\n" {
 			list str Words
 			for Word in Line.trim.split " " {
-				if Word is not "" {
+				if Word != "" {
 					Words.add Word.copy
 				}
 			}
-			if Words.length >= 4 and Words[0] is "seat" and Words[2] is "xcursor_theme" {
+			if Words.length >= 4 && Words[0] == "seat" && Words[2] == "xcursor_theme" {
 				if Which == 0 {
 					return Words[3].copy
 				}
@@ -93,7 +93,7 @@ static str mouse_sway_cursor int Which {
 
 static str mouse_gsettings const str &Schema, const str &Key {
 	str Said = mouse_run "gsettings\x1fget\x1f" + Schema + "\x1f" + Key
-	if Said is "\x1e" {
+	if Said == "\x1e" {
 		return ""
 	}
 	return Said.trim
@@ -112,11 +112,11 @@ static const str mouse_gnome = "org.gnome.desktop.peripherals."
 static list str mouse_x11_devices bool Touchpads {
 	list str Ids
 	str Said = mouse_run "xinput\x1flist"
-	if Said is "\x1e" {
+	if Said == "\x1e" {
 		return Ids
 	}
 	for Line in Said.split "\n" {
-		if !Line.contains("slave  pointer") or Line.contains("XTEST") {
+		if !Line.contains("slave  pointer") || Line.contains("XTEST") {
 			continue
 		}
 		long At = Line.find "id="
@@ -129,8 +129,8 @@ static list str mouse_x11_devices bool Touchpads {
 		if Tab > 0 {
 			Id = Rest[to Tab - 1]
 		}
-		bool IsPad = Line.lower.contains("touchpad") or Line.lower.contains("trackpad")
-		if IsPad == Touchpads and Id.trim.is_long {
+		bool IsPad = Line.lower.contains("touchpad") || Line.lower.contains("trackpad")
+		if IsPad == Touchpads && Id.trim.is_long {
 			Ids.add Id.trim
 		}
 	}
@@ -140,7 +140,7 @@ static list str mouse_x11_devices bool Touchpads {
 // a property's value, as list-props shows it: "\tlibinput Accel Speed (306):\t0.000000"
 static str mouse_x11_prop const str &Id, const str &Name {
 	str Said = mouse_run "xinput\x1flist-props\x1f" + Id
-	if Said is "\x1e" {
+	if Said == "\x1e" {
 		return ""
 	}
 	for Line in Said.split "\n" {
@@ -159,7 +159,7 @@ static str mouse_x11_prop const str &Id, const str &Name {
 static str mouse_x11_first const str &Name, bool Touchpads {
 	for Id in mouse_x11_devices Touchpads {
 		str Value = mouse_x11_prop Id, Name
-		if Value is not "" {
+		if Value != "" {
 			return Value
 		}
 	}
@@ -170,7 +170,7 @@ static str mouse_x11_first const str &Name, bool Touchpads {
 static bool mouse_x11_set const str &Name, const str &Value, bool Touchpads {
 	bool Any = false
 	for Id in mouse_x11_devices Touchpads {
-		if mouse_x11_prop(Id, Name) is not "" and mouse_do("xinput\x1fset-prop\x1f" + Id + "\x1f" + Name + "\x1f" + Value) {
+		if mouse_x11_prop(Id, Name) != "" && mouse_do("xinput\x1fset-prop\x1f" + Id + "\x1f" + Name + "\x1f" + Value) {
 			Any = true
 		}
 	}
@@ -184,7 +184,7 @@ static bool mouse_x11_set const str &Name, const str &Value, bool Touchpads {
 static str mouse_get const str &Device, const str &Setting, const str &GnomeKey, const str &X11 {
 	long Kind = cby_desktop_kind
 	str SwayType = "pointer"
-	if Device is "touchpad" {
+	if Device == "touchpad" {
 		SwayType = "touchpad"
 	}
 	if Kind == 1 {
@@ -202,13 +202,13 @@ static str mouse_get const str &Device, const str &Setting, const str &GnomeKey,
 		return mouse_gsettings mouse_gnome + Device, GnomeKey
 	}
 	if Kind == 4 {
-		return mouse_x11_first X11, Device is "touchpad"
+		return mouse_x11_first X11, Device == "touchpad"
 	}
 	return ""
 }
 
 static bool mouse_yes const str &Value {
-	return Value is "enabled" or Value is "true" or Value is "1"
+	return Value == "enabled" || Value == "true" || Value == "1"
 }
 
 static double mouse_number const str &Value {
@@ -222,28 +222,28 @@ static bool mouse_set const str &Device, const str &Setting, const str &GnomeKey
 	long Kind = cby_desktop_kind
 	if Kind == 1 {
 		str SwayType = "pointer"
-		if Device is "touchpad" {
+		if Device == "touchpad" {
 			SwayType = "touchpad"
 		}
 		return mouse_sway_set SwayType, Setting, Value
 	}
 	if Kind == 2 {
 		str Given = Value.copy
-		if Value is "enabled" {
+		if Value == "enabled" {
 			Given = "true"
-		} else if Value is "disabled" {
+		} else if Value == "disabled" {
 			Given = "false"
 		}
 		return mouse_gsettings_set mouse_gnome + Device, GnomeKey, Given
 	}
 	if Kind == 4 {
 		str Given = Value.copy
-		if Value is "enabled" {
+		if Value == "enabled" {
 			Given = "1"
-		} else if Value is "disabled" {
+		} else if Value == "disabled" {
 			Given = "0"
 		}
-		return mouse_x11_set X11, Given, Device is "touchpad"
+		return mouse_x11_set X11, Given, Device == "touchpad"
 	}
 	return false
 }
@@ -309,7 +309,7 @@ bool mouse.has_touchpad {
 		return mouse_x11_devices(true).length > 0
 	}
 	if Kind == 2 {
-		return mouse_gsettings(mouse_gnome + "touchpad", "speed") is not ""
+		return mouse_gsettings(mouse_gnome + "touchpad", "speed") != ""
 	}
 	return false
 }
@@ -365,7 +365,7 @@ str mouse.cursor_theme {
 	long Kind = cby_desktop_kind
 	if Kind == 1 {
 		str Theme = mouse_sway_cursor 0
-		if Theme is "" {
+		if Theme == "" {
 			return "default"
 		}
 		return Theme
@@ -378,7 +378,7 @@ str mouse.cursor_theme {
 }
 
 bool mouse.set_cursor_size long Pixels {
-	if Pixels < 8 or Pixels > 256 {
+	if Pixels < 8 || Pixels > 256 {
 		return false
 	}
 	long Kind = cby_desktop_kind
@@ -394,7 +394,7 @@ bool mouse.set_cursor_size long Pixels {
 // (a theme is a folder in ~/.icons or /usr/share/icons with a cursors
 // folder inside)
 bool mouse.set_cursor_theme const str &Theme {
-	if Theme is "" or Theme.contains("'") or Theme.contains(" ") {
+	if Theme == "" || Theme.contains("'") || Theme.contains(" ") {
 		return false
 	}
 	long Kind = cby_desktop_kind
@@ -415,10 +415,10 @@ bool mouse.set_cursor_theme const str &Theme {
 bool mouse.can_change {
 	long Kind = cby_desktop_kind
 	if Kind == 1 {
-		return !mouse_sway_input("pointer").is_null or !mouse_sway_input("touchpad").is_null
+		return !mouse_sway_input("pointer").is_null || !mouse_sway_input("touchpad").is_null
 	}
 	if Kind == 2 {
-		return mouse_gsettings(mouse_gnome + "mouse", "speed") is not ""
+		return mouse_gsettings(mouse_gnome + "mouse", "speed") != ""
 	}
 	if Kind == 4 {
 		return mouse_x11_devices(false).length + mouse_x11_devices(true).length > 0

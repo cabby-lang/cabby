@@ -41,7 +41,7 @@ str system.hostname {
 // true if it was changed. Linux: hostnamectl. macOS: scutil, its three
 // names (the network's, Bonjour's ".local" one, and the one Finder shows).
 bool system.set_hostname const str &Name {
-	return cby_system_set_hostname(Name) is not 0
+	return cby_system_set_hostname(Name) != 0
 }
 
 // the system's name and version: "Debian GNU/Linux 13 (trixie)", "Arch

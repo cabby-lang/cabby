@@ -155,9 +155,9 @@ int main {
 	R.set_header "Authorization", "Bearer abc123"
 	R.set_timeout 10
 	int Status = R.send
-	if Status is 0 {
+	if Status == 0 {
 		println "no answer:", R.error
-	} else if not R.worked {
+	} else if !R.worked {
 		println "it said", Status.text + ":", R.answer
 	}
 	return 0
@@ -209,7 +209,7 @@ object fetcher {
 	void get const str &Url, const str &Path {
 		R = networks.request_to Url
 		R.on_progress went
-		if R.save_to(Path) is not 200 {
+		if R.save_to(Path) != 200 {
 			println "\nit didn't work:", R.status, R.error
 		}
 	}
@@ -268,7 +268,7 @@ object shouter {
 	// the connection's, for each line that comes back
 	void answered {
 		println "back came", C.line
-		if C.line is "GOODBYE" {
+		if C.line == "GOODBYE" {
 			S.close
 			C.close
 		}
@@ -532,7 +532,7 @@ object chat {
 	}
 
 	void answer {
-		if Web.path == "/chat" and Web.wants_socket {
+		if Web.path == "/chat" && Web.wants_socket {
 			long Who = Web.accept_socket
 			Web.send_message Who, "Welcome! " + Web.sockets.length.text + " here."
 		} else {
@@ -693,7 +693,7 @@ int main {
 	}
 	println "my address:", networks.local_address
 	str Wifi = networks.wifi_name
-	if Wifi is not "" {
+	if Wifi != "" {
 		println "on Wi-Fi:", Wifi
 	}
 	return 0

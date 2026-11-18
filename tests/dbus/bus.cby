@@ -34,7 +34,7 @@ object watcher {
 		println "its owner:", Bus.call(Owner)[0].str
 		dbus.message Id = dbus.method_call("org.freedesktop.DBus", "/org/freedesktop/DBus",
 			"org.freedesktop.DBus", "GetId")
-		println "the bus's id is 32 characters:", Bus.call(Id)[0].str.length is 32
+		println "the bus's id is 32 characters:", Bus.call(Id)[0].str.length == 32
 		dbus.message Look = dbus.method_call("org.freedesktop.DBus", "/org/freedesktop/DBus",
 			"org.freedesktop.DBus.Introspectable", "Introspect")
 		println "interfaces it has:", Bus.call(Look)[0].str.contains("org.freedesktop.DBus")

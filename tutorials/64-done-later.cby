@@ -36,7 +36,7 @@ object prime_counter : threads.worker {
 
 	bool is_prime int N const {
 		for int D = 2; D * D <= N; D++ {
-			if N % D is 0 {
+			if N % D == 0 {
 				return false
 			}
 		}

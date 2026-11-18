@@ -49,7 +49,7 @@ object painter : threads.worker {
 		double X = 0.0
 		double Z = 0.0
 		int Times = 0
-		while Times < MOST and X * X + Z * Z <= 4.0 {
+		while Times < MOST && X * X + Z * Z <= 4.0 {
 			double Next = X * X - Z * Z + Re
 			Z = 2.0 * X * Z + Im
 			X = Next
@@ -86,7 +86,7 @@ object fractal_window : gui.window {
 
 	// each strip as it comes: onto the whole picture, at its place
 	void strip_done {
-		if not Painter.has_picture {
+		if !Painter.has_picture {
 			return
 		}
 		images.picture Strip = Painter.picture

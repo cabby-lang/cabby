@@ -44,7 +44,7 @@ int main {
 	println "before:", os.got_signal("user2")
 	os.send_signal os.pid, "user2"
 	int Turns = 0
-	while !os.got_signal("user2") and Turns < 100 {
+	while !os.got_signal("user2") && Turns < 100 {
 		time.sleep time.milliseconds(10)
 		Turns++
 	}
@@ -66,12 +66,12 @@ int main {
 	for P in Found {
 		if P.parent_pid == os.pid {
 			Pid = P.pid
-			println "found sleep:", P.command, P.user is not ""
+			println "found sleep:", P.command, P.user != ""
 			println "stopped:", P.stop
 		}
 	}
 	Sleeper.wait
-	println "it's gone:", Pid > 0 and !os.running(Pid)
+	println "it's gone:", Pid > 0 && !os.running(Pid)
 
 	println "no such signal:", os.send_signal(os.pid, "nonsense")
 	return 0

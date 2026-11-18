@@ -75,7 +75,7 @@ int main {
 	int Weekend = 0
 	for i in 30 {
 		weekday W = (Today + i).weekday
-		if W is SATURDAY or W is SUNDAY {
+		if W == SATURDAY || W == SUNDAY {
 			Weekend++
 		}
 	}

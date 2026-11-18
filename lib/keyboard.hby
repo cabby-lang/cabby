@@ -45,14 +45,14 @@ static str keyboard_run const str &Line {
 }
 
 static bool keyboard_do const str &Line {
-	return keyboard_run(Line) is not "\x1e"
+	return keyboard_run(Line) != "\x1e"
 }
 
 // the words of a line, without the spaces between them
 static list str keyboard_words const str &Line {
 	list str Words
 	for Word in Line.trim.split " " {
-		if Word is not "" {
+		if Word != "" {
 			Words.add Word.copy
 		}
 	}
@@ -70,7 +70,7 @@ static str keyboard_layout_of const str &Name {
 
 static str keyboard_variant_of const str &Name {
 	long Open = Name.find "("
-	if Open < 0 or !Name.ends_with(")") {
+	if Open < 0 || !Name.ends_with(")") {
 		return ""
 	}
 	return Name[Open + 1 to Name.length - 2]
@@ -100,10 +100,10 @@ static list str keyboard_names const str &Layouts, const str &Variants {
 	long I = 0
 	for L in Layouts.split "," {
 		str Name = L.trim
-		if I < Vs.length and Vs[I].trim is not "" {
+		if I < Vs.length && Vs[I].trim != "" {
 			Name += "(" + Vs[I].trim + ")"
 		}
-		if Name is not "" {
+		if Name != "" {
 			Names.add Name
 		}
 		I++
@@ -118,7 +118,7 @@ static json keyboard_sway {
 	if json.can_read Said {
 		json All = json.read Said
 		for long I = 0; I < All.length; I++ {
-			if All.item_at(I)["type"].str_or("") is "keyboard" {
+			if All.item_at(I)["type"].str_or("") == "keyboard" {
 				return All.item_at(I).copy
 			}
 		}
@@ -131,7 +131,7 @@ static json keyboard_sway {
 static str keyboard_name_of const str &Description {
 	str Rules = "/usr/share/X11/xkb/rules/evdev.lst"
 	str Instead = shell.get "CABBY_XKB_RULES"     // (the tests' own list)
-	if Instead is not "" {
+	if Instead != "" {
 		Rules = Instead
 	}
 	if !files.exists(Rules) {
@@ -150,14 +150,14 @@ static str keyboard_name_of const str &Description {
 		}
 		str Rest = Line.trim[Words[0].length to]
 		str Said = Rest.trim
-		if Section is "layout" and Said is Description {
+		if Section == "layout" && Said == Description {
 			return Words[0].copy
 		}
 		// a variant's: "  dvorak          us: English (Dvorak)"
-		if Section is "variant" and Words[1].ends_with(":") {
+		if Section == "variant" && Words[1].ends_with(":") {
 			str Base = Words[1][to Words[1].length - 2]
 			str Named = Said[Words[1].length to]
-			if Named.trim is Description {
+			if Named.trim == Description {
 				return Base + "(" + Words[0] + ")"
 			}
 		}
@@ -169,7 +169,7 @@ static str keyboard_name_of const str &Description {
 
 static str keyboard_gsettings const str &Schema, const str &Key {
 	str Said = keyboard_run "gsettings\x1fget\x1f" + Schema + "\x1f" + Key
-	if Said is "\x1e" {
+	if Said == "\x1e" {
 		return ""
 	}
 	return Said.trim
@@ -195,7 +195,7 @@ static list str keyboard_gnome_layouts {
 	str Said = keyboard_gsettings "org.gnome.desktop.input-sources", "sources"
 	for Part in Said.split "('xkb', '" {
 		long End = Part.find "'"
-		if End > 0 and !Part.starts_with("[") {
+		if End > 0 && !Part.starts_with("[") {
 			str Name = Part[to End - 1]
 			long Plus = Name.find "+"
 			if Plus > 0 {
@@ -273,7 +273,7 @@ str keyboard.layout {
 	if cby_desktop_kind == 1 {
 		At = keyboard_sway["xkb_active_layout_index"].long_or 0
 	}
-	if At < 0 or At >= All.length {
+	if At < 0 || At >= All.length {
 		At = 0
 	}
 	return All[At].copy
@@ -285,7 +285,7 @@ bool keyboard.set_layouts const list str &Names {
 		return false
 	}
 	for Name in Names {
-		if Name is "" or Name.contains(",") or Name.contains("'") or Name.contains(" ") {
+		if Name == "" || Name.contains(",") || Name.contains("'") || Name.contains(" ") {
 			return false
 		}
 	}
@@ -297,10 +297,10 @@ bool keyboard.set_layouts const list str &Names {
 			return false
 		}
 		str V = Variants.copy
-		if V is "" {
+		if V == "" {
 			V = ","
 		}
-		return keyboard_do("swaymsg\x1finput\x1ftype:keyboard\x1fxkb_variant\x1f" + V) and
+		return keyboard_do("swaymsg\x1finput\x1ftype:keyboard\x1fxkb_variant\x1f" + V) &&
 		keyboard_do("swaymsg\x1finput\x1ftype:keyboard\x1fxkb_layout\x1f" + Layouts)
 	}
 	if Kind == 2 {
@@ -311,7 +311,7 @@ bool keyboard.set_layouts const list str &Names {
 			}
 			str Name = keyboard_layout_of Names[I]
 			str Variant = keyboard_variant_of Names[I]
-			if Variant is not "" {
+			if Variant != "" {
 				Name += "+" + Variant
 			}
 			Sources += "('xkb', '" + Name + "')"
@@ -370,12 +370,12 @@ long keyboard.repeat_rate {
 }
 
 bool keyboard.set_repeat_delay long Milliseconds {
-	if Milliseconds < 100 or Milliseconds > 2000 {
+	if Milliseconds < 100 || Milliseconds > 2000 {
 		return false
 	}
 	long Kind = cby_desktop_kind
 	if Kind == 1 {
-		return !keyboard_sway.is_null and keyboard_do("swaymsg\x1finput\x1ftype:keyboard\x1frepeat_delay\x1f" + Milliseconds.text)
+		return !keyboard_sway.is_null && keyboard_do("swaymsg\x1finput\x1ftype:keyboard\x1frepeat_delay\x1f" + Milliseconds.text)
 	}
 	if Kind == 2 {
 		return keyboard_gsettings_set "org.gnome.desktop.peripherals.keyboard", "delay", Milliseconds.text
@@ -391,12 +391,12 @@ bool keyboard.set_repeat_delay long Milliseconds {
 }
 
 bool keyboard.set_repeat_rate long PerSecond {
-	if PerSecond < 1 or PerSecond > 100 {
+	if PerSecond < 1 || PerSecond > 100 {
 		return false
 	}
 	long Kind = cby_desktop_kind
 	if Kind == 1 {
-		return !keyboard_sway.is_null and keyboard_do("swaymsg\x1finput\x1ftype:keyboard\x1frepeat_rate\x1f" + PerSecond.text)
+		return !keyboard_sway.is_null && keyboard_do("swaymsg\x1finput\x1ftype:keyboard\x1frepeat_rate\x1f" + PerSecond.text)
 	}
 	if Kind == 2 {
 		long Between = (1000 + PerSecond / 2) / PerSecond

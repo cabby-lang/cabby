@@ -40,7 +40,7 @@ object listener {
 
 	void heard {
 		Heard++
-		if Heard is 2 {
+		if Heard == 2 {
 			events.stop
 		}
 	}

@@ -43,13 +43,13 @@ object chat_room {
 		if Line.starts_with "name " {
 			Names[S.from] = Line[5 to]
 			S.send_line_to_all Names[S.from] + " is here (" + S.connections.length.text + " in the room)"
-		} else if Line is "who" {
+		} else if Line == "who" {
 			list str Who
 			for Each in S.connections {
 				Who.add Names[Each].copy
 			}
 			S.reply "here: " + Who.join(", ")
-		} else if Line is "bye" {
+		} else if Line == "bye" {
 			S.reply "goodbye, " + Names[S.from]
 			long Who = S.from
 			S.close_connection Who       // (on_close is for the other end's closing)
@@ -126,21 +126,21 @@ object evening {
 		Ada.tell
 		Alan.tell
 		Step++
-		if Step is 1 {
+		if Step == 1 {
 			Ada.visit Room.port
-		} else if Step is 2 {
+		} else if Step == 2 {
 			Ada.say "name Ada"
-		} else if Step is 3 {
+		} else if Step == 3 {
 			Alan.visit Room.port
-		} else if Step is 4 {
+		} else if Step == 4 {
 			Alan.say "name Alan"
-		} else if Step is 5 {
+		} else if Step == 5 {
 			Ada.say "hello, Alan"
-		} else if Step is 6 {
+		} else if Step == 6 {
 			Alan.say "who"
-		} else if Step is 7 {
+		} else if Step == 7 {
 			Alan.say "bye"
-		} else if Step is 9 {
+		} else if Step == 9 {
 			Next.stop
 			Room.close
 			println "the room is closed"

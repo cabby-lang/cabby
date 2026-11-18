@@ -26,7 +26,7 @@ int main {
 		return 1
 	}
 	str Job = printing.print "scales.pdf"
-	if Job is "" {
+	if Job == "" {
 		println "it didn't print"
 		return 1
 	}

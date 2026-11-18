@@ -61,7 +61,7 @@ int main {
 
 	json All = Bus.properties("org.freedesktop.UPower", Battery,
 		"org.freedesktop.UPower.Device")
-	println "charging:", All["State"].long is 1
+	println "charging:", All["State"].long == 1
 	return 0
 }
 ```

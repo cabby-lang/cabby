@@ -23,9 +23,9 @@ syn keyword cabbyType          moment duration date time_of_day date_time weekda
 syn keyword cabbyStorage       const static register volatile extern inner
 syn keyword cabbyStructure     struct union enum object aka
 syn keyword cabbyBoolean       true false
-syn keyword cabbyReserved      cement auto typedef extended quadruple
+syn keyword cabbyReserved      cement auto typedef extended quadruple is not and or
 syn keyword cabbySelf          self
-syn keyword cabbyOperator      sizeof is not and or
+syn keyword cabbyOperator      sizeof
 syn keyword cabbyBuiltin       print println input read_line read_char read_key end_of_input stdout stderr abs close_to random random_seed exit
 syn keyword cabbyTodo          contained TODO FIXME XXX NOTE
 

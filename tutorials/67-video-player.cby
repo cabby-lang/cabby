@@ -27,7 +27,7 @@ object player : gui.window {
 	void build {
 		Film = videos.open Path
 		str Title = Film.title
-		if Title is "" {
+		if Title == "" {
 			Title = Path.copy
 		}
 		set_title Title

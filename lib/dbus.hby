@@ -250,7 +250,7 @@ object dbus.bus {
 
 	// true when there's a bus (only dbus.try_session's can be without one)
 	bool is_open const {
-		return Id is not 0
+		return Id != 0
 	}
 
 	~dbus.bus {
@@ -352,7 +352,7 @@ object dbus.bus {
 	// ("org.example.Thing"): true if it's this program's now, false if
 	// another program has it.
 	bool own_name const str &Name {
-		return cby_dbus_own_name(Id, Name) is not 0
+		return cby_dbus_own_name(Id, Name) != 0
 	}
 
 	// Calls to the object at Path ("/org/example/Thing") go to the

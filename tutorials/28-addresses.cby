@@ -54,7 +54,7 @@ int main {
 	address char Here = addresses.of Text
 	address char Stop = Here
 	long Sum = 0
-	until Here[0] is '\0' {
+	until Here[0] == '\0' {
 		Sum += strtol Here, addresses.of(Stop), 10
 		Here = Stop
 	}

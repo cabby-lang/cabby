@@ -19,7 +19,7 @@ object chat {
 	}
 
 	void answer {
-		if Web.path == "/chat" and Web.wants_socket {
+		if Web.path == "/chat" && Web.wants_socket {
 			long Who = Web.accept_socket
 			Web.send_message Who, "welcome, " + Web.sockets.length.text + " here"
 		} else if Web.path == "/chat" {

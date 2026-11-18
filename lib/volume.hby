@@ -27,13 +27,13 @@ int volume.level {
 
 // true if it's muted
 bool volume.muted {
-	return cby_volume_read(1) is 1
+	return cby_volume_read(1) == 1
 }
 
 // sets how loud, from 0 to 100 (less than 0 is 0, more than 100 is 100):
 // true if it was set
 bool volume.set int Level {
-	return cby_volume_set(Level) is not 0
+	return cby_volume_set(Level) != 0
 }
 
 // louder by Amount (out of 100): true if it was set
@@ -56,12 +56,12 @@ bool volume.down int Amount {
 
 // silent, keeping the level for unmute: true if it was done
 bool volume.mute {
-	return cby_volume_set_muted(1) is not 0
+	return cby_volume_set_muted(1) != 0
 }
 
 // back to the level it was
 bool volume.unmute {
-	return cby_volume_set_muted(0) is not 0
+	return cby_volume_set_muted(0) != 0
 }
 
 // true if it can be read and set here: there's something to set it with

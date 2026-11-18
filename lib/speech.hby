@@ -56,11 +56,11 @@ static str speech_run const str &Line, const str &Input, bool Has {
 // which program says it: "say" (a Mac's), "espeak-ng", "espeak",
 // "spd-say", or "" for none
 static str speech_program {
-	if cby_desktop_on_a_mac is not 0 {
+	if cby_desktop_on_a_mac != 0 {
 		return "say"
 	}
 	for Program in "espeak-ng,espeak,spd-say".split "," {
-		if speech_run(Program + "\x1f--version", "", false) is not "\x1e" {
+		if speech_run(Program + "\x1f--version", "", false) != "\x1e" {
 			return Program.copy
 		}
 	}
@@ -71,7 +71,7 @@ static str speech_program {
 static list str speech_words const str &Line {
 	list str Words
 	for Word in Line.split " " {
-		if Word is not "" {
+		if Word != "" {
 			Words.add Word.copy
 		}
 	}
@@ -83,7 +83,7 @@ static list str speech_words const str &Line {
 static list str speech_mac_voices {
 	list str Pairs
 	str Said = speech_run "say\x1f-v\x1f?", "", false
-	if Said is "\x1e" {
+	if Said == "\x1e" {
 		return Pairs
 	}
 	for Line in Said.split "\n" {
@@ -136,36 +136,36 @@ object speech.speaker {
 	// saving it into Path if Path isn't "")
 	str arguments const str &Program, const str &Path const {
 		str Line = Program.copy
-		if Program is "say" {
+		if Program == "say" {
 			str Name = Voice.copy
-			if Name is "" and Language is not "" {
+			if Name == "" && Language != "" {
 				list str Pairs = speech_mac_voices
 				long I = 0
-				while I + 1 < Pairs.length and Name is "" {
-					if Pairs[I + 1] is Language or Pairs[I + 1].starts_with(Language + "-") {
+				while I + 1 < Pairs.length && Name == "" {
+					if Pairs[I + 1] == Language || Pairs[I + 1].starts_with(Language + "-") {
 						Name = Pairs[I].copy
 					}
 					I += 2
 				}
 			}
-			if Name is not "" {
+			if Name != "" {
 				Line += "\x1f-v\x1f" + Name
 			}
 			if Rate > 0 {
 				Line += "\x1f-r\x1f" + Rate.text
 			}
-			if Path is not "" {
+			if Path != "" {
 				Line += "\x1f-o\x1f" + Path
 				if Path.lower.ends_with ".wav" {
 					Line += "\x1f--data-format=LEI16@22050"
 				}
 			}
-		} else if Program is "spd-say" {
+		} else if Program == "spd-say" {
 			Line += "\x1f-w"
-			if Voice is not "" {
+			if Voice != "" {
 				Line += "\x1f-y\x1f" + Voice
 			}
-			if Language is not "" {
+			if Language != "" {
 				Line += "\x1f-l\x1f" + Language
 			}
 			if Rate > 0 {
@@ -181,15 +181,15 @@ object speech.speaker {
 			}
 			Line += "\x1f-e"
 		} else {
-			if Voice is not "" {
+			if Voice != "" {
 				Line += "\x1f-v\x1f" + Voice
-			} else if Language is not "" {
+			} else if Language != "" {
 				Line += "\x1f-v\x1f" + Language
 			}
 			if Rate > 0 {
 				Line += "\x1f-s\x1f" + Rate.text
 			}
-			if Path is not "" {
+			if Path != "" {
 				Line += "\x1f-w\x1f" + Path
 			}
 			Line += "\x1f--stdin"
@@ -200,10 +200,10 @@ object speech.speaker {
 	// Says it aloud, waiting until it's said: true if it was
 	bool say const str &Text const {
 		str Program = speech_program
-		if Program is "" {
+		if Program == "" {
 			return false
 		}
-		return speech_run(arguments(Program, ""), Text, true) is not "\x1e"
+		return speech_run(arguments(Program, ""), Text, true) != "\x1e"
 	}
 
 	// Saves it said into a sound file instead: WAV (and on a Mac, AIFF for
@@ -211,10 +211,10 @@ object speech.speaker {
 	// that's needed for this on Linux.)
 	bool save const str &Text, const str &Path const {
 		str Program = speech_program
-		if Program is "" or Program is "spd-say" {
+		if Program == "" || Program == "spd-say" {
 			return false
 		}
-		return speech_run(arguments(Program, Path), Text, true) is not "\x1e"
+		return speech_run(arguments(Program, Path), Text, true) != "\x1e"
 	}
 }
 
@@ -234,7 +234,7 @@ bool speech.save const str &Text, const str &Path {
 
 // true if there's something to say it with
 bool speech.can_speak {
-	return speech_program is not ""
+	return speech_program != ""
 }
 
 // The voices there are, for set_voice: a Mac's by name ("Samantha",
@@ -243,27 +243,27 @@ bool speech.can_speak {
 list str speech.voices {
 	list str Names
 	str Program = speech_program
-	if Program is "say" {
+	if Program == "say" {
 		list str Pairs = speech_mac_voices
 		long I = 0
 		while I < Pairs.length {
 			Names.add Pairs[I].copy
 			I += 2
 		}
-	} else if Program is "spd-say" {
+	} else if Program == "spd-say" {
 		// "NAME  LANGUAGE  VARIANT", after a line saying so
 		for Line in speech_run("spd-say\x1f-L", "", false).split "\n" {
 			list str Words = speech_words Line
-			if Words.length > 0 and Words[0] is not "NAME" and Words[0] is not "\x1e" {
+			if Words.length > 0 && Words[0] != "NAME" && Words[0] != "\x1e" {
 				Names.add Words[0].copy
 			}
 		}
-	} else if Program is not "" {
+	} else if Program != "" {
 		// " 5  en-gb   --/M   English_(Great_Britain)  gmw/en ...", after
 		// a line saying "Pty Language ..."
 		for Line in speech_run(Program + "\x1f--voices", "", false).split "\n" {
 			list str Words = speech_words Line
-			if Words.length > 1 and Words[0] is not "Pty" and Words[0] is not "\x1e" {
+			if Words.length > 1 && Words[0] != "Pty" && Words[0] != "\x1e" {
 				Names.add Words[1].copy
 			}
 		}
@@ -277,7 +277,7 @@ list str speech.voices {
 // ("whisper-cpp", Homebrew's), or "" for none
 static str speech_whisper {
 	for Program in "whisper-cli,whisper-cpp".split(",") {
-		if speech_run(Program + "\x1f--help", "", false) is not "\x1e" {
+		if speech_run(Program + "\x1f--help", "", false) != "\x1e" {
 			return Program.copy
 		}
 	}
@@ -298,13 +298,13 @@ static str speech_model_in const str &Folder {
 	list str Names = directories.list Folder
 	for Size in "tiny,base,small,medium,large".split(",") {
 		for Name in Names {
-			if Name.starts_with("ggml-" + Size) and Name.ends_with(".bin") {
+			if Name.starts_with("ggml-" + Size) && Name.ends_with(".bin") {
 				return Folder + "/" + Name
 			}
 		}
 	}
 	for Name in Names {
-		if Name.starts_with("ggml-") and Name.ends_with(".bin") {
+		if Name.starts_with("ggml-") && Name.ends_with(".bin") {
 			return Folder + "/" + Name
 		}
 	}
@@ -315,7 +315,7 @@ static str speech_model_in const str &Folder {
 // the models speech.get_model fetched, then where whisper.cpp's packages
 // put them ("" for none).
 str speech.model {
-	if shell.has("CABBY_WHISPER_MODEL") and shell.get("CABBY_WHISPER_MODEL") is not "" {
+	if shell.has("CABBY_WHISPER_MODEL") && shell.get("CABBY_WHISPER_MODEL") != "" {
 		return shell.get "CABBY_WHISPER_MODEL"
 	}
 	str Home = directories.home
@@ -329,7 +329,7 @@ str speech.model {
 	Folders.add "/usr/local/share/whisper-cpp"
 	for Folder in Folders {
 		str Found = speech_model_in(Folder)
-		if Found is not "" {
+		if Found != "" {
 			return Found
 		}
 	}
@@ -371,14 +371,14 @@ object speech.listener {
 	// panic if there's nothing to hear it with (speech.can_hear says).
 	str hear const str &Path const {
 		str Program = speech_whisper()
-		if Program is "" {
+		if Program == "" {
 			speech_cant_hear "there's no whisper-cli (whisper.cpp) to hear with: whisper.cpp on Arch (in the AUR), brew install whisper-cpp on a Mac"
 		}
 		str Using = Model.copy
-		if Using is "" {
+		if Using == "" {
 			Using = speech.model
 		}
-		if Using is "" {
+		if Using == "" {
 			speech_cant_hear "there's no Whisper model to hear with: speech.get_model \"base.en\" fetches one"
 		}
 		if !files.exists(Path) {
@@ -388,20 +388,20 @@ object speech.listener {
 		str Wav = speech_temporary("heard")
 		sound.convert_to_wav Path, Wav, 16000, 1
 		str Code = Language.copy
-		if Code is "" {
+		if Code == "" {
 			Code = "auto"
 		}
 		str Said = speech_run(Program + "\x1f-m\x1f" + Using + "\x1f-f\x1f" + Wav + "\x1f-l\x1f" + Code + "\x1f-nt\x1f-np", "", false)
 		files.delete Wav
-		if Said is "\x1e" {
+		if Said == "\x1e" {
 			speech_cant_hear Program + " couldn't hear '" + Path + "' (is the model a whisper.cpp one: ggml-...bin?)"
 		}
 		// (a line for each part it heard, each with a space before it)
 		str Words
 		for Line in Said.split "\n" {
 			str Part = Line.trim
-			if Part is not "" {
-				if Words is not "" {
+			if Part != "" {
+				if Words != "" {
 					Words += " "
 				}
 				Words += Part
@@ -426,7 +426,7 @@ object speech.listener {
 // (a file of its own in the temporary folder: by this program's number)
 static str speech_temporary const str &What {
 	str Folder = "/tmp"
-	if shell.has("TMPDIR") and shell.get("TMPDIR") is not "" {
+	if shell.has("TMPDIR") && shell.get("TMPDIR") != "" {
 		Folder = shell.get "TMPDIR"
 	}
 	return Folder + "/cabby-" + What + "-" + os.pid.text + ".wav"
@@ -452,5 +452,5 @@ str speech.hear_for duration Wait {
 
 // whether there's something to hear with: whisper.cpp, and a model
 bool speech.can_hear {
-	return speech_whisper() is not "" and speech.model is not ""
+	return speech_whisper() != "" && speech.model != ""
 }

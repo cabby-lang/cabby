@@ -299,7 +299,7 @@ object emails.received {
 
 	// saved as a file: false if it couldn't be written
 	bool save_attachment int Which, const str &Path const {
-		return cby_email_save_attachment(Id, Which, Path) is not 0
+		return cby_email_save_attachment(Id, Which, Path) != 0
 	}
 
 	// in a mailbox: its number there (to mark it read, move it, delete
@@ -309,11 +309,11 @@ object emails.received {
 	}
 
 	bool read const {
-		return cby_email_got_number(Id, 4, 0) is not 0
+		return cby_email_got_number(Id, 4, 0) != 0
 	}
 
 	bool flagged const {
-		return cby_email_got_number(Id, 5, 0) is not 0
+		return cby_email_got_number(Id, 5, 0) != 0
 	}
 
 	// its size, in bytes
@@ -355,7 +355,7 @@ object emails.mailbox {
 	inner str Error
 
 	~emails.mailbox {
-		if Id is not 0 {
+		if Id != 0 {
 			cby_imap_close Id
 		}
 	}
@@ -374,9 +374,9 @@ object emails.mailbox {
 	// 143, STARTTLS (plain to begin with, then encrypted)
 	void set_port long Number {
 		Port = Number
-		if Security is not 2 {
+		if Security != 2 {
 			Security = 0
-			if Number is 143 {
+			if Number == 143 {
 				Security = 1
 			}
 		}
@@ -389,29 +389,29 @@ object emails.mailbox {
 
 	// (connected, and the folder chosen, when first needed)
 	inner void ready {
-		if Id is not 0 {
+		if Id != 0 {
 			return
 		}
 		Id = cby_imap_open Host, Port, Security, User, Password
-		if Id is 0 {
+		if Id == 0 {
 			cby_conn_panic
 		}
-		if cby_imap_select(Id, Folder) is 0 {
+		if cby_imap_select(Id, Folder) == 0 {
 			cby_conn_panic
 		}
 	}
 
 	// whether it can connect and log in: false, and error says why, if not
 	bool can_connect {
-		if Id is not 0 {
+		if Id != 0 {
 			return true
 		}
 		Id = cby_imap_open Host, Port, Security, User, Password
-		if Id is 0 {
+		if Id == 0 {
 			Error = emails_conn_given cby_conn_error()
 			return false
 		}
-		if cby_imap_select(Id, Folder) is 0 {
+		if cby_imap_select(Id, Folder) == 0 {
 			Error = emails_conn_given cby_conn_error()
 			return false
 		}
@@ -441,7 +441,7 @@ object emails.mailbox {
 	// isn't there.
 	void open_folder const str &Name {
 		Folder = Name.copy
-		if Id is not 0 and cby_imap_select(Id, Folder) is 0 {
+		if Id != 0 && cby_imap_select(Id, Folder) == 0 {
 			cby_conn_panic
 		}
 	}
@@ -470,13 +470,13 @@ object emails.mailbox {
 			cby_conn_panic
 		}
 		long From = 0
-		if Most > 0 and Count > Most {
+		if Most > 0 && Count > Most {
 			From = Count - Most
 		}
 		long I = From
 		while I < Count {
 			long Found = cby_imap_fetch(Id, cby_imap_found(Id, I))
-			if Found is not 0 {
+			if Found != 0 {
 				emails.received R
 				R.set_up Found
 				Got.add R
@@ -520,7 +520,7 @@ object emails.mailbox {
 	emails.received message long Number {
 		ready
 		long Found = cby_imap_fetch Id, Number
-		if Found is 0 {
+		if Found == 0 {
 			cby_conn_panic
 		}
 		emails.received R
@@ -531,34 +531,34 @@ object emails.mailbox {
 	// marked read, or unread; flagged (starred), or not: true if it was
 	bool mark_read long Number {
 		ready
-		return cby_imap_store(Id, Number, "+FLAGS (\\Seen)") is not 0
+		return cby_imap_store(Id, Number, "+FLAGS (\\Seen)") != 0
 	}
 
 	bool mark_unread long Number {
 		ready
-		return cby_imap_store(Id, Number, "-FLAGS (\\Seen)") is not 0
+		return cby_imap_store(Id, Number, "-FLAGS (\\Seen)") != 0
 	}
 
 	bool flag long Number {
 		ready
-		return cby_imap_store(Id, Number, "+FLAGS (\\Flagged)") is not 0
+		return cby_imap_store(Id, Number, "+FLAGS (\\Flagged)") != 0
 	}
 
 	bool unflag long Number {
 		ready
-		return cby_imap_store(Id, Number, "-FLAGS (\\Flagged)") is not 0
+		return cby_imap_store(Id, Number, "-FLAGS (\\Flagged)") != 0
 	}
 
 	// moved to another folder ("Archive"), and deleted for good: true if
 	// it was
 	bool move long Number, const str &To {
 		ready
-		return cby_imap_move(Id, Number, To) is not 0
+		return cby_imap_move(Id, Number, To) != 0
 	}
 
 	bool delete long Number {
 		ready
-		return cby_imap_delete(Id, Number) is not 0
+		return cby_imap_delete(Id, Number) != 0
 	}
 
 	// a message put into a folder, as it is, without sending it: a copy
@@ -566,19 +566,19 @@ object emails.mailbox {
 	// read; save_unread leaves it unread.
 	bool save const emails.message &Message, const str &Folder {
 		ready
-		return cby_imap_append(Id, Folder, Message.text, 1) is not 0
+		return cby_imap_append(Id, Folder, Message.text, 1) != 0
 	}
 
 	bool save_unread const emails.message &Message, const str &Folder {
 		ready
-		return cby_imap_append(Id, Folder, Message.text, 0) is not 0
+		return cby_imap_append(Id, Folder, Message.text, 0) != 0
 	}
 
 	// the same, for a message as text (a .eml file read, or a received
 	// one's whole)
 	bool save_text const str &Raw, const str &Folder {
 		ready
-		return cby_imap_append(Id, Folder, Raw, 1) is not 0
+		return cby_imap_append(Id, Folder, Raw, 1) != 0
 	}
 }
 

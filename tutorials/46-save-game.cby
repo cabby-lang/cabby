@@ -65,7 +65,7 @@ str describe const bytes &Slot {
 
 void show_players const str &Path {
 	bytes All = files.read_bytes Path
-	if not All.starts_with "CSAV" {
+	if !(All.starts_with "CSAV") {
 		println Path, "isn't a save file"
 		return
 	}

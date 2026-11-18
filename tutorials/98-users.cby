@@ -22,11 +22,11 @@ int main {
 	println "Your groups:", users.groups
 	if users.is_root {
 		println "You're the administrator (root): careful!"
-	} else if users.in_group("sudo") or users.in_group("wheel") or users.in_group("admin") {
+	} else if users.in_group("sudo") || users.in_group("wheel") || users.in_group("admin") {
 		println "You can be the administrator, with sudo"
 	}
 	for Name in users.all {
-		if Name is not users.name {
+		if Name != users.name {
 			println "Also here:", Name, "(" + users.full_name_of(Name) + "), at", users.home_of(Name)
 		}
 	}

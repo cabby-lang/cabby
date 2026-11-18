@@ -61,7 +61,7 @@ static str linux_run const str &Line {
 static list str linux_words const str &Line {
 	list str Words
 	for Word in Line.replace("\t", " ").split " " {
-		if Word is not "" {
+		if Word != "" {
 			Words.add Word.copy
 		}
 	}
@@ -114,13 +114,13 @@ object linux.sensor {
 
 	// the unit: "°C", "RPM", "V", "W", "A"
 	str unit const {
-		if Kind is "temperature" {
+		if Kind == "temperature" {
 			return "°C"
-		} else if Kind is "fan" {
+		} else if Kind == "fan" {
 			return "RPM"
-		} else if Kind is "voltage" {
+		} else if Kind == "voltage" {
 			return "V"
-		} else if Kind is "power" {
+		} else if Kind == "power" {
 			return "W"
 		}
 		return "A"
@@ -142,7 +142,7 @@ static list linux.sensor linux_sensors_of const str &Kind {
 	for I in cby_linux_sensors {
 		linux.sensor S
 		S.fill I
-		if Kind is "" or S.kind is Kind {
+		if Kind == "" || S.kind == Kind {
 			Found.add S
 		}
 	}
@@ -264,7 +264,7 @@ list linux.block_device linux.disks {
 	for I in cby_linux_block_devices {
 		linux.block_device B
 		B.fill I
-		if B.kind is "disk" {
+		if B.kind == "disk" {
 			Found.add B
 		}
 	}
@@ -276,7 +276,7 @@ list linux.block_device linux.partitions_of const str &Disk {
 	for I in cby_linux_block_devices {
 		linux.block_device B
 		B.fill I
-		if B.disk is Disk {
+		if B.disk == Disk {
 			Found.add B
 		}
 	}
@@ -393,7 +393,7 @@ object linux.module {
 
 	list str used_by const {
 		list str Names
-		if Users is not "" {
+		if Users != "" {
 			Names = Users.split ","
 		}
 		return Names
@@ -426,12 +426,12 @@ bool linux.module_loaded const str &Name {
 // loads a module, and what it needs, with modprobe (it needs the
 // administrator): true if it's loaded
 bool linux.load_module const str &Name {
-	return linux_run("modprobe\x1f" + Name) is not "\x1e"
+	return linux_run("modprobe\x1f" + Name) != "\x1e"
 }
 
 // unloads one (and what only it needed): true if it was
 bool linux.unload_module const str &Name {
-	return linux_run("modprobe\x1f-r\x1f" + Name) is not "\x1e"
+	return linux_run("modprobe\x1f-r\x1f" + Name) != "\x1e"
 }
 
 // ---- the kernel's settings (as sysctl has them, in /proc/sys)
@@ -443,14 +443,14 @@ str linux.setting const str &Name {
 }
 
 bool linux.has_setting const str &Name {
-	return cby_linux_has_setting(Name) is not 0
+	return cby_linux_has_setting(Name) != 0
 }
 
 // Changes one, until the computer starts again (it needs the
 // administrator): true if it was changed. (For good: a file in
 // /etc/sysctl.d.)
 bool linux.set_setting const str &Name, const str &Value {
-	return cby_linux_set_setting(Name, Value) is not 0
+	return cby_linux_set_setting(Name, Value) != 0
 }
 
 // ---- systemd's services
@@ -497,7 +497,7 @@ object linux.service {
 
 	// whether it's running now
 	bool running const {
-		return Sub is "running"
+		return Sub == "running"
 	}
 
 	// whether it starts with the computer: "enabled", "disabled",
@@ -544,7 +544,7 @@ object linux.service {
 	}
 
 	inner bool act const str &What {
-		bool Done = linux_run(systemctl(What) + "\x1f" + Name) is not "\x1e"
+		bool Done = linux_run(systemctl(What) + "\x1f" + Name) != "\x1e"
 		refresh
 		return Done
 	}
@@ -560,7 +560,7 @@ object linux.service {
 
 	// whether systemd knows of it ("not-found": it doesn't)
 	bool known const {
-		return Loaded is "loaded"
+		return Loaded == "loaded"
 	}
 }
 
@@ -569,7 +569,7 @@ static lookup str str linux_show const str &Systemctl, const str &Unit {
 	lookup str str Says
 	str Line = Systemctl + "\x1f--property=Id,Description,LoadState,ActiveState,SubState,UnitFileState\x1f" + Unit
 	str Said = linux_run Line
-	if Said is "\x1e" {
+	if Said == "\x1e" {
 		return Says
 	}
 	for Each in Said.split "\n" {
@@ -607,7 +607,7 @@ static list linux.service linux_services_of bool Users {
 	// whether each starts with the computer, from one list
 	lookup str str Enable
 	str Files = linux_run Systemctl + "\x1flist-unit-files\x1f--type=service\x1f--no-legend\x1f--plain\x1f--no-pager"
-	if Files is not "\x1e" {
+	if Files != "\x1e" {
 		for Line in Files.split "\n" {
 			list str Words = linux_words Line
 			if Words.length >= 2 {
@@ -616,7 +616,7 @@ static list linux.service linux_services_of bool Users {
 		}
 	}
 	str Units = linux_run Systemctl + "\x1flist-units\x1f--type=service\x1f--all\x1f--no-legend\x1f--plain\x1f--no-pager"
-	if Units is "\x1e" {
+	if Units == "\x1e" {
 		return Found
 	}
 	for Line in Units.split "\n" {
@@ -626,7 +626,7 @@ static list linux.service linux_services_of bool Users {
 			str Description
 			long I = 4
 			while I < Words.length {
-				if Description is not "" {
+				if Description != "" {
 					Description += " "
 				}
 				Description += Words[I]
@@ -674,5 +674,5 @@ static linux.service linux_service_found const str &Name, bool Users {
 // whether systemd has a service by that name
 bool linux.has_service const str &Name {
 	lookup str str Says = linux_show "systemctl\x1fshow", linux_unit(Name)
-	return linux_said(Says, "LoadState") is "loaded"
+	return linux_said(Says, "LoadState") == "loaded"
 }

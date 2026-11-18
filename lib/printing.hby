@@ -40,9 +40,9 @@ static str printing_run const str &Line, const str &Input, bool Has {
 
 static list str printing_lines const str &Text {
 	list str Lines
-	if Text is not "" and Text is not "\x1e" {
+	if Text != "" && Text != "\x1e" {
 		for Line in Text.split "\n" {
-			if Line.trim is not "" {
+			if Line.trim != "" {
 				Lines.add Line.trim
 			}
 		}
@@ -70,7 +70,7 @@ static list str printing_first_words const str &Text {
 // the printers this computer knows, by name: ["Brother_HL_L2350DW"]
 list str printing.printers {
 	str Said = printing_run "lpstat\x1f-e", "", false
-	if Said is not "\x1e" {
+	if Said != "\x1e" {
 		return printing_lines Said
 	}
 	// (an older CUPS's: "printer Office is idle.  enabled since ...")
@@ -92,7 +92,7 @@ list str printing.printers {
 str printing.default_printer {
 	str Said = printing_run "lpstat\x1f-d", "", false
 	long Colon = Said.find ": "
-	if Said.starts_with("no ") or Colon < 0 {
+	if Said.starts_with("no ") || Colon < 0 {
 		return ""
 	}
 	str Name = Said[Colon + 2 to]
@@ -163,19 +163,19 @@ object printing.settings {
 	// (lp's arguments, each after a "\x1f")
 	str arguments const {
 		str Line
-		if Printer is not "" {
+		if Printer != "" {
 			Line += "\x1f-d\x1f" + Printer
 		}
 		if Copies > 1 {
 			Line += "\x1f-n\x1f" + Copies.text
 		}
-		if Title is not "" {
+		if Title != "" {
 			Line += "\x1f-t\x1f" + Title
 		}
-		if Sides is not "" {
+		if Sides != "" {
 			Line += "\x1f-o\x1fsides=" + Sides
 		}
-		if Pages is not "" {
+		if Pages != "" {
 			Line += "\x1f-o\x1fpage-ranges=" + Pages
 		}
 		if Landscape {
@@ -235,7 +235,7 @@ list str printing.jobs {
 // true once a job's printed (or canceled): it's no longer waiting
 bool printing.done const str &Job {
 	for Waiting in printing.jobs {
-		if Waiting is Job {
+		if Waiting == Job {
 			return false
 		}
 	}
@@ -244,10 +244,10 @@ bool printing.done const str &Job {
 
 // stops a job: true if it was stopped
 bool printing.cancel const str &Job {
-	return printing_run("cancel\x1f" + Job, "", false) is not "\x1e"
+	return printing_run("cancel\x1f" + Job, "", false) != "\x1e"
 }
 
 // stops every job of this person's
 bool printing.cancel_all {
-	return printing_run("cancel\x1f-a", "", false) is not "\x1e"
+	return printing_run("cancel\x1f-a", "", false) != "\x1e"
 }

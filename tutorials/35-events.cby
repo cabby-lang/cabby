@@ -70,7 +70,7 @@ object alarm {
 
 	inner void ring {
 		Rings++
-		if Rings is 3 {
+		if Rings == 3 {
 			println "  alarm rang 3 times: everyone's up"
 			events.stop              // ends events.run now
 		}

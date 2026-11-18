@@ -39,7 +39,7 @@ object prime_counter : threads.worker {
 			return false
 		}
 		for int D = 2; D * D <= N; D++ {
-			if N % D is 0 {
+			if N % D == 0 {
 				return false
 			}
 		}
@@ -70,8 +70,8 @@ object chain_finder : threads.worker {
 	int steps_from int Start const {
 		long N = Start
 		int Count = 0
-		while N is not 1 {
-			if N % 2 is 0 {
+		while N != 1 {
+			if N % 2 == 0 {
 				N /= 2
 			} else {
 				N = 3 * N + 1

@@ -332,7 +332,7 @@ object viewer : tui.window {
 
 	void pressed {
 		println "pressed", "[" + key + "]"
-		if key is "Q" {
+		if key == "Q" {
 			close
 		}
 	}

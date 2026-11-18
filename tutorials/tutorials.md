@@ -1,6 +1,6 @@
 # The Cabby Manual
 
-*For Cabby 0.35.1 (2026-11-19).*
+*For Cabby 0.36.0 (2026-11-19).*
 
 A book for learning Cabby one idea at a time, and a reference to come back
 to afterwards.
@@ -60,7 +60,7 @@ int main {
 
 **[Part II: Control flow](#part-ii-control-flow)**
 
-6. [If and else](#chapter-6-if-and-else): conditions, `&&` `||` `!`, and in words: `is` `and` `or` `not`
+6. [If and else](#chapter-6-if-and-else): conditions, `==` `!=` `&&` `||` `!`, short-circuiting
 7. [While, until and do](#chapter-7-while-until-and-do): loops that test a condition
 8. [For loops, break and continue](#chapter-8-for-loops-break-and-continue): `for i in 1 to 10`, the three-part `for`
 9. [Switch](#chapter-9-switch): `case`, `default`, fall-through
@@ -1069,49 +1069,32 @@ println "no crash"
 no crash
 ```
 
-#### In words
+#### `!` and a comparison
 
-Each of these has a word too, which often reads more like what you mean:
-
-| Symbol | Word |
-|---|---|
-| `a == b` | `a is b` |
-| `a != b` | `a is not b` |
-| `a && b` | `a and b` |
-| `a \|\| b` | `a or b` |
-| `!a` | `not a` |
+`!` turns round only what comes straight after it. To turn round a whole
+comparison, put it in parentheses, or write the opposite comparison
+instead, which usually reads better:
 
 <!-- main -->
 ```cabby
-str Name = "Ada"
 int Tries = 2
 bool Locked = false
-if Name is "Ada" and not Locked {
-	println "hello, Ada"
+if !Locked && !(Tries == 0) {
+	println "tried before"
 }
-if Tries is not 3 or Locked {
-	println "try again"
-}
-if not Tries is 0 {               // not (Tries is 0)
+if !Locked && Tries != 0 {    // the same, and easier to read
 	println "tried before"
 }
 ```
 
 ```text
-hello, Ada
-try again
+tried before
 tried before
 ```
 
-There are no words for `<`, `>`, `<=` and `>=`: they're the math everyone
-already knows, so they stay as they are (`if Age >= 18 and not Banned`).
-The words are for programmers' symbols, which say less to the eye.
-
-They work exactly like the symbols, and the two can be mixed, but pick one
-style for a program and keep to it. The one difference is `not`: it takes
-the whole comparison after it, as you'd read it aloud, so `not Tries is 0`
-means `not (Tries is 0)`. (`!Tries == 0` would be `(!Tries) == 0`.) `and`
-and `or` end what `not` takes.
+`!Tries == 0` would be `(!Tries) == 0`, which isn't what it looks like.
+If you know Python, note that there are no words for these: Cabby
+writes `==`, `!=`, `&&`, `||` and `!`, as C and most languages do.
 
 #### Numbers as conditions
 
@@ -1142,8 +1125,8 @@ bit 2 is set
 
 * `if cond { } else if cond { } else { }`: no parentheses around the
   condition, braces always.
-* `&&` and `||` short-circuit; `!` negates.
-* In words: `is`, `is not`, `and`, `or`, `not`.
+* `&&` and `||` short-circuit; `!` negates what's straight after it, so a
+  comparison it turns round goes in parentheses: `!(A == B)`, or `A != B`.
 * Zero is false, everything else is true.
 
 #### Try this
@@ -1202,7 +1185,7 @@ println Halvings, "halvings"
 #### until
 
 `until cond { ... }` is `while` turned round: it repeats *until* the
-condition is true. `until Done` means `while not Done`; use whichever says
+condition is true. `until Done` means `while !Done`; use whichever says
 what you mean:
 
 <!-- main -->
@@ -1255,7 +1238,7 @@ println
 int Guess = 0
 do {
 	Guess += 7
-} until Guess % 5 is 0
+} until Guess % 5 == 0
 println Guess
 ```
 
@@ -2248,7 +2231,7 @@ next read (the trap C's `getchar` sets). An empty line gives `'\n'`.
 int main {
 	print "Carry on? (y/n) "
 	char Answer = read_char
-	if Answer is 'y' or Answer is 'Y' {
+	if Answer == 'y' || Answer == 'Y' {
 		println "Carrying on"
 	}
 }
@@ -2272,10 +2255,10 @@ int main {
 	println "Arrow keys to move, q to stop"
 	int X = 0
 	str Key = read_key
-	until Key is "q" or end_of_input {
-		if Key is "left" {
+	until Key == "q" || end_of_input {
+		if Key == "left" {
 			X--
-		} else if Key is "right" {
+		} else if Key == "right" {
 			X++
 		}
 		println "at", X
@@ -4936,7 +4919,7 @@ object countdown {
 
 	void tick {
 		Left--
-		if Left is 0 {
+		if Left == 0 {
 			Done.call
 		}
 	}
@@ -5280,8 +5263,8 @@ int main {
 * **`addresses.of X`** gives where `X` is; **`.value`** reads or changes
   what's there; **`A[i]`** is what's `i` values along.
 * **`+` and `-`** step by whole values, not bytes. `B - A` says how many
-  values apart two addresses are, and addresses compare with `==`, `<`,
-  `is` and the rest.
+  values apart two addresses are, and addresses compare with `==`, `<`
+  and the rest.
 * **`addresses.none`** is no address (C's `NULL`); **`.is_none`** checks
   for it. **`addresses.at 0x0200`** is an address given as a number, for
   devices at fixed places.
@@ -5553,7 +5536,7 @@ int main {
 		N.value.Next = Head      // the new node goes in front
 		Head = N
 	}
-	for address node P = Head; not P.is_none; P = P.value.Next {
+	for address node P = Head; !P.is_none; P = P.value.Next {
 		println P.value.Value
 	}
 	until Head.is_none {        // free each node, keeping the next one's address first
@@ -7134,7 +7117,7 @@ int main {
 	date Christmas = dates.make Today.year, 12, 25
 	println Christmas - Today, "days until Christmas"
 	println Today + 14, Today.add_months(3)
-	println Today.weekday is TUESDAY, Today.month
+	println Today.weekday == TUESDAY, Today.month
 }
 ```
 
@@ -7153,7 +7136,7 @@ true November
 * **`.add_months`** and **`.add_years`** go by the calendar: 31 January
   and a month is the last day of February.
 * **`.weekday`** and **`.month`** are enums (`TUESDAY`, `NOVEMBER`), named in capitals as every enum value is, so
-  they compare with `is`, and show as their names.
+  they compare with `==`, and show as their names.
 
 #### Patterns: written as in a spreadsheet
 
@@ -7238,7 +7221,7 @@ open for 8 hours 30 minutes
   `time.sleep`, `time.seconds N` and the rest.
 * `use dates`: `date`, `time_of_day`, `date_time`, `weekday`, `month`;
   `dates.today`, `dates.make`, `dates.time`, `dates.now`.
-* A date steps by days; `.add_months`; `.weekday is SATURDAY`.
+* A date steps by days; `.add_months`; `.weekday == SATURDAY`.
 * `X.format "d mmmm yyyy"`, `dates.read Text, Pattern`: spreadsheet
   patterns, with `m` meaning minutes after an hour.
 
@@ -7801,7 +7784,7 @@ int main {
 	R.set_header "Accept", "application/json"
 	R.set_json json.read("{\"name\": \"tea\"}")
 	R.set_timeout 10
-	if R.send is 0 {
+	if R.send == 0 {
 		println "no answer:", R.error
 		return 1
 	}
@@ -7831,7 +7814,7 @@ object fetcher {
 	void get const str &Url, const str &Path {
 		R = networks.request_to Url
 		R.on_progress went
-		if R.save_to(Path) is not 200 {
+		if R.save_to(Path) != 200 {
 			println "\nit didn't work:", R.status, R.error
 		}
 	}
@@ -7882,7 +7865,7 @@ object shouter {
 
 	void answered {
 		println "back came", C.line
-		if C.line is "GOODBYE" {
+		if C.line == "GOODBYE" {
 			S.close_connection S.connections[0]
 			S.close
 			C.close
@@ -11500,7 +11483,7 @@ Neither goes through its fields, which are its own while it works:
 
 ```cabby
 // in work: every thousand numbers
-if N % 1000 is 0 {
+if N % 1000 == 0 {
 	if stopping {
 		Canceled = true
 		return
@@ -11586,7 +11569,7 @@ a line, and `picture` takes it:
 
 ```cabby
 void strip_done {
-	if not Painter.has_picture {
+	if !Painter.has_picture {
 		return
 	}
 	images.picture Strip = Painter.picture
@@ -14297,7 +14280,7 @@ object shouter {
 	// the connection's, for each line that comes back
 	void answered {
 		println "back came", C.line
-		if C.line is "GOODBYE" {
+		if C.line == "GOODBYE" {
 			S.close
 			C.close
 		}
@@ -14568,9 +14551,9 @@ object pictures {
 	}
 
 	void answer {
-		if Web.path is "/search" and !Web.has_query_value("for") {
+		if Web.path == "/search" && !Web.has_query_value("for") {
 			Web.send_status 400, "Search for what?"
-		} else if Web.method is "POST" and Web.has_form_value("name") {
+		} else if Web.method == "POST" && Web.has_form_value("name") {
 			Web.send_text "thanks, " + Web.form_value("name")
 		} else if !Web.send_file("public" + Web.path) {
 			Web.send_not_found
@@ -14630,7 +14613,7 @@ object scoreboard {
 	}
 
 	void answer {
-		if Web.path is "/live" and Web.wants_socket {
+		if Web.path == "/live" && Web.wants_socket {
 			long Who = Web.accept_socket
 			Web.send_message Who, "welcome: " + Home.text
 		} else {
@@ -14639,7 +14622,7 @@ object scoreboard {
 	}
 
 	void heard {
-		if Web.message is "goal" {
+		if Web.message == "goal" {
 			Home++
 			Web.send_message_to_all "goal! " + Home.text
 		} else {
@@ -15102,7 +15085,7 @@ object watching {
 	}
 
 	void changed {
-		if Notes.change is "renamed" {
+		if Notes.change == "renamed" {
 			println Notes.old_path, "is now", Notes.path
 		} else {
 			println Notes.path, "was", Notes.change
@@ -15213,7 +15196,7 @@ int main {
 	long Count = 0
 	while !os.got_signal("user2") {
 		Count++
-		if Count is 1000 {
+		if Count == 1000 {
 			os.send_signal os.pid, "user2"     // (another program would send it)
 		}
 	}
@@ -15436,11 +15419,11 @@ use linux
 int main {
 	linux.service Ssh = linux.service_named "ssh"
 	println Ssh.description + ":", Ssh.active, Ssh.enabled
-	if !Ssh.running and !Ssh.start {
+	if !Ssh.running && !Ssh.start {
 		println "starting it needs the administrator: sudo"
 	}
 	for S in linux.services {
-		if S.active is "failed" {
+		if S.active == "failed" {
 			println "failed:", S.name
 		}
 	}
@@ -15482,7 +15465,7 @@ use linux
 
 int main {
 	for T in linux.temperatures {
-		if T.critical > 0 and T.value > T.critical - 10 {
+		if T.critical > 0 && T.value > T.critical - 10 {
 			println "nearly too hot:", T.label, T.value
 		}
 	}
@@ -15779,7 +15762,7 @@ keyboard's media keys do:
 use media
 
 int main {
-	if media.player is "" {
+	if media.player == "" {
 		println "nothing's playing"
 		return 0
 	}
@@ -16004,7 +15987,7 @@ int main {
 		println "not found: is it in pairing mode?"
 		return 1
 	}
-	if !Phones.paired and !Phones.pair {
+	if !Phones.paired && !Phones.pair {
 		println "it didn't pair:", bluetooth.error
 		return 1
 	}
@@ -16049,7 +16032,7 @@ use bluetooth
 
 int main {
 	bluetooth.device Keys = bluetooth.device_named "Magic Keyboard"
-	if Keys.found and Keys.paired {
+	if Keys.found && Keys.paired {
 		Keys.set_trusted true
 	}
 	bluetooth.turn_off
@@ -16374,7 +16357,7 @@ use screens
 
 int main {
 	for S in screens.all {                   // (each S can be read, not changed)
-		if !S.main and S.on {
+		if !S.main && S.on {
 			screens.screen Other = screens.named S.name
 			Other.turn_off
 		}
@@ -16536,7 +16519,8 @@ Session saved to adding.cby
   gives Cabby code: keywords yellow, types green, strings and numbers
   magenta, built-ins like `println` bold cyan, members like `.length` and
   escapes like `\t` pink, comments blue, `use` lines bright blue, and
-  `cement` or a stray `;` in red. The line of code shown under an error is
+  `cement`, a stray `;`, or `is`, `and`, `or` and `not` (Cabby writes
+  `==`, `&&`, `||` and `!`) in red. The line of code shown under an error is
   colored the same way, in every mode. They're your terminal's own 16
   colors, so they follow its theme. Set `NO_COLOR=1` to turn color off,
   or change any color with `CABBY_COLORS`, written like `LS_COLORS`:
@@ -16555,7 +16539,7 @@ Every keyword is reserved: none can name a variable or function. `typedef` is re
 |---|---|---|
 | `aka` | another name for a type: `double aka celsius` | [20](#chapter-20-aka-another-name-for-a-type) |
 | `kind` | a number of its own: `long kind meters` (only a keyword there) | [20](#chapter-20-aka-another-name-for-a-type) |
-| `and` `or` `not` | `&&`, `\|\|` and `!` in words | [6](#chapter-6-if-and-else) |
+| `and` `or` `not` `is` | reserved: Cabby writes `&&`, `\|\|`, `!` and `==` | [6](#chapter-6-if-and-else) |
 | `auto` | reserved: Cabby asks for the type to be written | [2](#chapter-2-variables-and-the-basic-types) |
 | `bool` `true` `false` | the boolean type and its values | [2](#chapter-2-variables-and-the-basic-types) |
 | `break` | leave a loop or a `switch` | [8](#chapter-8-for-loops-break-and-continue), [9](#chapter-9-switch) |
@@ -16575,7 +16559,6 @@ Every keyword is reserved: none can name a variable or function. `typedef` is re
 | `if` | choose a path | [6](#chapter-6-if-and-else) |
 | `in` | `for i in ...`, `for X in L`, `for K, V in L` | [8](#chapter-8-for-loops-break-and-continue), [15](#chapter-15-lists), [16](#chapter-16-lookups) |
 | `inner` | a field or method only the object (and its children) can use | [24](#chapter-24-inheritance) |
-| `is` | `==` in words; `is not` is `!=` | [6](#chapter-6-if-and-else) |
 | `list` | a growable list: `list int Scores` | [15](#chapter-15-lists) |
 | `lookup` | values found by key: `lookup str int Ages` | [16](#chapter-16-lookups) |
 | `object` | a class: fields, methods, destructor, parents | [22](#chapter-22-objects-and-methods) |
@@ -16674,13 +16657,12 @@ From tightest to loosest binding:
 | `+` `-` | add (or join strings), subtract |
 | `<<` `>>` | shift |
 | `<` `<=` `>` `>=` | compare |
-| `==` `!=` `is` `is not` | equal, not equal |
+| `==` `!=` | equal, not equal |
 | `&` | bitwise and |
 | `^` | bitwise exclusive or |
 | `\|` | bitwise or |
-| `not a` | not (it takes the whole comparison after it: `not a is b`) |
-| `&&` `and` | logical and (short-circuit) |
-| `\|\|` `or` | logical or (short-circuit) |
+| `&&` | logical and (short-circuit) |
+| `\|\|` | logical or (short-circuit) |
 
 A call (`f a, b`) takes everything after it, to the end of the line or the
 closing parenthesis or square bracket around it ([Chapter 10](#chapter-10-functions)).
@@ -16902,9 +16884,7 @@ their elements singular: `for Score in Scores`.
   whole condition or loop (`if Counts.contains Word {`); parentheses around
   the arguments when it is part of something bigger (`add(1, 2) + 3`);
   never empty parentheses (`Clicks.value`, `rand`).
-* Conditions in words (`is`, `is not`, `and`, `or`, `not`) are Cabby's
-  own style; the symbols are fine too, but keep to one or the other in a
-  file. `until Done` rather than `while !Done`.
+* `until Done` rather than `while !Done`.
 * Go through a list with `for X in L`, and count with `for i in`; leave
   early rather than nesting deeply; `goto`
   only out of nested loops; a deliberate fall-through says so.

@@ -18,7 +18,7 @@ extern long cby_power_read long what
 
 // true if the computer has a battery (a laptop)
 bool power.has_battery {
-	return cby_power_read(0) is not 0
+	return cby_power_read(0) != 0
 }
 
 // how full it is, from 0 to 100; -1 with no battery
@@ -28,15 +28,15 @@ int power.battery_percent {
 
 // true while it's being charged
 bool power.charging {
-	return cby_power_read(2) is not 0
+	return cby_power_read(2) != 0
 }
 
 // true on mains power (charging, full, or with no battery at all)
 bool power.plugged_in {
-	return cby_power_read(3) is not 0
+	return cby_power_read(3) != 0
 }
 
 // true when it's as full as it gets
 bool power.battery_full {
-	return cby_power_read(4) is not 0
+	return cby_power_read(4) != 0
 }

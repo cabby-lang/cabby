@@ -81,7 +81,7 @@ object imap {
 	void said {
 		long Who = S.from
 		str Line = S.line
-		if Pending != 0 and Who == PendingWho {
+		if Pending != 0 && Who == PendingWho {
 			appending Line
 			return
 		}
@@ -105,7 +105,7 @@ object imap {
 			say Who, Tag + " OK LIST completed"
 		} else if Upper.starts_with "SELECT " {
 			str Name = Rest[8 to Rest.length - 2]
-			if Name == "INBOX" or Name == "Archive" {
+			if Name == "INBOX" || Name == "Archive" {
 				Selected[Who] = Name.copy
 				say Who, "* " + count(Name, false).text + " EXISTS"
 				say Who, Tag + " OK [READ-WRITE] SELECT completed"
@@ -192,7 +192,7 @@ object imap {
 	long count const str &Folder, bool UnreadOnly const {
 		long N = 0
 		for M in Box {
-			if M.Folder == Folder and (!UnreadOnly or !M.Seen) {
+			if M.Folder == Folder && (!UnreadOnly || !M.Seen) {
 				N++
 			}
 		}
@@ -206,7 +206,7 @@ object imap {
 		}
 		str Found = "* SEARCH"
 		for M in Box {
-			if M.Folder == Selected[Who] and matches(M, Criteria) {
+			if M.Folder == Selected[Who] && matches(M, Criteria) {
 				Found += " " + M.Uid.text
 			}
 		}
@@ -244,7 +244,7 @@ object imap {
 						Flags = "\\Seen"
 					}
 					if M.Flagged {
-						if Flags is not "" {
+						if Flags != "" {
 							Flags += " "
 						}
 						Flags += "\\Flagged"
@@ -255,7 +255,7 @@ object imap {
 				}
 			}
 		}
-		if Answer is not "" {
+		if Answer != "" {
 			S.send_to Who, Answer
 		}
 		say Who, Tag + " OK FETCH completed"

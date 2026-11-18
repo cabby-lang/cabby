@@ -49,12 +49,12 @@ int main {
 	println "Vegetarian:", Menu.find("li em").parent.text
 	println "Map:", Menu.find("a").attribute "href"
 	element Breakfast = Menu.find "#breakfast"
-	println "Breakfast menu?", not Breakfast.is_missing
+	println "Breakfast menu?", !Breakfast.is_missing
 
 	// ---- making a page of our own: what's still available
 	element Available = html.element "ul"
 	for Item in Menu.find_all "li.item" {
-		if not Item.attribute("class").contains("sold-out") {
+		if !Item.attribute("class").contains("sold-out") {
 			element Line = html.element "li"
 			Line.add_text Item.text + " - $" + Item.attribute("data-price")
 			Available.add Line
