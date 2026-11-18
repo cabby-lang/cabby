@@ -43,7 +43,9 @@ Three ways to run Cabby:
 The interactive session is the quickest way to experiment while you read.
 Declare a variable, call a function, see the answer straight away. Type
 `exit` when you're done; Cabby offers to save what you typed as a `.cby`
-file. (`sudo make uninstall` removes everything `make install` put in place.)
+file. One difference from a program: each prompt starts on a new line, so
+output that a `print` leaves unfinished carries on below it. Type the lines
+between `{` and `}` to run them as one input and see them as a program would. (`sudo make uninstall` removes everything `make install` put in place.)
 
 ## Conventions in these files
 

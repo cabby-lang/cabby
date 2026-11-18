@@ -26,7 +26,12 @@ program, then try the exercises at the end.
   that output, and Cabby's test suite checks them all again (`make test`),
   so what you read is what you'll get. The quickest way to try one is the
   interactive session ([Appendix B](#appendix-b-the-interactive-session)):
-  type `cabby` and paste the lines in.
+  type `cabby` and paste the lines in. One thing looks different there:
+  the session starts a new line before each prompt, so when a `print`
+  leaves a line unfinished for the next input to carry on, the output
+  comes out over more lines than shown. To see it exactly as shown, type
+  the lines between `{` and `}`, which the session runs as one input, or
+  put them inside `int main { ... }` in a file and run that.
 * **Read the error messages.** Many exercises go wrong on purpose. Cabby's
   messages say what is wrong, where, and usually how to fix it; learning to
   read them is half of learning the language.
@@ -283,6 +288,13 @@ one two three
 no newline yet...
 Numbers: 1 2.5 c true
 ```
+
+Typed into the interactive session a line at a time, `one`, ` two` and
+` three` come out on three lines instead: each line runs on its own, and
+the session starts a new line before its next prompt. Typed between `{`
+and `}`, the lines run as one input and print as shown. So do they when
+run as a file (`cabby print.cby`) or compiled (`cabby -c print.cby` and
+`./print`), with the lines inside `int main { ... }`.
 
 Notice there are no parentheses around the arguments. A call's arguments
 are simply everything after its name, to the end of the line. Parentheses are only
@@ -16206,6 +16218,10 @@ Session saved to adding.cby
   values for the whole session. Functions can't see them; pass them in.
 * **An expression on its own is printed**, as if you'd typed `println`
   before it: `x * 10` shows `50`.
+* **Each prompt starts on a new line.** So `print "one"` and then
+  `print " two"`, typed as two inputs, show on two lines, where a program
+  would show `one two`. Lines typed between `{` and `}` run as one input,
+  and their output is as a program's.
 * **Everything is checked together.** After each input the whole session is
   checked again as one program, so a string you moved three inputs ago is
   still moved. An input that fails to check is reported and forgotten.

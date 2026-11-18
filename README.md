@@ -1178,6 +1178,11 @@ or statements. Statements become the body of `main`, so a variable you
 declare at the prompt is a local of `main`: it keeps its value until the
 session ends, and functions cannot see it (pass it to them instead).
 
+**Output.** Each prompt starts on a new line, so `print "one"` and then
+`print " two"`, typed as two inputs, show on two lines where a program would
+show `one two`. Lines typed between `{` and `}` run as one input, and their
+output is as a program's.
+
 **Checking.** After every input the whole session is checked again as one
 program, so the usual rules apply across inputs: a string you moved three
 inputs ago is still moved. An input that fails to check is reported and
