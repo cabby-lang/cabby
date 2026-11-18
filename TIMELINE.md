@@ -76,6 +76,7 @@ the patch number with fixes alone.
 | 0.33.0 | 18 November | a read-through: changing files in place after bytes, every chapter with "In short" and "Try this", links and appendices put right |
 | 0.33.1 | 19 November | the interactive session: a `/*` comment carries on until its `*/`, and why `print` looks different there |
 | 0.33.2 | 19 November | chapter 4 shows how to check that two floating-point numbers are close, with `abs` |
+| 0.33.3 | 19 November | in the interactive session, a block comment's lines start ` * `, as in Vim |
 
 ---
 
@@ -1310,6 +1311,12 @@ the patch number with fixes alone.
 - Chapter 4 said to check that floating-point results are close rather
   than equal, but not how: it shows `abs(A - B) < limit` now, for a
   `double` and a `float`, and how big the limit should be for each.
+
+*Version 0.33.3:*
+
+- In the interactive session, the lines of a `/*` comment that begins
+  its line start ` * `, so the stars line up as they do in Vim, and a `/`
+  typed straight after that closes the comment (` */`).
 
 ## Along the way (dates not recorded)
 

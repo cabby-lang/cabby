@@ -62,6 +62,11 @@ s = screen(['else {', 'println "tiny"', '}'])
 check('last_else_runs', s[-2:] == ['medium', '>>>'], s)
 s = screen(['if x > 5 {', 'println "big"', '}', ''])
 check('blank_line_ends_if', s[-1] == '>>>', s)
+# a block comment's lines start " * ", as in Vim, and a slash then closes it
+s = screen(['/* A block comment,', 'over two lines.', '/'])
+check('comment_leader', s[-3:] == ['...  * over two lines.', '...  */', '>>>'], s)
+s = screen(['int y = 1 /* after code', 'no leader */', 'y'])
+check('no_leader_after_code', s[-4:] == ['... no leader */', '>>> y', '1', '>>>'], s)
 
 def keys(k):
     """Presses keys without Enter; gives back what the screen shows, then clears the line."""

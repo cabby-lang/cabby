@@ -1,6 +1,6 @@
 # The Cabby Manual
 
-*For Cabby 0.33.2 (2026-11-19).*
+*For Cabby 0.33.3 (2026-11-19).*
 
 A book for learning Cabby one idea at a time, and a reference to come back
 to afterwards.
@@ -16252,7 +16252,9 @@ Session saved to adding.cby
   still moved. An input that fails to check is reported and forgotten.
 * **Several lines.** While a `{`, `(`, `[` or `/*` comment is open, or
   after a line like `if x > 0` that needs its `{`, the prompt becomes `...`
-  and the next line is indented for you. Typing `}` removes a tab. After an `if` block, press
+  and the next line is indented for you. Typing `}` removes a tab. In a
+  `/*` comment that begins its line, the next line starts ` * `, as in Vim,
+  and typing `/` straight after it closes the comment. After an `if` block, press
   Enter on an empty line to run it (or type the next statement), since an
   `else` might follow; after a final `else` block it runs straight away.
 * **Redefining a function** replaces it, if every earlier input that calls

@@ -1369,6 +1369,29 @@ static char *auto_indent(const char *text)
 	return s;
 }
 
+/* Inside a block comment that began a line, the next line starts as Vim
+ * starts it: the comment's tabs, then " * ". NULL when the comment began
+ * after code on its line (`x = 4`, then a comment), or no comment is open. */
+static char *comment_leader(const char *text)
+{
+	if (!hl_comment_open_at(text, text + strlen(text)))
+		return NULL;
+	const char *last = text, *p = text;
+	for (; *p; p++)
+		if (*p == '\n' && !is_blank(p + 1))
+			last = p + 1;
+	int n = leading_tabs(last);
+	const char *b = last + n;
+	while (*b == ' ')
+		b++;
+	if (!(b[0] == '/' && b[1] == '*') && b[0] != '*')
+		return NULL;
+	char *s = malloc((size_t)n + 4);
+	memset(s, '\t', (size_t)n);
+	memcpy(s + n, " * ", 4);
+	return s;
+}
+
 static void append_line(char **text, const char *line)
 {
 	char *t = *text ? concat(*text, "\n", line, "") : xstrdup(line);
@@ -1640,7 +1663,9 @@ static char *read_input(void)
 			Completeness c = completeness(text);
 			if (c == IN_COMPLETE)
 				return text;
-			char *indent = c == IN_IF ? xstrdup("") : auto_indent(text);
+			char *indent = c == IN_IF ? xstrdup("") : comment_leader(text);
+			if (!indent)
+				indent = auto_indent(text);
 			if (c == IN_HEADER) {
 				/* `{` goes at the header's own indentation */
 				free(indent);
