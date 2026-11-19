@@ -130,9 +130,8 @@ static json keyboard_sway {
 // them (evdev.lst) says which name that is ("us")
 static str keyboard_name_of const str &Description {
 	str Rules = "/usr/share/X11/xkb/rules/evdev.lst"
-	str Instead = shell.get "CABBY_XKB_RULES"     // (the tests' own list)
-	if Instead != "" {
-		Rules = Instead
+	if shell.has "CABBY_XKB_RULES" {             // (the tests' own list)
+		Rules = shell.get "CABBY_XKB_RULES"
 	}
 	if !files.exists(Rules) {
 		return Description.copy

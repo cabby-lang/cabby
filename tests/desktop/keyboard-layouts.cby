@@ -1,0 +1,7 @@
+use keyboard
+
+// the layouts, without the tests' own list of them (CABBY_XKB_RULES): the
+// system's is read, or, without one, Sway's descriptions are kept
+int main {
+	println "layouts:", keyboard.layouts.length
+}

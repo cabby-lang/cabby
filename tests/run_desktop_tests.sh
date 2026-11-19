@@ -384,6 +384,8 @@ for lib in screens mouse keyboard; do
 	settings SWAYSOCK=/run/sway.sock swaymsg $lib sway
 	settings WAYLAND_DISPLAY=wayland-1 none $lib none
 done
+cp "$DIR/computer.json" "$STATE/computer.json"
+check "keyboard layouts, on sway, without the tests' list" "-u CABBY_XKB_RULES ${SETTINGS/CABBY_XKB_RULES=$DIR\/xkb\/evdev.lst/} SWAYSOCK=/run/sway.sock CABBY_HAVE=swaymsg" keyboard-layouts "layouts: 2"
 settings DISPLAY=:0 xrandr screens x11
 settings DISPLAY=:0 xinput mouse x11
 settings DISPLAY=:0 xset,setxkbmap keyboard x11

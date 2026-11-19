@@ -81,6 +81,7 @@ the patch number with fixes alone.
 | 0.35.0 | 19 November | `use screens`, `use mouse` and `use keyboard`: the monitors, the pointer and cursor, and the layouts, each desktop's way; chapter 107 |
 | 0.35.1 | 19 November | the interactive session: a comment after `{` no longer stops the next line's indent, and indentation messages count only the tabs typed |
 | 0.36.0 | 19 November | conditions in symbols only: `is`, `is not`, `and`, `or` and `not` are taken out, for `==`, `!=`, `&&`, `\|\|` and `!` |
+| 0.36.1 | 19 November | `keyboard.layouts` on Sway stopped when the tests' own list of layouts wasn't named |
 
 ---
 
@@ -1405,6 +1406,14 @@ the patch number with fixes alone.
     guide's rule for words became one for writing the opposite
     comparison (`Tries != 0`, not `!(Tries == 0)`).
   - `for X in L` stays: `in` isn't another way of writing an operator.
+
+*Version 0.36.1:*
+
+- On a computer running Sway, `keyboard.layouts` (and tutorial 107)
+  stopped with "the environment variable 'CABBY_XKB_RULES' isn't set":
+  the tests name their own list of layouts with it, and asking for it
+  with `shell.get` when it isn't there is a panic. It asks `shell.has`
+  first, and the tests check the layouts without it too.
 
 ## Along the way (dates not recorded)
 
