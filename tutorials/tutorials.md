@@ -1,6 +1,6 @@
 # The Cabby Manual
 
-*For Cabby 0.36.0 (2026-11-19).*
+*For Cabby 0.36.1 (2026-11-19).*
 
 A book for learning Cabby one idea at a time, and a reference to come back
 to afterwards.
