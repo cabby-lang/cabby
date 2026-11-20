@@ -1,6 +1,6 @@
 # The Cabby Manual
 
-*For Cabby 0.43.2 (2026-11-21).*
+*For Cabby 0.43.3 (2026-11-21).*
 
 A book for learning Cabby one idea at a time, and a reference to come back
 to afterwards.
@@ -5533,8 +5533,9 @@ When **compiled**, nothing is checked, as in C. So try such a program with
 with `cabby -c --checked prog.cby`: the program is built with clang's
 AddressSanitizer, which stops it at reading or writing past the end, at
 memory used after it's freed, and (on Linux) at memory never freed, with
-a report naming the function it happened in. It runs about half as fast,
-so it's for testing, not for the program you give people.
+a report naming the function it happened in. It runs about half as fast
+(and is built with `-O1` at most, so the optimizer keeps every read for it
+to check), so it's for testing, not for the program you give people.
 
 An address is also only good while its value is there. A local variable
 is gone when its function returns, and its block ends; a list's items move
@@ -16908,7 +16909,7 @@ Run `cabby` with no file to type Cabby a piece at a time:
 
 ```text
 $ cabby
-Cabby 0.43.2 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
+Cabby 0.43.3 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
 Cabby comes with ABSOLUTELY NO WARRANTY, under the MIT License; "cabby.license" for details.
 >>> int add int a, int b {
 ... 	return a + b

@@ -3104,13 +3104,19 @@ static void begin_function(CG *G)
 
 static bool codegen_checked;   /* --checked */
 
+/* --checked (or CABBY_SANITIZE=1) marks every function for AddressSanitizer:
+ * main too, or what's inlined into it goes unchecked */
+static const char *checked_attrs(void)
+{
+	const char *san = getenv("CABBY_SANITIZE");
+	return codegen_checked || (san && *san == '1') ? " sanitize_address" : "";
+}
+
 static void end_function(CG *G, const char *header)
 {
 	fclose(G->entry);
 	fclose(G->body);
-	/* --checked (or CABBY_SANITIZE=1) marks functions for AddressSanitizer */
-	const char *san = getenv("CABBY_SANITIZE");
-	const char *attrs = codegen_checked || (san && *san == '1') ? " sanitize_address" : "";
+	const char *attrs = checked_attrs();
 	out(G->funcs, "%s%s {\nentry:\n%s\tbr label %%start\nstart:\n%s}\n\n", header, attrs, G->entry_buf, G->body_buf);
 	free(G->entry_buf);
 	free(G->body_buf);
@@ -3642,7 +3648,7 @@ static void gen_main_wrapper(CG *G)
 	FnDecl *m = G->S->main_fn;
 	bool args = m->params.len == 2;
 	bool ret_int = m->ret_type->kind != TY_VOID;
-	out(G->funcs, "define i32 @main(i32 %%argc, ptr %%argv) {\n");
+	out(G->funcs, "define i32 @main(i32 %%argc, ptr %%argv)%s {\n", checked_attrs());
 	out(G->funcs, "\tcall void @cby_rt_init()\n");
 	if (args) {
 		out(G->funcs, "\t%%args = call ptr @cby_args(i32 %%argc, ptr %%argv)\n");
@@ -4315,6 +4321,7 @@ int compile_program(Sema *S, const char *src_path, const CompileOptions *opt)
 			fprintf(stderr, "cabby: can't write '%s'\n", out_name);
 			return 1;
 		}
+		codegen_checked = opt->checked;
 		codegen_emit(S, f);
 		fclose(f);
 		return 0;
@@ -4343,7 +4350,9 @@ int compile_program(Sema *S, const char *src_path, const CompileOptions *opt)
 	if (!clang_new_enough(cc))
 		return 1;
 	char olevel[8];
-	snprintf(olevel, sizeof olevel, "-O%d", opt->opt_level);
+	/* (--checked: -O1 at most, or LLVM works out what an array holds before
+	 * AddressSanitizer looks, and a read past its end isn't there to catch) */
+	snprintf(olevel, sizeof olevel, "-O%d", opt->checked && opt->opt_level > 1 ? 1 : opt->opt_level);
 	/* clang, the program, then each library header's native code
 	 * (libcabby<name>.a and the flags in <name>.link), the runtime, libm */
 	char *argv[256];
