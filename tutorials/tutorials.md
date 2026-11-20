@@ -1,6 +1,6 @@
 # The Cabby Manual
 
-*For Cabby 0.39.2 (2026-11-20).*
+*For Cabby 0.40.0 (2026-11-20).*
 
 A book for learning Cabby one idea at a time, and a reference to come back
 to afterwards.
@@ -3008,6 +3008,39 @@ small letters, so `"alan"` sorts after `"Grace"`. `.reverse` works on a
 list of anything. Both change the list in place, so neither can be used
 inside a loop that goes through that list.
 
+For some other order, `.sort_by` takes a function that gives each element
+a number or a string to go by (its *key*), and `.sort_with` a function
+that says, of two, whether the first goes first. Each takes its elements
+as `const` borrows ([Chapter 14](#chapter-14-references-borrowing)):
+
+<!-- run -->
+```cabby
+long length_of const str &Word {
+	return Word.length
+}
+
+bool longer const str &A, const str &B {
+	return A.length > B.length
+}
+
+int main {
+	list str Words = {"pear", "fig", "banana", "kiwi"}
+	Words.sort_by length_of
+	println Words
+	Words.sort_with longer
+	println Words
+}
+```
+
+```text
+[fig, pear, kiwi, banana]
+[banana, pear, kiwi, fig]
+```
+
+Both keep elements that come out the same in the order they were in:
+`pear` stays before `kiwi`. They put lists of structs and objects in order
+too, by a field: [Chapter 22](#chapter-22-objects-and-methods).
+
 #### Copies and slices
 
 Like strings, lists are moved, not copied ([Chapter 13](#chapter-13-ownership-moves-and-drops)):
@@ -3170,6 +3203,7 @@ Alan has 1 marks
   elements; the list itself can't change inside its own loop.
 * `println L` shows it as `[a, b, c]`.
 * `.contains`, `.find`, `.sort`, `.reverse`, `.copy`, slices `L[a to b]`.
+* `.sort_by key_of` and `.sort_with comes_before`, for other orders.
 * `S.split Sep` and `L.join Sep` between strings and lists of strings.
 * A list owns its elements: adding moves them in.
 
@@ -4320,6 +4354,75 @@ smaller and faster to go through.
 A good habit: start with a struct for data, and make it an object when it
 needs to *do* things: methods, a destructor, handlers.
 
+#### Putting objects in order
+
+`.sort` can't put objects in order by itself: which comes first, two
+players or two windows? `.sort_by` names what to go by, a field of theirs,
+smallest first; `.sort_with` names a function that compares two:
+
+<!-- run -->
+```cabby
+object player {
+	str Name
+	int Score
+	int Wins
+}
+
+// more wins first; the same wins, then the higher score
+bool ahead const player &A, const player &B {
+	if A.Wins != B.Wins {
+		return A.Wins > B.Wins
+	}
+	return A.Score > B.Score
+}
+
+void show const list player &All {
+	for P in All {
+		println " ", P.Name, P.Score, P.Wins
+	}
+}
+
+int main {
+	list player All
+	str Names[4] = {"Ada", "Alan", "Grace", "Linus"}
+	int Scores[4] = {70, 95, 70, 80}
+	int Wins[4] = {2, 1, 3, 2}
+	for i in 4 {
+		player P
+		P.Name = Names[i].copy
+		P.Score = Scores[i]
+		P.Wins = Wins[i]
+		All.add P
+	}
+	All.sort_by Score
+	println "by score:"
+	show All
+	All.sort_with ahead
+	println "the table:"
+	show All
+}
+```
+
+```text
+by score:
+  Ada 70 2
+  Grace 70 3
+  Linus 80 2
+  Alan 95 1
+the table:
+  Grace 70 3
+  Linus 80 2
+  Ada 70 2
+  Alan 95 1
+```
+
+The field can be a number, `bool`, `char` or `str`; for the largest
+first, `.reverse` after. Equals keep their order (Ada stays before Grace),
+so sorting by one thing and then another sorts by the second, then the
+first. A function giving a key works as for strings:
+`int age_in_months const pet &P`, then `Pets.sort_by age_in_months`. The
+same works for a list of structs.
+
 #### In short
 
 * `object name { fields  methods }`; fields and methods by bare name inside.
@@ -4332,6 +4435,7 @@ needs to *do* things: methods, a destructor, handlers.
 * Objects always move.
 * A struct is a value (plain data, copied, small and fast); an object is a
   thing (methods, a life of its own, moved).
+* `L.sort_by Field`, or `L.sort_with comes_before`, puts objects in order.
 
 #### Try this
 
@@ -16685,7 +16789,7 @@ Run `cabby` with no file to type Cabby a piece at a time:
 
 ```text
 $ cabby
-Cabby 0.39.2 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
+Cabby 0.40.0 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
 Cabby comes with ABSOLUTELY NO WARRANTY, under the MIT License; "cabby.license" for details.
 >>> int add int a, int b {
 ... 	return a + b
@@ -16883,6 +16987,7 @@ true  false                   bool
 | `.split` | strings | a `list str` |
 | `.add`, `.insert`, `.remove_at`, `.take_last`, `.clear` | lists | adding and removing ([Chapter 15](#chapter-15-lists)) |
 | `.sort`, `.reverse` | lists | in order, smallest first; last element first |
+| `.sort_by`, `.sort_with` | lists | in order by a field or a function's key; by a function comparing two ([Chapter 22](#chapter-22-objects-and-methods)) |
 | `.join` | a `list str` | one `str`, with a separator between |
 | `.contains`, `.remove`, `.clear` | lookups | by key ([Chapter 16](#chapter-16-lookups)) |
 | `.keys`, `.values` | lookups | a list of copies, in the order the keys were added |
@@ -17013,8 +17118,6 @@ CABBY_GUI_SCRIPT="type 1 Ada; click Say hello; shot greeter.png; close" cabby 51
 * Objects pointing at each other freely (a chain or tree can be built
   from objects holding a `list` of their own kind, or with `use addresses`;
   see [Chapter 28](#chapter-28-addresses)).
-* Sorting a list of objects (by a field, or by a function that compares
-  two of them); `.sort` takes numbers, `bool`, `char` and strings.
 * `.upper` and `.lower` for letters beyond A to Z (é, α).
 * Panels and bars of a desktop (a dock, a system tray) in the gui
   library.

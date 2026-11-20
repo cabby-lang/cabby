@@ -71,6 +71,7 @@ typedef struct CG {
 	VEC(Type *) lists;            /* element types of the lists used: helpers ldrop.N, lcopy.N, lfind.N */
 	VEC(Type *) lookups;          /* the lookup types used: helpers kdrop.N, kclear.N, kcopy.N ... */
 	VEC(Type *) fdrops;           /* the types a frame may drop: helpers fdrop.N */
+	VEC(Expr *) sorts;            /* L.sort_by / sort_with calls: helpers sbefore.N */
 
 	/* `... else`: what a function has that a caught panic must drop (each
 	 * local and temporary with a drop flag), told to the runtime when the
@@ -1669,6 +1670,15 @@ static Op gen_str_builtin(CG *G, Expr *e, Op *sret)
 			kind = (el->is_signed && !el->is_char ? RT_SORT_I8 : RT_SORT_U8) + sz;
 		}
 		emit(G, "call void @cby_list_sort(ptr %s, i32 %d)", l.s, kind);
+		return op("undef");
+	}
+	case BUILTIN_LIST_SORT_BY:
+	case BUILTIN_LIST_SORT_WITH: {
+		Type *el = args->items[0]->ty->inner;
+		Op l = gen_read(G, args->items[0]);
+		int id = G->sorts.len;
+		vec_push(&G->A, G->sorts, e);
+		emit(G, "call void @cby_list_sort_by(ptr %s, i64 %s, ptr @\"sbefore.%d\")", l.s, elem_size(G, el), id);
 		return op("undef");
 	}
 	case BUILTIN_LIST_REVERSE: {
@@ -3604,6 +3614,7 @@ static const char *runtime_decls =
 	"declare void @cby_list_free(ptr)\n"
 	"declare void @cby_list_join(ptr, ptr, ptr)\n"
 	"declare void @cby_list_sort(ptr, i32)\n"
+	"declare void @cby_list_sort_by(ptr, i64, ptr)\n"
 	"declare void @cby_list_reverse(ptr, i64)\n"
 	"declare void @rt_print_list_open()\n"
 	"declare void @rt_print_list_sep(i64)\n"
@@ -3887,6 +3898,99 @@ static void gen_list_helper(CG *G, int id)
 	}
 }
 
+/* ---- L.sort_by and L.sort_with: sbefore.N(b, a), true when the element
+ * at b goes before the one at a; cby_list_sort_by merge-sorts with it ---- */
+
+/* the field (owner, index) of the element at p: a struct's in place, an
+ * object's through its handle (and its class's offsets, if it has any
+ * derived ones) */
+static Op elem_field(CG *G, Type *el, Op p, int owner, int index)
+{
+	ObjectInfo *o = el->obj;
+	int slot = o->block_start[owner] + index;
+	Op r = tmp(G);
+	if (o->kind == OBJ_STRUCT) {
+		emit(G, "%s = getelementptr %%S.%d, ptr %s, i32 0, i32 %d", r.s, o->id, p.s, slot);
+		return r;
+	}
+	Op h = tmp(G);
+	emit(G, "%s = load ptr, ptr %s", h.s, p.s);
+	if (!o->has_derived)
+		return obj_field_static(G, o, h, slot);
+	Op ci = tmp(G), offs = tmp(G), op_ = tmp(G), off = tmp(G), blk = tmp(G), slotp = tmp(G);
+	emit(G, "%s = load ptr, ptr %s", ci.s, h.s);
+	emit(G, "%s = getelementptr %%classinfo, ptr %s, i32 0, i32 1", offs.s, ci.s);
+	emit(G, "%s = load ptr, ptr %s", op_.s, offs.s);
+	emit(G, "%s = getelementptr i64, ptr %s, i64 %d", slotp.s, op_.s, owner);
+	emit(G, "%s = load i64, ptr %s", off.s, slotp.s);
+	emit(G, "%s = getelementptr i8, ptr %s, i64 %s", blk.s, h.s, off.s);
+	emit(G, "%s = getelementptr %%B.%d, ptr %s, i32 0, i32 %d", r.s, owner, blk.s, index);
+	return r;
+}
+
+/* the key of the element at p: where it is (a field), or a new value (a
+ * function's; a str is put in *made, to be dropped) */
+static Op sort_key(CG *G, Expr *cb, Type *el, Op p, Op *made)
+{
+	Type *k = cb->as.callback.key;
+	FnDecl *fn = cb->as.callback.fn;
+	if (!fn) {
+		Op f = elem_field(G, el, p, cb->as.callback.owner_id, cb->as.callback.field_index);
+		return k->kind == TY_STR ? f : load(G, k, f, false);
+	}
+	if (fn->definition)
+		fn = fn->definition;
+	if (k->kind == TY_STR) {
+		*made = entry_alloca(G, llty(G, k), "key");
+		emit(G, "call void %s(ptr %s, ptr %s)", fn_name(G, fn), made->s, p.s);
+		return *made;
+	}
+	Op r = tmp(G);
+	emit(G, "%s = call %s %s(ptr %s)", r.s, vty(G, k), fn_name(G, fn), p.s);
+	return r;
+}
+
+static void gen_sort_helper(CG *G, int id)
+{
+	Expr *e = G->sorts.items[id];
+	Expr *cb = e->as.call.args.items[1];
+	Type *el = e->as.call.args.items[0]->ty->inner;
+	G->fn = NULL;
+	begin_function(G);
+	Op r = tmp(G);
+	if (e->as.call.builtin == BUILTIN_LIST_SORT_WITH) {
+		FnDecl *fn = cb->as.callback.fn->definition ? cb->as.callback.fn->definition : cb->as.callback.fn;
+		emit(G, "%s = call i1 %s(ptr %%b, ptr %%a)", r.s, fn_name(G, fn));
+	} else {
+		Type *k = cb->as.callback.key;
+		Op mb = { "" }, ma = { "" };
+		Op kb = sort_key(G, cb, el, op("%%b"), &mb), ka = sort_key(G, cb, el, op("%%a"), &ma);
+		if (k->kind == TY_STR) {
+			Op c = tmp(G);
+			emit(G, "%s = call i32 @cby_str_compare(ptr %s, ptr %s)", c.s, kb.s, ka.s);
+			emit(G, "%s = icmp slt i32 %s, 0", r.s, c.s);
+			if (mb.s[0])
+				emit_drop(G, k, mb);
+			if (ma.s[0])
+				emit_drop(G, k, ma);
+		} else if (k->kind == TY_FLOAT) {
+			/* (a float that isn't a number goes last, as .sort has it) */
+			Op lt = tmp(G), na = tmp(G), nb = tmp(G), nan = tmp(G);
+			const char *ft = vty(G, k);
+			emit(G, "%s = fcmp olt %s %s, %s", lt.s, ft, kb.s, ka.s);
+			emit(G, "%s = fcmp uno %s %s, %s", na.s, ft, ka.s, ka.s);
+			emit(G, "%s = fcmp ord %s %s, %s", nb.s, ft, kb.s, kb.s);
+			emit(G, "%s = and i1 %s, %s", nan.s, na.s, nb.s);
+			emit(G, "%s = or i1 %s, %s", r.s, lt.s, nan.s);
+		} else {
+			bool uns = k->kind == TY_BOOL || k->is_char || !k->is_signed;
+			emit(G, "%s = icmp %s %s %s, %s", r.s, uns ? "ult" : "slt", vty(G, k), kb.s, ka.s);
+		}
+	}
+	emit_term(G, "ret i1 %s", r.s);
+	end_function(G, astr(G, "define internal i1 @\"sbefore.%d\"(ptr %%b, ptr %%a)", id));
+}
+
 /* Calls body(G, lt, l, pos, arg) for each position in use, in order. */
 static void lk_loop(CG *G, Type *lt, Op l, void (*body)(CG *, Type *, Op, Op, void *), void *arg)
 {
@@ -4029,6 +4133,8 @@ void codegen_emit(Sema *S, FILE *o)
 	gen_main_wrapper(&G);
 	for (int i = 0; i < G.fdrops.len; i++)
 		gen_fdrop_helper(&G, i);
+	for (int i = 0; i < G.sorts.len; i++)
+		gen_sort_helper(&G, i);
 	/* helpers can need more helpers (a list of lookups, say): until none are new */
 	for (int li = 0, ki = 0; li < G.lists.len || ki < G.lookups.len;) {
 		while (li < G.lists.len)

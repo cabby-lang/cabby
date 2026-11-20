@@ -3028,6 +3028,92 @@ int main {
 	qsort addresses.of_items(N), N.length, sizeof(long), by_name
 }
 
+### ok_sort_by_and_with
+// expect: quiet
+object pet {
+	str Name
+	int Age
+}
+bool older const pet &A, const pet &B {
+	return A.Age > B.Age
+}
+int main {
+	list pet Pets
+	Pets.sort_by Age
+	Pets.sort_by Name
+	Pets.sort_with older
+}
+
+### err_sort_by_not_a_field
+// expect: 'Weight' isn't a field of 'pet', or a function
+object pet {
+	int Age
+}
+int main {
+	list pet Pets
+	Pets.sort_by Weight
+}
+
+### err_sort_by_unordered_field
+// expect: '.sort_by Toys' puts them in order by a number, bool, char or string, and 'Toys' is a 'list str'
+object pet {
+	list str Toys
+}
+int main {
+	list pet Pets
+	Pets.sort_by Toys
+}
+
+### err_sort_with_wrong_shape
+// expect: 'older' can't put a 'list pet' in order: '.sort_with' wants a function like 'bool comes_before const pet &A, const pet &B'
+object pet {
+	int Age
+}
+bool older pet &A, pet &B {
+	return A.Age > B.Age
+}
+int main {
+	list pet Pets
+	Pets.sort_with older
+}
+
+### err_sort_by_key_gives_a_list
+// expect: '.sort_by' wants a function like 'int key_of const pet &Item', giving a number, bool, char or string
+object pet {
+	list str Toys
+}
+list str toys_of const pet &P {
+	return P.Toys.copy
+}
+int main {
+	list pet Pets
+	Pets.sort_by toys_of
+}
+
+### err_sort_of_a_borrowed_list
+// expect: borrowed
+object pet {
+	int Age
+}
+int main {
+	list pet Pets
+	pet P
+	Pets.add P
+	const pet &First = Pets[0]
+	Pets.sort_by Age
+	println First.Age
+}
+
+### err_sort_objects_plainly
+// expect: '.sort' puts numbers, bools, chars and strings in order, not the elements of a 'list pet' (.sort_by and .sort_with put anything in order)
+object pet {
+	int Age
+}
+int main {
+	list pet Pets
+	Pets.sort
+}
+
 ### err_callback_not_a_function
 // expect: expected the name of a function for
 use addresses

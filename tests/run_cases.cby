@@ -3468,6 +3468,103 @@ int main {
 	return 0
 }
 
+### lists_sorted_by_and_with
+//> Rex 2 | Tom 3 | Ada 3 | Bo 5 |
+//> Ada 3 | Bo 5 | Rex 2 | Tom 3 |
+//> Bo 5 | Tom 3 | Ada 3 | Rex 2 |
+//> Bo 5 | Tom 3 | Ada 3 | Rex 2 |
+//> 1.5 2.5 NaN
+//> [false, true, true]
+//> [a, b, c]
+//> [fig, pear, kiwi, banana]
+//> 0 2 | 1 1 | 3 0 |
+object animal {
+	str Name
+	int Age
+	double Weight
+	bool Tame
+}
+
+object dog : animal {
+	int Barks
+}
+
+struct spot {
+	int X
+	int Y
+}
+
+str name_of const animal &A {
+	return A.Name.copy
+}
+
+bool heavier const animal &A, const animal &B {
+	return A.Weight > B.Weight
+}
+
+int by_length const str &S {
+	return (int)S.length
+}
+
+void show const list animal &All {
+	str Line = ""
+	for A in All {
+		Line += A.Name + " " + A.Age.text + " | "
+	}
+	println Line.trim
+}
+
+int main {
+	list animal All
+	str Names[4] = {"Tom", "Rex", "Ada", "Bo"}
+	int Ages[4] = {3, 2, 3, 5}
+	double Weights[4] = {4.5, 3.0, 4.0, 9.5}
+	for i in 4 {
+		animal A
+		if i == 1 {
+			dog D
+			A = D
+		}
+		A.Name = Names[i].copy
+		A.Age = Ages[i]
+		A.Weight = Weights[i]
+		All.add A
+	}
+	All.sort_by Age                       // equals keep their order
+	show All
+	All.sort_by name_of
+	show All
+	All.sort_with heavier
+	show All
+	All.sort_by Tame
+	All.reverse
+	All.sort_by Name
+	All.sort_by Weight
+	All.reverse
+	show All
+	list double D = {2.5, 0.0 / 0.0, 1.5}
+	D.sort
+	println D[0], D[1], D[2]
+	list bool B = {true, false, true}
+	B.sort
+	println B
+	list char C = {'c', 'a', 'b'}
+	C.sort
+	println C
+	list str Words = {"pear", "fig", "banana", "kiwi"}
+	Words.sort_by by_length
+	println Words
+	list spot Spots = {{3, 0}, {0, 2}, {1, 1}}
+	Spots.sort_by Y
+	Spots.reverse
+	str Line = ""
+	for P in Spots {
+		Line += P.X.text + " " + P.Y.text + " | "
+	}
+	println Line.trim
+	return 0
+}
+
 ### csv_read_and_written
 //> 4 [Name, Age, Note]
 //> [Ada, 36, likes "tea", and cake]

@@ -23,7 +23,7 @@ static const char *const functions[] = {
 /* members of strings, numbers, lists and lookups: shown after a '.' */
 static const char *const members[] = {
 	"length", "copy", "text", "find", "contains", "starts_with", "ends_with", "replace", "trim",
-	"upper", "lower", "repeat", "pad_left", "pad_right", "centered", "split", "join", "add", "insert", "remove_at", "take_last", "clear", "sort", "reverse",
+	"upper", "lower", "repeat", "pad_left", "pad_right", "centered", "split", "join", "add", "insert", "remove_at", "take_last", "clear", "sort", "sort_by", "sort_with", "reverse",
 	"remove", "keys", "values", "read_line", "at_end",
 	"is_int", "is_long", "is_number", "to_int", "to_long", "to_double",
 	"call", "is_set", "value", "is_none", "number", "handle", NULL,   /* (handlers, addresses, files) */

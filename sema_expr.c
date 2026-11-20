@@ -2023,6 +2023,76 @@ static bool list_change(Checker *C, Expr *recv, const char *name)
 	return true;
 }
 
+static bool inside(Checker *C, ObjectInfo *owner);
+static void inner_error(Checker *C, SrcLoc l, const char *what, const char *name, ObjectInfo *owner);
+
+/* the parameter is `const T &` for the list's elements */
+static bool param_borrows(const VarDecl *p, const Type *el)
+{
+	const Type *t = p->type->resolved;
+	return t && t->kind == TY_REF && !t->is_mut && type_eq(t->inner, el);
+}
+
+/* L.sort_by's and L.sort_with's argument: a field of the elements (sort_by
+ * Age), or a function's name. sort_by's function gives the key (a number,
+ * char, bool or str) from `const T &`; sort_with's says, from two, whether
+ * the first goes first: bool f const T &A, const T &B. The argument
+ * becomes an EXPR_CALLBACK holding which. */
+static bool check_sort_arg(Checker *C, Expr **ap, Type *lt, bool with)
+{
+	Expr *a = *ap;
+	Type *el = lt->inner;
+	const char *what = with ? "sort_with" : "sort_by";
+	const char *n = a->kind == EXPR_IDENT ? a->as.ident.name : NULL;
+	FieldInfo *f = n && !with && (el->kind == TY_OBJECT) && el->obj->kind != OBJ_UNION ? lookup_field(el->obj, n) : NULL;
+	if (f) {
+		if (f->is_inner && !inside(C, f->owner))
+			inner_error(C, a->loc, "field", f->name, f->owner);
+		if (!list_elem_comparable(f->type)) {
+			sema_error(a->loc, "'.sort_by %s' puts them in order by a number, bool, char or string, and '%s' "
+				   "is a '%s' (a function giving one can be named instead)", n, n, ts(f->type));
+			return false;
+		}
+		memset(&a->as, 0, sizeof a->as);
+		a->kind = EXPR_CALLBACK;
+		a->as.callback.owner_id = f->owner->id;
+		a->as.callback.field_index = f->own_index;
+		a->as.callback.key = f->type;
+		a->ty = &t_void;
+		return true;
+	}
+	GlobalName *g = n && !lookup_local(C, n) ? find_global(C, n, a->loc) : NULL;
+	const char *shape = with ? "bool comes_before const %s &A, const %s &B" : "int key_of const %s &Item";
+	char want[256];
+	snprintf(want, sizeof want, shape, ts(el), ts(el));
+	if (!g || g->kind != GN_FN) {
+		if (n && !with && el->kind == TY_OBJECT)
+			sema_error(a->loc, "'%s' isn't a field of '%s', or a function", n, ts(el));
+		else
+			sema_error(a->loc, "'.%s' takes the name of a function, as '%s'%s", what, want,
+				   !with && el->kind == TY_OBJECT ? ", or of a field" : "");
+		return false;
+	}
+	FnDecl *fn = g->fn;
+	Type *rt = fn->ret_type;
+	bool ok = fn->self_kind == SELF_NONE && fn->params.len == (with ? 2 : 1) && rt;
+	for (int k = 0; ok && k < fn->params.len; k++)
+		ok = param_borrows(fn->params.items[k], el);
+	if (ok)
+		ok = with ? rt->kind == TY_BOOL : list_elem_comparable(rt);
+	if (!ok) {
+		sema_error(a->loc, "'%s' can't put a '%s' in order: '.%s' wants a function like '%s'%s", n, ts(lt), what,
+			   want, with ? ", true when A goes first" : ", giving a number, bool, char or string");
+		return false;
+	}
+	memset(&a->as, 0, sizeof a->as);
+	a->kind = EXPR_CALLBACK;
+	a->as.callback.fn = fn;
+	a->as.callback.key = with ? NULL : rt;
+	a->ty = &t_void;
+	return true;
+}
+
 static Type *list_member(Checker *C, Expr *e, Expr *recv, Type *lt, const char *name)
 {
 	static const struct { const char *name; Builtin b; int nargs; bool changes; } members[] = {
@@ -2038,11 +2108,13 @@ static Type *list_member(Checker *C, Expr *e, Expr *recv, Type *lt, const char *
 		{ "join", BUILTIN_LIST_JOIN, 1, false },
 		{ "sort", BUILTIN_LIST_SORT, 0, true },
 		{ "reverse", BUILTIN_LIST_REVERSE, 0, true },
+		{ "sort_by", BUILTIN_LIST_SORT_BY, 1, true },
+		{ "sort_with", BUILTIN_LIST_SORT_WITH, 1, true },
 	};
 	static const char *const examples[] = {
 		"Scores.length", "Scores.add 90", "Scores.insert 0, 90", "Scores.remove_at 2", "Scores.take_last",
 		"Scores.clear", "Scores.contains 90", "Scores.find 90", "Scores.copy", "Words.join \", \"",
-		"Scores.sort", "Scores.reverse",
+		"Scores.sort", "Scores.reverse", "Pets.sort_by Age", "Pets.sort_with comes_before",
 	};
 	Type *el = lt->inner;
 	for (size_t m = 0; m < sizeof members / sizeof *members; m++) {
@@ -2071,8 +2143,16 @@ static Type *list_member(Checker *C, Expr *e, Expr *recv, Type *lt, const char *
 		}
 		if (b == BUILTIN_LIST_SORT && !list_elem_comparable(el)) {
 			sema_error(e->loc, "'.sort' puts numbers, bools, chars and strings in order, not the elements "
-				   "of a '%s'", ts(lt));
+				   "of a '%s' (.sort_by and .sort_with put anything in order)", ts(lt));
 			ok = false;
+		}
+		if (b == BUILTIN_LIST_SORT_BY || b == BUILTIN_LIST_SORT_WITH) {
+			if (!list_change(C, recv, name))
+				return &t_error;
+			make_builtin(C, e, b, name, recv, NULL);
+			vec_push(C->A, e->as.call.args, given.items[0]);
+			return check_sort_arg(C, &e->as.call.args.items[1], lt, b == BUILTIN_LIST_SORT_WITH) ? &t_void
+											     : &t_error;
 		}
 		if (b == BUILTIN_LIST_COPY && !list_elem_copyable(el)) {
 			sema_error(e->loc, "a '%s' can't be copied: its elements can't be (objects are never "
@@ -2133,7 +2213,8 @@ static Type *list_member(Checker *C, Expr *e, Expr *recv, Type *lt, const char *
 		}
 	}
 	sema_error(e->loc, "a list has no '.%s' (it has .length, .add, .insert, .remove_at, .take_last, .clear, "
-		   ".contains, .find, .copy, .sort, .reverse%s)", name, el->kind == TY_STR ? " and .join" : "");
+		   ".contains, .find, .copy, .sort, .sort_by, .sort_with, .reverse%s)", name,
+		   el->kind == TY_STR ? " and .join" : "");
 	return &t_error;
 }
 
