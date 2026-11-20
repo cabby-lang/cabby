@@ -83,6 +83,7 @@ the patch number with fixes alone.
 | 0.36.0 | 19 November | conditions in symbols only: `is`, `is not`, `and`, `or` and `not` are taken out, for `==`, `!=`, `&&`, `\|\|` and `!` |
 | 0.36.1 | 19 November | `keyboard.layouts` on Sway stopped when the tests' own list of layouts wasn't named |
 | 0.37.0 | 20 November | who's on the network (`answering`, `pings`); a file's own name as a prefix for its functions; chapters 33, 34 and 51 put right |
+| 0.37.1 | 20 November | `tests/machines/later.sh`: the checks still waiting on a real computer |
 
 ---
 
@@ -1434,6 +1435,14 @@ the patch number with fixes alone.
   what happens sending to a program that's ended; chapter 51 no longer
   says gui's windows can't be read by a screen reader (they can, on
   Linux).
+
+*Version 0.37.1:*
+
+- `tests/machines/later.sh screens | beeps | hearing`: the checks still
+  waiting on a real computer, one at a time. A Mac's monitors read and
+  set (to the mode and place they have, so nothing changes); a video's
+  beeping sound; and, on Arch, what `speech.can_hear` finds and doesn't
+  (whisper-cli on the PATH, its exit status, the models anywhere).
 
 ## Along the way (dates not recorded)
 
