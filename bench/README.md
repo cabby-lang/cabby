@@ -308,3 +308,50 @@ L[K] += 1 }` finds K once, for string keys too.
 The interpreter: `switch` is in bytecode (a loop with one in it, 5×
 faster than before), and so is making an object whose fields are given
 numbers (`square S = {.Size = I % 100}`).
+
+## Before 1.0 (2026-11-20)
+
+The last speed check, after the language's last additions (`sort_by`,
+`.upper` beyond A to Z, elements borrowed separately, links). Best of 5,
+on a busier computer than the earlier runs (Python's own times are up by
+about a fifth):
+
+| Program | cabby | python | | cabby -c | c | rust |
+|---|---|---|---|---|---|---|
+| fib | 64 ms | 81 ms | 0.79× | 112 ms | 64 ms | 130 ms |
+| sieve | 108 ms | 197 ms | 0.55× | 351 ms | 356 ms | 344 ms |
+| mandelbrot | 53 ms | 88 ms | 0.60× | 238 ms | 252 ms | 202 ms |
+| sort | 256 ms | 515 ms | 0.50× | 890 ms | 836 ms | 947 ms |
+| strings | 67 ms | 94 ms | 0.71× | 485 ms | 412 ms | 206 ms |
+| objects | 45 ms | 57 ms | 0.79× | **64 ms** | 422 ms | 587 ms |
+| text | 36 ms | 55 ms | 0.65× | 568 ms | 515 ms | 491 ms |
+| lists | 21 ms | 41 ms | 0.51× | 53 ms | 48 ms | 52 ms |
+| lookups | 54 ms | 52 ms | 1.04× | 672 ms | 572 ms | 1.64 s |
+
+What changed on the way:
+
+- **Links had cost compiled `objects` about 9%**: every object carries 16
+  bytes for its place among linked objects, and dropping one asked the
+  runtime whether it had one. The question is now asked in the program
+  itself (a load and a test, with the call only for an object that's been
+  linked to).
+- **Objects made with `malloc` itself**, not through a runtime function,
+  and freed with `free`: LLVM then knows what they are, and an object
+  that's made, used and dropped without going anywhere else doesn't touch
+  the heap at all. `objects` went from 385 ms (level with C, which mallocs
+  each one) to 64 ms, six times faster than C.
+- **`.upper` and `.lower` kept their quick path**: the new Unicode case
+  mapping had made every call, even on plain A to Z, take the long way,
+  and interpreted `text` had fallen level with Python (48 ms each). Text
+  that's all A to Z is changed in one pass again, in the interpreter and
+  the runtime: 36 ms against Python's 55, and compiled level with C.
+- A `lookups` slowdown in the first run (78 ms) was the computer, not
+  Cabby: builds from before today's changes and after them all take 50
+  ms on it, measured side by side.
+
+Interpreted Cabby is ahead of Python at nine of the ten, and level at
+lookups (within the run-to-run noise, which on this computer is up to a
+fifth), using a quarter to a half of Python's memory. Compiled, it's
+within about 1.2× of C at all but `fib`, where gcc's own trick for that
+recursion leaves clang-built programs behind (C built with clang takes as
+long as Cabby), and far ahead at `objects`.

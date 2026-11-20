@@ -694,6 +694,7 @@ static void store(CG *G, Type *t, Op v, Op ptr, bool is_volatile)
 /* ============================================================== expressions */
 
 static Op gen_val(CG *G, Expr *e);
+static void gen_obj_alloc(CG *G, Op h, int id);
 static void declare_extern(CG *G, FnDecl *fn);
 static void gen_into(CG *G, Expr *e, Op dst);
 static Op gen_place(CG *G, Expr *e);
@@ -2408,7 +2409,7 @@ static void gen_init(CG *G, Expr *e, Op dst)
 	/* malloc, then zero in place: calloc misses glibc's fast cache, and
 	 * LLVM drops the zeroing of fields that are set straight after */
 	need_intrinsic(G, "llvm.memset", "declare void @llvm.memset.p0.i64(ptr, i8, i64, i1)");
-	emit(G, "%s = call ptr @rt_obj_alloc(i64 ptrtoint (ptr getelementptr (%%O.%d, ptr null, i32 1) to i64))", h.s, o->id);
+	gen_obj_alloc(G, h, o->id);
 	emit(G, "call void @llvm.memset.p0.i64(ptr %s, i8 0, i64 ptrtoint (ptr getelementptr (%%O.%d, ptr null, i32 1) to i64), i1 false)",
 	     h.s, o->id);
 	emit(G, "store ptr @\"ci.%d\", ptr %s", o->id, h.s);
@@ -3279,6 +3280,25 @@ static void gen_fdrop_helper(CG *G, int id)
 	end_function(G, astr(G, "define internal void @\"fdrop.%d\"(ptr %%p)", id));
 }
 
+/* A new object's memory, h (not zeroed): malloc itself, so LLVM knows
+ * what it is, with 16 bytes before h for its place among linked objects
+ * (rt.c), set to none */
+static void gen_obj_alloc(CG *G, Op h, int id)
+{
+	Op raw = tmp(G), none = tmp(G), bad = lbl(G, "nomem"), ok = lbl(G, "mem");
+	need_intrinsic(G, "extern.malloc", "declare ptr @malloc(i64)");   /* (a program's own extern malloc is the same) */
+	emit(G, "%s = call ptr @malloc(i64 add (i64 ptrtoint (ptr getelementptr (%%O.%d, ptr null, i32 1) to i64), i64 16))",
+	     raw.s, id);
+	emit(G, "%s = icmp eq ptr %s, null", none.s, raw.s);
+	emit_term(G, "br i1 %s, label %%%s, label %%%s, !prof !0", none.s, bad.s, ok.s);
+	place_label(G, bad);
+	emit(G, "call void @rt_out_of_memory()");
+	emit_term(G, "unreachable");
+	place_label(G, ok);
+	emit(G, "store i64 0, ptr %s", raw.s);
+	emit(G, "%s = getelementptr i8, ptr %s, i64 16", h.s, raw.s);
+}
+
 /* Per-class drop function and zero constructor. */
 static void gen_object_support(CG *G, ObjectInfo *K)
 {
@@ -3292,21 +3312,37 @@ static void gen_object_support(CG *G, ObjectInfo *K)
 	}
 	/* links to it are gone before its fields are (a field's destructor
 	 * that follows one back finds it gone) */
-	emit(G, "call void @rt_obj_unlink(ptr %%h)");
+	{
+		/* (only an object that's been linked to has a place to give up:
+		 * most never have, so it's tested here, not in a call) */
+		Op lp = tmp(G), lv = tmp(G), any = tmp(G), un = lbl(G, "unlink"), go = lbl(G, "fields");
+		emit(G, "%s = getelementptr i8, ptr %%h, i64 -16", lp.s);
+		emit(G, "%s = load i64, ptr %s", lv.s, lp.s);
+		emit(G, "%s = icmp ne i64 %s, 0", any.s, lv.s);
+		emit_term(G, "br i1 %s, label %%%s, label %%%s, !prof !0", any.s, un.s, go.s);
+		place_label(G, un);
+		emit(G, "call void @rt_obj_unlink(ptr %%h)");
+		br(G, go);
+		place_label(G, go);
+	}
 	for (int i = 0; i < K->field_count; i++) {
 		Type *ft = K->fields[i].type;
 		if (!type_needs_drop(ft))
 			continue;
 		emit_drop(G, ft, obj_field_static(G, K, h, i));
 	}
-	emit(G, "call void @rt_obj_free(ptr %%h)");
+	{
+		Op raw = tmp(G);
+		emit(G, "%s = getelementptr i8, ptr %%h, i64 -16", raw.s);
+		emit(G, "call void @free(ptr %s)", raw.s);
+	}
 	emit_term(G, "ret void");
 	end_function(G, astr(G, "define internal void @\"drop.%d\"(ptr %%h)", K->id));
 
 	/* new.K(): a zeroed object */
 	begin_function(G);
 	need_intrinsic(G, "llvm.memset", "declare void @llvm.memset.p0.i64(ptr, i8, i64, i1)");
-	emit(G, "%%h = call ptr @rt_obj_alloc(i64 ptrtoint (ptr getelementptr (%%O.%d, ptr null, i32 1) to i64))", K->id);
+	gen_obj_alloc(G, op("%%h"), K->id);
 	emit(G, "call void @llvm.memset.p0.i64(ptr %%h, i8 0, i64 ptrtoint (ptr getelementptr (%%O.%d, ptr null, i32 1) to i64), i1 false)",
 	     K->id);
 	emit(G, "store ptr @\"ci.%d\", ptr %%h", K->id);
@@ -3715,8 +3751,7 @@ static const char *runtime_decls_rest =
 	"declare ptr @rt_alloc_zeroed(i64)\n"
 	"declare ptr @rt_alloc(i64)\n"
 	"declare void @rt_free(ptr)\n"
-	"declare ptr @rt_obj_alloc(i64)\n"
-	"declare void @rt_obj_free(ptr)\n"
+	"declare void @rt_out_of_memory()\n"
 	"declare void @rt_obj_unlink(ptr)\n"
 	"declare i64 @cby_link_obj(ptr)\n"
 	"declare ptr @cby_link_get(i64, ptr, ptr, ptr, i32, i32)\n"
