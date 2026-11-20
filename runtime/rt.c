@@ -798,18 +798,245 @@ static char *alloc_text(int64_t n)
 	return p;
 }
 
-/* A copy in upper (or lower) case: A-Z and a-z only. */
-char *rt_str_case(const char *d, int64_t n, bool upper)
+/* ---- upper and lower case, beyond A to Z ----
+ * Latin (with Latin-1, Extended-A and -B, and the Extended Additional
+ * block: æ þ ð ƿ ȝ, ā ē ī ō ū, Vietnamese), Greek (with its accents and
+ * the polytonic letters of Ancient Greek), Cyrillic, Armenian, and the
+ * fullwidth letters. Upper case of ß is SS; of ς (a final sigma), Σ.
+ * Anything else, and bytes that aren't UTF-8, are left as they are. */
+
+/* pairs in a run: upper at even (or odd) code points, lower the next */
+static bool in_pairs(uint32_t c, uint32_t from, uint32_t to, bool upper_even, uint32_t *upper, uint32_t *lower)
 {
-	char *p = alloc_text(n);
-	for (int64_t i = 0; i < n; i++) {
-		char c = d[i];
-		if (upper && c >= 'a' && c <= 'z')
-			c = (char)(c - 32);
-		else if (!upper && c >= 'A' && c <= 'Z')
-			c = (char)(c + 32);
-		p[i] = c;
+	if (c < from || c > to)
+		return false;
+	bool is_up = ((c & 1) == 0) == upper_even;
+	*upper = is_up ? c : c - 1;
+	*lower = is_up ? c + 1 : c;
+	return *lower <= to;
+}
+
+/* the other case of c: upper (or lower), or c itself */
+static uint32_t case_of(uint32_t c, bool to_upper)
+{
+	uint32_t up = c, lo = c;
+	if (c >= 'A' && c <= 'Z') { up = c; lo = c + 32; }
+	else if (c >= 'a' && c <= 'z') { up = c - 32; lo = c; }
+	else if (c < 0xC0) return c;
+	/* Latin-1: À-Þ and à-þ, but not × and ÷; ÿ and Ÿ */
+	else if (c >= 0xC0 && c <= 0xDE && c != 0xD7) { up = c; lo = c + 32; }
+	else if (c >= 0xE0 && c <= 0xFE && c != 0xF7) { up = c - 32; lo = c; }
+	else if (c == 0xFF || c == 0x178) { up = 0x178; lo = 0xFF; }
+	else if (c == 0xB5) return c;
+	/* Latin Extended-A */
+	else if (c == 0x130) return to_upper ? c : 'i';
+	else if (c == 0x131) return to_upper ? 'I' : c;
+	else if (c == 0x17F) return to_upper ? 'S' : c;   /* long s */
+	else if (in_pairs(c, 0x100, 0x12F, true, &up, &lo) || in_pairs(c, 0x132, 0x137, true, &up, &lo) ||
+		 in_pairs(c, 0x139, 0x148, false, &up, &lo) || in_pairs(c, 0x14A, 0x177, true, &up, &lo) ||
+		 in_pairs(c, 0x179, 0x17E, false, &up, &lo)) { }
+	/* Latin Extended-B: the letters in pairs, wynn and yogh among them */
+	else if (c == 0x1BF || c == 0x1F7) { up = 0x1F7; lo = 0x1BF; }   /* ƿ Ƿ */
+	else if (c >= 0x1C4 && c <= 0x1CC) {   /* Ǆ ǅ ǆ, Ǉ ǈ ǉ, Ǌ ǋ ǌ */
+		uint32_t base = c - (c - 0x1C4) % 3;
+		up = base;
+		lo = base + 2;
+		if (c == base + 1)
+			return to_upper ? up : lo;
 	}
+	else if (in_pairs(c, 0x1CD, 0x1DC, false, &up, &lo) || in_pairs(c, 0x1DE, 0x1EF, true, &up, &lo) ||
+		 in_pairs(c, 0x1F4, 0x1F5, true, &up, &lo) || in_pairs(c, 0x1F8, 0x21F, true, &up, &lo) ||
+		 in_pairs(c, 0x222, 0x233, true, &up, &lo) || in_pairs(c, 0x246, 0x24F, true, &up, &lo)) { }
+	else if (c == 0x1F1 || c == 0x1F2 || c == 0x1F3) { up = 0x1F1; lo = 0x1F3; if (c == 0x1F2) return to_upper ? up : lo; }
+	/* Greek: the letters, and those with an accent */
+	else if (c == 0x3C2) return to_upper ? 0x3A3 : c;   /* final sigma */
+	else if (c >= 0x391 && c <= 0x3AB && c != 0x3A2) { up = c; lo = c + 32; }
+	else if (c >= 0x3B1 && c <= 0x3CB) { up = c - 32; lo = c; }
+	else if (c == 0x386 || c == 0x3AC) { up = 0x386; lo = 0x3AC; }
+	else if (c >= 0x388 && c <= 0x38A) { up = c; lo = c + 37; }
+	else if (c >= 0x3AD && c <= 0x3AF) { up = c - 37; lo = c; }
+	else if (c == 0x38C || c == 0x3CC) { up = 0x38C; lo = 0x3CC; }
+	else if (c == 0x38E || c == 0x38F) { up = c; lo = c + 63; }
+	else if (c == 0x3CD || c == 0x3CE) { up = c - 63; lo = c; }
+	else if (in_pairs(c, 0x3D8, 0x3EF, true, &up, &lo)) { }
+	/* Cyrillic */
+	else if (c >= 0x400 && c <= 0x40F) { up = c; lo = c + 80; }
+	else if (c >= 0x410 && c <= 0x42F) { up = c; lo = c + 32; }
+	else if (c >= 0x430 && c <= 0x44F) { up = c - 32; lo = c; }
+	else if (c >= 0x450 && c <= 0x45F) { up = c - 80; lo = c; }
+	else if (c == 0x4C0 || c == 0x4CF) { up = 0x4C0; lo = 0x4CF; }
+	else if (in_pairs(c, 0x460, 0x481, true, &up, &lo) || in_pairs(c, 0x48A, 0x4BF, true, &up, &lo) ||
+		 in_pairs(c, 0x4C1, 0x4CE, false, &up, &lo) || in_pairs(c, 0x4D0, 0x52F, true, &up, &lo)) { }
+	/* Armenian */
+	else if (c >= 0x531 && c <= 0x556) { up = c; lo = c + 48; }
+	else if (c >= 0x561 && c <= 0x586) { up = c - 48; lo = c; }
+	/* Latin Extended Additional (ẞ is SS's capital: its lower case is ß) */
+	else if (c == 0x1E9E) return to_upper ? c : 0xDF;
+	else if (in_pairs(c, 0x1E00, 0x1E95, true, &up, &lo) || in_pairs(c, 0x1EA0, 0x1EFF, true, &up, &lo)) { }
+	/* Greek Extended: Ancient Greek's breathings and accents */
+	else if (c >= 0x1F00 && c <= 0x1F6F) {
+		uint32_t row = c & ~0xFu, col = c & 0xF;
+		/* rows of eight lower, then eight upper; some have only some */
+		static const uint16_t has[7] = { 0xFFFF, 0x3F3F, 0xFFFF, 0xFFFF, 0x3F3F, 0xAAFF, 0xFFFF };
+		uint32_t pair = col < 8 ? col + 8 : col - 8;
+		if (!(has[(row - 0x1F00) >> 4] >> col & 1) || !(has[(row - 0x1F00) >> 4] >> pair & 1))
+			return c;
+		up = row + (col | 8);
+		lo = row + (col & 7);
+	}
+	else if (c >= 0x1F80 && c <= 0x1FAF) {   /* with iota below: as their capitals have it */
+		uint32_t row = c & ~0xFu, col = c & 0xF;
+		up = row + (col | 8);
+		lo = row + (col & 7);
+	}
+	else {
+		static const uint16_t pairs[][2] = {   /* upper, lower */
+			{ 0x1FB8, 0x1FB0 }, { 0x1FB9, 0x1FB1 }, { 0x1FBA, 0x1F70 }, { 0x1FBB, 0x1F71 }, { 0x1FBC, 0x1FB3 },
+			{ 0x1FC8, 0x1F72 }, { 0x1FC9, 0x1F73 }, { 0x1FCA, 0x1F74 }, { 0x1FCB, 0x1F75 }, { 0x1FCC, 0x1FC3 },
+			{ 0x1FD8, 0x1FD0 }, { 0x1FD9, 0x1FD1 }, { 0x1FDA, 0x1F76 }, { 0x1FDB, 0x1F77 },
+			{ 0x1FE8, 0x1FE0 }, { 0x1FE9, 0x1FE1 }, { 0x1FEA, 0x1F7A }, { 0x1FEB, 0x1F7B }, { 0x1FEC, 0x1FE5 },
+			{ 0x1FF8, 0x1F78 }, { 0x1FF9, 0x1F79 }, { 0x1FFA, 0x1F7C }, { 0x1FFB, 0x1F7D }, { 0x1FFC, 0x1FF3 },
+		};
+		bool found = false;
+		for (size_t i = 0; i < sizeof pairs / sizeof *pairs && !found; i++)
+			if (c == pairs[i][0] || c == pairs[i][1]) {
+				up = pairs[i][0];
+				lo = pairs[i][1];
+				found = true;
+			}
+		if (!found) {
+			if (c >= 0xFF21 && c <= 0xFF3A) { up = c; lo = c + 32; }        /* fullwidth */
+			else if (c >= 0xFF41 && c <= 0xFF5A) { up = c - 32; lo = c; }
+			else return c;
+		}
+	}
+	return to_upper ? up : lo;
+}
+
+/* the code point at p (n bytes left), and how many bytes it takes; a byte
+ * that doesn't start UTF-8 properly is itself (*len 1, and 0 said) */
+static uint32_t utf8_at(const unsigned char *p, int64_t n, int *len)
+{
+	unsigned char b = p[0];
+	int k = b < 0x80 ? 1 : (b & 0xE0) == 0xC0 ? 2 : (b & 0xF0) == 0xE0 ? 3 : (b & 0xF8) == 0xF0 ? 4 : 0;
+	if (k == 0 || k > n) {
+		*len = 1;
+		return 0xFFFFFFFF;
+	}
+	uint32_t c = k == 1 ? b : k == 2 ? b & 0x1F : k == 3 ? b & 0x0F : b & 0x07;
+	for (int i = 1; i < k; i++) {
+		if ((p[i] & 0xC0) != 0x80) {
+			*len = 1;
+			return 0xFFFFFFFF;
+		}
+		c = c << 6 | (p[i] & 0x3F);
+	}
+	*len = k;
+	return c;
+}
+
+static int utf8_put(char *out, uint32_t c)
+{
+	if (c < 0x80) { out[0] = (char)c; return 1; }
+	if (c < 0x800) { out[0] = (char)(0xC0 | c >> 6); out[1] = (char)(0x80 | (c & 0x3F)); return 2; }
+	if (c < 0x10000) {
+		out[0] = (char)(0xE0 | c >> 12); out[1] = (char)(0x80 | (c >> 6 & 0x3F)); out[2] = (char)(0x80 | (c & 0x3F));
+		return 3;
+	}
+	out[0] = (char)(0xF0 | c >> 18); out[1] = (char)(0x80 | (c >> 12 & 0x3F));
+	out[2] = (char)(0x80 | (c >> 6 & 0x3F)); out[3] = (char)(0x80 | (c & 0x3F));
+	return 4;
+}
+
+/* Greek letters with no capital of their own: the capital, then the
+ * accent as a mark of its own (U+0342 is the circumflex, perispomeni),
+ * and Ι for an iota below, as Unicode's SpecialCasing has them */
+static const struct { uint16_t c; uint16_t to[3]; } greek_upper[] = {
+	{ 0x1F50, { 0x3A5, 0x313 } }, { 0x1F52, { 0x3A5, 0x313, 0x300 } }, { 0x1F54, { 0x3A5, 0x313, 0x301 } },
+	{ 0x1F56, { 0x3A5, 0x313, 0x342 } },
+	{ 0x1FB2, { 0x1FBA, 0x399 } }, { 0x1FB4, { 0x386, 0x399 } }, { 0x1FB6, { 0x391, 0x342 } },
+	{ 0x1FB7, { 0x391, 0x342, 0x399 } }, { 0x1FC2, { 0x1FCA, 0x399 } }, { 0x1FC4, { 0x389, 0x399 } },
+	{ 0x1FC6, { 0x397, 0x342 } }, { 0x1FC7, { 0x397, 0x342, 0x399 } }, { 0x1FD2, { 0x3AA, 0x300 } },
+	{ 0x1FD3, { 0x3AA, 0x301 } }, { 0x1FD6, { 0x399, 0x342 } }, { 0x1FD7, { 0x3AA, 0x342 } },
+	{ 0x1FE2, { 0x3AB, 0x300 } }, { 0x1FE3, { 0x3AB, 0x301 } }, { 0x1FE4, { 0x3A1, 0x313 } },
+	{ 0x1FE6, { 0x3A5, 0x342 } }, { 0x1FE7, { 0x3AB, 0x342 } }, { 0x1FF2, { 0x1FFA, 0x399 } },
+	{ 0x1FF4, { 0x38F, 0x399 } }, { 0x1FF6, { 0x3A9, 0x342 } }, { 0x1FF7, { 0x3A9, 0x342, 0x399 } },
+};
+
+/* a letter with a case (marks between letters, U+0300 to U+036F, are
+ * part of the letter before) */
+static bool is_cased(uint32_t c)
+{
+	return case_of(c, true) != c || case_of(c, false) != c || c == 0xDF || c == 0x3C2;
+}
+
+/* whether a letter follows at u (marks skipped): for Σ at a word's end */
+static bool letter_follows(const unsigned char *u, int64_t n)
+{
+	for (int64_t i = 0; i < n;) {
+		int len;
+		uint32_t c = utf8_at(u + i, n - i, &len);
+		if (c >= 0x300 && c <= 0x36F) {
+			i += len;
+			continue;
+		}
+		return c != 0xFFFFFFFF && is_cased(c);
+	}
+	return false;
+}
+
+/* A copy in upper (or lower) case; *outn its length, which can differ
+ * (ß is SS, and ı's I is a byte shorter). */
+char *rt_str_case(const char *d, int64_t n, bool upper, int64_t *outn)
+{
+	/* (at most twice as long: SS for ß, and no letter's other case
+	 * takes more than one byte more) */
+	char *p = alloc_text(n * 2);
+	int64_t o = 0;
+	const unsigned char *u = (const unsigned char *)d;
+	bool after_letter = false;   /* (for Σ, which is ς at the end of a word) */
+	for (int64_t i = 0; i < n;) {
+		unsigned char b = u[i];
+		if (b < 0x80) {
+			p[o++] = upper && b >= 'a' && b <= 'z' ? (char)(b - 32) : !upper && b >= 'A' && b <= 'Z' ? (char)(b + 32)
+											          : (char)b;
+			after_letter = (b | 32) >= 'a' && (b | 32) <= 'z';
+			i++;
+			continue;
+		}
+		int len;
+		uint32_t c = utf8_at(u + i, n - i, &len);
+		if (c == 0xFFFFFFFF) {
+			p[o++] = (char)b;
+			i++;
+			continue;
+		}
+		bool mark = c >= 0x300 && c <= 0x36F;
+		bool done = false;
+		if (upper && c == 0xDF) {
+			p[o++] = 'S';
+			p[o++] = 'S';
+			done = true;
+		} else if (upper && c >= 0x1F50 && c <= 0x1FF7) {
+			for (size_t k = 0; k < sizeof greek_upper / sizeof *greek_upper; k++)
+				if (greek_upper[k].c == c) {
+					for (int m = 0; m < 3 && greek_upper[k].to[m]; m++)
+						o += utf8_put(p + o, greek_upper[k].to[m]);
+					done = true;
+					break;
+				}
+		} else if (!upper && c == 0x3A3 && after_letter && !letter_follows(u + i + len, n - i - len)) {
+			o += utf8_put(p + o, 0x3C2);
+			done = true;
+		}
+		if (!done)
+			o += utf8_put(p + o, case_of(c, upper));
+		if (!mark)
+			after_letter = is_cased(c);
+		i += len;
+	}
+	p[o] = '\0';
+	*outn = o;
 	return p;
 }
 
@@ -1214,8 +1441,9 @@ void cby_str_trim(cby_str *dst, const cby_str *s)
 
 void cby_str_case(cby_str *dst, const cby_str *s, bool upper)
 {
-	dst->data = rt_str_case(DATA(s), str_len(s), upper);
-	dst->len = str_len(s);
+	int64_t n;
+	dst->data = rt_str_case(DATA(s), str_len(s), upper, &n);
+	dst->len = n;
 }
 
 void cby_str_replace(cby_str *dst, const cby_str *s, const cby_str *from, const cby_str *to)

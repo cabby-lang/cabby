@@ -2527,17 +2527,11 @@ static Value eval_str_builtin(Interp *I, Expr *e)
 	}
 	case BUILTIN_STR_UPPER:
 	case BUILTIN_STR_LOWER: {
-		/* (straight into the new string: as rt_str_case does it) */
 		Str *s = str_of(eval_read(I, args->items[0]));
-		bool upper = e->as.call.builtin == BUILTIN_STR_UPPER;
-		Str *r = str_new(s->data, s->len);
-		for (int64_t i = 0; i < r->len; i++) {
-			char c = r->data[i];
-			if (upper && c >= 'a' && c <= 'z')
-				r->data[i] = (char)(c - 32);
-			else if (!upper && c >= 'A' && c <= 'Z')
-				r->data[i] = (char)(c + 32);
-		}
+		int64_t n;
+		char *p = rt_str_case(s->data, s->len, e->as.call.builtin == BUILTIN_STR_UPPER, &n);
+		Str *r = str_new(p, n);
+		free(p);
 		return (Value){ .kind = V_STR, .as.s = r };
 	}
 	case BUILTIN_STR_REPLACE: {
@@ -2597,7 +2591,7 @@ static Value eval_str_builtin(Interp *I, Expr *e)
 			set_panic_loc(e->loc);
 			p = rt_str_repeat(s->data, s->len, times, &n, file_of(e->loc), e->loc.line, e->loc.col);
 		} else {
-			p = rt_str_case(s->data, s->len, e->as.call.builtin == BUILTIN_STR_UPPER);
+			p = rt_str_case(s->data, s->len, e->as.call.builtin == BUILTIN_STR_UPPER, &n);
 		}
 		Value v = { .kind = V_STR, .as.s = str_new(p, n) };
 		free(p);

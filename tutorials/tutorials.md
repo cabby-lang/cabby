@@ -1,6 +1,6 @@
 # The Cabby Manual
 
-*For Cabby 0.40.0 (2026-11-20).*
+*For Cabby 0.41.0 (2026-11-20).*
 
 A book for learning Cabby one idea at a time, and a reference to come back
 to afterwards.
@@ -2335,8 +2335,23 @@ Each call there is in parentheses because it shares a line with others
 ([Chapter 10](#calling-a-function)). On a line of its own, none are needed:
 `bool Found = Line.contains "cat"`.
 
-`.upper` and `.lower` change the English letters A to Z only; letters like
-é or Greek α are left as they are.
+`.upper` and `.lower` know more than A to Z: the letters of Latin with
+its accents (é, ā, æ, þ), Greek, Cyrillic and Armenian:
+
+<!-- main -->
+```cabby
+println "Ærendgewrit".upper, "Ὀδυσσεύς".upper, "ΛΌΓΟΣ".lower, "straße".upper
+```
+
+```text
+ÆRENDGEWRIT ὈΔΥΣΣΕΎΣ λόγος STRASSE
+```
+
+A capital Σ ending a word becomes the final ς; ß has no capital of its
+own, so it's SS; and a Greek letter with no capital (ῆ) is the capital
+followed by its accent. So a word can come back a different length.
+Letters beyond these, and characters that aren't letters, stay as they
+are.
 
 #### Slices
 
@@ -16789,7 +16804,7 @@ Run `cabby` with no file to type Cabby a piece at a time:
 
 ```text
 $ cabby
-Cabby 0.40.0 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
+Cabby 0.41.0 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
 Cabby comes with ABSOLUTELY NO WARRANTY, under the MIT License; "cabby.license" for details.
 >>> int add int a, int b {
 ... 	return a + b
@@ -17118,7 +17133,6 @@ CABBY_GUI_SCRIPT="type 1 Ada; click Say hello; shot greeter.png; close" cabby 51
 * Objects pointing at each other freely (a chain or tree can be built
   from objects holding a `list` of their own kind, or with `use addresses`;
   see [Chapter 28](#chapter-28-addresses)).
-* `.upper` and `.lower` for letters beyond A to Z (é, α).
 * Panels and bars of a desktop (a dock, a system tray) in the gui
   library.
 * Shadows and physics in 3D (`use world`).
