@@ -18,6 +18,14 @@ LDLIBS  := -lffi -lm -ldl -pthread
 # Darwin parts of the C library, and libraries that are allowed to use the
 # interpreter's own functions (as Linux allows by itself).
 UNAME := $(shell uname -s)
+# Homebrew for this Mac's own processor: on an Apple one it's in
+# /opt/homebrew, and a Homebrew in /usr/local is Intel's (for Rosetta),
+# whose libraries can't be linked here
+ARCH := $(shell uname -m)
+BREW := brew
+ifeq ($(UNAME)-$(ARCH),Darwin-arm64)
+BREW := $(firstword $(wildcard /opt/homebrew/bin/brew) brew)
+endif
 ifeq ($(UNAME),Darwin)
 PLATFORM_DEFS := -D_DARWIN_C_SOURCE
 PLATFORM_SHARED := -Wl,-undefined,dynamic_lookup
@@ -27,9 +35,17 @@ LDFLAGS += -Wl,-stack_size,0x3c00000
 SOUND_FRAMEWORKS := -framework CoreFoundation -framework CoreAudio -framework AudioToolbox
 CFLAGS += $(PLATFORM_DEFS)
 # ffi.h: Homebrew's libffi (wherever Homebrew is: /opt/homebrew or
-# /usr/local), or else the one in Apple's own SDK
-BREW_FFI := $(firstword $(wildcard $(shell brew --prefix libffi 2>/dev/null)/include/ffi.h) \
-	$(wildcard /opt/homebrew/opt/libffi/include/ffi.h) $(wildcard /usr/local/opt/libffi/include/ffi.h))
+# /usr/local), or else the one in Apple's own SDK; only one built for this
+# processor (lipo says), so an Intel Homebrew's isn't taken on an Apple one
+FFI_FOR_HERE = $(if $(filter $(ARCH),$(shell lipo -archs $(dir $(1))../lib/libffi.dylib 2>/dev/null)),$(1))
+BREW_FFI_ALL := $(wildcard $(shell $(BREW) --prefix libffi 2>/dev/null)/include/ffi.h) \
+	$(wildcard /opt/homebrew/opt/libffi/include/ffi.h) $(wildcard /usr/local/opt/libffi/include/ffi.h)
+BREW_FFI := $(firstword $(foreach f,$(BREW_FFI_ALL),$(call FFI_FOR_HERE,$(f))))
+ifneq ($(BREW_FFI_ALL),)
+ifeq ($(BREW_FFI),)
+$(warning Homebrew's libffi isn't built for $(ARCH) (it's in $(dir $(firstword $(BREW_FFI_ALL)))): Apple's own is used instead; /opt/homebrew/bin/brew install libffi gives one)
+endif
+endif
 SDK_FFI := $(wildcard $(shell xcrun --show-sdk-path 2>/dev/null)/usr/include/ffi/ffi.h)
 ifneq ($(BREW_FFI),)
 CFLAGS += -I$(dir $(BREW_FFI))
@@ -71,7 +87,7 @@ GAME_LIBS := $(shell pkg-config --libs sdl3 2>/dev/null)
 GAME_CFLAGS := $(shell pkg-config --cflags sdl3 2>/dev/null)
 ifeq ($(strip $(GAME_LIBS)),)
 # (without pkg-config: where Homebrew puts it, or the usual places)
-SDL_PREFIX := $(firstword $(patsubst %/include/SDL3/SDL.h,%,$(wildcard $(shell brew --prefix sdl3 2>/dev/null)/include/SDL3/SDL.h \
+SDL_PREFIX := $(firstword $(patsubst %/include/SDL3/SDL.h,%,$(wildcard $(shell $(BREW) --prefix sdl3 2>/dev/null)/include/SDL3/SDL.h \
 	/opt/homebrew/opt/sdl3/include/SDL3/SDL.h /usr/local/opt/sdl3/include/SDL3/SDL.h /usr/local/include/SDL3/SDL.h)))
 ifneq ($(SDL_PREFIX),)
 GAME_LIBS := -L$(SDL_PREFIX)/lib -lSDL3
@@ -195,7 +211,7 @@ VIDEOS_LIBS := $(shell pkg-config --libs $(FFMPEG_PKGS) 2>/dev/null)
 VIDEOS_CFLAGS := $(shell pkg-config --cflags $(FFMPEG_PKGS) 2>/dev/null)
 # (without pkg-config: where Homebrew puts it, or the usual places)
 ifeq ($(strip $(VIDEOS_LIBS)),)
-FFMPEG_PREFIX := $(firstword $(patsubst %/include/libavformat/avformat.h,%,$(wildcard $(shell brew --prefix ffmpeg 2>/dev/null)/include/libavformat/avformat.h \
+FFMPEG_PREFIX := $(firstword $(patsubst %/include/libavformat/avformat.h,%,$(wildcard $(shell $(BREW) --prefix ffmpeg 2>/dev/null)/include/libavformat/avformat.h \
 	/opt/homebrew/opt/ffmpeg/include/libavformat/avformat.h /usr/local/opt/ffmpeg/include/libavformat/avformat.h /usr/local/include/libavformat/avformat.h)))
 ifneq ($(FFMPEG_PREFIX),)
 VIDEOS_LIBS := -L$(FFMPEG_PREFIX)/lib -lavformat -lavcodec -lswscale -lswresample -lavutil

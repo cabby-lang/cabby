@@ -86,6 +86,7 @@ the patch number with fixes alone.
 | 0.37.1 | 20 November | `tests/machines/later.sh`: the checks still waiting on a real computer |
 | 0.38.0 | 20 November | `use csv`; `callback`, a Cabby function for C to call; `cabby -c --checked`, with AddressSanitizer |
 | 0.39.0 | 20 November | The last look at names: clearer library names, and messages that all say "can't" |
+| 0.39.1 | 20 November | whisper-cli found off the PATH (Arch's ~/.local/bin); a Mac build skips an Intel Homebrew's libffi |
 
 ---
 
@@ -1487,6 +1488,20 @@ old names need changing:
   array is said the way a list's is: "index 4 is outside an array of
   length 4 (positions 0 to 3)"; a shift is "can't shift by 40: it must be
   0 to 31".
+
+*Version 0.39.1:*
+
+- `speech` finds `whisper-cli` where it's often put without being on the
+  `PATH`: `~/.local/bin` (which Arch leaves off it), whisper.cpp's own
+  `build/bin`, and Homebrew's `bin`. `CABBY_WHISPER` names it, if it's
+  elsewhere. (On Arch it was in `~/.local/bin`, and `can_hear` said false.)
+  `tests/machines/later.sh hearing` now also listens for five seconds and
+  shows what it heard.
+- Building on a Mac with an Apple processor: Homebrew in `/opt/homebrew`
+  is asked first, and a libffi is only used if `lipo` says it's built for
+  this processor. An Intel Homebrew in `/usr/local` (Rosetta's) had given
+  an `x86_64` libffi, and the link failed with every `ffi_` call missing.
+  The same Homebrew is asked for SDL 3 and FFmpeg.
 
 ## Along the way (dates not recorded)
 
