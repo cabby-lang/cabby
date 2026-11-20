@@ -716,7 +716,7 @@ static const char *const str_member_names[] = {
 	"repeat", "pad_left", "pad_right", "centered", "split", "is_int", "to_int", "is_long", "to_long", "is_number", "to_double", NULL,
 };
 static const char *const list_member_names[] = {
-	"length", "add", "insert", "remove_at", "take_last", "clear", "contains", "find", "copy", "sort", "reverse", NULL,
+	"length", "add", "insert", "remove_at", "take_last", "clear", "contains", "find", "copy", "sort", "sort_by", "sort_with", "reverse", NULL,
 };
 static const char *const lookup_member_names[] = {
 	"length", "contains", "remove", "clear", "copy", "keys", "values", NULL,

@@ -16,7 +16,7 @@ cabby --check     prog.cby              type- and ownership-check only
 cabby --style     prog.cby              list names and calls that don't follow STYLE.md
 cabby --dump-ast  prog.cby              print the syntax tree
 cabby --dump-tokens prog.cby            print the token stream
-cabby --version                         which Cabby this is: "Cabby 0.39.2 (2026-11-20)"
+cabby --version                         which Cabby this is: "Cabby 0.40.0 (2026-11-20)"
 cabby --license                         Cabby's license (MIT)
 ```
 
@@ -346,6 +346,8 @@ Scores.length   Scores[i]  // read or change an element; every index is checked
 Scores.contains 70   Scores.find 70     // true/false; the position or -1
 Scores.copy   Scores[1 to 3]            // a new list: all of it, or a slice
 Scores.sort   Scores.reverse          // smallest first; last first
+Pets.sort_by Age   Pets.sort_by name_of // by a field, or a function's key
+Pets.sort_with older                    // bool older const pet &A, const pet &B
 println Scores             // [100, 90, 70]; a list str prints as [Ada, Alan]
 list str Words = Line.split " "         // and back: Words.join ", "
 for Score in Scores { }    // each element, read-only: a copy for numbers,
@@ -356,7 +358,8 @@ A list can't be changed inside a `for` loop that goes through it, and an
 element can't be moved out with `[i]` (borrow it, `.copy` it, or take it
 out with `.take_last` or `.remove_at`). Lists can hold anything, including
 other lists (`list list int Grid`); `.copy`, slices, `.contains`, `.find`
-and `.sort` need elements that can be copied or compared.
+and `.sort` need elements that can be copied or compared; `.sort_by` and
+`.sort_with` put anything in order, keeping equals in the order they were.
 
 **Lookups.** `lookup K V Name` holds a value of type `V` for each key of
 type `K`, kept in the order the keys were added: `lookup str int Ages =
@@ -1192,7 +1195,7 @@ Run `cabby` with no file to type Cabby a piece at a time:
 
 ```
 $ cabby
-Cabby 0.39.2 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
+Cabby 0.40.0 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
 Cabby comes with ABSOLUTELY NO WARRANTY, under the MIT License; "cabby.license" for details.
 >>> int add int a, int b {
 ... 	return a + b

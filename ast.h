@@ -258,7 +258,12 @@ struct Expr {
 			int slot;             /* vtable slot: the window's own override is called */
 			struct Symbol *self;  /* the window */
 		} handler;
-		struct { FnDecl *fn; } callback;
+		struct {
+			FnDecl *fn;
+			/* L.sort_by: a field of the element (fn NULL), or fn's key */
+			int owner_id, field_index;
+			struct Type *key;
+		} callback;
 	} as;
 };
 

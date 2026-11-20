@@ -233,6 +233,8 @@ typedef enum {
 	BUILTIN_LIST_SLICE,  /* L[a to b]      (L, a, b, flags) -> a new list of copies */
 	BUILTIN_LIST_JOIN,   /* L.join sep     (L, sep) -> str, for a list str */
 	BUILTIN_LIST_SORT,   /* L.sort         (L)      smallest first; strings in dictionary order */
+	BUILTIN_LIST_SORT_BY,   /* L.sort_by F    (L, CALLBACK) by a field, or a function's key; stable */
+	BUILTIN_LIST_SORT_WITH, /* L.sort_with F  (L, CALLBACK) F(A, B) true: A goes first; stable */
 	BUILTIN_LIST_REVERSE, /* L.reverse     (L)      last element first */
 	BUILTIN_LOOKUP_LEN,  /* K.length       (K)      -> long */
 	BUILTIN_LOOKUP_CONTAINS, /* K.contains k (K, k) -> bool */

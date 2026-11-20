@@ -88,6 +88,7 @@ the patch number with fixes alone.
 | 0.39.0 | 20 November | The last look at names: clearer library names, and messages that all say "can't" |
 | 0.39.1 | 20 November | whisper-cli found off the PATH (Arch's ~/.local/bin); a Mac build skips an Intel Homebrew's libffi |
 | 0.39.2 | 20 November | Pasting keeps (or gives) indentation; tutorials 28 and 40 show callbacks and CSV |
+| 0.40.0 | 20 November | Lists of objects put in order: `.sort_by` a field or a function's key, `.sort_with` a function comparing two |
 
 ---
 
@@ -1519,6 +1520,23 @@ old names need changing:
 - On a Mac with an Apple processor, SDL 3 and FFmpeg, like libffi, are
   only taken from a Homebrew built for it, and /opt/homebrew's
   pkg-config is asked first.
+
+*Version 0.40.0:* the first of the known gaps before 1.0.
+
+- **`L.sort_by Age`** puts a list of structs or objects in order by a
+  field (a number, `bool`, `char` or `str`), smallest first.
+  **`L.sort_by length_of`** goes by what a function gives each element
+  (`long length_of const str &Word`), for any list.
+  **`L.sort_with ahead`** takes a function saying, of two, whether the
+  first goes first (`bool ahead const player &A, const player &B`).
+- Both are stable: elements that come out the same keep their order, so
+  sorting by one thing and then another sorts by the second, then the
+  first. A float that isn't a number goes last, as `.sort` has it.
+- The interpreter merge-sorts the positions, working each key out once;
+  compiled, each call has its own small "goes before" function, and the
+  runtime merge-sorts with it (`cby_list_sort_by`).
+- Chapter 15 shows them on strings, and Chapter 22 has "Putting objects in
+  order"; Appendix H no longer lists it as missing.
 
 ## Along the way (dates not recorded)
 

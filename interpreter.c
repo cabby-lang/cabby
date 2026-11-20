@@ -1356,6 +1356,87 @@ static int cmp_value_str(const void *a, const void *b)
 	return rt_str_compare(x->data, x->len, y->data, y->len);
 }
 
+/* how keys of type t compare, as L.sort does */
+static int (*cmp_for(const Type *t))(const void *, const void *)
+{
+	return t->kind == TY_STR ? cmp_value_str : t->kind == TY_FLOAT ? cmp_value_float :
+	       t->kind == TY_INT && t->is_char ? cmp_value_char :
+	       t->kind == TY_INT && !t->is_signed ? cmp_value_unsigned : cmp_value_signed;
+}
+
+/* L.sort_by and L.sort_with: a merge sort of the positions (so it's
+ * stable: equals keep their order), then the elements put in that order */
+typedef struct {
+	Interp *I;
+	List *l;
+	Value *keys;                                   /* sort_by: each one's key */
+	int (*cmp)(const void *, const void *);
+	FnDecl *with;                                  /* sort_with: the function */
+	SrcLoc loc;
+} SortBy;
+
+/* true when position b's element goes before a's */
+static bool sort_before(SortBy *sb, int64_t b, int64_t a)
+{
+	if (sb->keys)
+		return sb->cmp(&sb->keys[b], &sb->keys[a]) < 0;
+	Value args[2] = { v_ref(&sb->l->items[b]), v_ref(&sb->l->items[a]) };
+	Value r = call_function(sb->I, sb->with, NULL, args, sb->loc);
+	return r.as.b;
+}
+
+static void sort_merge(SortBy *sb, int64_t *idx, int64_t *tmp, int64_t n)
+{
+	if (n < 2)
+		return;
+	int64_t h = n / 2;
+	sort_merge(sb, idx, tmp, h);
+	sort_merge(sb, idx + h, tmp, n - h);
+	int64_t i = 0, j = h, k = 0;
+	while (i < h && j < n)
+		tmp[k++] = sort_before(sb, idx[j], idx[i]) ? idx[j++] : idx[i++];
+	while (i < h)
+		tmp[k++] = idx[i++];
+	while (j < n)
+		tmp[k++] = idx[j++];
+	memcpy(idx, tmp, sizeof *idx * (size_t)n);
+}
+
+static void list_sort_by(Interp *I, List *l, Expr *cb, bool with, SrcLoc loc)
+{
+	int64_t n = l->len;
+	if (n < 2)
+		return;
+	SortBy sb = { I, l, NULL, NULL, with ? cb->as.callback.fn : NULL, loc };
+	if (!with) {
+		sb.keys = malloc(sizeof(Value) * (size_t)n);
+		sb.cmp = cmp_for(cb->as.callback.key);
+		for (int64_t i = 0; i < n; i++) {
+			if (cb->as.callback.fn) {
+				Value arg = v_ref(&l->items[i]);
+				sb.keys[i] = call_function(I, cb->as.callback.fn, NULL, &arg, loc);
+			} else {
+				Object *o = deref_all(&l->items[i])->as.obj;
+				sb.keys[i] = o->fields[o->cls->block_start[cb->as.callback.owner_id] + cb->as.callback.field_index];
+			}
+		}
+	}
+	int64_t *idx = malloc(sizeof *idx * (size_t)n * 2);
+	for (int64_t i = 0; i < n; i++)
+		idx[i] = i;
+	sort_merge(&sb, idx, idx + n, n);
+	Value *was = malloc(sizeof(Value) * (size_t)n);
+	memcpy(was, l->items, sizeof(Value) * (size_t)n);
+	for (int64_t i = 0; i < n; i++)
+		l->items[i] = was[idx[i]];
+	if (sb.keys && cb->as.callback.fn)
+		for (int64_t i = 0; i < n; i++)
+			value_drop(I, &sb.keys[i]);
+	free(sb.keys);
+	free(was);
+	free(idx);
+}
+
 /* Room for `more` elements at the end: the room doubles when full. */
 static void list_reserve(List *l, int64_t more)
 {
@@ -2662,6 +2743,10 @@ static Value eval_str_builtin(Interp *I, Expr *e)
 			qsort(l->items, (size_t)l->len, sizeof(Value), cmp);
 		return v_void();
 	}
+	case BUILTIN_LIST_SORT_BY:
+	case BUILTIN_LIST_SORT_WITH:
+		list_sort_by(I, list_of(eval_read(I, args->items[0])), args->items[1], e->as.call.builtin == BUILTIN_LIST_SORT_WITH, e->loc);
+		return v_void();
 	case BUILTIN_LIST_REVERSE: {
 		List *l = list_of(eval_read(I, args->items[0]));
 		for (int64_t a = 0, b = l->len - 1; a < b; a++, b--) {

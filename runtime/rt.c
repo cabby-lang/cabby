@@ -1845,6 +1845,48 @@ void cby_list_sort(cby_list *l, int kind)
 		qsort(l->data, (size_t)l->len, size[kind], cmp[kind]);
 }
 
+/* L.sort_by and L.sort_with: a merge sort of the positions, so equals
+ * keep their order; before(b, a) says whether the element at b goes
+ * before the one at a. Then the elements are put in that order. */
+typedef bool (*cby_before)(const void *b, const void *a);
+
+static void sort_by_merge(const char *data, int64_t size, cby_before before, int64_t *idx, int64_t *tmp, int64_t n)
+{
+	if (n < 2)
+		return;
+	int64_t h = n / 2;
+	sort_by_merge(data, size, before, idx, tmp, h);
+	sort_by_merge(data, size, before, idx + h, tmp, n - h);
+	int64_t i = 0, j = h, k = 0;
+	while (i < h && j < n)
+		tmp[k++] = before(data + idx[j] * size, data + idx[i] * size) ? idx[j++] : idx[i++];
+	while (i < h)
+		tmp[k++] = idx[i++];
+	while (j < n)
+		tmp[k++] = idx[j++];
+	memcpy(idx, tmp, sizeof *idx * (size_t)n);
+}
+
+void cby_list_sort_by(cby_list *l, int64_t size, cby_before before)
+{
+	int64_t n = l->len;
+	if (n < 2)
+		return;
+	int64_t *idx = malloc(sizeof *idx * (size_t)n * 2);
+	char *was = malloc((size_t)(n * size));
+	if (!idx || !was)
+		rt_panic(NULL, 0, 0, "out of memory");
+	for (int64_t i = 0; i < n; i++)
+		idx[i] = i;
+	sort_by_merge(l->data, size, before, idx, idx + n, n);
+	char *data = l->data;
+	memcpy(was, data, (size_t)(n * size));
+	for (int64_t i = 0; i < n; i++)
+		memcpy(data + i * size, was + idx[i] * size, (size_t)size);
+	free(was);
+	free(idx);
+}
+
 /* L.reverse */
 void cby_list_reverse(cby_list *l, int64_t size)
 {
