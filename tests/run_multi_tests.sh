@@ -34,6 +34,7 @@ check_error() {   # NAME FILE MESSAGE
 check_output headers_and_impl "$DIR/multi/main.cby" $'42 true 12\n5 10\nprintf 7'
 check_output example "$DIR/../examples/example.cby" $'The char you chose is...\nf\n5'
 check_output headerless_module "$DIR/multi/headerless.cby" '42'
+check_output local_prefix "$DIR/multi/prefixed.cby" '5.0 7.0'
 check_error  static_is_private "$DIR/multi/private.cby" "'helper' is declared static in"
 
 echo "multi-file tests ($MODE): $pass passed, $fail failed"

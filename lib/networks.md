@@ -712,6 +712,46 @@ Linux asks `iwgetid` or NetworkManager's `nmcli`; a Mac asks
 that's been allowed Location Services (Terminal, say, in System Settings,
 Privacy & Security, Location Services), and `""` otherwise.
 
+### Who's there
+
+Which computers on the network have something listening on a port, all
+asked at once, and pings:
+
+<!-- check -->
+```cabby
+use networks
+use time
+
+int main {
+	list str Near = networks.nearby_addresses     // 192.168.1.1 to .254, but this one
+	for Host in networks.answering Near, 22, time.milliseconds(500) {
+		println Host, "has ssh"
+	}
+	if networks.pings "192.168.1.1", time.seconds(1) {
+		println "the router answers, in", networks.ping_time("192.168.1.1", time.seconds(1)).milliseconds, "ms"
+	}
+}
+```
+
+| Function | What it gives |
+|---|---|
+| `list str networks.nearby_addresses` | The other addresses on this computer's network when it's a home or office one with room for 254: `192.168.1.1` to `192.168.1.254`, without its own. Empty when it isn't on an IPv4 network. |
+| `list str networks.answering Hosts, Port, Wait` | Those of `Hosts` with a program listening on `Port`. Every one is asked at once, so 254 addresses take `Wait`, not 254 times it. One that hasn't answered within `Wait` isn't counted. |
+| `bool networks.pings Host, Wait` | `true` if `Host` answers a ping within `Wait`. |
+| `duration networks.ping_time Host, Wait` | How long its answer took to come back; a panic if there's none within `Wait` (`pings` asks first, or `else` catches it). |
+
+A ping is an ICMP echo, as the `ping` command sends. Cabby sends it
+itself where the system lets any program (a Mac does, and Linux does when
+`net.ipv4.ping_group_range` takes in the program's group, as systemd sets
+it on Debian and Arch), and asks the `ping` command otherwise. Many
+computers are set not to answer pings (Windows, and Macs in stealth
+mode), so no answer doesn't mean nobody's there; `answering` on a port
+they serve finds them anyway.
+
+Ask only the computers you're allowed to. On a network that isn't yours,
+asking every computer what it's listening on is what an attacker does
+first, and it's noticed.
+
 ## When it goes wrong
 
 A download that fails is a panic that says why, at the line that asked:

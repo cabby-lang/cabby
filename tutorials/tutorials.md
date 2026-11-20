@@ -1,6 +1,6 @@
 # The Cabby Manual
 
-*For Cabby 0.36.1 (2026-11-19).*
+*For Cabby 0.37.0 (2026-11-20).*
 
 A book for learning Cabby one idea at a time, and a reference to come back
 to afterwards.
@@ -6466,16 +6466,59 @@ A library can keep its names apart from yours by giving them a prefix:
 in full (`gui.window w`), so two libraries, or a library and your program,
 can both have a `window`. The `gui` library in Part IX works this way.
 
+A file's own name is a prefix it can use, as a library's is (`use files`
+gives `files.read`). So a file of functions names them all with its own
+name in front, and `use local` brings them in with it:
+
+```cabby
+// kit/tools.cby
+double tools.twice double V {
+	return V * 2
+}
+
+// static: private to this file, so it needs no prefix
+static double half double V {
+	return V / 2
+}
+
+double tools.half_of_twice double V {
+	return half tools.twice(V)
+}
+```
+
+```cabby
+// main.cby
+use local kit/tools
+
+int main {
+	println tools.twice(2.5), tools.half_of_twice(7.0)
+}
+```
+
+```text
+5.0 7.0
+```
+
+A type a file declares can start with any prefix (`struct geo.size` makes
+`geo` one), and its functions can then use that one too:
+`double geo.area const geo.size &S`. This is how Cabby's own libraries
+are written: open `lib/brightness.hby` and you'll find
+`int brightness.level`, with the C it calls underneath.
+
 #### In short
 
 * `.hby` for declarations, `.cby` beside it for bodies; `use local path`
   brings in both. Without a `.hby`, it brings in the `.cby` alone.
 * `static` keeps a top-level name private to its file.
+* A file's name is a prefix for its functions: `tools.twice` in
+  `tools.cby`, brought in by `use local tools`.
 
 #### Try this
 
 * Add `double area const polygon &p` to the header and write it in
   `geometry.cby`.
+* Make a file `words.cby` of your own with `str words.shout const str &S`,
+  which gives `S` in capitals with "!" after it, and use it.
 
 [← Chapter 32](#chapter-32-files-directories-and-commands) · [Contents](#contents) · [Chapter 34 →](#chapter-34-processes)
 
@@ -6524,6 +6567,59 @@ exit status: 0
   **`at_end`** is `true` once it has ended and every line has been read.
 * **`wait`** waits for it to end and gives its exit status.
   **`is_running`**, **`status`** and **`stop`** do what they say.
+
+#### A Cabby program on the other end
+
+A program of your own can be the process. What `send` sends is its
+*input*, read with `read_line` until `end_of_input`, as if it were typed;
+its *arguments* are the words after its name in `start`, in `Argv`
+([Chapter 31](#chapter-31-command-line-arguments-and-exit-status)). A program that only
+looks at `Argv` never sees what's sent:
+
+<!-- check -->
+```cabby
+// count.cby: says what it was started with, and counts the lines it's sent
+int main int Argc, str Argv[] {
+	println "started with", Argc - 1, "arguments"
+	int Lines = 0
+	str Line = read_line
+	while !end_of_input {
+		Lines++
+		Line = read_line
+	}
+	println Lines, "lines"
+}
+```
+
+<!-- check -->
+```cabby
+// talk.cby
+use processes
+
+int main {
+	process Counter
+	Counter.start "cabby count.cby one two"    // arguments, after its name
+	Counter.send "pear"                          // lines, to its input
+	Counter.send "apple"
+	Counter.send "fig"
+	Counter.end_input                            // now it can count them
+	until Counter.at_end {
+		println Counter.read_line
+	}
+}
+```
+
+```text
+started with 2 arguments
+3 lines
+```
+
+`count.cby` reads until the end of its input, so it only prints its count
+once `end_input` says there's no more. A program that never reads its
+input (one that only prints its `Argv`, say) may have ended before the
+lines are sent, and sending to it then is a panic: "can't send to 'cabby
+args.cby': it has stopped reading (it has ended)". `is_running` says
+whether it's still there to send to.
 
 #### A process belongs to its variable
 
@@ -7728,10 +7824,50 @@ false 0
 Downloads use libcurl, the library behind the `curl` command, so
 `https://`, redirects and proxies all work as they do for `curl`.
 
+#### Who's on the network
+
+The computers on your own network can be asked whether something's
+listening on a port, all of them at once, as `nmap` does. A computer
+that's on and serving that port answers within a moment; one that isn't
+there doesn't, and isn't waited for longer than the time given:
+
+<!-- check -->
+```cabby
+use networks
+use time
+
+int main {
+	list str Near = networks.nearby_addresses     // 192.168.1.1 to .254, but this one
+	println "asking", Near.length, "computers about port 22 (ssh)..."
+	for Host in networks.answering Near, 22, time.milliseconds(500) {
+		println " ", Host, "has ssh"
+	}
+	if networks.pings "192.168.1.1", time.seconds(1) {
+		println "the router answers a ping, in", networks.ping_time("192.168.1.1", time.seconds(1)).milliseconds, "ms"
+	}
+}
+```
+
+```text
+asking 253 computers about port 22 (ssh)...
+  192.168.1.12 has ssh
+  192.168.1.30 has ssh
+the router answers a ping, in 1.84 ms
+```
+
+`networks.answering Hosts, Port, Wait` gives those of `Hosts` with a
+program listening on `Port`, and takes `Wait` however many are asked.
+`networks.pings` and `networks.ping_time` send a ping, as the `ping`
+command does; many computers are set not to answer one, though, so a
+port is the surer way to find them. Ask only the computers on a network
+that's yours: on anyone else's, it's what an attacker does first.
+
 #### In short
 
 * `use networks`; `networks.download Url`, `networks.download_to Url,
   Path`.
+* `networks.nearby_addresses`, `networks.answering Hosts, Port, Wait`,
+  `networks.pings Host, Wait` and `ping_time`: who's on the network.
 * `networks.can_reach Url` and `networks.status Url` check first; a failed
   download is a panic that says why.
 
@@ -9697,8 +9833,10 @@ with its breathings included.
 Change `use gui` to `use gtk`, and `gui.` to `gtk.`, and the same program
 is drawn by GTK 4, with GTK's own widgets (`gtk4` on Arch, `libgtk-4-dev`
 on Debian). Everything in these chapters works the same with it. Choose it
-if you want GTK's look, or if someone using your program needs a screen
-reader: GTK's widgets can be read aloud, and gui's can't yet.
+if you want GTK's look. Both can be used with a screen reader on Linux
+(Orca): gui's windows tell it what's in them, with nothing to do but
+`set_description` on a picture or canvas ([Chapter 53](#chapter-53-more-widgets),
+and `lib/gui.md`). On a Mac, gui's can't be read aloud by VoiceOver yet.
 
 #### In short
 

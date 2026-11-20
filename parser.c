@@ -2,6 +2,7 @@
 
 #include <limits.h>
 #include <stdarg.h>
+#include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -2765,6 +2766,22 @@ static void parse_top(Parser *P)
 	case TOK_USE: {
 		advance(P);
 		char *path;
+		/* A file of one's own gives its name as a prefix (`use local
+		 * shapes/geo` gives geo.area), as a library's name does */
+		if (t.use_local) {
+			const char *s = t.v.str.data;
+			int n = (int)t.v.str.len;
+			if (n > 4 && memcmp(s + n - 4, ".hby", 4) == 0)
+				n -= 4;
+			int from = n;
+			while (from > 0 && s[from - 1] != '/')
+				from--;
+			bool word = from < n && (isalpha((unsigned char)s[from]) || s[from] == '_');
+			for (int k = from; word && k < n; k++)
+				word = isalnum((unsigned char)s[k]) || s[k] == '_';
+			if (word)
+				add_namespace(P->ld, s + from, n - from);
+		}
 		if (t.use_local) {
 			const char *slash = strrchr(P->path, '/');
 			size_t dl = slash ? (size_t)(slash - P->path + 1) : 0;
