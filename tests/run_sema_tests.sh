@@ -18,7 +18,8 @@ pass=0 fail=0 skipped=0
 LIBDIR=${CABBY_LIB:-$(dirname "$CLI")/lib}
 
 awk -v dir="$TMP" '
-	/^### / { name = $2; file = dir "/" name ".cby"; print name > (dir "/names"); next }
+	# (each case closed when the next starts: macOS awk has only so many open)
+	/^### / { if (file) close(file); name = $2; file = dir "/" name ".cby"; print name > (dir "/names"); next }
 	{ if (file) print > file }
 ' "$CASES"
 

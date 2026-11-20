@@ -4052,7 +4052,8 @@ static Exec exec_recovering(Interp *I, Stmt *s)
 {
 	Recover *r = s->recover;
 	CellChunk *chunk = I->chunk;
-	int64_t used = chunk ? chunk->used : 0;
+	/* (volatile: newer gcc can't tell it isn't changed after _setjmp) */
+	volatile int64_t used = chunk ? chunk->used : 0;
 	int ntemps = I->ntemps, depth = I->depth, drop_depth = g_drop_depth;
 	int panic_file = g_panic_file, lib_file = g_lib_call_fileid;
 	int ext_mark = g_next, nxlat = g_nxlat;

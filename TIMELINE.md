@@ -93,6 +93,7 @@ the patch number with fixes alone.
 | 0.42.0 | 20 November | Elements at positions written as numbers are borrowed separately: `Scores[0]` lent, `Scores[1]` changed |
 | 0.43.0 | 20 November | `link T`: objects pointing at each other without owning, safely, caught when one is gone |
 | 0.43.1 | 20 November | The speed check before 1.0: objects made with malloc itself (compiled `objects` 6× faster than C), `.upper`'s quick path back |
+| 0.43.2 | 21 November | The last tests on the three computers: the test scripts on macOS's awk, a ping test's address, a warning on Arch |
 
 ---
 
@@ -1623,6 +1624,18 @@ other freely.
 - Interpreted Cabby is ahead of Python at nine of the ten benchmarks, and
   level at lookups; compiled, within about 1.2× of C but for `fib` (gcc's
   trick), and far ahead at `objects`.
+
+*Version 0.43.2:* from running `make test` on the Mac, Debian and Arch
+before 1.0.
+
+- The sema and program tests split their cases with awk, which kept every
+  case's file open; macOS's awk can only have so many, and with 298 sema
+  cases it ran out (252 ran). Each is closed when the next starts.
+- `networks/who_is_there` pinged 10.255.255.1 expecting no answer, but
+  some home networks answer it (on both the Mac and Debian). It pings
+  192.0.2.1 now, an address kept for examples (RFC 5737).
+- Newer gcc (Arch's) warned that a variable in the interpreter's `... else`
+  might be lost by `longjmp`; it can't be, but it's `volatile` now.
 
 ## Along the way (dates not recorded)
 

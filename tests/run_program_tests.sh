@@ -18,7 +18,8 @@ trap 'rm -rf "$TMP"' EXIT
 pass=0 fail=0
 
 awk -v dir="$TMP" '
-	/^### / { name = $2; file = dir "/" name ".cby"; print name > (dir "/names"); next }
+	# (each case closed when the next starts: macOS awk has only so many open)
+	/^### / { if (file) close(file); name = $2; file = dir "/" name ".cby"; print name > (dir "/names"); next }
 	{ if (file) print > file }
 ' "$CASES"
 
