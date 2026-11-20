@@ -1,11 +1,13 @@
 // answering: those with something listening, all asked at once, within the
-// time given; and a ping that isn't answered
+// time given; and a ping that isn't answered (192.0.2.1 is kept for
+// examples, RFC 5737, so nothing should answer it: 10.255.255.1, used
+// before, is answered on some home networks)
 //> listening: true
 //> nothing there: false
 //> nowhere: false
 //> all at once: true
 //> no ping: false
-//> said: '10.255.255.1' didn't answer a ping within 200 ms
+//> said: '192.0.2.1' didn't answer a ping within 200 ms
 use networks
 use time
 
@@ -19,12 +21,12 @@ int main {
 	list str Here = {"127.0.0.1"}
 	println "listening:", networks.answering(Here, S.port, time.seconds(1)).length == 1
 	println "nothing there:", networks.answering(Here, Empty, time.seconds(1)).length == 1
-	list str Far = {"10.255.255.1", "no-such-host.invalid"}
+	list str Far = {"192.0.2.1", "no-such-host.invalid"}
 	moment Start = time.now
 	println "nowhere:", networks.answering(Far, S.port, time.milliseconds(500)).length == 1
 	println "all at once:", time.since(Start).seconds < 2
-	println "no ping:", networks.pings("10.255.255.1", time.milliseconds(200))
-	duration T = networks.ping_time "10.255.255.1", time.milliseconds(200) else Why {
+	println "no ping:", networks.pings("192.0.2.1", time.milliseconds(200))
+	duration T = networks.ping_time "192.0.2.1", time.milliseconds(200) else Why {
 		println "said:", Why
 		return 0
 	}
