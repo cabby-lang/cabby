@@ -1,0 +1,29 @@
+// The monitors, as this computer's own desktop says (tests/machines/later.sh).
+// It changes nothing unless given `change`: then the main screen is set to
+// the mode it already has, and to where it already is, which shows the
+// changing works without changing what you see.
+use screens
+
+int main int Argc, str Argv[] {
+	println "desktop:", screens.desktop, "| can change:", screens.can_change, "| screens:", screens.count
+	for S in screens.all {
+		println " ", S.text, "| main:", S.main, "| description:", S.description
+		println "    modes:", S.modes.length, S.modes
+	}
+	if Argc < 2 || Argv[1] != "change" {
+		return 0
+	}
+	screens.screen Main = screens.main
+	if !Main.found {
+		println "no main screen"
+		return 1
+	}
+	bool Mode = Main.set_mode Main.width, Main.height, Main.refresh
+	bool Place = Main.set_position Main.x, Main.y
+	println "set to the same mode:", Mode, "| to the same place:", Place
+	println "now:", Main.text
+	if !Mode || !Place {
+		return 1
+	}
+	return 0
+}
