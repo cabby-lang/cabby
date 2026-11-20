@@ -15,7 +15,7 @@ cabby --check     prog.cby              type- and ownership-check only
 cabby --style     prog.cby              list names and calls that don't follow STYLE.md
 cabby --dump-ast  prog.cby              print the syntax tree
 cabby --dump-tokens prog.cby            print the token stream
-cabby --version                         which Cabby this is: "Cabby 0.36.1 (2026-11-19)"
+cabby --version                         which Cabby this is: "Cabby 0.37.0 (2026-11-20)"
 cabby --license                         Cabby's license (MIT)
 ```
 
@@ -997,6 +997,13 @@ server, WebSockets, encryption and email.
 `events.step` goes round the event loop once, for a program with a loop
 of its own. `networks.md` has them.
 
+**Who's on the network.** `networks.answering Hosts, Port, Wait` gives
+those of `Hosts` with a program listening on `Port`, every one asked at
+once (`networks.nearby_addresses` is the network's other 253, for a home
+or office one), and `networks.pings Host, Wait` and `ping_time` send a
+ping (ICMP), by a socket of the program's own where the system allows
+it, or the `ping` command.
+
 **A web server.** `networks.web_server` answers browsers: `on_request`'s
 handler looks at `path` (and `query_value`, `form_value`, `cookie`,
 `body_json`) and answers with `send_page`, `send_json`, `send_file`,
@@ -1153,7 +1160,7 @@ Run `cabby` with no file to type Cabby a piece at a time:
 
 ```
 $ cabby
-Cabby 0.36.1 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
+Cabby 0.37.0 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
 Cabby comes with ABSOLUTELY NO WARRANTY, under the MIT License; "cabby.license" for details.
 >>> int add int a, int b {
 ... 	return a + b

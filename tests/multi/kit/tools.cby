@@ -1,0 +1,13 @@
+// tools.cby: a file of functions whose names start with its own (tools.)
+double tools.twice double V {
+	return V * 2
+}
+
+// static: private to this file, so it needs no prefix
+static double half double V {
+	return V / 2
+}
+
+double tools.half_of_twice double V {
+	return half tools.twice(V)
+}

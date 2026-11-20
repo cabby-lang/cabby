@@ -82,6 +82,7 @@ the patch number with fixes alone.
 | 0.35.1 | 19 November | the interactive session: a comment after `{` no longer stops the next line's indent, and indentation messages count only the tabs typed |
 | 0.36.0 | 19 November | conditions in symbols only: `is`, `is not`, `and`, `or` and `not` are taken out, for `==`, `!=`, `&&`, `\|\|` and `!` |
 | 0.36.1 | 19 November | `keyboard.layouts` on Sway stopped when the tests' own list of layouts wasn't named |
+| 0.37.0 | 20 November | who's on the network (`answering`, `pings`); a file's own name as a prefix for its functions; chapters 33, 34 and 51 put right |
 
 ---
 
@@ -1414,6 +1415,25 @@ the patch number with fixes alone.
   the tests name their own list of layouts with it, and asking for it
   with `shell.get` when it isn't there is a panic. It asks `shell.has`
   first, and the tests check the layouts without it too.
+
+*Version 0.37.0:*
+
+- **Who's on the network.** `networks.answering Hosts, Port, Wait` asks
+  every one of `Hosts` at once whether a program's listening on `Port`
+  (as `nmap` does), and takes `Wait` however many there are;
+  `networks.nearby_addresses` is the other 253 addresses on a home or
+  office network. `networks.pings Host, Wait` and `ping_time` send a
+  ping, by an ICMP socket of the program's own where the system lets
+  any program (a Mac; Linux with systemd's ping_group_range), and by the
+  `ping` command otherwise. Chapter 41 has "Who's on the network".
+- **A file's own name is a prefix for its functions**, as a library's
+  is: `use local kit/tools` lets `tools.cby` define `tools.twice`, with
+  nothing else declared. Chapter 33's Namespaces shows it.
+- From the read-through together: chapter 34 has "A Cabby program on the
+  other end", on input (`send`, `read_line`) and arguments (`Argv`) and
+  what happens sending to a program that's ended; chapter 51 no longer
+  says gui's windows can't be read by a screen reader (they can, on
+  Linux).
 
 ## Along the way (dates not recorded)
 

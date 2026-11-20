@@ -11,6 +11,7 @@
  * (read_line), with no handlers at all. */
 #include "rt.h"
 #include <arpa/inet.h>
+#include <ctype.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <netdb.h>
@@ -25,6 +26,9 @@
 #include <strings.h>
 #include <sys/socket.h>
 #include <sys/types.h>
+#include <sys/wait.h>
+#include <spawn.h>
+#include <time.h>
 #include <unistd.h>
 
 extern int cby_events_watch(int fd, void (*fn)(void *data), void *data);
@@ -718,6 +722,259 @@ static const char *strcasestr_portable(const char *s, const char *word, const ch
 	return NULL;
 }
 
+/* ------------------------------------------------------------ asking who's there
+ *
+ * Which of many computers have something listening on a port, all asked at
+ * once (a connection started to each, and the time limit for them all,
+ * rather than each in turn); and a ping, an ICMP echo, as the ping command
+ * sends: by a socket of the program's own where the system lets anyone
+ * (a Mac does, and Linux when net.ipv4.ping_group_range takes in the
+ * program's group, as systemd sets it), or else by the ping command. */
+
+static _Thread_local char *answered_text;
+
+/* (at a thread's end, and the program's) */
+static void answered_end(void)
+{
+	free(answered_text);
+	answered_text = NULL;
+}
+__attribute__((constructor)) static void answered_threads(void) { rt_on_thread_end(answered_end); }
+
+static int64_t clock_ms(void)
+{
+	struct timespec ts;
+	clock_gettime(CLOCK_MONOTONIC, &ts);
+	return (int64_t)ts.tv_sec * 1000 + ts.tv_nsec / 1000000;
+}
+
+/* hosts, each after a "\x1f": those that answered, one a line */
+int64_t cby_net_answering(const char *hosts, int64_t port, int64_t ms)
+{
+	char ports[16];
+	snprintf(ports, sizeof ports, "%lld", (long long)port);
+	int cap = 16, n = 0;
+	struct pollfd *p = malloc(sizeof *p * (size_t)cap);
+	char **who = malloc(sizeof *who * (size_t)cap);
+	char *list = strdup(hosts);
+	bool was = rt_gil_drop();
+	for (char *h = list; h && *h;) {
+		char *sep = strchr(h, '\x1f');
+		if (sep)
+			*sep = 0;
+		struct addrinfo hints = { 0 }, *found = NULL;
+		hints.ai_family = AF_UNSPEC;
+		hints.ai_socktype = SOCK_STREAM;
+		hints.ai_flags = AI_NUMERICSERV;
+		if (getaddrinfo(h, ports, &hints, &found) == 0 && found) {
+			int fd = socket(found->ai_family, found->ai_socktype, found->ai_protocol);
+			if (fd >= 0) {
+				fcntl(fd, F_SETFL, fcntl(fd, F_GETFL) | O_NONBLOCK);
+				fcntl(fd, F_SETFD, FD_CLOEXEC);
+				int r = connect(fd, found->ai_addr, found->ai_addrlen);
+				if (r == 0 || errno == EINPROGRESS) {
+					if (n == cap) {
+						cap *= 2;
+						p = realloc(p, sizeof *p * (size_t)cap);
+						who = realloc(who, sizeof *who * (size_t)cap);
+					}
+					p[n] = (struct pollfd){ fd, POLLOUT, 0 };
+					who[n++] = h;
+				} else {
+					close(fd);
+				}
+			}
+			freeaddrinfo(found);
+		}
+		h = sep ? sep + 1 : NULL;
+	}
+	/* each answers, or is refused, or the time's up */
+	bool *yes = calloc((size_t)(n ? n : 1), 1);
+	int64_t end_at = clock_ms() + (ms > 0 ? ms : 0);
+	int left = n;
+	while (left > 0) {
+		int64_t wait = end_at - clock_ms();
+		if (wait <= 0)
+			break;
+		int r = poll(p, (nfds_t)n, (int)wait);
+		if (r < 0 && errno == EINTR)
+			continue;
+		if (r <= 0)
+			break;
+		for (int i = 0; i < n; i++)
+			if (p[i].fd >= 0 && p[i].revents) {
+				int err = 0;
+				socklen_t el = sizeof err;
+				getsockopt(p[i].fd, SOL_SOCKET, SO_ERROR, &err, &el);
+				yes[i] = err == 0 && (p[i].revents & POLLOUT);
+				close(p[i].fd);
+				p[i].fd = -1;   /* (poll leaves it be) */
+				left--;
+			}
+	}
+	size_t len = 0;
+	for (int i = 0; i < n; i++)
+		len += strlen(who[i]) + 1;
+	free(answered_text);
+	answered_text = malloc(len + 1);
+	size_t at = 0;
+	for (int i = 0; i < n; i++) {
+		if (p[i].fd >= 0)
+			close(p[i].fd);
+		if (yes[i]) {
+			size_t l = strlen(who[i]);
+			memcpy(answered_text + at, who[i], l);
+			at += l;
+			answered_text[at++] = '\n';
+		}
+	}
+	answered_text[at] = 0;
+	rt_gil_take(was);
+	free(yes);
+	free(p);
+	free(who);
+	free(list);
+	return give(answered_text, at);
+}
+
+static uint16_t icmp_sum(const unsigned char *b, size_t n)
+{
+	uint32_t sum = 0;
+	for (size_t i = 0; i + 1 < n; i += 2)
+		sum += (uint32_t)(b[i] << 8 | b[i + 1]);
+	if (n & 1)
+		sum += (uint32_t)(b[n - 1] << 8);
+	while (sum >> 16)
+		sum = (sum & 0xFFFF) + (sum >> 16);
+	return (uint16_t)~sum;
+}
+
+/* by a socket of the program's own: the round trip in microseconds, -1 no
+ * answer in time, -2 the system doesn't let the program ping this way */
+static int64_t ping_socket(const struct sockaddr_in *to, int64_t ms)
+{
+	int fd = socket(AF_INET, SOCK_DGRAM, IPPROTO_ICMP);
+	if (fd < 0)
+		return -2;
+	fcntl(fd, F_SETFD, FD_CLOEXEC);
+	static _Atomic unsigned short seq;
+	unsigned short mine = (unsigned short)(++seq);
+	unsigned char out[16] = { 8, 0, 0, 0, 0x43, 0x42, (unsigned char)(mine >> 8), (unsigned char)mine,
+				  'c', 'a', 'b', 'b', 'y', 0, 0, 0 };
+	uint16_t sum = icmp_sum(out, sizeof out);
+	out[2] = (unsigned char)(sum >> 8);
+	out[3] = (unsigned char)sum;
+	struct timespec t0, t1;
+	clock_gettime(CLOCK_MONOTONIC, &t0);
+	if (sendto(fd, out, sizeof out, 0, (const struct sockaddr *)to, sizeof *to) < 0) {
+		close(fd);
+		return errno == EACCES || errno == EPERM ? -2 : -1;
+	}
+	int64_t end_at = clock_ms() + ms;
+	int64_t got = -1;
+	for (;;) {
+		int64_t wait = end_at - clock_ms();
+		if (wait <= 0)
+			break;
+		struct pollfd p = { fd, POLLIN, 0 };
+		int r = poll(&p, 1, (int)wait);
+		if (r < 0 && errno == EINTR)
+			continue;
+		if (r <= 0)
+			break;
+		unsigned char in[256];
+		ssize_t k = recv(fd, in, sizeof in, 0);
+		if (k <= 0)
+			continue;
+		size_t off = 0;
+		if ((in[0] >> 4) == 4)             /* a Mac gives the IP header too */
+			off = (size_t)(in[0] & 0x0F) * 4;
+		if ((size_t)k < off + 8 || in[off] != 0)   /* 0: an echo reply */
+			continue;
+		/* (Linux sets the id itself; the sequence number is ours) */
+		if (in[off + 6] != (unsigned char)(mine >> 8) || in[off + 7] != (unsigned char)mine)
+			continue;
+		clock_gettime(CLOCK_MONOTONIC, &t1);
+		got = (int64_t)(t1.tv_sec - t0.tv_sec) * 1000000 + (t1.tv_nsec - t0.tv_nsec) / 1000;
+		break;
+	}
+	close(fd);
+	return got;
+}
+
+/* by the ping command: "time=0.045 ms" */
+static int64_t ping_command(const char *host, int64_t ms)
+{
+	for (const char *c = host; *c; c++)
+		if (!(isalnum((unsigned char)*c) || *c == '.' || *c == '-' || *c == ':'))
+			return -1;   /* (a name, or an address, and nothing else) */
+	char wait[24];
+#ifdef __APPLE__
+	snprintf(wait, sizeof wait, "%lld", (long long)(ms > 0 ? ms : 1));   /* -W: milliseconds */
+#else
+	snprintf(wait, sizeof wait, "%lld", (long long)((ms + 999) / 1000 > 0 ? (ms + 999) / 1000 : 1));
+#endif
+	const char *dir = getenv("CABBY_TOOLS");
+	char prog[600];
+	snprintf(prog, sizeof prog, "%s%sping", dir && *dir ? dir : "", dir && *dir ? "/" : "");
+	const char *argv[] = { prog, "-n", "-c", "1", "-W", wait, host, NULL };
+	int fds[2];
+	if (pipe(fds) != 0)
+		return -1;
+	posix_spawn_file_actions_t acts;
+	posix_spawn_file_actions_init(&acts);
+	posix_spawn_file_actions_adddup2(&acts, fds[1], 1);
+	posix_spawn_file_actions_addopen(&acts, 2, "/dev/null", O_WRONLY, 0);
+	posix_spawn_file_actions_addclose(&acts, fds[0]);
+	posix_spawn_file_actions_addclose(&acts, fds[1]);
+	pid_t pid;
+	extern char **environ;
+	int ok = posix_spawnp(&pid, prog, &acts, NULL, (char *const *)argv, environ);
+	posix_spawn_file_actions_destroy(&acts);
+	close(fds[1]);
+	char buf[2048];
+	size_t len = 0;
+	ssize_t k;
+	while (len + 1 < sizeof buf && (k = read(fds[0], buf + len, sizeof buf - len - 1)) != 0) {
+		if (k < 0) {
+			if (errno == EINTR)
+				continue;
+			break;
+		}
+		len += (size_t)k;
+	}
+	buf[len] = 0;
+	close(fds[0]);
+	if (ok == 0)
+		while (waitpid(pid, NULL, 0) < 0 && errno == EINTR) {
+		}
+	const char *t = strstr(buf, "time=");
+	if (ok != 0 || !t)
+		return -1;
+	return (int64_t)(strtod(t + 5, NULL) * 1000 + 0.5);
+}
+
+/* (a header's own panic, at the program's line) */
+void cby_net_panic(const char *why) { rt_panic(NULL, 0, 0, "%s", why); }
+
+/* the round trip to host, in microseconds, or -1 if it didn't answer in ms */
+int64_t cby_net_ping(const char *host, int64_t ms)
+{
+	bool was = rt_gil_drop();
+	struct addrinfo hints = { 0 }, *found = NULL;
+	hints.ai_family = AF_INET;
+	int64_t got = -1;
+	if (getaddrinfo(host, NULL, &hints, &found) == 0 && found) {
+		/* (the tests ask a stand-in ping command, from CABBY_TOOLS) */
+		got = getenv("CABBY_TOOLS") ? -2 : ping_socket((const struct sockaddr_in *)found->ai_addr, ms);
+		if (got == -2)
+			got = ping_command(host, ms);
+		freeaddrinfo(found);
+	}
+	rt_gil_take(was);
+	return got;
+}
+
 #include "web.h"
 #include "websockets.h"
 #include "tls.h"
@@ -733,6 +990,7 @@ __attribute__((destructor)) static void connections_end(void)
 	nconns = 0;
 	free(error_text);
 	error_text = NULL;   /* (objects of the program's dropped after this find none) */
+	answered_end();
 	tls_forget();
 	imaps_end();
 }

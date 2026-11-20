@@ -28,10 +28,14 @@
 use addresses
 use bytes
 use json
+use time
 
 // ---- the C side (in Cabby's runtime)
 
 extern long cby_networks_download str url
+extern long cby_net_answering str hosts, long port, long ms
+extern long cby_net_ping str host, long ms
+extern void cby_net_panic str why
 extern void cby_networks_take address char dst
 extern void cby_networks_download_to str url, str path
 extern long cby_networks_status str url
@@ -287,6 +291,74 @@ static str networks_here long What {
 // has no IPv4 one; "" when it isn't on a network)
 str networks.local_address {
 	return networks_here 0
+}
+
+// ---- who's there
+
+// the other addresses on this computer's network, if it's a home or
+// office one with room for 254 (192.168.1.1 to 192.168.1.254, without this
+// computer's own): the ones to ask with answering and pings. Empty when
+// it isn't on an IPv4 network.
+list str networks.nearby_addresses {
+	list str Near
+	str Mine = networks.local_address
+	long Dot = -1
+	for long I = 0; I < Mine.length; I++ {
+		if Mine[I] == '.' {
+			Dot = I
+		}
+	}
+	if Dot < 0 || Mine.contains(":") {
+		return Near
+	}
+	str Start = Mine[to Dot]
+	for i in 1 to 254 {
+		str Address = Start + i.text
+		if Address != Mine {
+			Near.add Address
+		}
+	}
+	return Near
+}
+
+// Of Hosts, those with a program listening on Port, all asked at once:
+// each that hasn't answered within Wait isn't counted. 254 addresses with
+// a Wait of half a second take half a second, not two minutes. (Only ask
+// computers you're allowed to: on someone else's network, it's what an
+// attacker does first.)
+list str networks.answering const list str &Hosts, long Port, duration Wait {
+	list str Answered
+	if Hosts.length == 0 {
+		return Answered
+	}
+	str Joined = Hosts.join "\x1f"
+	long Length = cby_net_answering Joined, Port, Wait.whole_milliseconds
+	str Text = " ".repeat Length
+	address char Room = addresses.of_text Text
+	cby_conn_take Room
+	for Line in Text.split "\n" {
+		if Line != "" {
+			Answered.add Line.copy
+		}
+	}
+	return Answered
+}
+
+// true if Host answers a ping (an ICMP echo, as the ping command sends)
+// within Wait. Many computers are set not to answer (Windows, and Macs
+// with stealth mode), so no answer doesn't mean nobody's there.
+bool networks.pings const str &Host, duration Wait {
+	return cby_net_ping(Host, Wait.whole_milliseconds) >= 0
+}
+
+// how long a ping took to come back from Host: a panic if it didn't
+// answer within Wait (pings asks first, or else catches it)
+duration networks.ping_time const str &Host, duration Wait {
+	long Micros = cby_net_ping Host, Wait.whole_milliseconds
+	if Micros < 0 {
+		cby_net_panic "'" + Host + "' didn't answer a ping within " + Wait.whole_milliseconds.text + " ms"
+	}
+	return time.nanoseconds(Micros * 1000)
 }
 
 // true when it's on a network (Wi-Fi, a cable): whether the internet

@@ -1,0 +1,6 @@
+// a file of one's own gives its name as a prefix: use local kit/tools
+use local kit/tools
+
+int main {
+	println tools.twice(2.5), tools.half_of_twice(7.0)
+}
