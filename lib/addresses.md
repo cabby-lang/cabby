@@ -310,7 +310,8 @@ then clang's AddressSanitizer is built in, and reading or writing past
 an array or a block, using memory after it's freed, and (on Linux)
 memory never freed each stop the program with a report of what and
 where (the function, and those that called it). It's about half as
-fast: for testing. It needs AddressSanitizer's runtime (`libclang-rt-dev`
+fast, and built with `-O1` at most (so that the optimizer keeps every
+read and write for it to check): for testing. It needs AddressSanitizer's runtime (`libclang-rt-dev`
 on Debian, `compiler-rt` on Arch; a Mac's clang has it).
 
 When **interpreted** (`cabby prog.cby`), Cabby checks addresses of its own

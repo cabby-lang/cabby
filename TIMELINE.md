@@ -94,6 +94,7 @@ the patch number with fixes alone.
 | 0.43.0 | 20 November | `link T`: objects pointing at each other without owning, safely, caught when one is gone |
 | 0.43.1 | 20 November | The speed check before 1.0: objects made with malloc itself (compiled `objects` 6× faster than C), `.upper`'s quick path back |
 | 0.43.2 | 21 November | The last tests on the three computers: the test scripts on macOS's awk, a ping test's address, a warning on Arch |
+| 0.43.3 | 21 November | `cabby -c --checked` catches a read past an array's end again: `-O1` at most, and `main` marked too |
 
 ---
 
@@ -1636,6 +1637,21 @@ before 1.0.
   192.0.2.1 now, an address kept for examples (RFC 5737).
 - Newer gcc (Arch's) warned that a variable in the interpreter's `... else`
   might be lost by `longjmp`; it can't be, but it's `volatile` now.
+
+*Version 0.43.3:* the checked builds' test `past` failed on the Mac and
+Debian: reading one past an array's end ran and printed a sum instead of
+being stopped.
+
+- At `-O2`, LLVM split the small array into separate values before
+  AddressSanitizer looked, and the read past its end became no read at
+  all. `--checked` builds at `-O1` at most now, as AddressSanitizer is
+  usually used, which keeps the read for it to catch.
+- `main` itself wasn't marked for AddressSanitizer, only the program's own
+  functions, so what was inlined into it went unchecked. Every function is
+  marked now, and `--emit-llvm --checked` marks them too (it didn't).
+- Tested here with clang compiling and GCC's AddressSanitizer linking, as
+  this computer's clang has no runtime for it: all four checked tests
+  pass.
 
 ## Along the way (dates not recorded)
 

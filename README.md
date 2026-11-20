@@ -16,7 +16,7 @@ cabby --check     prog.cby              type- and ownership-check only
 cabby --style     prog.cby              list names and calls that don't follow STYLE.md
 cabby --dump-ast  prog.cby              print the syntax tree
 cabby --dump-tokens prog.cby            print the token stream
-cabby --version                         which Cabby this is: "Cabby 0.43.2 (2026-11-21)"
+cabby --version                         which Cabby this is: "Cabby 0.43.3 (2026-11-21)"
 cabby --license                         Cabby's license (MIT)
 ```
 
@@ -1228,7 +1228,7 @@ Run `cabby` with no file to type Cabby a piece at a time:
 
 ```
 $ cabby
-Cabby 0.43.2 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
+Cabby 0.43.3 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
 Cabby comes with ABSOLUTELY NO WARRANTY, under the MIT License; "cabby.license" for details.
 >>> int add int a, int b {
 ... 	return a + b
@@ -1645,8 +1645,9 @@ library needs nothing installed.
 `--checked` to build it with clang's AddressSanitizer: reading or writing
 past what's there, using memory after it's freed, and (on Linux) memory
 never freed each stop the program with a report of where, naming the
-function and those that called it. It's slower (about twice), for testing
-code that uses addresses. It needs AddressSanitizer's runtime:
+function and those that called it. It's slower (about twice, and built
+with `-O1` at most, so the optimizer leaves the reads it would check), for
+testing code that uses addresses. It needs AddressSanitizer's runtime:
 `libclang-rt-dev` on Debian (`libclang-rt-19-dev` for clang 19),
 `compiler-rt` on Arch; a Mac's clang has it.
 
