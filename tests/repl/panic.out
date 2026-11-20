@@ -1,4 +1,4 @@
-panic at <input>:1:2: index 7 is out of bounds for an array of length 3
+panic at <input>:1:2: index 7 is outside an array of length 3 (positions 0 to 2)
     a[i]
      ^
 3

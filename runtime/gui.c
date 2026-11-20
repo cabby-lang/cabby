@@ -3877,7 +3877,7 @@ static void start_sdl(void)
 	}
 	SDL_SetHint(SDL_HINT_IME_IMPLEMENTED_UI, "composition");   /* text being composed is drawn in the text box */
 	if (!SDL_Init(SDL_INIT_VIDEO)) {
-		fprintf(stderr, "gui: cannot open a window: %s\n", SDL_GetError());
+		fprintf(stderr, "gui: can't open a window: %s\n", SDL_GetError());
 		ssh_instead("gui", "tui");
 		exit(1);
 	}
@@ -4024,7 +4024,7 @@ void cby_gui_window_run(int64_t win)
 	if (!w->sw) {
 		SDL_WindowFlags flags = SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY | SDL_WINDOW_HIDDEN;
 		if (!make_window(w->title, w->width, w->height, flags, scripted(), &w->sw, &w->r)) {
-			fprintf(stderr, "gui: cannot open a window: %s\n", SDL_GetError());
+			fprintf(stderr, "gui: can't open a window: %s\n", SDL_GetError());
 			ssh_instead("gui", "tui");
 			exit(1);
 		}

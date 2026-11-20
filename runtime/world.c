@@ -1335,7 +1335,7 @@ static void start_sdl(void)
 	if (scripted())
 		SDL_SetHint(SDL_HINT_VIDEO_DRIVER, "offscreen");   /* drawn, but not shown */
 	if (!SDL_Init(SDL_INIT_VIDEO)) {
-		fprintf(stderr, "world: cannot open a window: %s\n", SDL_GetError());
+		fprintf(stderr, "world: can't open a window: %s\n", SDL_GetError());
 		exit(1);
 	}
 	started = 1;
@@ -1573,7 +1573,7 @@ void cby_world_run(int64_t id)
 	if (!use_gl) {
 		SDL_WindowFlags flags = SDL_WINDOW_RESIZABLE;
 		if (!make_window(w->title, w->width, w->height, flags, scripted(), &window, &renderer)) {
-			fprintf(stderr, "world: cannot open a window: %s\n", SDL_GetError());
+			fprintf(stderr, "world: can't open a window: %s\n", SDL_GetError());
 			exit(1);
 		}
 		if (!scripted())

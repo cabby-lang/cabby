@@ -16,7 +16,7 @@ cabby --check     prog.cby              type- and ownership-check only
 cabby --style     prog.cby              list names and calls that don't follow STYLE.md
 cabby --dump-ast  prog.cby              print the syntax tree
 cabby --dump-tokens prog.cby            print the token stream
-cabby --version                         which Cabby this is: "Cabby 0.38.0 (2026-11-20)"
+cabby --version                         which Cabby this is: "Cabby 0.39.0 (2026-11-20)"
 cabby --license                         Cabby's license (MIT)
 ```
 
@@ -988,7 +988,7 @@ functions for each struct (`json.from_struct_<name>`,
 
 **CSV.** `use csv` reads tables as spreadsheets save them:
 `csv.read_file "scores.csv"` gives the rows, each a `list str` of its
-fields, and `csv.records_of_file` gives each row after the first as a
+fields, and `csv.read_records_file` gives each row after the first as a
 `lookup str str`, by the first row's names (`P["Age"]`). Quoted fields
 (commas, `""` for a quote, line ends inside) are RFC 4180's;
 `read_separated Text, ';'` reads semicolons or tabs. `csv.text Rows` and
@@ -1192,7 +1192,7 @@ Run `cabby` with no file to type Cabby a piece at a time:
 
 ```
 $ cabby
-Cabby 0.38.0 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
+Cabby 0.39.0 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
 Cabby comes with ABSOLUTELY NO WARRANTY, under the MIT License; "cabby.license" for details.
 >>> int add int a, int b {
 ... 	return a + b
@@ -1349,7 +1349,7 @@ int main {
   `add_check`, `add_choice` (a drop-down), `add_slider min, max`,
   `add_text_area` (several lines), `add_list`, `add_progress`,
   `add_image path` and `add_separator`. Every widget has `set_text`, `text`,
-  `set_enabled`, `set_visible` and `set_min_size`. Windows also have
+  `set_enabled`, `set_visible` and `set_minimum_size`. Windows also have
   `set_title`, `set_size w, h` and `close`.
 * **Handlers.** `button.on_click name`, `entry.on_change name`,
   `check.on_toggle name`, `list.on_select name` and the rest take the name of

@@ -191,7 +191,7 @@ static void resolve_gotos(Checker *C)
 			if (gi->blocks[i] == lb)
 				d = i;
 		if (d < 0) {
-			sema_error(s->loc, "'goto %s' cannot jump into a block it is not already in", s->as.goto_.label);
+			sema_error(s->loc, "'goto %s' can't jump into a block it is not already in", s->as.goto_.label);
 			sema_note(label->loc, "the label is here");
 			continue;
 		}
@@ -302,7 +302,7 @@ static void check_var(Checker *C, VarDecl *v)
 			C->binding = saved;
 		}
 		if (v->is_register)
-			sema_error(v->loc, "a reference cannot be 'register'");
+			sema_error(v->loc, "a reference can't be 'register'");
 		v->sym = s;
 		declare(C, s);
 		return;
@@ -975,7 +975,7 @@ static void check_stmt(Checker *C, Stmt *s)
 			Type *t = check_expr(C, vp, CTX_VALUE, rt);
 			if (rt->kind == TY_VOID) {
 				if (!type_is_error(t))
-					sema_error((*vp)->loc, "'%s' returns void, so 'return' cannot give a value", C->fn->name);
+					sema_error((*vp)->loc, "'%s' returns void, so 'return' can't give a value", C->fn->name);
 			} else {
 				char what[160];
 				snprintf(what, sizeof what, "the return value of '%s'", C->fn->name);

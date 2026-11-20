@@ -202,7 +202,7 @@ object gui.widget {
 	}
 
 	// The smallest size it may be, in pixels (-1: no minimum that way).
-	void set_min_size int Width, int Height {
+	void set_minimum_size int Width, int Height {
 		cby_gui_set_min_size Id, Width, Height
 	}
 }

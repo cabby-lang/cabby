@@ -437,18 +437,18 @@ static const char *conflict_message(const Loan *l, AccessKind k, char *buf, size
 	const char *n = l->root->name;
 	if (!l->is_mut) {
 		switch (k) {
-		case ACC_WRITE:      snprintf(buf, size, "cannot change '%s' while it is borrowed", n); break;
-		case ACC_MOVE:       snprintf(buf, size, "cannot move '%s' while it is borrowed", n); break;
-		case ACC_BORROW_MUT: snprintf(buf, size, "cannot lend '%s' as mutable while it is also borrowed read-only", n); break;
+		case ACC_WRITE:      snprintf(buf, size, "can't change '%s' while it is borrowed", n); break;
+		case ACC_MOVE:       snprintf(buf, size, "can't move '%s' while it is borrowed", n); break;
+		case ACC_BORROW_MUT: snprintf(buf, size, "can't lend '%s' as mutable while it is also borrowed read-only", n); break;
 		default:             return NULL;
 		}
 	} else {
 		switch (k) {
-		case ACC_READ:       snprintf(buf, size, "cannot use '%s' while it is lent as mutable", n); break;
-		case ACC_WRITE:      snprintf(buf, size, "cannot change '%s' while it is lent as mutable", n); break;
-		case ACC_MOVE:       snprintf(buf, size, "cannot move '%s' while it is lent as mutable", n); break;
-		case ACC_BORROW:     snprintf(buf, size, "cannot borrow '%s' while it is lent as mutable", n); break;
-		case ACC_BORROW_MUT: snprintf(buf, size, "cannot lend '%s' as mutable twice at the same time", n); break;
+		case ACC_READ:       snprintf(buf, size, "can't use '%s' while it is lent as mutable", n); break;
+		case ACC_WRITE:      snprintf(buf, size, "can't change '%s' while it is lent as mutable", n); break;
+		case ACC_MOVE:       snprintf(buf, size, "can't move '%s' while it is lent as mutable", n); break;
+		case ACC_BORROW:     snprintf(buf, size, "can't borrow '%s' while it is lent as mutable", n); break;
+		case ACC_BORROW_MUT: snprintf(buf, size, "can't lend '%s' as mutable twice at the same time", n); break;
 		}
 	}
 	return buf;
@@ -509,7 +509,7 @@ void check_loans(Checker *C, FnDecl *fn)
 			vec_push(C->A, reported, j);
 			if (l->borrower && strcmp(l->borrower->name, " seq") == 0) {
 				/* the hidden borrow of a `for X in Things` loop */
-				sema_error(a->loc, "cannot change '%s' inside a loop that goes through it", l->root->name);
+				sema_error(a->loc, "can't change '%s' inside a loop that goes through it", l->root->name);
 				bool lk = l->borrower->type && l->borrower->type->kind == TY_REF && l->borrower->type->inner &&
 					  l->borrower->type->inner->kind == TY_LOOKUP;
 				sema_note(l->loc, "the loop over '%s' starts here; collect the changes in another %s "

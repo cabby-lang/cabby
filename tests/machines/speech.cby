@@ -9,7 +9,7 @@ int main {
 	}
 	speech.say "Hello from Cabby"
 	if !speech.can_hear {
-		println "spoken; nothing here hears (whisper-cli, and a model: speech.get_model \"base.en\")"
+		println "spoken; nothing here hears (whisper-cli, and a model: speech.download_model \"base.en\")"
 		return 77
 	}
 	str Path = "cabby-machine-hello.wav"

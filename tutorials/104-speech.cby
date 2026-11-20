@@ -37,7 +37,7 @@ int main int Argc, str Argv[] {
 	if speech.can_hear {
 		println "heard back:", speech.hear("cabby-hello.wav")
 	} else {
-		println "nothing here hears (whisper.cpp, and a model: speech.get_model \"base.en\")"
+		println "nothing here hears (whisper.cpp, and a model: speech.download_model \"base.en\")"
 	}
 	files.delete "cabby-hello.wav"
 }

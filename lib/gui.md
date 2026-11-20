@@ -228,7 +228,7 @@ Every widget (`gui.label`, `gui.button`, `gui.entry`, `gui.check`,
 | `void set_enabled bool On` | `false` grays it out so it can't be used; `true` makes it usable again. |
 | `void set_visible bool On` | `false` hides it (it takes no space); `true` shows it again. |
 | `void set_description const str &Text` | What a screen reader says it is, when its text doesn't say: `"Our logo"` for a picture, `"The board"` for a canvas. (Said after the text, for something that has some.) |
-| `void set_min_size int Width, int Height` | The smallest size it may be, in pixels; -1 for no minimum that way. |
+| `void set_minimum_size int Width, int Height` | The smallest size it may be, in pixels; -1 for no minimum that way. |
 | `void set_text_color const str &Color` | The color its text is written in: `"darkred"`, `"#3366cc"`, as for a canvas's `set_color`. `""` for the usual again. |
 | `void set_background const str &Color` | The color behind it: a button's or text box's own color, or behind a label. `""` for the usual again. |
 

@@ -13,7 +13,7 @@ took one
     take b
          ^
 again
-<input>:1:1: error: cannot assign to 'c' because it is const
+<input>:1:1: error: can't assign to 'c' because it is const
     c = 3
     ^
 <earlier input>:1:11: note: 'c' is declared const

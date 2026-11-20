@@ -194,7 +194,7 @@ static str mouse_get const str &Device, const str &Setting, const str &GnomeKey,
 		}
 		json Value = Input["libinput"][Setting]
 		if Value.is_number {
-			return Value.double_.text
+			return Value.double.text
 		}
 		return Value.str_or ""
 	}

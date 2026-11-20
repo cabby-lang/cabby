@@ -13,7 +13,7 @@ use system
 
 int main {
 	println "running on", system.name, "(" + system.machine + "),", "called", system.hostname
-	println system.processors, "processors,", system.memory / 1024 / 1024 / 1024, "GB of memory"
+	println system.processors, "processors"
 	println "on for", system.uptime / 3600, "hours"
 	return 0
 }
@@ -28,8 +28,10 @@ int main {
 | `system.kernel` | the kernel's version | `"6.12.48-amd64"` | Darwin's: `"24.1.0"` |
 | `system.machine` | the kind of processor | `"x86_64"`, `"aarch64"` | `"arm64"` (an Apple processor) |
 | `system.processors` | how many processors (cores): how many workers can run at once | | |
-| `system.memory` | its memory, in bytes (a `long`) | | |
 | `system.uptime` | seconds since it was turned on (a `long`) | | |
+
+How much memory it has, and how much is in use, is `os.memory_total` and
+the rest, in `use os`.
 
 ## Naming the computer
 

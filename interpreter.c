@@ -3405,7 +3405,7 @@ static Value call_extern(Interp *I, Expr *e, FnDecl *fn)
 		? ffi_prep_cif_var(&cif, FFI_DEFAULT_ABI, (unsigned)nfixed, (unsigned)n, rtype, types)
 		: ffi_prep_cif(&cif, FFI_DEFAULT_ABI, (unsigned)n, rtype, types);
 	if (st != FFI_OK)
-		panic_at(e->loc, "cannot prepare a call to external function '%s'", fn->name);
+		panic_at(e->loc, "can't call the C function '%s': libffi couldn't prepare the call", fn->name);
 
 	union { ffi_arg a; ffi_sarg s; double d; float f; int64_t i; unsigned char raw[16]; } ret;
 	memset(&ret, 0, sizeof ret);
@@ -4209,7 +4209,7 @@ static void load_natives(Program *prog)
 		fclose(f);
 		void *h = dlopen(path, RTLD_NOW | RTLD_GLOBAL);
 		if (!h) {
-			fprintf(stderr, "cabby: cannot load %s: %s\n", path, dlerror());
+			fprintf(stderr, "cabby: can't load %s: %s\n", path, dlerror());
 			exit(1);
 		}
 		void (**hook)(void *, void *) = (void (**)(void *, void *))dlsym(h, "cby_invoke_hook");

@@ -33,7 +33,7 @@ OpenSSL, if CommonCrypto lacks something).
 | `long secrets.random_number From, To` | a whole number from From to To, both included, each as likely |
 | `str secrets.random_text Length` | random letters, digits, `-` and `_`, safe in a web address or a file's name: a sign-in code, a name no one can guess (22 characters are as hard to guess as anything needs) |
 | `str secrets.random_password Length` | a password for a person: small and capital letters, digits and symbols, at least one of each, without those that look alike (`0` and `O`, `1` and `l`) |
-| `str secrets.random_password_plain Length` | the same, without symbols |
+| `str secrets.random_password_without_symbols Length` | the same, without symbols |
 | `bytes secrets.random_bytes Count` | random [bytes](bytes.md): a key, a salt |
 
 These come from the system's own generator (the kernel's), which is what
@@ -129,8 +129,8 @@ service's own and hasn't been changed on the way:
 
 | | |
 |---|---|
-| `str secrets.signature Message, Key` | the message's signature: HMAC-SHA256, in hexadecimal |
-| `bool secrets.check_signature Message, Key, Signature` | true if it's the message's signature with that key |
+| `str secrets.shared_signature Message, Key` | the message's signature: HMAC-SHA256, in hexadecimal |
+| `bool secrets.check_shared_signature Message, Key, Signature` | true if it's the message's signature with that key |
 | `bool secrets.same A, B` | true if the two are the same, taking as long however much of them is: for comparing codes, so the time taken gives nothing away |
 
 ## Public keys

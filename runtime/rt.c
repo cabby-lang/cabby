@@ -368,27 +368,29 @@ void rt_check_div(int64_t a, int64_t b, int bits, bool is_signed, bool is_rem,
 	if (is_signed && b == -1 && !is_rem) {
 		int64_t min = bits == 64 ? INT64_MIN : -((int64_t)1 << (bits - 1));
 		if (a == min)
-			rt_panic(file, line, col, "overflow: %lld / -1 does not fit in %d bits", (long long)a, bits);
+			rt_panic(file, line, col, "overflow: %lld / -1 is too big for %d bits", (long long)a, bits);
 	}
 }
 
 void rt_check_shift(int64_t amount, int bits, const char *file, int line, int col)
 {
 	if (amount < 0 || amount >= bits)
-		rt_panic(file, line, col, "shift amount %lld is out of range 0..%d", (long long)amount, bits - 1);
+		rt_panic(file, line, col, "can't shift by %lld: it must be 0 to %d", (long long)amount, bits - 1);
 }
 
 void rt_str_bounds(int64_t index, int64_t len, const char *file, int line, int col)
 {
-	rt_panic(file, line, col, "index %lld is out of bounds for a string of length %lld", (long long)index,
-		 (long long)len);
+	if (len == 0)
+		rt_panic(file, line, col, "index %lld is outside an empty string", (long long)index);
+	rt_panic(file, line, col, "index %lld is outside a string of length %lld (positions 0 to %lld)",
+		 (long long)index, (long long)len, (long long)(len - 1));
 }
 
 void rt_bounds_check(int64_t index, int64_t len, const char *file, int line, int col)
 {
 	if (index < 0 || index >= len)
-		rt_panic(file, line, col, "index %lld is out of bounds for an array of length %lld",
-			 (long long)index, (long long)len);
+		rt_panic(file, line, col, "index %lld is outside an array of length %lld (positions 0 to %lld)",
+			 (long long)index, (long long)len, (long long)(len - 1));
 }
 
 int64_t rt_float_to_int(double v, int bits, bool is_signed)
@@ -846,7 +848,7 @@ char *rt_str_replace(const char *d, int64_t n, const char *from, int64_t fn, con
 char *rt_str_repeat(const char *d, int64_t n, int64_t times, int64_t *outn, const char *file, int line, int col)
 {
 	if (times < 0)
-		rt_panic(file, line, col, "cannot repeat text %lld times", (long long)times);
+		rt_panic(file, line, col, "can't repeat text %lld times", (long long)times);
 	if (n > 0 && times > (INT64_MAX / 2) / n)
 		rt_panic(file, line, col, "repeating %lld characters %lld times is too long", (long long)n,
 			 (long long)times);

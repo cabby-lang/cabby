@@ -20,7 +20,7 @@ int main {
 	double Busy = os.cpu_use
 	println "processors:", Busy >= 0 && Busy <= 100
 	bool AddsUp = os.memory_used + os.memory_available <= os.memory_total + 4096
-	println "memory:", os.memory_total == system.memory, os.memory_used > 0, os.memory_available > 0, AddsUp
+	println "memory:", os.memory_total > 1000000, os.memory_used > 0, os.memory_available > 0, AddsUp
 	println "swap:", os.swap_used <= os.swap_total
 	list double Load = os.load
 	println "load:", Load.length, Load[0] >= 0

@@ -227,7 +227,7 @@ static void start(void)
 	if (started)
 		return;
 	if (!gtk_init_check()) {
-		fprintf(stderr, "gtk: cannot open a window: no display was found (is a graphical session running?)\n");
+		fprintf(stderr, "gtk: can't open a window: no display was found (is a graphical session running?)\n");
 		exit(1);
 	}
 	started = 1;

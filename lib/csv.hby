@@ -6,7 +6,7 @@
 //     for Row in csv.read_file "scores.csv" {
 //         println Row[0], Row[1]
 //     }
-//     for R in csv.records_of_file "people.csv" {    the first row names the columns
+//     for R in csv.read_records_file "people.csv" {    the first row names the columns
 //         println R["Name"], R["Age"]
 //     }
 //     csv.write_file "out.csv", Rows
@@ -36,7 +36,7 @@ list list str csv.read_separated const str &Text, char Separator {
 		json One = All.item_at R
 		list str Fields
 		for long F = 0; F < One.length; F++ {
-			Fields.add One.item_at(F).str_
+			Fields.add One.item_at(F).str
 		}
 		Rows.add Fields
 	}
@@ -56,7 +56,7 @@ list list str csv.read_file const str &Path {
 // Each row after the first as a lookup, by the names the first row gives
 // its columns: R["Name"]. A row that's short has "" for what's missing;
 // fields past the last named column are left out.
-list lookup str str csv.records const str &Text {
+list lookup str str csv.read_records const str &Text {
 	list list str Rows = csv.read Text
 	list lookup str str Records
 	if Rows.length == 0 {
@@ -76,8 +76,8 @@ list lookup str str csv.records const str &Text {
 	return Records
 }
 
-list lookup str str csv.records_of_file const str &Path {
-	return csv.records files.read(Path)
+list lookup str str csv.read_records_file const str &Path {
+	return csv.read_records files.read(Path)
 }
 
 // the names of the columns: the first row's fields (empty if there are

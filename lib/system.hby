@@ -5,7 +5,7 @@
 //
 //     println system.name             Debian GNU/Linux 13 (trixie), or macOS 15.1
 //     println system.hostname         its name on the network: "mini"
-//     println system.processors, "processors,", system.memory / 1024 / 1024 / 1024, "GB"
+//     println system.processors, "processors"
 //     if system.kind is "macos" { ... }
 //
 // The full reference is system.md, next to this file.
@@ -69,11 +69,6 @@ str system.machine {
 // how many processors (cores) it has: how many workers can run at once
 int system.processors {
 	return (int)cby_system_number(0)
-}
-
-// its memory, in bytes
-long system.memory {
-	return cby_system_number(1)
 }
 
 // how long since it was turned on, in seconds

@@ -229,7 +229,7 @@ libraries: a terminal character counts as 8 pixels wide and 16 high.
 `set_size 320, 160` gives a window of 40 by 10 characters, in the middle of
 the terminal (never smaller than what's in it needs). Without `set_size`
 the window fills the terminal, and follows it when the terminal is resized.
-`set_min_size` works the same way.
+`set_minimum_size` works the same way.
 
 ## Printing while a window is open
 

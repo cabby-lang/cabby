@@ -284,7 +284,7 @@ static str speech_whisper {
 	return ""
 }
 
-// where Cabby keeps the models it fetches (speech.get_model)
+// where Cabby keeps the models it fetches (speech.download_model)
 str speech.model_folder {
 	return directories.save_folder("Cabby") + "/whisper"
 }
@@ -312,7 +312,7 @@ static str speech_model_in const str &Folder {
 }
 
 // The model Whisper hears with, as it's found: CABBY_WHISPER_MODEL, then
-// the models speech.get_model fetched, then where whisper.cpp's packages
+// the models speech.download_model fetched, then where whisper.cpp's packages
 // put them ("" for none).
 str speech.model {
 	if shell.has("CABBY_WHISPER_MODEL") && shell.get("CABBY_WHISPER_MODEL") != "" {
@@ -340,7 +340,7 @@ str speech.model {
 // Hugging Face), for speech.model to find: "base.en" (148 MB, English
 // only: quick, and good), "base" (any language), "small" (466 MB, better),
 // "medium". It's fetched once; its path is given.
-str speech.get_model const str &Name {
+str speech.download_model const str &Name {
 	str Folder = speech.model_folder
 	directories.make Folder
 	str Path = Folder + "/ggml-" + Name + ".bin"
@@ -379,7 +379,7 @@ object speech.listener {
 			Using = speech.model
 		}
 		if Using == "" {
-			speech_cant_hear "there's no Whisper model to hear with: speech.get_model \"base.en\" fetches one"
+			speech_cant_hear "there's no Whisper model to hear with: speech.download_model \"base.en\" fetches one"
 		}
 		if !files.exists(Path) {
 			speech_cant_hear "there's no sound file '" + Path + "' to hear"

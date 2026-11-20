@@ -191,7 +191,7 @@ Type *resolve_type(Checker *C, TypeExpr *te, unsigned flags, const char *where)
 	case TYPEX_SLICE: {
 		bool slice = te->kind == TYPEX_SLICE;
 		if (!(flags & (slice ? RT_ALLOW_SLICE : RT_ALLOW_REF))) {
-			sema_error(te->loc, "references cannot be used in %s; a borrow may not outlive the "
+			sema_error(te->loc, "references can't be used in %s; a borrow may not outlive the "
 				   "function that takes it", where);
 			break;
 		}
@@ -679,7 +679,7 @@ static bool compute_mro(Checker *C, ObjectInfo *o)
 		if (!any_left)
 			break;
 		if (!pick) {
-			sema_error(o->decl->loc, "cannot compute a consistent method resolution order for '%s'; "
+			sema_error(o->decl->loc, "can't compute a consistent method resolution order for '%s'; "
 				   "its parents list shared ancestors in conflicting orders", o->name);
 			return false;
 		}
@@ -851,7 +851,7 @@ static void check_objects(Checker *C)
 				sema_error(pr->loc, "'%s' is a %s; objects can only inherit from objects", pr->name,
 					   ast_object_kind_name(tn->obj->kind));
 			} else if (tn->obj == o) {
-				sema_error(pr->loc, "'%s' cannot inherit from itself", o->name);
+				sema_error(pr->loc, "'%s' can't inherit from itself", o->name);
 			} else {
 				pr->decl = tn->obj->decl;
 			}
@@ -865,7 +865,7 @@ static void check_objects(Checker *C)
 			Type *t = resolve_type(C, f->type, o->kind == OBJ_OBJECT ? RT_ALLOW_HANDLER : 0,
 					       o->kind == OBJ_STRUCT ? "a struct's fields" : "a union's fields");
 			if (f->is_const)
-				sema_error(f->loc, "fields cannot be const; make the variable that holds the %s const instead",
+				sema_error(f->loc, "fields can't be const; make the variable that holds the %s const instead",
 					   ast_object_kind_name(o->kind));
 			if (o->kind == OBJ_UNION && !type_is_error(t) && !type_is_plain(t))
 				sema_error(f->loc, "union fields must be plain data (numbers, bool, char, and structs or "
@@ -1122,7 +1122,7 @@ static void check_main(Checker *C)
 	FnDecl *m = g->fn;
 	C->S->main_fn = m;
 	if (m->is_extern) {
-		sema_error(m->loc, "'main' cannot be extern");
+		sema_error(m->loc, "'main' can't be extern");
 		return;
 	}
 	if (m->ret_type && !type_is_error(m->ret_type) && m->ret_type->kind != TY_VOID &&

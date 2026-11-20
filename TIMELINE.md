@@ -85,6 +85,7 @@ the patch number with fixes alone.
 | 0.37.0 | 20 November | who's on the network (`answering`, `pings`); a file's own name as a prefix for its functions; chapters 33, 34 and 51 put right |
 | 0.37.1 | 20 November | `tests/machines/later.sh`: the checks still waiting on a real computer |
 | 0.38.0 | 20 November | `use csv`; `callback`, a Cabby function for C to call; `cabby -c --checked`, with AddressSanitizer |
+| 0.39.0 | 20 November | The last look at names: clearer library names, and messages that all say "can't" |
 
 ---
 
@@ -1467,6 +1468,25 @@ Three things for 1.0, from an outside review:
   so what the interpreter catches with addresses (past the end, used
   after it's freed, and on Linux never freed) is caught compiled too.
   For testing; `tests/run_checked_tests.sh`, skipped without the runtime.
+
+*Version 0.39.0:* the last look at names before 1.0. Programs using the
+old names need changing:
+
+- `speech.get_model` is `speech.download_model`; `networks.encode` and
+  `decode` are `networks.url_encode` and `url_decode`.
+- `csv.records` and `csv.records_of_file` are `csv.read_records` and
+  `csv.read_records_file`, to go with `csv.write_records_file`.
+- `secrets.random_password_plain` is
+  `secrets.random_password_without_symbols`; `secrets.signature` and
+  `check_signature` (a key both sides know) are `secrets.shared_signature`
+  and `check_shared_signature`, so they're not taken for `sign` and
+  `check_signed` (a key pair).
+- `system.memory` is gone: it was `os.memory_total` twice.
+- A window's widgets have `set_minimum_size`, not `set_min_size`.
+- Messages say "can't", never "cannot"; an index outside a string or an
+  array is said the way a list's is: "index 4 is outside an array of
+  length 4 (positions 0 to 3)"; a shift is "can't shift by 40: it must be
+  0 to 31".
 
 ## Along the way (dates not recorded)
 

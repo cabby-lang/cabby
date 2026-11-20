@@ -9,7 +9,7 @@ char *read_file(const char *path, size_t *len_out)
 {
 	FILE *f = fopen(path, "rb");
 	if (!f) {
-		fprintf(stderr, "error: cannot open '%s': %s\n", path, strerror(errno));
+		fprintf(stderr, "error: can't open '%s': %s\n", path, strerror(errno));
 		return NULL;
 	}
 	size_t cap = 4096, len = 0;
@@ -32,7 +32,7 @@ char *read_file(const char *path, size_t *len_out)
 	int err = ferror(f);
 	fclose(f);
 	if (err) {
-		fprintf(stderr, "error: cannot read '%s'\n", path);
+		fprintf(stderr, "error: can't read '%s'\n", path);
 		free(buf);
 		return NULL;
 	}

@@ -1,6 +1,6 @@
 # The Cabby Manual
 
-*For Cabby 0.38.0 (2026-11-20).*
+*For Cabby 0.39.0 (2026-11-20).*
 
 A book for learning Cabby one idea at a time, and a reference to come back
 to afterwards.
@@ -653,7 +653,7 @@ println "300 squeezed into a byte:", (int)Narrow
 A constant that fits needs no cast: `char c = 65` and `short s = 1000` are
 fine. A negative value can't go into an unsigned type without one:
 
-<!-- error-main: cannot hold every 'int' value -->
+<!-- error-main: can't hold every 'int' value -->
 ```cabby
 unsigned u = -1
 ```
@@ -927,14 +927,14 @@ use them. Writing them in capitals is a common habit, not a rule.
 Changing a constant is an error, and the message points at both the
 assignment and the declaration that made it constant:
 
-<!-- error-main: cannot assign to 'WEEKS' because it is const -->
+<!-- error-main: can't assign to 'WEEKS' because it is const -->
 ```cabby
 const int WEEKS = 4
 WEEKS = 5
 ```
 
 ```text
-error: cannot assign to 'WEEKS' because it is const
+error: can't assign to 'WEEKS' because it is const
 note: 'WEEKS' is declared const
 ```
 
@@ -1845,18 +1845,18 @@ programming. Cabby checks every index. A constant index that's out of range is a
 before the program runs; any other is checked as it runs, and stops the
 program with a *panic* that says what happened:
 
-<!-- error-main: index 3 is out of bounds -->
+<!-- error-main: index 3 is outside -->
 ```cabby
 int Xs[3]
 println Xs[3]
 ```
 
 ```text
-error: index 3 is out of bounds for 'int[3]'
+error: index 3 is outside 'int[3]' (positions 0 to 2)
 ```
 
 ```text
-panic at prog.cby:4:12: index 5 is out of bounds for an array of length 3
+panic at prog.cby:4:12: index 5 is outside an array of length 3 (positions 0 to 2)
 ```
 
 #### Passing arrays to functions
@@ -2710,7 +2710,7 @@ These are checked before the program runs:
 Rule 2 in action: `View` reads `Acc`, so `Acc` can't change until `View` is
 finished with:
 
-<!-- error: cannot lend 'Acc' as mutable while it is also borrowed read-only -->
+<!-- error: can't lend 'Acc' as mutable while it is also borrowed read-only -->
 ```cabby
 struct account {
 	str Owner
@@ -2730,7 +2730,7 @@ int main {
 ```
 
 ```text
-error: cannot lend 'Acc' as mutable while it is also borrowed read-only
+error: can't lend 'Acc' as mutable while it is also borrowed read-only
 note: 'Acc' is borrowed here
 note: the borrow is still in use here, through 'View'
 ```
@@ -2740,7 +2740,7 @@ ended at its last use.
 
 Rule 4 is why this is refused:
 
-<!-- error: a function cannot return a reference -->
+<!-- error: a function can't return a reference -->
 ```cabby
 int &pick int &a {
 	return a
@@ -2751,7 +2751,7 @@ int main {
 ```
 
 ```text
-error: a function cannot return a reference: the borrow could outlive what
+error: a function can't return a reference: the borrow could outlive what
        it points to; return a value instead
 ```
 
@@ -2941,7 +2941,7 @@ println Scores
 A list can't be changed (added to, removed from, cleared) inside a loop
 that goes through it: the loop would lose its place. Cabby refuses it:
 
-<!-- error: cannot change 'Scores' inside a loop that goes through it -->
+<!-- error: can't change 'Scores' inside a loop that goes through it -->
 ```cabby
 int main {
 	list int Scores = {90, 85}
@@ -2952,7 +2952,7 @@ int main {
 ```
 
 ```text
-error: cannot change 'Scores' inside a loop that goes through it
+error: can't change 'Scores' inside a loop that goes through it
 note: the loop over 'Scores' starts here; collect the changes in another
       list and make them after the loop
 ```
@@ -3288,7 +3288,7 @@ Both names are read-only, as with lists: copies for numbers, `bool` and
 `char`, and read-only borrows for anything else. A lookup can't be changed
 inside a loop that goes through it:
 
-<!-- error: cannot change 'Ages' inside a loop that goes through it -->
+<!-- error: can't change 'Ages' inside a loop that goes through it -->
 ```cabby
 int main {
 	lookup str int Ages = {"Ada": 36, "Alan": 41}
@@ -3299,7 +3299,7 @@ int main {
 ```
 
 ```text
-error: cannot change 'Ages' inside a loop that goes through it
+error: can't change 'Ages' inside a loop that goes through it
 note: the loop over 'Ages' starts here; collect the changes in another
       lookup (or a list) and make them after the loop
 ```
@@ -4105,7 +4105,7 @@ A method marked `const` (after its parameters) promises not to change its
 object. Cabby checks the promise, and only `const` methods can be called
 through a read-only borrow:
 
-<!-- error: cannot call 'bump' through a read-only borrow -->
+<!-- error: can't call 'bump' through a read-only borrow -->
 ```cabby
 object counter {
 	int Count
@@ -4122,7 +4122,7 @@ int main {
 ```
 
 ```text
-error: cannot call 'bump' through a read-only borrow: it can change the object
+error: can't call 'bump' through a read-only borrow: it can change the object
 note: 'View' is a read-only borrow ('const counter &'); drop the 'const' to
       allow changes
 ```
@@ -5025,7 +5025,7 @@ which might change that very list. So Cabby treats a call to a part that
 has handlers as a change to the whole object, and refuses it inside a loop
 over the object's lists:
 
-<!-- error: cannot change 'self' inside a loop that goes through it -->
+<!-- error: can't change 'self' inside a loop that goes through it -->
 ```cabby
 object countdown {
 	handler Done
@@ -5648,7 +5648,7 @@ decide that for themselves, so in Cabby the useful part is the rule that
 comes with it: a `register` variable can never be **borrowed**. It promises
 that nothing else will ever see or change the variable.
 
-<!-- error: cannot borrow 'Total' because it is declared 'register' -->
+<!-- error: can't borrow 'Total' because it is declared 'register' -->
 ```cabby
 void bump int &n {
 	n++
@@ -5664,7 +5664,7 @@ int main {
 ```
 
 ```text
-error: cannot borrow 'Total' because it is declared 'register'
+error: can't borrow 'Total' because it is declared 'register'
 note: declared here
 ```
 
@@ -7067,7 +7067,7 @@ moved value, conflicting borrows. A few can only be noticed while it runs.
 Then the program *panics*: it stops at once, says where and why, and exits
 with status 101. It never carries on with corrupted memory.
 
-<!-- panic: index 4 is out of bounds for an array of length 4 -->
+<!-- panic: index 4 is outside an array of length 4 (positions 0 to 3) -->
 ```cabby
 int main {
 	int Squares[4] = {0, 1, 4, 9}
@@ -7086,7 +7086,7 @@ int main {
 ```
 
 ```text
-panic at prog.cby:4:35: index 4 is out of bounds for an array of length 4
+panic at prog.cby:4:35: index 4 is outside an array of length 4 (positions 0 to 3)
     		println i, "squared is", Squares[i]
     		                                 ^
 ```
@@ -7104,7 +7104,7 @@ The messages:
 
 ```text
 panic at prog.cby:3:13: division by zero
-panic at prog.cby:3:12: shift amount 40 is out of range 0..31
+panic at prog.cby:3:12: can't shift by 40: it must be 0 to 31
 panic at prog.cby:2:9: stack overflow: more than 100000 nested calls (calling 'depth')
 ```
 
@@ -7771,7 +7771,7 @@ int main {
 	for Row in csv.read_file "people.csv" {
 		println Row.length, Row
 	}
-	for P in csv.records_of_file "people.csv" {
+	for P in csv.read_records_file "people.csv" {
 		println P["Name"], "is", P["Age"].to_long + 1, "next year, in", P["Town"]
 	}
 	list list str Rows = {{"Item", "Price"}, {"tea, black", "3.50"}}
@@ -7793,7 +7793,7 @@ Item,Price
 ```
 
 Every field is text: `.to_long` and `.to_double` make numbers of them.
-`csv.read` and `csv.records` take the text itself, `csv.text` gives rows
+`csv.read` and `csv.read_records` take the text itself, `csv.text` gives rows
 as text, and `csv.read_separated Text, ';'` reads fields between
 semicolons (as some countries' spreadsheets save them) or tabs.
 `csv.md` has the rest.
@@ -7807,7 +7807,7 @@ semicolons (as some countries' spreadsheets save them) or tabs.
   `.text`, `.pretty`.
 * `json.from S` makes JSON from a struct; `J.fill S` fills one in from
   JSON, by the fields' names.
-* `use csv`: `csv.read_file Path` (rows), `csv.records_of_file Path`
+* `use csv`: `csv.read_file Path` (rows), `csv.read_records_file Path`
   (lookups, by the first row's names), `csv.write_file Path, Rows`.
 
 #### Try this
@@ -8190,7 +8190,7 @@ https://example.com/search?q=fish%20%26%20chips&page=3
 Some letters can't go in an address as they are: a space is written
 `%20`, an `&` `%26`, and `é` (two bytes in UTF-8) `%C3%A9`. Taking an
 address apart decodes them, so the parts are plain text; putting it back
-together encodes what needs it. `networks.encode` and `networks.decode`
+together encodes what needs it. `networks.url_encode` and `networks.url_decode`
 do it to any text, and `+` in a query is a space too, as forms send it.
 
 #### Making an address
@@ -8210,7 +8210,7 @@ all text.
 
 * `networks.read_url Address` gives its parts (`Scheme`, `Host`, `Port`,
   `Path`, `Query`, `Fragment`), and `.text` puts them together again.
-* `networks.encode` and `decode` make text safe for an address, and back.
+* `networks.url_encode` and `url_decode` make text safe for an address, and back.
 
 #### Try this
 
@@ -15261,7 +15261,7 @@ use system
 
 int main {
 	println system.name, "(" + system.kind + ") on", system.hostname
-	println system.processors, "processors,", system.memory / 1000000000, "GB"
+	println system.processors, "processors"
 }
 ```
 
@@ -15271,7 +15271,7 @@ int main {
 | `system.name`, `system.version` | `"Debian GNU/Linux 13 (trixie)"`, `"macOS 15.1"`; just the version |
 | `system.hostname` | its name on the network |
 | `system.kernel`, `system.machine` | the kernel's version; the processor's kind, `"x86_64"`, `"arm64"` |
-| `system.processors`, `system.memory` | how many processors (how many workers can run at once); memory, in bytes |
+| `system.processors` | how many processors: how many workers can run at once |
 | `system.uptime` | seconds since it was turned on |
 
 #### What it's doing
@@ -15807,7 +15807,7 @@ and which can't be changed without its being noticed. `lock_file` and
 #### Signed
 
 A **signature** shows that a message hasn't been changed, by whoever
-has the key: `secrets.signature Message, Key`, and `check_signature` to
+has the key: `secrets.shared_signature Message, Key`, and `check_shared_signature` to
 check it. With **public keys**, one key signs (the private one, kept)
 and another checks (the public one, given to anyone):
 
@@ -15839,7 +15839,7 @@ a secret and a file locked, and messages signed both ways.
 
 * `random_number`, `random_text`, `random_password`.
 * `hash_password` and `check_password`; never the password itself.
-* `lock` and `unlock`; `signature` and `check_signature`; `sign` and
+* `lock` and `unlock`; `shared_signature` and `check_shared_signature`; `sign` and
   `check_signed` with a key pair.
 
 #### Try this
@@ -15863,7 +15863,7 @@ use secrets
 use bytes
 
 int main {
-	str Plain = secrets.random_password_plain 10
+	str Plain = secrets.random_password_without_symbols 10
 	println Plain.length, Plain.contains("#")
 	bytes Key = secrets.random_bytes 32
 	println Key.length
@@ -16149,7 +16149,7 @@ use time
 
 int main {
 	if !speech.can_hear {
-		speech.get_model "base.en"           // once: 148 MB
+		speech.download_model "base.en"           // once: 148 MB
 	}
 	println speech.hear("reminder.wav")
 	println "Say something:"
@@ -16171,7 +16171,7 @@ is there.
 
 * `speech.say`, `save`, `can_speak`; a `speech.speaker` with
   `set_language`, `set_rate`, `set_voice`.
-* `speech.hear`, `hear_for`, `can_hear`, `get_model`.
+* `speech.hear`, `hear_for`, `can_hear`, `download_model`.
 
 #### Try this
 
@@ -16988,7 +16988,7 @@ floating-point value to an integer (saturates).
 | `add_separator` | a dividing line |
 
 **Every widget** has `set_text Text`, `text` (for a drop-down or list, the
-chosen entry), `set_enabled b`, `set_visible b` and `set_min_size w, h`.
+chosen entry), `set_enabled b`, `set_visible b` and `set_minimum_size w, h`.
 
 **Handlers** name one of the window's own methods, with no parameters and
 no result, written without parentheses: `SaveButton.on_click save`.

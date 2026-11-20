@@ -34,10 +34,10 @@ object mutter {
 
 	void add_spec dbus.message &A, const json &Mon {
 		A.begin_struct
-		A.add_str Mon["connector"].str_
-		A.add_str Mon["vendor"].str_
-		A.add_str Mon["product"].str_
-		A.add_str Mon["serial"].str_
+		A.add_str Mon["connector"].str
+		A.add_str Mon["vendor"].str
+		A.add_str Mon["product"].str
+		A.add_str Mon["serial"].str
 		A.end_struct
 	}
 
@@ -50,7 +50,7 @@ object mutter {
 
 	dbus.message current_state {
 		dbus.message A = dbus.answer
-		A.add_uint State["serial"].long_
+		A.add_uint State["serial"].long
 		A.begin_list "((ssss)a(siiddada{sv})a{sv})"
 		json Monitors = State["monitors"]
 		for long I = 0; I < Monitors.length; I++ {
@@ -62,22 +62,22 @@ object mutter {
 			for long M = 0; M < Modes.length; M++ {
 				json Mode = Modes.item_at M
 				A.begin_struct
-				A.add_str Mode.item_at(0).str_
-				A.add_int Mode.item_at(1).long_
-				A.add_int Mode.item_at(2).long_
-				A.add_double Mode.item_at(3).double_
-				A.add_double Mode.item_at(4).double_
+				A.add_str Mode.item_at(0).str
+				A.add_int Mode.item_at(1).long
+				A.add_int Mode.item_at(2).long
+				A.add_double Mode.item_at(3).double
+				A.add_double Mode.item_at(4).double
 				A.begin_list "d"
 				json Scales = Mode.item_at 5
 				for long K = 0; K < Scales.length; K++ {
-					A.add_double Scales.item_at(K).double_
+					A.add_double Scales.item_at(K).double
 				}
 				A.end_list
 				A.begin_lookup "s", "v"
-				if Mode.item_at(6).bool_ {
+				if Mode.item_at(6).bool {
 					add_flag A, "is-current"
 				}
-				if Mode.item_at(7).bool_ {
+				if Mode.item_at(7).bool {
 					add_flag A, "is-preferred"
 				}
 				A.end_lookup
@@ -87,7 +87,7 @@ object mutter {
 			A.begin_lookup "s", "v"
 			A.add_str "display-name"
 			A.begin_variant "s"
-			A.add_str Mon["name"].str_
+			A.add_str Mon["name"].str
 			A.end_variant
 			A.end_lookup
 			A.end_struct
@@ -98,15 +98,15 @@ object mutter {
 		for long L = 0; L < Logical.length; L++ {
 			json One = Logical.item_at L
 			A.begin_struct
-			A.add_int One.item_at(0).long_
-			A.add_int One.item_at(1).long_
-			A.add_double One.item_at(2).double_
-			A.add_uint One.item_at(3).long_
-			A.add_bool One.item_at(4).bool_
+			A.add_int One.item_at(0).long
+			A.add_int One.item_at(1).long
+			A.add_double One.item_at(2).double
+			A.add_uint One.item_at(3).long
+			A.add_bool One.item_at(4).bool
 			A.begin_list "(ssss)"
 			json Shows = One.item_at 5
 			for long K = 0; K < Shows.length; K++ {
-				add_spec A, monitor(Shows.item_at(K).str_)
+				add_spec A, monitor(Shows.item_at(K).str)
 			}
 			A.end_list
 			A.begin_lookup "s", "v"
@@ -122,7 +122,7 @@ object mutter {
 	json monitor const str &Connector {
 		json Monitors = State["monitors"]
 		for long I = 0; I < Monitors.length; I++ {
-			if Monitors.item_at(I)["connector"].str_ == Connector {
+			if Monitors.item_at(I)["connector"].str == Connector {
 				return Monitors.item_at(I).copy
 			}
 		}
@@ -132,7 +132,7 @@ object mutter {
 	long monitor_at const str &Connector {
 		json Monitors = State["monitors"]
 		for long I = 0; I < Monitors.length; I++ {
-			if Monitors.item_at(I)["connector"].str_ == Connector {
+			if Monitors.item_at(I)["connector"].str == Connector {
 				return I
 			}
 		}
@@ -141,7 +141,7 @@ object mutter {
 
 	// [serial, method, [[x, y, scale, turn, main, [[connector, mode, {}]]]], {}]
 	void apply const json &Values {
-		if Values.item_at(0).long_ != State["serial"].long_ {
+		if Values.item_at(0).long != State["serial"].long {
 			Bus.fail "org.freedesktop.DBus.Error.AccessDenied", "The requested configuration is based on stale information"
 			return
 		}
@@ -152,8 +152,8 @@ object mutter {
 			json Shows = json.list
 			json Pairs = One.item_at 5
 			for long K = 0; K < Pairs.length; K++ {
-				str Connector = Pairs.item_at(K).item_at(0).str_
-				str Mode = Pairs.item_at(K).item_at(1).str_
+				str Connector = Pairs.item_at(K).item_at(0).str
+				str Mode = Pairs.item_at(K).item_at(1).str
 				long At = monitor_at Connector
 				if At < 0 {
 					Bus.fail "org.freedesktop.DBus.Error.InvalidArgs", "Invalid connector"
@@ -162,12 +162,12 @@ object mutter {
 				bool Found = false
 				json Modes = State["monitors"].item_at(At)["modes"]
 				for long M = 0; M < Modes.length; M++ {
-					if Modes.item_at(M).item_at(0).str_ == Mode {
+					if Modes.item_at(M).item_at(0).str == Mode {
 						Found = true
 						bool Fits = false
 						json Scales = Modes.item_at(M).item_at 5
 						for long S = 0; S < Scales.length; S++ {
-							if close_to Scales.item_at(S).double_, One.item_at(2).double_, 0.001 {
+							if close_to Scales.item_at(S).double, One.item_at(2).double, 0.001 {
 								Fits = true
 							}
 						}
@@ -195,20 +195,20 @@ object mutter {
 		// each monitor's current mode is the one it was given (none if off)
 		json Monitors = State["monitors"]
 		for long I = 0; I < Monitors.length; I++ {
-			str Connector = Monitors.item_at(I)["connector"].str_
+			str Connector = Monitors.item_at(I)["connector"].str
 			str Wanted = ""
 			for long L = 0; L < Given.length; L++ {
 				json Pairs = Given.item_at(L).item_at 5
 				for long K = 0; K < Pairs.length; K++ {
-					if Pairs.item_at(K).item_at(0).str_ == Connector {
-						Wanted = Pairs.item_at(K).item_at(1).str_
+					if Pairs.item_at(K).item_at(0).str == Connector {
+						Wanted = Pairs.item_at(K).item_at(1).str
 					}
 				}
 			}
 			json Modes = Monitors.item_at(I)["modes"]
 			for long M = 0; M < Modes.length; M++ {
 				json Mode = Modes.item_at M
-				Mode.set_item_at 6, json.from_bool(Mode.item_at(0).str_ == Wanted)
+				Mode.set_item_at 6, json.from_bool(Mode.item_at(0).str == Wanted)
 				Modes.set_item_at M, Mode
 			}
 			json Mon = Monitors.item_at I
@@ -217,7 +217,7 @@ object mutter {
 		}
 		State.set_item "monitors", Monitors
 		State.set_item "logical", Logical
-		State.set_item "serial", json.from_long(State["serial"].long_ + 1)
+		State.set_item "serial", json.from_long(State["serial"].long + 1)
 	}
 }
 

@@ -74,7 +74,7 @@ object caretaker {
 
 int main {
 	println "This is", system.name, "on", system.hostname, "(" + system.kind + ", " + system.machine + ")"
-	println system.processors, "processors,", system.memory / 1000000000, "GB of memory, up", system.uptime / 3600, "hours"
+	println system.processors, "processors,", os.memory_total / 1000000000, "GB of memory, up", system.uptime / 3600, "hours"
 	println "The processors are", os.cpu_use.text(0) + "% busy; memory in use:", os.memory_used / 1000000, "MB"
 	list double Load = os.load
 	println "Waiting for a processor, on average:", Load[0].text(2), "in the last minute,", Load[2].text(2), "in the last fifteen"
