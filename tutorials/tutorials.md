@@ -1,6 +1,6 @@
 # The Cabby Manual
 
-*For Cabby 0.39.1 (2026-11-20).*
+*For Cabby 0.39.2 (2026-11-20).*
 
 A book for learning Cabby one idea at a time, and a reference to come back
 to afterwards.
@@ -7565,7 +7565,7 @@ true
 
 ### Chapter 40: JSON
 
-*Program: `40-json.cby`. Library: `use json`.*
+*Program: `40-json.cby`. Libraries: `use json`, `use csv`.*
 
 #### What JSON is
 
@@ -16685,7 +16685,8 @@ Run `cabby` with no file to type Cabby a piece at a time:
 
 ```text
 $ cabby
-Cabby interactive session. Type statements and declarations; "exit" to finish.
+Cabby 0.39.2 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
+Cabby comes with ABSOLUTELY NO WARRANTY, under the MIT License; "cabby.license" for details.
 >>> int add int a, int b {
 ... 	return a + b
 ... }

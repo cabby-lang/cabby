@@ -1,7 +1,7 @@
 // Tutorial 46: Changing a file in place
 //
 // Run it:      cabby 46-save-game.cby
-// Or compile:  cabby -c 46-save-game.cby && ./33-save-game
+// Or compile:  cabby -c 46-save-game.cby && ./46-save-game
 // Library:     use files (which brings bytes)
 // Topics:      a file format of your own, files.open_to_change, .move_to,
 //              .read_bytes, .write_bytes, .position, .size, .move_to_end,

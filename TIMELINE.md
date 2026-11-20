@@ -87,6 +87,7 @@ the patch number with fixes alone.
 | 0.38.0 | 20 November | `use csv`; `callback`, a Cabby function for C to call; `cabby -c --checked`, with AddressSanitizer |
 | 0.39.0 | 20 November | The last look at names: clearer library names, and messages that all say "can't" |
 | 0.39.1 | 20 November | whisper-cli found off the PATH (Arch's ~/.local/bin); a Mac build skips an Intel Homebrew's libffi |
+| 0.39.2 | 20 November | Pasting keeps (or gives) indentation; tutorials 28 and 40 show callbacks and CSV |
 
 ---
 
@@ -1502,6 +1503,22 @@ old names need changing:
   this processor. An Intel Homebrew in `/usr/local` (Rosetta's) had given
   an `x86_64` libffi, and the link failed with every `ffi_` call missing.
   The same Homebrew is asked for SDL 3 and FFmpeg.
+
+*Version 0.39.2:*
+
+- Pasting into the interactive session: a pasted line keeps its own
+  indentation when it has some, has its spaces made tabs (the first
+  indented line says how many a level is), and is indented as a typed one
+  would be when it has none, as text copied from a page or a terminal
+  often has. It had cleared the usual indentation and put nothing back.
+- Tutorial 28's program sorts its readings with C's `qsort` and a
+  `callback`; tutorial 40's saves its songs as a CSV table and reads them
+  back. Twelve programs' "Or compile" lines named the program before the
+  chapters were renumbered (`./41-json`), and now name their own.
+- Appendix B shows the session's first lines as they are now.
+- On a Mac with an Apple processor, SDL 3 and FFmpeg, like libffi, are
+  only taken from a Homebrew built for it, and /opt/homebrew's
+  pkg-config is asked first.
 
 ## Along the way (dates not recorded)
 

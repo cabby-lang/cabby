@@ -1,7 +1,7 @@
 // Tutorial 41: Downloading
 //
 // Run it:      cabby 41-downloads.cby
-// Or compile:  cabby -c 41-downloads.cby && ./42-downloads
+// Or compile:  cabby -c 41-downloads.cby && ./41-downloads
 // Library:     use networks
 // Topics:      networks.download, networks.download_to, networks.can_reach,
 //              networks.status, with json.read

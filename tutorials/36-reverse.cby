@@ -1,7 +1,7 @@
 // Tutorial 36: A whole program — reversing a string
 //
 // Run it:      cabby 36-reverse.cby stressed
-// Or compile:  cabby -c 36-reverse.cby && ./37-reverse stressed
+// Or compile:  cabby -c 36-reverse.cby && ./36-reverse stressed
 //
 // This program puts several earlier tutorials together: command-line
 // arguments (28), a header and its implementation (27), borrowing (15),

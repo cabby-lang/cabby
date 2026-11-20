@@ -1,7 +1,7 @@
 // Tutorial 34: Processes
 //
 // Run it:      cabby 34-processes.cby
-// Or compile:  cabby -c 34-processes.cby && ./35-processes
+// Or compile:  cabby -c 34-processes.cby && ./34-processes
 // Library:     use processes
 // Topics:      starting a program, sending it lines, reading what it
 //              prints, waiting, handlers for its lines and its end
