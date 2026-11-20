@@ -89,11 +89,28 @@ static void prescan_types(Loader *ld, const char *path, const char *src)
 	TokenKind prev = TOK_NEWLINE;
 	Token prev_tok = { 0 }, prev2_tok = { 0 };
 	bool in_typedef = false;
+	bool in_callback = false;   /* after `callback`, before its name */
 	Token last_ident = { 0 };
 	for (;;) {
 		Token t = lexer_next(&L);
 		if (t.kind == TOK_EOF)
 			break;
+		/* `callback int comparer ...`: the first name after the type it
+		 * gives (a keyword, or a type already known) is the new type's */
+		if (t.kind == TOK_KW_CALLBACK) {
+			in_callback = true;
+		} else if (in_callback && t.kind == TOK_NEWLINE) {
+			in_callback = false;
+		} else if (in_callback && t.kind == TOK_IDENT) {
+			bool known = false;
+			for (int i = 0; i < ld->types.len && !known; i++)
+				known = (int)strlen(ld->types.items[i]) == t.length &&
+					memcmp(ld->types.items[i], t.start, (size_t)t.length) == 0;
+			if (!known && !(t.length == 7 && memcmp(t.start, "address", 7) == 0)) {
+				add_type_name(ld, t.start, t.length);
+				in_callback = false;
+			}
+		}
 		if (t.kind == TOK_IDENT && (prev == TOK_KW_OBJECT || prev == TOK_KW_STRUCT ||
 					    prev == TOK_KW_UNION || prev == TOK_KW_ENUM)) {
 			/* gui . window before `gui` is known as a namespace */
@@ -2398,10 +2415,19 @@ static void parse_params(Parser *P, FnDecl *fn, bool is_extern)
 }
 
 /* After `type name`: parameters, optional const (methods), body or end of line. */
+static FnDecl *parse_fn_rest_as(Parser *P, TypeExpr *ret, const char *name, SrcLoc at, ObjectDecl *owner,
+				bool is_extern, bool is_static, int indent);
+
 static FnDecl *parse_fn_rest(Parser *P, TypeExpr *ret, Token name, ObjectDecl *owner, bool is_extern,
 			     bool is_static, int indent)
 {
-	FnDecl *fn = ast_fn(P->arena, tok_text(P, name), loc_of(P, name));
+	return parse_fn_rest_as(P, ret, tok_text(P, name), loc_of(P, name), owner, is_extern, is_static, indent);
+}
+
+static FnDecl *parse_fn_rest_as(Parser *P, TypeExpr *ret, const char *name, SrcLoc at, ObjectDecl *owner,
+				bool is_extern, bool is_static, int indent)
+{
+	FnDecl *fn = ast_fn(P->arena, name, at);
 	fn->ret = ret;
 	fn->owner = owner;
 	fn->is_extern = is_extern;
@@ -2915,6 +2941,36 @@ static void parse_top(Parser *P)
 			return;
 		}
 		break;
+	}
+	case TOK_KW_CALLBACK: {
+		/* `callback int comparer address void, address void`: a C function
+		 * pointer's type, by the shape of the functions it can point to */
+		advance(P);
+		DeclSpec ds;
+		if (!parse_decl_spec(P, &ds, false))
+			return;
+		FnDecl *sig;
+		bool address_named = ds.base && ds.base->kind == TYPEX_ADDRESS && ds.base->inner &&
+				     ds.base->inner->kind == TYPEX_NAMED && !ds.base->inner->builtin &&
+				     (starts_type(P, P->cur) || check(P, TOK_NEWLINE) || check(P, TOK_KW_VOID));
+		if (check(P, TOK_IDENT) && !address_named) {
+			Token name = P->cur;
+			advance(P);
+			sig = parse_fn_rest(P, ds.base, name, NULL, true, false, 0);
+		} else if (address_named) {
+			/* `callback address starter address Given`: an address it gives, and
+			 * its name (already a type's, as the file's types are found first) */
+			TypeExpr *plain = ast_type_expr(P->arena, TYPEX_ADDRESS, ds.base->loc);
+			sig = parse_fn_rest_as(P, plain, ds.base->inner->name, ds.base->inner->loc, NULL, true, false, 0);
+		} else {
+			error_at(P, P->cur, "a callback is named after what it gives: 'callback int comparer address A, address B'");
+			return;
+		}
+		Decl *d = ast_decl(P->arena, DECL_TYPEDEF, l);
+		d->as.typedef_.name = sig->name;
+		d->as.typedef_.callback = sig;
+		push_decl(P, d);
+		return;
 	}
 	case TOK_KW_TYPEDEF:
 		error_at(P, t, "Cabby has no 'typedef': write the type, then 'aka', then the new name "

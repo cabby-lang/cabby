@@ -1557,6 +1557,7 @@ static void list_index_check(int64_t i, int64_t len, bool insert, SrcLoc l)
 static void encode(const Type *t, const Value *v, unsigned char *dst)
 {
 	switch (t->kind) {
+	case TY_CALLBACK: { int64_t x = v->as.i; memcpy(dst, &x, 8); break; }   /* a C function's address */
 	case TY_BOOL: dst[0] = v->as.b; break;
 	case TY_INT: {
 		int64_t x = v->as.i;
@@ -3156,9 +3157,93 @@ static ffi_type *ffi_of(const Type *t)
 	case TY_FLOAT: return t->bits == 32 ? &ffi_type_float : &ffi_type_double;
 	case TY_STR:
 	case TY_REF:
-	case TY_ADDRESS: return &ffi_type_pointer;
+	case TY_ADDRESS:
+	case TY_CALLBACK: return &ffi_type_pointer;
 	default:       return &ffi_type_void;
 	}
+}
+
+/* ---- callbacks: a Cabby function C can call
+ *
+ * C is given a function of libffi's making (a closure) with the
+ * callback's shape; called, it runs the Cabby function, in whichever
+ * interpreter this thread has (a worker's own if C calls from a thread of
+ * its own), with the lock held as for a handler. Addresses C passes it
+ * stay as C gave them: during qsort they point into the C copy that's
+ * being sorted, not at Cabby's values (which are written back after). */
+typedef struct {
+	ffi_cif cif;
+	ffi_type **args;
+	FnDecl *fn;
+} CallbackShape;
+
+static void worker_interp_begin(Interp *W);
+static void worker_interp_end(Interp *W);
+
+static void callback_entry(ffi_cif *cif, void *ret, void **cargs, void *data)
+{
+	(void)cif;
+	CallbackShape *k = data;
+	FnDecl *fn = k->fn;
+	bool was = rt_gil_enter();
+	Interp mine, *I = g_interp;
+	if (!I) {
+		worker_interp_begin(&mine);
+		I = &mine;
+	}
+	int n = fn->params.len;
+	Value *argv = rt_alloc(sizeof *argv * (size_t)(n ? n : 1));
+	for (int i = 0; i < n; i++) {
+		Type *t = fn->params.items[i]->type->resolved;
+		if (t->kind == TY_ADDRESS) {
+			void *p;
+			memcpy(&p, cargs[i], sizeof p);
+			argv[i] = raw_address(p);
+		} else {
+			argv[i] = decode(t, cargs[i]);
+		}
+	}
+	int mark = I->ntemps;
+	Value r = call_function(I, fn, NULL, argv, fn->loc);
+	release_temps(I, mark);
+	free(argv);
+	Type *rt = fn->ret_type;
+	/* (libffi wants a whole register's worth for a smaller number) */
+	if (rt->kind == TY_INT) {
+		if (rt->is_signed)
+			*(ffi_sarg *)ret = (ffi_sarg)r.as.i;
+		else
+			*(ffi_arg *)ret = (ffi_arg)(uint64_t)r.as.i;
+	} else if (rt->kind == TY_FLOAT || rt->kind == TY_ADDRESS) {
+		encode(rt, &r, ret);
+	}
+	if (I == &mine)
+		worker_interp_end(I);
+	rt_gil_leave(was);
+}
+
+/* the C function for fn, made the first time it's given to C */
+static void *callback_code(FnDecl *fn, SrcLoc at)
+{
+	if (fn->definition)
+		fn = fn->definition;
+	if (fn->is_extern)
+		return fn->backend ? fn->backend : dlsym(RTLD_DEFAULT, fn->name);   /* C's own */
+	if (fn->callback_code)
+		return fn->callback_code;
+	CallbackShape *k = calloc(1, sizeof *k);
+	k->fn = fn;
+	int n = fn->params.len;
+	k->args = calloc((size_t)(n ? n : 1), sizeof *k->args);
+	for (int i = 0; i < n; i++)
+		k->args[i] = ffi_of(fn->params.items[i]->type->resolved);
+	void *code = NULL;
+	ffi_closure *cl = ffi_closure_alloc(sizeof(ffi_closure), &code);
+	if (!cl || ffi_prep_cif(&k->cif, FFI_DEFAULT_ABI, (unsigned)n, ffi_of(fn->ret_type), k->args) != FFI_OK ||
+	    ffi_prep_closure_loc(cl, &k->cif, callback_entry, k, code) != FFI_OK)
+		panic_at(at, "'%s' couldn't be made into a function C can call", fn->name);
+	fn->callback_code = code;   /* (kept for the program's life: C may keep it) */
+	return code;
 }
 
 /* An extern call's own working arrays: kept here until it's done, so a
@@ -3573,6 +3658,9 @@ static Value eval(Interp *I, Expr *e)
 		}
 		break;
 	}
+
+	case EXPR_CALLBACK:
+		return v_int((int64_t)(intptr_t)callback_code(e->as.callback.fn, e->loc));
 
 	case EXPR_HANDLER: {
 		Value *w = deref_all(symbol_cell(I, e->as.handler.self));

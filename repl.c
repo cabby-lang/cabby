@@ -1093,12 +1093,12 @@ static int complete_word(const char *line, int pos, int *start, char ***items)
 		static const char *const words[] = {
 			"if", "else", "while", "do", "for", "in", "to", "down", "by", "switch", "case", "default", "break",
 			"continue", "return", "goto", "sizeof", "const", "static", "list", "lookup", "object", "struct",
-			"union", "enum", "aka", "until", "inner", "use", "true", "false", "self", "int", "long", "short", "char", "float",
+			"union", "enum", "aka", "callback", "until", "inner", "use", "true", "false", "self", "int", "long", "short", "char", "float",
 			"double", "bool", "str", "void", "unsigned", "signed", "print", "println", "input", "read_line",
 			"end_of_input", "read_char", "read_key", "stdout", "stderr", "exit", "abs", "close_to", "random", "random_seed", "cabby", NULL,
 		};
 		cand_add_all(&c, words);
-		static const char *const libs[] = { "files", "directories", "shell", "processes", "events", "addresses", "time", "dates", "json", "bytes", "networks", "html", "xml", "gui", "gtk", "tui", "game", "tgame", "world", "sound", "bluetooth", "emails", "secrets", "volume", "brightness", "printing", "speech", "system", "videos", "os", "linux", "screens", "mouse", "keyboard", NULL };
+		static const char *const libs[] = { "files", "directories", "shell", "processes", "events", "addresses", "time", "dates", "json", "bytes", "networks", "html", "xml", "gui", "gtk", "tui", "game", "tgame", "world", "sound", "bluetooth", "emails", "secrets", "volume", "brightness", "printing", "speech", "system", "videos", "os", "linux", "screens", "mouse", "keyboard", "csv", NULL };
 		for (int i = 0; libs[i]; i++)
 			if (header_used(libs[i]))
 				cand_add(&c, libs[i]);

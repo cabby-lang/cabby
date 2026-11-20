@@ -11,7 +11,7 @@ DBGFLAGS = -O0 -g -fsanitize=address,undefined -fno-omit-frame-pointer
 
 BUILD   := build
 CORE    := arena.c diag.c util.c lexer.c ast.c ast_print.c parser.c types.c style.c \
-           sema_decl.c sema_expr.c sema_stmt.c sema_flow.c interpreter.c codegen.c repl.c lineedit.c highlight.c runtime/rt.c runtime/dates.c runtime/json.c runtime/networks.c runtime/markup.c runtime/bytes.c runtime/patterns.c runtime/hashes.c runtime/archives.c runtime/databases.c runtime/threads.c runtime/dbus.c runtime/bluetooth.c runtime/emails.c runtime/secrets.c runtime/desktop.c runtime/zones.c runtime/connections.c runtime/images.c runtime/os.c runtime/linux.c
+           sema_decl.c sema_expr.c sema_stmt.c sema_flow.c interpreter.c codegen.c repl.c lineedit.c highlight.c runtime/rt.c runtime/dates.c runtime/json.c runtime/csv.c runtime/networks.c runtime/markup.c runtime/bytes.c runtime/patterns.c runtime/hashes.c runtime/archives.c runtime/databases.c runtime/threads.c runtime/dbus.c runtime/bluetooth.c runtime/emails.c runtime/secrets.c runtime/desktop.c runtime/zones.c runtime/connections.c runtime/images.c runtime/os.c runtime/linux.c
 LDLIBS  := -lffi -lm -ldl -pthread
 
 # macOS: Homebrew's libffi (it isn't on the usual paths), the BSD and
@@ -247,12 +247,13 @@ lib/processes.link: Makefile
 	echo "" > $@
 
 # the runtime linked into compiled programs
-lib/libcabbyrt.a: runtime/rt.c runtime/dates.c runtime/json.c runtime/networks.c runtime/markup.c runtime/bytes.c runtime/patterns.c runtime/hashes.c runtime/archives.c runtime/databases.c runtime/threads.c runtime/dbus.c runtime/bluetooth.c runtime/bluetooth_mac.h runtime/emails.c runtime/secrets.c runtime/desktop.c runtime/zones.c runtime/connections.c runtime/web.h runtime/websockets.h runtime/tls.h runtime/imap.h runtime/postgres.h runtime/images.c runtime/os.c runtime/linux.c runtime/colors.h runtime/rt.h
+lib/libcabbyrt.a: runtime/rt.c runtime/dates.c runtime/json.c runtime/csv.c runtime/networks.c runtime/markup.c runtime/bytes.c runtime/patterns.c runtime/hashes.c runtime/archives.c runtime/databases.c runtime/threads.c runtime/dbus.c runtime/bluetooth.c runtime/bluetooth_mac.h runtime/emails.c runtime/secrets.c runtime/desktop.c runtime/zones.c runtime/connections.c runtime/web.h runtime/websockets.h runtime/tls.h runtime/imap.h runtime/postgres.h runtime/images.c runtime/os.c runtime/linux.c runtime/colors.h runtime/rt.h
 	$(CC) -std=c11 -O2 -fPIC -D_DEFAULT_SOURCE -D_POSIX_C_SOURCE=200809L $(PLATFORM_DEFS) -c runtime/rt.c -o $(BUILD)/rt_lib.o
 	$(CC) -std=c11 -O2 -fPIC -D_DEFAULT_SOURCE -D_POSIX_C_SOURCE=200809L $(PLATFORM_DEFS) -c runtime/dates.c -o $(BUILD)/dates_lib.o
 	$(CC) -std=c11 -O2 -fPIC -D_DEFAULT_SOURCE -D_POSIX_C_SOURCE=200809L $(PLATFORM_DEFS) -c runtime/json.c -o $(BUILD)/json_lib.o
 	$(CC) -std=c11 -O2 -fPIC -D_DEFAULT_SOURCE -D_POSIX_C_SOURCE=200809L $(PLATFORM_DEFS) -c runtime/networks.c -o $(BUILD)/networks_lib.o
 	$(CC) -std=c11 -O2 -fPIC -D_DEFAULT_SOURCE -D_POSIX_C_SOURCE=200809L $(PLATFORM_DEFS) -c runtime/markup.c -o $(BUILD)/markup_lib.o
+	$(CC) -std=c11 -O2 -fPIC -D_DEFAULT_SOURCE -D_POSIX_C_SOURCE=200809L $(PLATFORM_DEFS) -c runtime/csv.c -o $(BUILD)/csv_lib.o
 	$(CC) -std=c11 -O2 -fPIC -D_DEFAULT_SOURCE -D_POSIX_C_SOURCE=200809L $(PLATFORM_DEFS) -c runtime/bytes.c -o $(BUILD)/bytes_lib.o
 	$(CC) -std=c11 -O2 -fPIC -D_DEFAULT_SOURCE -D_POSIX_C_SOURCE=200809L $(PLATFORM_DEFS) -c runtime/patterns.c -o $(BUILD)/patterns_lib.o
 	$(CC) -std=c11 -O2 -fPIC -D_DEFAULT_SOURCE -D_POSIX_C_SOURCE=200809L $(PLATFORM_DEFS) -c runtime/hashes.c -o $(BUILD)/hashes_lib.o
@@ -269,7 +270,7 @@ lib/libcabbyrt.a: runtime/rt.c runtime/dates.c runtime/json.c runtime/networks.c
 	$(CC) -std=c11 -O2 -fPIC -D_DEFAULT_SOURCE -D_POSIX_C_SOURCE=200809L $(PLATFORM_DEFS) -c runtime/zones.c -o $(BUILD)/zones_lib.o
 	$(CC) -std=c11 -O2 -fPIC -D_DEFAULT_SOURCE -D_POSIX_C_SOURCE=200809L $(PLATFORM_DEFS) -c runtime/connections.c -o $(BUILD)/connections_lib.o
 	$(CC) -std=c11 -O2 -fPIC -D_DEFAULT_SOURCE -D_POSIX_C_SOURCE=200809L $(PLATFORM_DEFS) -c runtime/images.c -o $(BUILD)/images_lib.o
-	ar rcs $@ $(BUILD)/rt_lib.o $(BUILD)/dates_lib.o $(BUILD)/json_lib.o $(BUILD)/networks_lib.o $(BUILD)/markup_lib.o $(BUILD)/bytes_lib.o $(BUILD)/patterns_lib.o $(BUILD)/hashes_lib.o $(BUILD)/archives_lib.o $(BUILD)/databases_lib.o $(BUILD)/threads_lib.o $(BUILD)/dbus_lib.o $(BUILD)/bluetooth_lib.o $(BUILD)/emails_lib.o $(BUILD)/secrets_lib.o $(BUILD)/desktop_lib.o $(BUILD)/zones_lib.o $(BUILD)/connections_lib.o $(BUILD)/images_lib.o $(BUILD)/os_lib.o $(BUILD)/linux_lib.o
+	ar rcs $@ $(BUILD)/rt_lib.o $(BUILD)/dates_lib.o $(BUILD)/json_lib.o $(BUILD)/csv_lib.o $(BUILD)/networks_lib.o $(BUILD)/markup_lib.o $(BUILD)/bytes_lib.o $(BUILD)/patterns_lib.o $(BUILD)/hashes_lib.o $(BUILD)/archives_lib.o $(BUILD)/databases_lib.o $(BUILD)/threads_lib.o $(BUILD)/dbus_lib.o $(BUILD)/bluetooth_lib.o $(BUILD)/emails_lib.o $(BUILD)/secrets_lib.o $(BUILD)/desktop_lib.o $(BUILD)/zones_lib.o $(BUILD)/connections_lib.o $(BUILD)/images_lib.o $(BUILD)/os_lib.o $(BUILD)/linux_lib.o
 
 # -rdynamic: libraries the interpreter loads (processes, tui, gui) use its
 # event loop, as compiled programs use the runtime's

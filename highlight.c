@@ -14,7 +14,7 @@ static const char *const types[] = {
 	"char", "short", "int", "long", "float", "double", "void", "bool", "str",
 	"signed", "unsigned", "handler", "list", "lookup", "file", "directory", "process", "address", "timer", "moment", "duration", "date", "time_of_day", "date_time", "weekday",
 	"month", "json", "bytes", "element", "html", "xml", "const", "static", "register", "volatile",
-	"extern", "struct", "union", "enum", "object", "aka", "inner", NULL,
+	"extern", "struct", "union", "enum", "object", "aka", "callback", "inner", NULL,
 };
 static const char *const constants[] = { "true", "false", NULL };
 static const char *const functions[] = {
@@ -44,7 +44,7 @@ static const char *const lib_function_names[] = {
 	"files", "directories", "shell", "addresses", "events", "time", "dates", "json", "cabby", "networks",
 	"html", "xml", "bytes", "sound", "archives", "patterns", "hashes", "databases", "threads", "dbus",
 	"desktop", "power", "volume", "system", "users", "mime", "media", "images", "brightness", "printing", "speech",
-	"bluetooth", "emails", "secrets", "videos", "os", "linux", "screens", "mouse", "keyboard", NULL
+	"bluetooth", "emails", "secrets", "videos", "os", "linux", "screens", "mouse", "keyboard", "csv", NULL
 };
 
 /* and the types among them, by their whole names: threads.worker */

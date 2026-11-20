@@ -194,6 +194,7 @@ static const char *llty(CG *G, const Type *t)
 	case TY_REF:    return "ptr";
 	case TY_HANDLER: return "{ ptr, ptr }";   /* the window, its method */
 	case TY_ADDRESS: return "ptr";
+	case TY_CALLBACK: return "ptr";   /* a C function pointer */
 	case TY_ARRAY:  return astr(G, "[%" PRIu64 " x %s]", t->len, llty(G, t->inner));
 	case TY_OBJECT:
 		switch (t->obj->kind) {
@@ -691,6 +692,7 @@ static void store(CG *G, Type *t, Op v, Op ptr, bool is_volatile)
 /* ============================================================== expressions */
 
 static Op gen_val(CG *G, Expr *e);
+static void declare_extern(CG *G, FnDecl *fn);
 static void gen_into(CG *G, Expr *e, Op dst);
 static Op gen_place(CG *G, Expr *e);
 static Op gen_call(CG *G, Expr *e, Op *sret);
@@ -2238,6 +2240,14 @@ static Op gen_val(CG *G, Expr *e)
 		return is_place(o) ? gen_place(G, o) : gen_read(G, o);
 	}
 
+	case EXPR_CALLBACK: {
+		/* the function itself: C calls it as it calls its own (a function
+		 * of numbers and addresses has C's calling convention) */
+		FnDecl *f = e->as.callback.fn;
+		if (f->is_extern)
+			declare_extern(G, f);
+		return op("%s", fn_name(G, f));
+	}
 	case EXPR_HANDLER: {
 		/* { the window's object, its (most derived) method } */
 		Op h = tmp(G);
@@ -3049,13 +3059,15 @@ static void begin_function(CG *G)
 	G->labels.len = 0;
 }
 
+static bool codegen_checked;   /* --checked */
+
 static void end_function(CG *G, const char *header)
 {
 	fclose(G->entry);
 	fclose(G->body);
-	/* CABBY_SANITIZE=1 marks functions for AddressSanitizer (used by the tests) */
+	/* --checked (or CABBY_SANITIZE=1) marks functions for AddressSanitizer */
 	const char *san = getenv("CABBY_SANITIZE");
-	const char *attrs = san && *san == '1' ? " sanitize_address" : "";
+	const char *attrs = codegen_checked || (san && *san == '1') ? " sanitize_address" : "";
 	out(G->funcs, "%s%s {\nentry:\n%s\tbr label %%start\nstart:\n%s}\n\n", header, attrs, G->entry_buf, G->body_buf);
 	free(G->entry_buf);
 	free(G->body_buf);
@@ -4139,6 +4151,7 @@ int compile_program(Sema *S, const char *src_path, const CompileOptions *opt)
 		return 1;
 	}
 	FILE *f = fdopen(fd, "w");
+	codegen_checked = opt->checked;
 	codegen_emit(S, f);
 	fclose(f);
 
@@ -4156,6 +4169,13 @@ int compile_program(Sema *S, const char *src_path, const CompileOptions *opt)
 	argv[argc++] = (char *)cc;
 	argv[argc++] = olevel;
 	argv[argc++] = "-Wno-override-module";
+	if (opt->checked) {
+		/* AddressSanitizer: reading past what's there, using memory after
+		 * it's freed, and (on Linux) memory never freed, each said where */
+		argv[argc++] = "-fsanitize=address";
+		argv[argc++] = "-fno-omit-frame-pointer";
+		argv[argc++] = "-g";
+	}
 	argv[argc++] = ll;
 	Program *prog = S->prog;
 	for (int i = 0; i < prog->natives.len && argc < 200; i++) {
@@ -4189,6 +4209,9 @@ int compile_program(Sema *S, const char *src_path, const CompileOptions *opt)
 	}
 	if (rc != 0) {
 		fprintf(stderr, "cabby: building with '%s' failed (see the messages above)\n", cc);
+		if (opt->checked)
+			fprintf(stderr, "cabby: --checked needs clang's AddressSanitizer: on Debian, libclang-rt-dev "
+				"(libclang-rt-19-dev for clang 19); on Arch, compiler-rt; a Mac's clang has it\n");
 		return 1;
 	}
 	return 0;

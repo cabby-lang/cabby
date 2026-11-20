@@ -1,0 +1,11 @@
+use addresses
+
+int main {
+	int Scores[3] = {10, 20, 30}
+	address int A = addresses.of Scores[0]
+	int Sum = 0
+	for i in 4 {
+		Sum += A[i]           // one past the end
+	}
+	println Sum
+}

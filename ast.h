@@ -130,6 +130,7 @@ typedef enum {
 	EXPR_SIZEOF,     /* sizeof(T) / sizeof e — rewritten to EXPR_INT by sema */
 	EXPR_BORROW,
 	EXPR_HANDLER,   /* sema: a window's method passed as a handler */
+	EXPR_CALLBACK,  /* sema: a function passed to C as a callback (as.callback.fn) */
 	EXPR_AT,        /* sema: what's at an address (A.value, A[i]): a place */     /* inserted by sema where a reference is bound */
 } ExprKind;
 
@@ -257,6 +258,7 @@ struct Expr {
 			int slot;             /* vtable slot: the window's own override is called */
 			struct Symbol *self;  /* the window */
 		} handler;
+		struct { FnDecl *fn; } callback;
 	} as;
 };
 
@@ -428,6 +430,7 @@ struct FnDecl {
 	unsigned handler_native; /* sema: handler parameters it gives to C (a window's widgets) */
 	void *backend;
 	void *bytecode;          /* the interpreter's bytecode for it (interpreter_bytecode.c) */
+	void *callback_code;     /* the interpreter's C function that runs it, given to C as a callback */
 	int bc_state;            /* 0 not tried yet, 1 made, 2 not made: the tree-walker runs it */
 };
 
@@ -484,7 +487,8 @@ struct Decl {
 		FnDecl *fn;
 		ObjectDecl *object;
 		EnumDecl *enum_;
-		struct { const char *name; TypeExpr *type; bool is_kind; bool is_strict; TypeExpr *steps; } typedef_;
+		struct { const char *name; TypeExpr *type; bool is_kind; bool is_strict; TypeExpr *steps;
+			 FnDecl *callback; } typedef_;   /* callback: `callback int comparer address void, address void` */
 		VarDeclVec vars;
 	} as;
 };

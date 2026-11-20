@@ -1,0 +1,10 @@
+use addresses
+
+int main {
+	address int A = addresses.allocate 4
+	A[3] = 7
+	println A[3]
+	addresses.free A
+	list str Words = {"a", "b"}
+	println Words
+}

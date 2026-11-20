@@ -1,0 +1,8 @@
+use addresses
+
+int main {
+	address int A = addresses.allocate 4
+	A[0] = 7
+	addresses.free A
+	println A[0]               // used after it's freed
+}

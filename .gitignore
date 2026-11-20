@@ -15,6 +15,7 @@ __pycache__/
 # what the packaging scripts and machine checks leave
 /packaging/*/out/
 /machine-results.txt
+/machine-results.txt.tmp
 
 # compiled tutorials and examples, and what they save
 /tutorials/[0-9]*-*

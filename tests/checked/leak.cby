@@ -1,0 +1,7 @@
+use addresses
+
+int main {
+	address int A = addresses.allocate 100
+	A[0] = 7
+	println A[0]               // never freed
+}

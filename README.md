@@ -11,11 +11,12 @@ cabby                                   start an interactive session (§12)
 cabby prog.cby [args]                   run a program with the interpreter
 cabby -c prog.cby [-o prog]             build a native executable (via LLVM)
 cabby -c prog.cby --emit-llvm           write the LLVM IR (prog.ll) instead
+cabby -c prog.cby --checked             build it with AddressSanitizer, for testing
 cabby --check     prog.cby              type- and ownership-check only
 cabby --style     prog.cby              list names and calls that don't follow STYLE.md
 cabby --dump-ast  prog.cby              print the syntax tree
 cabby --dump-tokens prog.cby            print the token stream
-cabby --version                         which Cabby this is: "Cabby 0.37.1 (2026-11-20)"
+cabby --version                         which Cabby this is: "Cabby 0.38.0 (2026-11-20)"
 cabby --license                         Cabby's license (MIT)
 ```
 
@@ -126,6 +127,7 @@ struct    switch    union     unsigned  void      volatile  while
 str       object    bool      true      false     self      use
 in        to        down      by        list      lookup    aka
 is        not       and       or        until     inner
+callback
 ```
 
 These are C89's keywords (all but `typedef`) plus `str` and `object`, and these.
@@ -143,6 +145,8 @@ write.
 * `lookup`, for values found by key: `lookup str int Ages` (§4).
 * `is`, `not`, `and` and `or` are reserved, and a program that uses one
   is told what to write: `==`, `!`, `&&` or `||` (§10).
+* `callback`, a C function pointer's shape, for C functions that call one
+  of yours: `callback int comparer address A, address B` (§11).
 * `until`, a loop that runs until its condition is true: `until Done { }`,
   and `do { } until Done` (§10).
 * `inner`, for an object's fields and methods that only it (and objects
@@ -844,6 +848,24 @@ way to do: `use standard` (`printf`, `abs`, `labs`, `rand`, `srand`, `exit`,
 `read_line`, `input`, `.to_int`, `.to_long` and `.to_double` do their jobs,
 and using one of C's names says which to use instead.
 
+**Callbacks.** A C function that calls one of yours (`qsort`'s
+comparison, a C library's event callback) takes a function pointer.
+`callback` names its shape, as a function header without a body, and a
+function of the program's with that shape is given by its name:
+
+```
+callback int comparer address A, address B
+extern void qsort address Base, long Count, long Size, comparer Compare
+qsort addresses.of_items(Numbers), Numbers.length, sizeof(long), by_number
+```
+
+A callback takes and gives numbers of 32 bits or more, `double`, and
+addresses (C's `void *` is a plain `address`), and can only be a
+parameter of an `extern` function. Cabby checks the function's shape
+against it. Compiled, C gets the function itself; interpreted, a function
+(libffi's) that runs it in the interpreter, from any thread C calls it
+from (manual chapter 28).
+
 **Files and directories.** `use files` and `use directories` turn on
 Cabby's own built-in functions for them (manual chapter 32):
 
@@ -963,6 +985,16 @@ struct's own values are defaults. Fields can be text, numbers, kinds,
 str ...`s and arrays of those; with `use json`, Cabby writes the two
 functions for each struct (`json.from_struct_<name>`,
 `json.fill_struct_<name>`) as it reads the program.
+
+**CSV.** `use csv` reads tables as spreadsheets save them:
+`csv.read_file "scores.csv"` gives the rows, each a `list str` of its
+fields, and `csv.records_of_file` gives each row after the first as a
+`lookup str str`, by the first row's names (`P["Age"]`). Quoted fields
+(commas, `""` for a quote, line ends inside) are RFC 4180's;
+`read_separated Text, ';'` reads semicolons or tabs. `csv.text Rows` and
+`csv.write_file Path, Rows` write them, quoting what needs it, and
+`csv.records_text Columns, Records` writes records. `lib/csv.md` is the
+reference.
 
 The library is an ordinary object in `json.hby`, using three things any
 library can: `[ ]` on an object with `item`/`item_at` (and `set_item`/
@@ -1160,7 +1192,7 @@ Run `cabby` with no file to type Cabby a piece at a time:
 
 ```
 $ cabby
-Cabby 0.37.1 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
+Cabby 0.38.0 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
 Cabby comes with ABSOLUTELY NO WARRANTY, under the MIT License; "cabby.license" for details.
 >>> int add int a, int b {
 ... 	return a + b
@@ -1573,7 +1605,14 @@ installed: `pkg-config libavformat` finds them (`ffmpeg` on Arch;
 library needs nothing installed.
 
 `-c` (`--compile`) takes `-o <file>` (default: the source name without `.cby`),
-`-O0` to `-O3` (default `-O2`), and `--emit-llvm` to write the IR instead.
+`-O0` to `-O3` (default `-O2`), `--emit-llvm` to write the IR instead, and
+`--checked` to build it with clang's AddressSanitizer: reading or writing
+past what's there, using memory after it's freed, and (on Linux) memory
+never freed each stop the program with a report of where, naming the
+function and those that called it. It's slower (about twice), for testing
+code that uses addresses. It needs AddressSanitizer's runtime:
+`libclang-rt-dev` on Debian (`libclang-rt-19-dev` for clang 19),
+`compiler-rt` on Arch; a Mac's clang has it.
 
 ```
 make                 # builds ./cabby

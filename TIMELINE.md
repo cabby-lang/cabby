@@ -84,6 +84,7 @@ the patch number with fixes alone.
 | 0.36.1 | 19 November | `keyboard.layouts` on Sway stopped when the tests' own list of layouts wasn't named |
 | 0.37.0 | 20 November | who's on the network (`answering`, `pings`); a file's own name as a prefix for its functions; chapters 33, 34 and 51 put right |
 | 0.37.1 | 20 November | `tests/machines/later.sh`: the checks still waiting on a real computer |
+| 0.38.0 | 20 November | `use csv`; `callback`, a Cabby function for C to call; `cabby -c --checked`, with AddressSanitizer |
 
 ---
 
@@ -1443,6 +1444,29 @@ the patch number with fixes alone.
   set (to the mode and place they have, so nothing changes); a video's
   beeping sound; and, on Arch, what `speech.can_hear` finds and doesn't
   (whisper-cli on the PATH, its exit status, the models anywhere).
+
+*Version 0.38.0:*
+
+Three things for 1.0, from an outside review:
+
+- **`use csv`**: tables as spreadsheets save them. `csv.read_file` gives
+  rows (a `list list str`), `csv.records_of_file` each row after the
+  first as a lookup by the first row's names, and `csv.write_file` and
+  `csv.records_text` write them, quoting what needs it. RFC 4180's
+  quoting, any line ending, Excel's byte order mark, and semicolons or
+  tabs (`read_separated`). The parsing is C's (runtime/csv.c). Chapter 40
+  has "Tables: CSV"; the reference is csv.md.
+- **`callback`**: a C function pointer's shape, for the C functions that
+  call one of yours (`qsort`'s comparison, a C library's events):
+  `callback int comparer address A, address B`, then a function of that
+  shape given by its name. Cabby checks the shape, and says what's
+  different. Compiled, C gets the function itself; interpreted, a libffi
+  closure that runs it in the interpreter, even from a thread of C's own.
+  Chapter 28 has "C calling back".
+- **`cabby -c --checked`**: a program built with clang's AddressSanitizer,
+  so what the interpreter catches with addresses (past the end, used
+  after it's freed, and on Linux never freed) is caught compiled too.
+  For testing; `tests/run_checked_tests.sh`, skipped without the runtime.
 
 ## Along the way (dates not recorded)
 

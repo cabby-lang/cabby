@@ -39,6 +39,7 @@ typedef struct CompileOptions {
 	bool emit_llvm;                /* write the IR instead of building */
 	int opt_level;                 /* passed to clang as -O<n> */
 	const char *const *lib_dirs;   /* where libcabbyrt.a lives */
+	bool checked;                  /* --checked: built with AddressSanitizer */
 } CompileOptions;
 
 /* Writes the LLVM IR module for the program. */
