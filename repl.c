@@ -1502,7 +1502,7 @@ static void preserve(const char *name)
 	char *path = session_file(*name ? name : "session");
 	FILE *f = fopen(path, "w");
 	if (!f) {
-		fprintf(stderr, "cannot write '%s'\n", path);
+		fprintf(stderr, "can't write '%s'\n", path);
 		free(path);
 		return;
 	}
@@ -1794,7 +1794,7 @@ static void offer_save(void)
 		}
 		FILE *f = fopen(path, "w");
 		if (!f) {
-			fprintf(stderr, "cannot write '%s': ", path);
+			fprintf(stderr, "can't write '%s': ", path);
 			perror(NULL);
 			free(path);
 			continue;
@@ -1803,7 +1803,7 @@ static void offer_save(void)
 		fputs(src, f);
 		free(src);
 		if (fclose(f) != 0) {
-			fprintf(stderr, "cannot write '%s'\n", path);
+			fprintf(stderr, "can't write '%s'\n", path);
 			free(path);
 			continue;
 		}

@@ -42,7 +42,7 @@ object viewer : gui.window {
 
 		Where = add_label "No picture yet: click Open..."
 		Picture = add_image ""
-		Picture.set_min_size 200, 150
+		Picture.set_minimum_size 200, 150
 	}
 
 	void choose {

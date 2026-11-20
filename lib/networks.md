@@ -102,8 +102,8 @@ address again, encoded.
 | Function | What it does |
 |---|---|
 | `networks.url networks.read_url const str &Address` | The address in its parts. One without its kind first (`https://`) is a panic. |
-| `str networks.encode const str &Text` | Text made safe to put in an address: every letter but A to Z, a to z, 0 to 9 and `- _ . ~` written as `%` and two hexadecimal digits, a byte at a time (`"é"` is `%C3%A9`). |
-| `str networks.decode const str &Text` | The other way: `%20` back to a space. |
+| `str networks.url_encode const str &Text` | Text made safe to put in an address: every letter but A to Z, a to z, 0 to 9 and `- _ . ~` written as `%` and two hexadecimal digits, a byte at a time (`"é"` is `%C3%A9`). |
+| `str networks.url_decode const str &Text` | The other way: `%20` back to a space. |
 | `lookup str str networks.read_query const str &Text` | `"q=fish+%26+chips&page=2"` as its names and values, decoded. |
 | `str networks.query_text const lookup str str &Query` | Names and values as an address's query, encoded: `"q=fish%20%26%20chips&page=2"`. |
 
@@ -126,7 +126,7 @@ int main {
 
 	json Item = json.read "{\"name\": \"Ada\", \"age\": 36}"
 	json Made = networks.post_json "https://httpbin.org/post", Item
-	println Made["json"]["name"].str_
+	println Made["json"]["name"].str
 
 	lookup str str Fields
 	Fields["name"] = "Ada"

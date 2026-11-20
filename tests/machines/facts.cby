@@ -7,7 +7,7 @@ use users
 
 int main {
 	println "name:", system.name, "| version:", system.version
-	println "memory:", system.memory / 1000000000, "GB | up for", system.uptime / 3600, "hours"
+	println "memory:", os.memory_total / 1000000000, "GB | up for", system.uptime / 3600, "hours"
 	println "processors busy:", os.cpu_use.text(0) + "%", "| memory used:", os.memory_used / 1000000, "MB of", os.memory_total / 1000000
 	for D in os.disks {
 		println "disk:", D.path, D.size / 1000000000, "GB,", D.free / 1000000000, "GB free"

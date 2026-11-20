@@ -117,7 +117,7 @@ past 100: false -1"
 # ---- the system
 REST="hostname: true
 kernel: true machine: true
-processors: true memory: true uptime: true"
+processors: true uptime: true"
 check "a Debian" "CABBY_DESKTOP_AS=linux CABBY_OS_RELEASE=$DIR/os-release-debian" system "linux | Debian GNU/Linux 13 (trixie) | 13
 $REST"
 check "an Arch" "CABBY_DESKTOP_AS=linux CABBY_OS_RELEASE=$DIR/os-release-arch" system "linux | Arch Linux | 

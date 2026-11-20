@@ -4,7 +4,7 @@
 // Or compile:  cabby -c 42-web-addresses.cby && ./43-web-addresses
 // Library:     use networks (and use files, use directories)
 // Topics:      networks.read_url, networks.url and its parts, text,
-//              Query, networks.encode and decode
+//              Query, networks.url_encode and decode
 //
 // A web address has parts: what kind of address it is, the computer, the
 // page on it, and, after a ?, names and values for the page to use:
@@ -45,8 +45,8 @@ int main {
 	println Weather.text
 
 	// ---- encoding text by itself: a word with an accent, a space, an &
-	str Safe = networks.encode "café & crème"
-	println Safe, "is", networks.decode(Safe)
+	str Safe = networks.url_encode "café & crème"
+	println Safe, "is", networks.url_decode(Safe)
 
 	// ---- an address for a file on this computer: file://, a path, no host
 	files.write "menu.txt", "Today: fish & chips\n"

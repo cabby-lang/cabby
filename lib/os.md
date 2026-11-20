@@ -226,7 +226,7 @@ int main {
 | | |
 |---|---|
 | `double os.cpu_use` | how busy the processors are, all together, from 0 to 100: since it was last asked (the first time, over a tenth of a second) |
-| `long os.memory_total` | the memory, in bytes (`system.memory`) |
+| `long os.memory_total` | the memory, in bytes |
 | `long os.memory_used`, `long os.memory_available` | in use, and available to programs |
 | `long os.swap_total`, `long os.swap_used` | swap: memory kept on the disk when there's too little |
 | `list double os.load` | how many programs are waiting for a processor, on average, over the last minute, five and fifteen |

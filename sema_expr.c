@@ -454,7 +454,7 @@ static void explain_immutable(const PlaceInfo *pi)
 {
 	Symbol *s = pi->root;
 	if (s->kind == SYM_SELF)
-		sema_note(s->loc, "this method is const, so it cannot change the object");
+		sema_note(s->loc, "this method is const, so it can't change the object");
 	else if (pi->via_ref)
 		sema_note(s->loc, "'%s' is a read-only borrow ('%s'); drop the 'const' to allow changes",
 			  s->name, ts(s->type));
@@ -468,7 +468,7 @@ static void explain_immutable(const PlaceInfo *pi)
 static void borrow_place(Checker *C, Expr *place, bool is_mut, SrcLoc loc, Symbol *binding)
 {
 	if (place->kind == EXPR_INDEX && place->as.index.on_str) {
-		sema_error(loc, "a character of a string cannot be borrowed; copy it into a 'char' variable");
+		sema_error(loc, "a character of a string can't be borrowed; copy it into a 'char' variable");
 		return;
 	}
 	PlaceInfo pi = analyze_place(place);
@@ -476,17 +476,17 @@ static void borrow_place(Checker *C, Expr *place, bool is_mut, SrcLoc loc, Symbo
 		return;
 	if (is_mut && !pi.mutable) {
 		if (pi.root->kind == SYM_SELF)
-			sema_error(loc, "cannot change the object inside a const method");
+			sema_error(loc, "can't change the object inside a const method");
 		else if (pi.via_ref)
-			sema_error(loc, "cannot pass '%s' on as a mutable borrow: it is a read-only borrow", pi.root->name);
+			sema_error(loc, "can't pass '%s' on as a mutable borrow: it is a read-only borrow", pi.root->name);
 		else if (pi.root->is_loop_var)
-			sema_error(loc, "cannot lend '%s' as mutable: a 'for ... in' counter is read-only", pi.root->name);
+			sema_error(loc, "can't lend '%s' as mutable: a 'for ... in' counter is read-only", pi.root->name);
 		else
-			sema_error(loc, "cannot lend '%s' as mutable because it is const", pi.root->name);
+			sema_error(loc, "can't lend '%s' as mutable because it is const", pi.root->name);
 		explain_immutable(&pi);
 	}
 	if (pi.root->is_register) {
-		sema_error(loc, "cannot borrow '%s' because it is declared 'register'", pi.root->name);
+		sema_error(loc, "can't borrow '%s' because it is declared 'register'", pi.root->name);
 		sema_note(pi.root->loc, "declared here");
 	}
 	if (pi.root->kind == SYM_GLOBAL || C->unevaluated)
@@ -671,10 +671,10 @@ bool coerce(Checker *C, Expr **ep, Type *to, const char *what)
 	if (from->kind == TY_FLOAT && to->kind == TY_INT)
 		sema_note(e->loc, "this would drop the fraction; write a cast if you mean it: (%s)...", ts(to));
 	else if (type_is_arith(from) && type_is_arith(to))
-		sema_note(e->loc, "'%s' cannot hold every '%s' value; write a cast if you are sure it fits: (%s)...",
+		sema_note(e->loc, "'%s' can't hold every '%s' value; write a cast if you are sure it fits: (%s)...",
 			  ts(to), ts(from), ts(to));
 	else if (from->kind == TY_OBJECT && to->kind == TY_OBJECT && object_is_subclass(from->obj, to->obj))
-		sema_note(e->loc, "a '%s' cannot be turned into a '%s' by value; take the parameter as a "
+		sema_note(e->loc, "a '%s' can't be turned into a '%s' by value; take the parameter as a "
 			  "reference ('const %s &') to use it as one", from->obj->name, to->obj->name, to->obj->name);
 	return false;
 }
@@ -733,11 +733,11 @@ bool bind_ref(Checker *C, Expr **ep, Type *rt, Symbol *binding, const char *what
 	}
 	if (!place) {
 		if (rt->is_mut) {
-			sema_error(a->loc, "cannot lend a temporary value as mutable for %s; store it in a variable first", what);
+			sema_error(a->loc, "can't lend a temporary value as mutable for %s; store it in a variable first", what);
 			return false;
 		}
 		if (binding) {
-			sema_error(a->loc, "cannot keep a reference to a temporary value; store the value in a variable first");
+			sema_error(a->loc, "can't keep a reference to a temporary value; store the value in a variable first");
 			return false;
 		}
 	} else {
@@ -945,12 +945,12 @@ static Type *check_binary(Checker *C, Expr *e)
 			return &t_bool;
 		}
 		if (lt->kind == TY_OBJECT && rt->kind == TY_OBJECT && lt->obj == rt->obj && object_with(lt, "same_as"))
-			sema_error(e->loc, "'%s' cannot compare two '%s's; use .same_as: 'A.same_as(B)'", o, ts(lt));
+			sema_error(e->loc, "'%s' can't compare two '%s's; use .same_as: 'A.same_as(B)'", o, ts(lt));
 		else if (lt->kind == TY_OBJECT || rt->kind == TY_OBJECT)
-			sema_error(e->loc, "'%s' cannot compare %ss; compare their fields", o,
+			sema_error(e->loc, "'%s' can't compare %ss; compare their fields", o,
 				   ast_object_kind_name((lt->kind == TY_OBJECT ? lt : rt)->obj->kind));
 		else
-			sema_error(e->loc, "cannot compare '%s' with '%s'", ts(lt), ts(rt));
+			sema_error(e->loc, "can't compare '%s' with '%s'", ts(lt), ts(rt));
 		return &t_error;
 	}
 	if (ast_binop_is_comparison(op)) {
@@ -1042,7 +1042,7 @@ static void ident_use(Checker *C, Expr *e, Symbol *s, Ctx ctx)
 	if (s->kind == SYM_GLOBAL || C->unevaluated) {
 		e->use = (ctx == CTX_VALUE && type_is_copy(vt)) ? USE_COPY : USE_BORROW;
 		if (ctx == CTX_VALUE && !type_is_copy(vt) && !C->unevaluated) {
-			sema_error(e->loc, "cannot move '%s' out of a global; it can only be read or borrowed", s->name);
+			sema_error(e->loc, "can't move '%s' out of a global; it can only be read or borrowed", s->name);
 			if (vt->kind == TY_STR)
 				sema_note(e->loc, "write '%s.copy' for a string of your own", s->name);
 		}
@@ -1055,7 +1055,7 @@ static void ident_use(Checker *C, Expr *e, Symbol *s, Ctx ctx)
 			record_access(C, s, ACC_READ, e->loc);
 		} else if (through) {
 			e->use = USE_BORROW;
-			sema_error(e->loc, "cannot take ownership of '%s' through a borrow", s->name);
+			sema_error(e->loc, "can't take ownership of '%s' through a borrow", s->name);
 			sema_note(s->loc, "'%s' is a borrow ('%s'); the value it points to belongs to someone else",
 				  s->name, ts(s->type));
 		} else {
@@ -1416,7 +1416,7 @@ static Type *check_args(Checker *C, Expr *call, FnDecl *fn, const char *fname)
 			else if (t->kind == TY_BOOL || (t->kind == TY_INT && t->bits < 32))
 				convert_to(C, ap, &t_int);
 			else if (t->kind != TY_INT && t->kind != TY_FLOAT && t->kind != TY_STR)
-				sema_error((*ap)->loc, "cannot pass '%s' to the '...' part of '%s'", ts(t), fname);
+				sema_error((*ap)->loc, "can't pass '%s' to the '...' part of '%s'", ts(t), fname);
 			continue;
 		}
 		VarDecl *p = fn->params.items[i];
@@ -1976,7 +1976,7 @@ static Type *check_builtin(Checker *C, Expr *call, Builtin b)
 			tc->ty = t;
 		}
 		if (!is_err(t) && !printable(t))
-			sema_error((*ap)->loc, "%s cannot show a value of type '%s'",
+			sema_error((*ap)->loc, "%s can't show a value of type '%s'",
 				   b == BUILTIN_PRINT ? "print" : "println", ts(t));
 		else if (!is_err(t) && !type_is_copy(t) && is_place_expr(*ap))
 			borrow_place(C, *ap, false, (*ap)->loc, NULL);   /* held until printed */
@@ -2266,7 +2266,7 @@ static Type *handler_member(Checker *C, Expr *e, Expr *recv, const char *name)
 		}
 		PlaceInfo pi = analyze_place(recv);
 		if (!pi.mutable) {
-			sema_error(e->loc, "cannot clear a handler inside a const method");
+			sema_error(e->loc, "can't clear a handler inside a const method");
 			return &t_error;
 		}
 	}
@@ -2279,7 +2279,7 @@ static Type *handler_member(Checker *C, Expr *e, Expr *recv, const char *name)
 		 * this one: as far as loans go, that changes all of it */
 		PlaceInfo pi = is_place_expr(recv) ? analyze_place(recv) : (PlaceInfo){ 0 };
 		if (field && pi.ok && !pi.mutable) {
-			sema_error(e->loc, "cannot call a handler from a const method: it can change the object");
+			sema_error(e->loc, "can't call a handler from a const method: it can change the object");
 			return &t_error;
 		}
 		if (pi.ok && !C->unevaluated && pi.root->kind != SYM_GLOBAL) {
@@ -2722,7 +2722,7 @@ static Type *check_method_call_on(Checker *C, Expr *call, bool recv_checked)
 		if (lookup_field(o, name))
 			sema_error(callee->loc, "'%s' is a field of '%s', not a method", name, o->name);
 		else if (o->decl->drop_fn && name[0] == '~')
-			sema_error(callee->loc, "the destructor cannot be called directly; it runs automatically");
+			sema_error(callee->loc, "the destructor can't be called directly; it runs automatically");
 		else if (makes(o, name))
 			sema_error(callee->loc, "'%s { }' runs by itself when the object is made; it can't be called", name);
 		else
@@ -2752,9 +2752,9 @@ static Type *check_method_call_on(Checker *C, Expr *call, bool recv_checked)
 		call->as.call.recv = RECV_PASS_REF;
 		if (want_mut && !pi.mutable) {
 			if (pi.root->kind == SYM_SELF)
-				sema_error(recv->loc, "cannot call '%s' from a const method: it can change the object", name);
+				sema_error(recv->loc, "can't call '%s' from a const method: it can change the object", name);
 			else
-				sema_error(recv->loc, "cannot call '%s' through a read-only borrow: it can change the object", name);
+				sema_error(recv->loc, "can't call '%s' through a read-only borrow: it can change the object", name);
 			explain_immutable(&pi);
 		} else if (!C->unevaluated && pi.root->kind != SYM_GLOBAL) {
 			/* a method that can change the object changes all of it, as far
@@ -2767,7 +2767,7 @@ static Type *check_method_call_on(Checker *C, Expr *call, bool recv_checked)
 		call->as.call.recv = want_mut ? RECV_AUTOREF_MUT : RECV_AUTOREF;
 		if (pi.ok) {
 			if (want_mut && !pi.mutable) {
-				sema_error(recv->loc, "cannot call '%s' on '%s': the method can change the object, but '%s' is %s",
+				sema_error(recv->loc, "can't call '%s' on '%s': the method can change the object, but '%s' is %s",
 					   name, pi.root->name, pi.root->name, pi.via_ref ? "a read-only borrow" : "const");
 				explain_immutable(&pi);
 			}
@@ -2982,7 +2982,7 @@ static Type *check_call(Checker *C, Expr **ep)
 			}
 			t = check_method_call(C, e);
 		} else {
-			sema_error(callee->loc, "this expression cannot be called");
+			sema_error(callee->loc, "this expression can't be called");
 		}
 	}
 	release_temps(C, mark);
@@ -2998,7 +2998,7 @@ static Type *check_init(Checker *C, Expr *e, Type *expected)
 	if (e->as.init.type)
 		T = resolve_type(C, e->as.init.type, 0, "initializers");
 	if (!T) {
-		sema_error(e->loc, "cannot tell what type this {...} is for; write the type in front, e.g. point{...}");
+		sema_error(e->loc, "can't tell what type this {...} is for; write the type in front, e.g. point{...}");
 		for (int i = 0; i < e->as.init.entries.len; i++)
 			check_expr(C, &e->as.init.entries.items[i].value, CTX_READ, NULL);
 		return &t_error;
@@ -3171,7 +3171,7 @@ static Type *check_expr_inner(Checker *C, Expr **ep, Ctx ctx, Type *expected)
 		}
 		e->as.ident.sym = s;
 		if (ctx == CTX_VALUE) {
-			sema_error(e->loc, "cannot take ownership of 'self'; methods borrow their object");
+			sema_error(e->loc, "can't take ownership of 'self'; methods borrow their object");
 			return &t_error;
 		}
 		ident_use(C, e, s, ctx);
@@ -3235,7 +3235,7 @@ static Type *check_expr_inner(Checker *C, Expr **ep, Ctx ctx, Type *expected)
 		Expr **vp = &e->as.assign.value;
 		bool compound = e->as.assign.compound;
 		if ((*tp)->kind == EXPR_SELF) {
-			sema_error((*tp)->loc, "cannot assign to 'self'; change its fields instead");
+			sema_error((*tp)->loc, "can't assign to 'self'; change its fields instead");
 			check_expr(C, vp, CTX_VALUE, NULL);
 			return &t_void;
 		}
@@ -3272,28 +3272,28 @@ static Type *check_expr_inner(Checker *C, Expr **ep, Ctx ctx, Type *expected)
 			return &t_void;
 		}
 		if (target->kind == EXPR_INT && target->as.int_lit.from_length) {
-			sema_error(target->loc, "'.length' gives a value; it cannot be assigned to");
+			sema_error(target->loc, "'.length' gives a value; it can't be assigned to");
 			check_expr(C, vp, CTX_VALUE, NULL);
 			return &t_void;
 		}
 		if (target->kind == EXPR_CALL && target->as.call.implicit) {
 			Expr *cal = target->as.call.callee;
 			const char *nm = cal->kind == EXPR_IDENT ? cal->as.ident.name : cal->as.field.name;
-			sema_error(target->loc, "'%s' is a %s: it gives a value and cannot be assigned to", nm,
+			sema_error(target->loc, "'%s' is a %s: it gives a value and can't be assigned to", nm,
 				   target->as.call.implicit == 2 ? "method" : "function");
 			check_expr(C, vp, CTX_VALUE, NULL);
 			return &t_void;
 		}
 		if (target->kind == EXPR_CALL && target->as.call.builtin > BUILTIN_PRINTLN) {
 			Builtin tb = target->as.call.builtin;
-			sema_error(target->loc, "'%s%s' gives a value; it cannot be assigned to",
+			sema_error(target->loc, "'%s%s' gives a value; it can't be assigned to",
 				   tb == BUILTIN_READ_LINE || tb == BUILTIN_INPUT || tb == BUILTIN_END_OF_INPUT ? "" : ".",
 				   target->as.call.callee->as.ident.name);
 			check_expr(C, vp, CTX_VALUE, NULL);
 			return &t_void;
 		}
 		if (!is_place_expr(target)) {
-			sema_error(target->loc, "cannot assign to a part of a temporary value");
+			sema_error(target->loc, "can't assign to a part of a temporary value");
 			check_expr(C, vp, CTX_VALUE, NULL);
 			return &t_void;
 		}
@@ -3305,15 +3305,15 @@ static Type *check_expr_inner(Checker *C, Expr **ep, Ctx ctx, Type *expected)
 		PlaceInfo pi = analyze_place(target);
 		if (!pi.mutable && !e->generated) {
 			if (pi.root->kind == SYM_SELF)
-				sema_error(target->loc, "cannot change the object inside a const method");
+				sema_error(target->loc, "can't change the object inside a const method");
 			else if (pi.via_ref)
-				sema_error(target->loc, "cannot assign through '%s': it is a read-only borrow", pi.root->name);
+				sema_error(target->loc, "can't assign through '%s': it is a read-only borrow", pi.root->name);
 			else if (pi.root->is_loop_var)
-				sema_error(target->loc, "cannot change '%s': a 'for ... in' counter is read-only", pi.root->name);
+				sema_error(target->loc, "can't change '%s': a 'for ... in' counter is read-only", pi.root->name);
 			else if (pi.root->kind == SYM_PARAM)
-				sema_error(target->loc, "cannot assign to '%s' because it is const", pi.root->name);
+				sema_error(target->loc, "can't assign to '%s' because it is const", pi.root->name);
 			else
-				sema_error(target->loc, "cannot assign to '%s' because it is const", pi.root->name);
+				sema_error(target->loc, "can't assign to '%s' because it is const", pi.root->name);
 			explain_immutable(&pi);
 		}
 		if (tt->kind == TY_HANDLER)
@@ -3446,7 +3446,7 @@ static Type *check_expr_inner(Checker *C, Expr **ep, Ctx ctx, Type *expected)
 				return t;
 			}
 			if (ot->obj->kind == OBJ_OBJECT && lookup_method(ot->obj, e->as.field.name))
-				sema_error(e->loc, "'%s' is a method; it cannot be assigned to", e->as.field.name);
+				sema_error(e->loc, "'%s' is a method; it can't be assigned to", e->as.field.name);
 			else
 				sema_error(e->loc, "'%s' has no field '%s'", ot->obj->name, e->as.field.name);
 			return &t_error;
@@ -3458,7 +3458,7 @@ static Type *check_expr_inner(Checker *C, Expr **ep, Ctx ctx, Type *expected)
 		e->as.field.field_index = f->own_index;
 		e->as.field.owner_id = f->owner->id;
 		if (ctx == CTX_VALUE && !type_is_copy(f->type)) {
-			sema_error(e->loc, "cannot move field '%s' (a '%s') out of its %s", f->name, ts(f->type),
+			sema_error(e->loc, "can't move field '%s' (a '%s') out of its %s", f->name, ts(f->type),
 				   ast_object_kind_name(ot->obj->kind));
 			sema_note(e->loc, "pass it to a 'const %s &' parameter to borrow it instead", ts(f->type));
 			return &t_error;
@@ -3502,7 +3502,7 @@ static Type *check_expr_inner(Checker *C, Expr **ep, Ctx ctx, Type *expected)
 				return &t_error;
 			}
 			if (bt->kind != TY_STR && bt->kind != TY_LIST) {
-				sema_error(e->loc, "cannot slice a '%s'; only strings can be sliced", ts(bt));
+				sema_error(e->loc, "can't slice a '%s'; only strings can be sliced", ts(bt));
 				return &t_error;
 			}
 			int flags = (ends[0] ? 0 : RT_SLICE_NO_FROM) | (ends[1] ? 0 : RT_SLICE_NO_TO);
@@ -3560,7 +3560,7 @@ static Type *check_expr_inner(Checker *C, Expr **ep, Ctx ctx, Type *expected)
 			if (!check_lookup_key(C, &e->as.index.index, bt))
 				return &t_error;
 			if (ctx == CTX_VALUE && !type_is_copy(bt->inner)) {
-				sema_error(e->loc, "cannot move a '%s' out of a lookup with [key]", ts(bt->inner));
+				sema_error(e->loc, "can't move a '%s' out of a lookup with [key]", ts(bt->inner));
 				sema_note(e->loc, "borrow it with a 'const %s &' variable or parameter, copy it with "
 					  ".copy, or take it out with .remove after copying it", ts(bt->inner));
 				return &t_error;
@@ -3586,20 +3586,20 @@ static Type *check_expr_inner(Checker *C, Expr **ep, Ctx ctx, Type *expected)
 			return &t_char;
 		}
 		if (bt->kind != TY_ARRAY && bt->kind != TY_SLICE && bt->kind != TY_LIST) {
-			sema_error(e->loc, "cannot index into a '%s'", ts(bt));
+			sema_error(e->loc, "can't index into a '%s'", ts(bt));
 			return &t_error;
 		}
 		if (bt->kind == TY_LIST && ctx == CTX_VALUE && !type_is_copy(bt->inner)) {
-			sema_error(e->loc, "cannot move a '%s' out of a list with [i]", ts(bt->inner));
+			sema_error(e->loc, "can't move a '%s' out of a list with [i]", ts(bt->inner));
 			sema_note(e->loc, "borrow it with a 'const %s &' variable or parameter, copy it with "
 				  ".copy, or take it out with .take_last", ts(bt->inner));
 			return &t_error;
 		}
 		int64_t k;
 		if (bt->kind == TY_ARRAY && const_eval_int(C, e->as.index.index, &k) && (k < 0 || (uint64_t)k >= bt->len))
-			sema_error(e->as.index.index->loc, "index %lld is out of bounds for '%s'", (long long)k, ts(bt));
+			sema_error(e->as.index.index->loc, "index %lld is outside '%s' (positions 0 to %lld)", (long long)k, ts(bt), (long long)bt->len - 1);
 		if (ctx == CTX_VALUE && !type_is_copy(bt->inner)) {
-			sema_error(e->loc, "cannot move a '%s' out of an array", ts(bt->inner));
+			sema_error(e->loc, "can't move a '%s' out of an array", ts(bt->inner));
 			sema_note(e->loc, "pass it to a 'const %s &' parameter to borrow it instead", ts(bt->inner));
 			return &t_error;
 		}
@@ -3615,7 +3615,7 @@ static Type *check_expr_inner(Checker *C, Expr **ep, Ctx ctx, Type *expected)
 			return to;
 		if (from->kind == TY_ADDRESS && to->kind == TY_ADDRESS)
 			return to;   /* the same memory, read as another kind */
-		sema_error(e->loc, "cannot cast '%s' to '%s'; casts convert between numbers, bool and char", ts(from), ts(to));
+		sema_error(e->loc, "can't cast '%s' to '%s'; casts convert between numbers, bool and char", ts(from), ts(to));
 		return &t_error;
 	}
 

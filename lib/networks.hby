@@ -82,7 +82,7 @@ bool networks.can_reach const str &Url {
 //     println Page.Host, Page.Path, Page.Query["q"]    example.com /search fish & chips
 //     Page.Query["page"] = "2"
 //     println Page.text                               the address again, with page=2
-//     str Safe = networks.encode "fish & chips"       fish%20%26%20chips
+//     str Safe = networks.url_encode "fish & chips"       fish%20%26%20chips
 //
 // (Written in Cabby: it's all text, so nothing on the C side is needed.)
 
@@ -104,7 +104,7 @@ object networks.url {
 	str text const {
 		str Address = Scheme + "://"
 		if User != "" {
-			Address += networks.encode(User) + "@"
+			Address += networks.url_encode(User) + "@"
 		}
 		Address += Host
 		if Port != 0 {
@@ -115,7 +115,7 @@ object networks.url {
 			Address += "?" + networks.query_text(Query)
 		}
 		if Fragment != "" {
-			Address += "#" + networks.encode(Fragment)
+			Address += "#" + networks.url_encode(Fragment)
 		}
 		return Address
 	}
@@ -142,7 +142,7 @@ static str networks_path_encoded const str &Path {
 	list str Parts = Path.split "/"
 	list str Encoded
 	for Part in Parts {
-		Encoded.add networks.encode(Part)
+		Encoded.add networks.url_encode(Part)
 	}
 	return Encoded.join "/"
 }
@@ -159,7 +159,7 @@ networks.url networks.read_url const str &Address {
 	str Rest = networks_after Address, At + 3
 	long Hash = Rest.find "#"
 	if Hash >= 0 {
-		Url.Fragment = networks.decode networks_after(Rest, Hash + 1)
+		Url.Fragment = networks.url_decode networks_after(Rest, Hash + 1)
 		Rest = networks_before Rest, Hash
 	}
 	long Ask = Rest.find "?"
@@ -170,12 +170,12 @@ networks.url networks.read_url const str &Address {
 	long Slash = Rest.find "/"
 	str Place = Rest.copy
 	if Slash >= 0 {
-		Url.Path = networks.decode networks_after(Rest, Slash)
+		Url.Path = networks.url_decode networks_after(Rest, Slash)
 		Place = networks_before Rest, Slash
 	}
 	long Who = Place.find "@"
 	if Who >= 0 {
-		Url.User = networks.decode networks_before(Place, Who)
+		Url.User = networks.url_decode networks_before(Place, Who)
 		Place = networks_after Place, Who + 1
 	}
 	long Colon = Place.find ":"
@@ -209,7 +209,7 @@ lookup str str networks.read_query const str &Text {
 str networks.query_text const lookup str str &Query {
 	list str Pairs
 	for Name in Query.keys {
-		Pairs.add networks.encode(Name) + "=" + networks.encode(Query[Name])
+		Pairs.add networks.url_encode(Name) + "=" + networks.url_encode(Query[Name])
 	}
 	return Pairs.join "&"
 }
@@ -217,7 +217,7 @@ str networks.query_text const lookup str str &Query {
 // text made safe to put in an address: every letter but A to Z, a to z,
 // 0 to 9 and - _ . ~ written as % and two hexadecimal digits, a byte at a
 // time ("é" is %C3%A9)
-str networks.encode const str &Text {
+str networks.url_encode const str &Text {
 	str Digits = "0123456789ABCDEF"
 	str Safe
 	for I in Text.length {
@@ -238,7 +238,7 @@ str networks.encode const str &Text {
 }
 
 // the other way: %20 back to a space, and so on
-str networks.decode const str &Text {
+str networks.url_decode const str &Text {
 	return networks_decoded Text, false
 }
 

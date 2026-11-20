@@ -194,7 +194,7 @@ object tui.widget {
 
 	// The smallest size it may be, in pixels as for the gui library (8 by 16
 	// to a character; -1: no minimum that way).
-	void set_min_size int Width, int Height {
+	void set_minimum_size int Width, int Height {
 		cby_tui_set_min_size Id, Width, Height
 	}
 }

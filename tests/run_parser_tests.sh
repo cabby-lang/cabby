@@ -200,7 +200,7 @@ err pointer_decl    'int f {\n\tint *p\n}\n'                'Cabby has no pointe
 err address_of      'int f {\n\tx = &y\n}\n'                "there is no address-of '&'" 1
 err deref           'int f {\n\tx = *p\n}\n'                "there is no '*' dereference" 1
 err inc_in_expr     'int f {\n\tx = i++\n}\n'               "'++' can only be used as a statement" 1
-err field_init      'object o {\n\tint x = 1\n}\n'          'fields cannot have initializers' 1
+err field_init      'object o {\n\tint x = 1\n}\n'          "fields can't have initializers" 1
 err struct_method   'struct s {\n\tint f {\n\t}\n}\n'       'a struct has no methods' 1
 err const_method_pos 'object o {\n\tconst int f {\n\t}\n}\n' "put 'const' after its parameters" 1
 err struct_inherits 'struct s : t {\n}\n'                   'only objects can inherit' 1
@@ -212,8 +212,8 @@ err auto_no_init    'int f {\n\tauto x\n}\n'                "'auto' needs an ini
 err const_no_init   'int f {\n\tconst int x\n}\n'           'a const variable needs an initial value' 1
 err unsized_no_init 'int f {\n\tint a[]\n}\n'               'needs an initializer to give its length' 1
 err variadic_plain  'int f int a, ... {\n}\n'               "variadic '...' is only allowed on extern" 1
-err extern_body     'extern int f int a {\n}\n'             'cannot have a body' 1
-err use_missing     'use local nope\n'                      "cannot find 'nope' (looked for" 1
+err extern_body     'extern int f int a {\n}\n'             "can't have a body" 1
+err use_missing     'use local nope\n'                      "can't find 'nope' (looked for" 1
 err use_inside      'int f {\n\tuse x\n}\n'                 "'use' belongs at the top level" 1
 err trailing_junk   'int f {\n\tx = 1 2\n}\n'               'expected end of line after the statement, found integer literal 2' 1
 

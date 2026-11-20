@@ -4130,7 +4130,7 @@ int compile_program(Sema *S, const char *src_path, const CompileOptions *opt)
 	if (opt->emit_llvm) {
 		FILE *f = fopen(out_name, "w");
 		if (!f) {
-			fprintf(stderr, "cabby: cannot write '%s'\n", out_name);
+			fprintf(stderr, "cabby: can't write '%s'\n", out_name);
 			return 1;
 		}
 		codegen_emit(S, f);
@@ -4141,13 +4141,13 @@ int compile_program(Sema *S, const char *src_path, const CompileOptions *opt)
 	char rt_buf[4096];
 	const char *rt = find_runtime(opt->lib_dirs, rt_buf, sizeof rt_buf);
 	if (!rt) {
-		fprintf(stderr, "cabby: cannot find the runtime library libcabbyrt.a (set CABBY_LIB to its directory)\n");
+		fprintf(stderr, "cabby: can't find the runtime library libcabbyrt.a (set CABBY_LIB to its directory)\n");
 		return 1;
 	}
 	char ll[] = "/tmp/cabby-XXXXXX.ll";
 	int fd = mkstemps(ll, 3);
 	if (fd < 0) {
-		fprintf(stderr, "cabby: cannot create a temporary file\n");
+		fprintf(stderr, "cabby: can't create a temporary file\n");
 		return 1;
 	}
 	FILE *f = fdopen(fd, "w");

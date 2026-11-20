@@ -628,7 +628,7 @@ static bool parse_decl_spec(Parser *P, DeclSpec *ds, bool allow_storage)
 		case TOK_KW_REGISTER:
 		case TOK_KW_EXTERN:
 			if (!allow_storage) {
-				error_at(P, t, "'%s' cannot be used here", token_kind_name(t.kind));
+				error_at(P, t, "'%s' can't be used here", token_kind_name(t.kind));
 				return false;
 			}
 			if (t.kind == TOK_KW_STATIC) ds->is_static = true;
@@ -761,7 +761,7 @@ static VarDecl *parse_declarator(Parser *P, const DeclSpec *ds, DeclCtx ctx)
 		if (check(P, TOK_STAR))
 			error_at(P, P->cur, "Cabby has no pointers; to borrow, write '&' before the name (e.g. 'window &w')");
 		else if (P->cur.kind >= TOK_KW_AUTO && P->cur.kind <= TOK_KW_SELF)
-			error_at(P, P->cur, "'%s' is a keyword and cannot be used as a name", token_kind_name(P->cur.kind));
+			error_at(P, P->cur, "'%s' is a keyword and can't be used as a name", token_kind_name(P->cur.kind));
 		else
 			error_at(P, P->cur, "expected a name, found %s", describe(P->cur));
 		return NULL;
@@ -802,7 +802,7 @@ static VarDecl *parse_declarator(Parser *P, const DeclSpec *ds, DeclCtx ctx)
 
 	TypeExpr *t = ds->base;
 	if (nd && !t) {
-		error_at(P, first_dim, "'auto' cannot be used with array dimensions");
+		error_at(P, first_dim, "'auto' can't be used with array dimensions");
 		return NULL;
 	}
 	for (int i = nd - 1; i >= 0; i--) {
@@ -838,7 +838,7 @@ static VarDecl *parse_declarator(Parser *P, const DeclSpec *ds, DeclCtx ctx)
 		return NULL;
 	} else if (is_ref) {
 		if (!t) {
-			error_at(P, amp, "'auto' cannot be a reference; write the type");
+			error_at(P, amp, "'auto' can't be a reference; write the type");
 			return NULL;
 		}
 		TypeExpr *r = ast_type_expr(P->arena, TYPEX_REF, loc_of(P, amp));
@@ -853,15 +853,15 @@ static VarDecl *parse_declarator(Parser *P, const DeclSpec *ds, DeclCtx ctx)
 	if (check(P, TOK_EQ)) {
 		Token eq = P->cur;
 		if (ctx == DCTX_FIELD) {
-			error_at(P, eq, "fields cannot have initializers; every field starts at zero");
+			error_at(P, eq, "fields can't have initializers; every field starts at zero");
 			return NULL;
 		}
 		if (ctx == DCTX_PARAM) {
-			error_at(P, eq, "parameters cannot have default values");
+			error_at(P, eq, "parameters can't have default values");
 			return NULL;
 		}
 		if (ctx == DCTX_TYPEDEF) {
-			error_at(P, eq, "'aka' gives a type a second name; it cannot have a value");
+			error_at(P, eq, "'aka' gives a type a second name; it can't have a value");
 			return NULL;
 		}
 		advance(P);
@@ -1176,7 +1176,7 @@ static Expr *parse_primary(Parser *P)
 			advance(P);
 			return parse_initializer_list(P, NULL, t);
 		}
-		error_at(P, t, "an initializer cannot appear directly in a condition; put it in parentheses");
+		error_at(P, t, "an initializer can't appear directly in a condition; put it in parentheses");
 		return ast_expr(P->arena, EXPR_INT, loc_of(P, t));
 	case TOK_ERROR:
 		advance(P);
@@ -1456,7 +1456,7 @@ static Expr *parse_unary(Parser *P)
 			Expr *e = ast_expr(P->arena, EXPR_CAST, loc_of(P, t));
 			if (parse_decl_spec(P, &ds, false)) {
 				if (check(P, TOK_AMP))
-					error_at(P, P->cur, "cannot cast to a reference");
+					error_at(P, P->cur, "can't cast to a reference");
 				e->as.cast.target = ds.base;
 			}
 			expect(P, TOK_RPAREN, "')' to close the cast");
@@ -1861,7 +1861,7 @@ static Stmt *parse_decl_stmt(Parser *P, bool in_for)
 		return s;
 	}
 	if (ds.base && ds.base->builtin && strcmp(ds.base->name, "void") == 0) {
-		error_at(P, ds.first, "a variable cannot have type 'void'");
+		error_at(P, ds.first, "a variable can't have type 'void'");
 		return s;
 	}
 	do {
@@ -2446,7 +2446,7 @@ static FnDecl *parse_fn_rest_as(Parser *P, TypeExpr *ret, const char *name, SrcL
 	}
 	if (is_extern) {
 		if (check(P, TOK_LBRACE))
-			error_at(P, P->cur, "extern functions are defined in C and cannot have a body here");
+			error_at(P, P->cur, "extern functions are defined in C and can't have a body here");
 		else
 			expect_newline(P, "the extern declaration");
 		fn->is_prototype = true;
@@ -2613,7 +2613,7 @@ static ObjectDecl *parse_object(Parser *P, ObjectKind kind, Token kw)
 			DeclSpec ds;
 			bool ok = parse_decl_spec(P, &ds, true);
 			if (ok && (ds.is_register || ds.is_extern || ds.is_auto)) {
-				error_at(P, ds.first, "'%s' cannot be used on a member",
+				error_at(P, ds.first, "'%s' can't be used on a member",
 					 ds.is_register ? "register" : ds.is_extern ? "extern" : "auto");
 				ok = false;
 			}
@@ -2643,14 +2643,14 @@ static ObjectDecl *parse_object(Parser *P, ObjectKind kind, Token kw)
 						 after.kind == TOK_EQ || after.kind == TOK_COMMA || after.kind == TOK_EOF);
 				if (is_field) {
 					if (amp) {
-						error_at(P, P->cur, "fields cannot be references; a borrow may not be stored");
+						error_at(P, P->cur, "fields can't be references; a borrow may not be stored");
 					} else {
 						do {
 							VarDecl *v = parse_declarator(P, &ds, DCTX_FIELD);
 							if (!v)
 								break;
 							if (ds.base->builtin && strcmp(ds.base->name, "void") == 0)
-								error_at(P, ds.first, "a field cannot have type 'void'");
+								error_at(P, ds.first, "a field can't have type 'void'");
 							vec_push(P->arena, obj->fields, v);
 						} while (match(P, TOK_COMMA));
 						if (!P->panic)
@@ -2663,7 +2663,7 @@ static ObjectDecl *parse_object(Parser *P, ObjectKind kind, Token kw)
 					error_at(P, ds.first, "to make a method read-only, put 'const' after its parameters: "
 						 "'int area const {'");
 				} else if (amp) {
-					error_at(P, P->cur, "methods cannot return references");
+					error_at(P, P->cur, "methods can't return references");
 				} else if (name.kind != TOK_IDENT) {
 					error_at(P, name, "expected a field or method name, found %s", describe(name));
 				} else {
@@ -2826,7 +2826,7 @@ static void parse_top(Parser *P)
 					expect_newline(P, "use");
 					return;
 				}
-				error_at(P, t, "cannot find '%.*s' (looked for %s, and %s beside it)", (int)t.v.str.len - 4,
+				error_at(P, t, "can't find '%.*s' (looked for %s, and %s beside it)", (int)t.v.str.len - 4,
 					 t.v.str.data, path, impl);
 				expect_newline(P, "use");
 				return;
@@ -2836,7 +2836,7 @@ static void parse_top(Parser *P)
 			const char *retired = retired_header_hint(t.v.str.data, (int)t.v.str.len - 4);
 			if (retired) {
 				/* an old copy may still be installed: it's never used */
-				error_at(P, t, "cannot find header '%.*s' in the Cabby library directory%s", (int)t.v.str.len - 4,
+				error_at(P, t, "can't find header '%.*s' in the Cabby library directory%s", (int)t.v.str.len - 4,
 					 t.v.str.data, retired);
 				expect_newline(P, "use");
 				return;
@@ -2855,7 +2855,7 @@ static void parse_top(Parser *P)
 			}
 			if (!path) {
 				const char *hint = P->ld->lib_dirs && *P->ld->lib_dirs ? "" : " (none configured; set CABBY_LIB)";
-				error_at(P, t, "cannot find header '%.*s' in the Cabby library directory%s", (int)t.v.str.len - 4,
+				error_at(P, t, "can't find header '%.*s' in the Cabby library directory%s", (int)t.v.str.len - 4,
 					 t.v.str.data, hint);
 				expect_newline(P, "use");
 				return;
@@ -3071,7 +3071,7 @@ static void parse_top(Parser *P)
 		if (!v)
 			return;
 		if (v->type->kind == TYPEX_REF) {
-			error_at(P, aka, "'aka' cannot name a reference type");
+			error_at(P, aka, "'aka' can't name a reference type");
 			return;
 		}
 		Decl *d = ast_decl(P->arena, DECL_TYPEDEF, l);
@@ -3100,9 +3100,9 @@ static void parse_top(Parser *P)
 			bool var = n1.kind != TOK_IDENT || n2.kind == TOK_EQ || n2.kind == TOK_COMMA ||
 				   n2.kind == TOK_LBRACKET || n2.kind == TOK_NEWLINE || n2.kind == TOK_EOF;
 			if (var)
-				error_at(P, P->cur, "global variables cannot be references");
+				error_at(P, P->cur, "global variables can't be references");
 			else
-				error_at(P, P->cur, "a function cannot return a reference: the borrow could outlive "
+				error_at(P, P->cur, "a function can't return a reference: the borrow could outlive "
 					 "what it points to; return a value instead");
 		}
 		else if (check(P, TOK_LPAREN) || check(P, TOK_STAR))
@@ -3140,7 +3140,7 @@ static void parse_top(Parser *P)
 		return;
 	}
 	if (ds.is_const) {
-		error_at(P, ds.first, "a return type cannot be const");
+		error_at(P, ds.first, "a return type can't be const");
 		return;
 	}
 	advance(P);
@@ -3200,7 +3200,7 @@ static void parse_file(Loader *ld, const char *path, SrcLoc from)
 	if (!src) {
 		if (from.line)
 			diag_report_in(DIAG_NOTE, from.file, from.line, from.col, "while reading this 'use'");
-		diag_report_in(DIAG_ERROR, from.file, 0, 0, "cannot read '%s'", path);
+		diag_report_in(DIAG_ERROR, from.file, 0, 0, "can't read '%s'", path);
 		return;
 	}
 	parse_source(ld, path, src);

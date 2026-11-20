@@ -551,7 +551,7 @@ int main {
 }
 
 ### err_assign_const
-// expect: cannot assign to 'x' because it is const
+// expect: can't assign to 'x' because it is const
 int main {
 	const int x = 1
 	x = 2
@@ -559,7 +559,7 @@ int main {
 }
 
 ### err_increment_const
-// expect: cannot assign to 'x' because it is const
+// expect: can't assign to 'x' because it is const
 int main {
 	const int x = 1
 	x++
@@ -567,7 +567,7 @@ int main {
 }
 
 ### err_assign_through_shared
-// expect: cannot assign through 'r': it is a read-only borrow
+// expect: can't assign through 'r': it is a read-only borrow
 object box {
 	int n
 }
@@ -579,7 +579,7 @@ int main {
 }
 
 ### err_const_method_changes
-// expect: cannot change the object inside a const method
+// expect: can't change the object inside a const method
 object box {
 	int n
 	void poke const {
@@ -591,7 +591,7 @@ int main {
 }
 
 ### err_const_method_calls_mutating
-// expect: cannot call 'set' from a const method
+// expect: can't call 'set' from a const method
 object box {
 	int n
 	void set int v {
@@ -606,7 +606,7 @@ int main {
 }
 
 ### err_mutating_method_on_const
-// expect: cannot call 'grow' on 's': the method can change the object, but 's' is const
+// expect: can't call 'grow' on 's': the method can change the object, but 's' is const
 object sq {
 	int side
 	void grow {
@@ -620,7 +620,7 @@ int main {
 }
 
 ### err_mut_borrow_of_const
-// expect: cannot lend 'x' as mutable because it is const
+// expect: can't lend 'x' as mutable because it is const
 void bump int &p {
 	p++
 }
@@ -631,7 +631,7 @@ int main {
 }
 
 ### err_mut_ref_to_temporary
-// expect: cannot lend a temporary value as mutable
+// expect: can't lend a temporary value as mutable
 void bump int &p {
 	p++
 }
@@ -641,7 +641,7 @@ int main {
 }
 
 ### err_register_borrow
-// expect: cannot borrow 'n' because it is declared 'register'
+// expect: can't borrow 'n' because it is declared 'register'
 void show const int &x {
 	println x
 }
@@ -652,7 +652,7 @@ int main {
 }
 
 ### err_assign_while_borrowed
-// expect: cannot change 'x' while it is borrowed
+// expect: can't change 'x' while it is borrowed
 int main {
 	int x = 1
 	const int &r = x
@@ -673,7 +673,7 @@ int main {
 }
 
 ### err_two_mut_borrows
-// expect: cannot lend 'x' as mutable twice at the same time
+// expect: can't lend 'x' as mutable twice at the same time
 int main {
 	int x = 1
 	int &a = x
@@ -684,7 +684,7 @@ int main {
 }
 
 ### err_move_while_borrowed
-// expect: cannot move 'a' while it is borrowed
+// expect: can't move 'a' while it is borrowed
 object box {
 	int n
 }
@@ -697,7 +697,7 @@ int main {
 }
 
 ### err_read_while_mut_borrowed
-// expect: cannot use 'x' while it is lent as mutable
+// expect: can't use 'x' while it is lent as mutable
 int main {
 	int x = 1
 	int &r = x
@@ -714,7 +714,7 @@ int main {
 }
 
 ### err_ref_to_temporary_kept
-// expect: cannot keep a reference to a temporary value
+// expect: can't keep a reference to a temporary value
 object box {
 	int n
 }
@@ -727,7 +727,7 @@ int main {
 }
 
 ### err_loop_carried_borrow
-// expect: cannot change 'x' while it is borrowed
+// expect: can't change 'x' while it is borrowed
 void keep const int &a {
 }
 int main {
@@ -747,7 +747,7 @@ int main {
 }
 
 ### err_mut_and_shared_args
-// expect: cannot borrow 'x' while it is lent as mutable
+// expect: can't borrow 'x' while it is lent as mutable
 void f int &a, const int &b {
 }
 int main {
@@ -757,7 +757,7 @@ int main {
 }
 
 ### err_receiver_conflict
-// expect: cannot lend 'c' as mutable while it is also borrowed read-only
+// expect: can't lend 'c' as mutable while it is also borrowed read-only
 object counter {
 	int n
 	void absorb const counter &o {
@@ -771,7 +771,7 @@ int main {
 }
 
 ### err_move_field
-// expect: cannot move field 'name' (a 'str') out of its object
+// expect: can't move field 'name' (a 'str') out of its object
 object p {
 	str name
 }
@@ -782,7 +782,7 @@ int main {
 }
 
 ### err_move_through_borrow
-// expect: cannot take ownership of 's' through a borrow
+// expect: can't take ownership of 's' through a borrow
 void keep str s {
 }
 void f const str &s {
@@ -793,7 +793,7 @@ int main {
 }
 
 ### err_narrowing
-// expect: 'int' cannot hold every 'long' value; write a cast
+// expect: 'int' can't hold every 'long' value; write a cast
 int main {
 	long big = 5
 	int small = big
@@ -839,7 +839,7 @@ int main {
 }
 
 ### err_the_same_field_read_while_lent
-// expect: cannot use 'Y' while it is lent as mutable
+// expect: can't use 'Y' while it is lent as mutable
 struct s {
 	list str L
 }
@@ -915,7 +915,7 @@ int main {
 }
 
 ### err_string_char_borrow
-// expect: a character of a string cannot be borrowed
+// expect: a character of a string can't be borrowed
 void bump char &c {
 	c++
 }
@@ -926,7 +926,7 @@ int main {
 }
 
 ### err_string_const_borrow_write
-// expect: cannot assign through 's': it is a read-only borrow
+// expect: can't assign through 's': it is a read-only borrow
 void f const str &s {
 	s[0] = 'x'
 }
@@ -935,7 +935,7 @@ int main {
 }
 
 ### err_string_length_readonly
-// expect: '.length' gives a value; it cannot be assigned to
+// expect: '.length' gives a value; it can't be assigned to
 int main {
 	str s = "ab"
 	s.length = 3
@@ -1031,7 +1031,7 @@ int main {
 }
 
 ### err_return_value_from_void
-// expect: 'f' returns void, so 'return' cannot give a value
+// expect: 'f' returns void, so 'return' can't give a value
 void f {
 	return 3
 }
@@ -1040,7 +1040,7 @@ int main {
 }
 
 ### err_ref_field
-// expect: fields cannot be references
+// expect: fields can't be references
 object holder {
 	int &r
 }
@@ -1049,7 +1049,7 @@ int main {
 }
 
 ### err_c3_inconsistent
-// expect: cannot compute a consistent method resolution order for 'C'
+// expect: can't compute a consistent method resolution order for 'C'
 object A {
 }
 object B : A {
@@ -1180,7 +1180,7 @@ int main {
 }
 
 ### err_untyped_init
-// expect: cannot tell what type this {...} is for
+// expect: can't tell what type this {...} is for
 int main {
 	println {1, 2}
 	return 0
@@ -1261,7 +1261,7 @@ int main {
 }
 
 ### err_variadic_object
-// expect: cannot pass 'box' to the '...' part of 'printf'
+// expect: can't pass 'box' to the '...' part of 'printf'
 extern int printf str fmt, ...
 object box {
 	int n
@@ -1374,7 +1374,7 @@ int main {
 }
 
 ### err_index_oob
-// expect: index 3 is out of bounds for 'int[3]'
+// expect: index 3 is outside 'int[3]' (positions 0 to 2)
 int main {
 	int a[3] = {1, 2, 3}
 	println a[3]
@@ -1437,7 +1437,7 @@ int main {
 }
 
 ### err_goto_into_block
-// expect: cannot jump into a block it is not already in
+// expect: can't jump into a block it is not already in
 int main {
 	goto inside
 	if true {
@@ -1498,7 +1498,7 @@ int main {
 }
 
 ### err_print_while_changed
-// expect: cannot lend 's' as mutable while it is also borrowed read-only
+// expect: can't lend 's' as mutable while it is also borrowed read-only
 int change str &s {
 	s = "new"
 	return 1
@@ -1510,7 +1510,7 @@ int main {
 }
 
 ### err_compare_while_changed
-// expect: cannot lend 's' as mutable while it is also borrowed read-only
+// expect: can't lend 's' as mutable while it is also borrowed read-only
 str pick str &s {
 	s = "z"
 	return "z"
@@ -1547,7 +1547,7 @@ int main {
 }
 
 ### err_assign_self
-// expect: cannot assign to 'self'
+// expect: can't assign to 'self'
 object box {
 	int n
 	void reset {
@@ -1559,7 +1559,7 @@ int main {
 }
 
 ### err_for_in_counter_read_only
-// expect: cannot change 'i': a 'for ... in' counter is read-only
+// expect: can't change 'i': a 'for ... in' counter is read-only
 int main {
 	for i in 5 {
 		i = 2
@@ -1568,7 +1568,7 @@ int main {
 }
 
 ### err_for_in_counter_not_lendable
-// expect: cannot lend 'i' as mutable: a 'for ... in' counter is read-only
+// expect: can't lend 'i' as mutable: a 'for ... in' counter is read-only
 void inc int &x {
 	x++
 }
@@ -1705,7 +1705,7 @@ int main {
 }
 
 ### err_number_text_assign
-// expect: '.text' gives a value; it cannot be assigned to
+// expect: '.text' gives a value; it can't be assigned to
 int main {
 	int n = 3
 	n.text = "4"
@@ -1713,21 +1713,21 @@ int main {
 }
 
 ### err_array_length_readonly
-// expect: '.length' gives a value; it cannot be assigned to
+// expect: '.length' gives a value; it can't be assigned to
 int main {
 	int xs[3]
 	xs.length = 9
 }
 
 ### err_string_length_increment
-// expect: '.length' gives a value; it cannot be assigned to
+// expect: '.length' gives a value; it can't be assigned to
 int main {
 	str s = "hello"
 	s.length++
 }
 
 ### err_string_length_borrow_mut
-// expect: cannot lend a temporary value as mutable
+// expect: can't lend a temporary value as mutable
 void f long &n {
 	n = 99
 }
@@ -1759,7 +1759,7 @@ int main {
 }
 
 ### err_assign_to_function
-// expect: 'five' is a function: it gives a value and cannot be assigned to
+// expect: 'five' is a function: it gives a value and can't be assigned to
 int five {
 	return 5
 }
@@ -1768,7 +1768,7 @@ int main {
 }
 
 ### err_assign_to_method
-// expect: 'v' is a method: it gives a value and cannot be assigned to
+// expect: 'v' is a method: it gives a value and can't be assigned to
 object a {
 	int v const {
 		return 1
@@ -1780,7 +1780,7 @@ int main {
 }
 
 ### err_lend_function_mutably
-// expect: cannot lend a temporary value as mutable
+// expect: can't lend a temporary value as mutable
 void bump int &n {
 	n++
 }
@@ -1825,7 +1825,7 @@ int main {
 }
 
 ### err_list_changed_inside_its_loop
-// expect: cannot change 'Scores' inside a loop that goes through it
+// expect: can't change 'Scores' inside a loop that goes through it
 int main {
 	list int Scores = {1, 2}
 	for s in Scores {
@@ -1842,7 +1842,7 @@ int main {
 }
 
 ### err_list_move_out_with_index
-// expect: cannot move a 'str' out of a list with [i]
+// expect: can't move a 'str' out of a list with [i]
 int main {
 	list str Names = {"a"}
 	str First = Names[0]
@@ -1899,7 +1899,7 @@ int main {
 }
 
 ### err_list_reverse_in_its_loop
-// expect: cannot change 'Scores' inside a loop that goes through it
+// expect: can't change 'Scores' inside a loop that goes through it
 int main {
 	list int Scores = {1, 2}
 	for S in Scores {
@@ -1908,7 +1908,7 @@ int main {
 }
 
 ### err_println_list_of_objects
-// expect: println cannot show a value of type 'list box'
+// expect: println can't show a value of type 'list box'
 object box {
 	int N
 }
@@ -1943,7 +1943,7 @@ int main {
 }
 
 ### err_lookup_move_out
-// expect: cannot move a 'str' out of a lookup with [key]
+// expect: can't move a 'str' out of a lookup with [key]
 int main {
 	lookup int str A
 	str S = A[1]
@@ -1967,14 +1967,14 @@ int main {
 }
 
 ### err_lookup_set_const
-// expect: cannot assign to 'A' because it is const
+// expect: can't assign to 'A' because it is const
 int main {
 	const lookup str int A = {"a": 1}
 	A["b"] = 2
 }
 
 ### err_lookup_change_in_its_loop
-// expect: cannot change 'A' inside a loop that goes through it
+// expect: can't change 'A' inside a loop that goes through it
 int main {
 	lookup str int A = {"a": 1}
 	for K, V in A {
@@ -2036,7 +2036,7 @@ int main {
 }
 
 ### err_borrow_same_field_in_loop
-// expect: cannot change 'self' inside a loop that goes through it
+// expect: can't change 'self' inside a loop that goes through it
 object tally {
 	list int Values
 
@@ -2050,7 +2050,7 @@ int main {
 }
 
 ### err_borrow_whole_object_in_loop
-// expect: cannot change 'self' inside a loop that goes through it
+// expect: can't change 'self' inside a loop that goes through it
 object tally {
 	list int Values
 	int Total
@@ -2069,7 +2069,7 @@ int main {
 }
 
 ### err_borrow_field_and_whole
-// expect: cannot borrow 'P' while it is lent as mutable
+// expect: can't borrow 'P' while it is lent as mutable
 object person {
 	str Name
 	int Age
@@ -2185,7 +2185,7 @@ int main {
 }
 
 ### err_handler_call_back_in_loop
-// expect: cannot change 'self' inside a loop that goes through it
+// expect: can't change 'self' inside a loop that goes through it
 object timer {
 	handler Tick
 	void step {
@@ -2216,7 +2216,7 @@ int main {
 }
 
 ### err_handler_call_in_const_method
-// expect: cannot call a handler from a const method
+// expect: can't call a handler from a const method
 object x {
 	handler H
 	void fire const {

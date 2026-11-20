@@ -691,7 +691,7 @@ int main {
 //> 1
 //> 2
 //> 3
-// panic: index 3 is out of bounds for an array of length 3
+// panic: index 3 is outside an array of length 3 (positions 0 to 2)
 int main {
 	int a[3] = {1, 2, 3}
 	int i = 0
@@ -712,7 +712,7 @@ int main {
 }
 
 ### panic_int_min_div
-// panic: overflow: -2147483648 / -1 does not fit in 32 bits
+// panic: overflow: -2147483648 / -1 is too big for 32 bits
 int main {
 	int m = -2147483648
 	int d = -1
@@ -721,7 +721,7 @@ int main {
 }
 
 ### panic_shift
-// panic: shift amount 32 is out of range 0..31
+// panic: can't shift by 32: it must be 0 to 31
 int main {
 	int s = 32
 	println 1 << s
@@ -927,7 +927,7 @@ int main {
 }
 
 ### string_tools
-// panic: index 20 is out of bounds for a string of length 9
+// panic: index 20 is outside a string of length 9 (positions 0 to 8)
 //> John Joan 4 4
 //> desserts  a
 //> >abcdefg! 9 > !
@@ -1224,7 +1224,7 @@ int main {
 }
 
 ### repeat_below_zero
-// panic: cannot repeat text -2 times
+// panic: can't repeat text -2 times
 int main {
 	int n = -2
 	println "ab".repeat(n)
@@ -3491,7 +3491,7 @@ int main {
 	for long R = 1; R < Rows.length; R++ {
 		println Rows[R]
 	}
-	list lookup str str People = csv.records Text
+	list lookup str str People = csv.read_records Text
 	println People[0]["Name"] + "|" + People[0]["Age"], People[2]["Name"] + "|" + People[2]["Age"] + "|" + People[2]["Note"]
 	str Back = csv.text Rows
 	print Back
@@ -4439,7 +4439,7 @@ int main {
 //> 6 5
 //> 9000000000 -3
 //> 1 3 3
-// panic: index 5 is out of bounds
+// panic: index 5 is outside
 use addresses
 
 struct pt {

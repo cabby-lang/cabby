@@ -1,5 +1,5 @@
 // speech to text (run_desktop_tests.sh), with a stand-in for whisper.cpp's
-// whisper-cli (tools/) and a model where speech.get_model would put it
+// whisper-cli (tools/) and a model where speech.download_model would put it
 use speech
 use shell
 

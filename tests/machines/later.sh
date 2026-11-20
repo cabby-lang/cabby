@@ -47,7 +47,7 @@ hearing)
 use speech
 
 int main {
-	println "model folder (speech.get_model's):", speech.model_folder
+	println "model folder (speech.download_model's):", speech.model_folder
 	println "model found:", speech.model
 	println "can hear:", speech.can_hear, "| can speak:", speech.can_speak
 }

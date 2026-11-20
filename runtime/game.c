@@ -1057,7 +1057,7 @@ static void start_sdl(void)
 		SDL_SetHint(SDL_HINT_RENDER_DRIVER, "software");
 	}
 	if (!SDL_Init(SDL_INIT_VIDEO)) {
-		fprintf(stderr, "game: cannot open a window: %s\n", SDL_GetError());
+		fprintf(stderr, "game: can't open a window: %s\n", SDL_GetError());
 		ssh_instead("game", "tgame");
 		exit(1);
 	}
@@ -1398,13 +1398,13 @@ void cby_game_run(int64_t win)
 	SDL_Surface *canvas = SDL_CreateSurface(g->width, g->height, SDL_PIXELFORMAT_RGBA32);
 	renderer = canvas ? SDL_CreateSoftwareRenderer(canvas) : NULL;
 	if (!renderer) {
-		fprintf(stderr, "tgame: cannot draw the game: %s\n", SDL_GetError());
+		fprintf(stderr, "tgame: can't draw the game: %s\n", SDL_GetError());
 		exit(1);
 	}
 #else
 	SDL_WindowFlags flags = SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY;
 	if (!make_window(g->title, g->width, g->height, flags, scripted(), &window, &renderer)) {
-		fprintf(stderr, "game: cannot open a window: %s\n", SDL_GetError());
+		fprintf(stderr, "game: can't open a window: %s\n", SDL_GetError());
 		ssh_instead("game", "tgame");
 		exit(1);
 	}

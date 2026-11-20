@@ -17,7 +17,7 @@ use files
 int main {
 	files.write "scores.csv", "Name,Score\nAda,95\n\"Hopper, Grace\",88\n"
 	long Total = 0
-	for P in csv.records_of_file "scores.csv" {
+	for P in csv.read_records_file "scores.csv" {
 		println P["Name"], P["Score"]
 		Total += P["Score"].to_long
 	}
@@ -48,8 +48,8 @@ Alan,91
 | `csv.read Text` | the rows, each a `list str` of its fields |
 | `csv.read_file Path` | the same, from a file (a panic if it can't be read, as `files.read`) |
 | `csv.read_separated Text, Separator` | fields between `';'` or `'\t'` (some countries' spreadsheets, and `.tsv`) |
-| `csv.records Text` | each row after the first as a `lookup str str`, by the names the first row gives its columns |
-| `csv.records_of_file Path` | the same, from a file |
+| `csv.read_records Text` | each row after the first as a `lookup str str`, by the names the first row gives its columns |
+| `csv.read_records_file Path` | the same, from a file |
 | `csv.columns Text` | the first row's fields: the columns' names |
 
 A record whose row is short has `""` for the columns it hasn't; fields

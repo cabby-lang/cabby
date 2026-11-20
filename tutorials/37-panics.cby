@@ -25,7 +25,7 @@
 
 // (For Cabby's test suite, which checks every tutorial: this one is
 // expected to end with the panic below.)
-// panic: index 4 is out of bounds for an array of length 4
+// panic: index 4 is outside an array of length 4 (positions 0 to 3)
 
 int depth int n {
 	return depth(n + 1) + 1        // never stops: a stack overflow

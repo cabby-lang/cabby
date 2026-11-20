@@ -75,7 +75,7 @@ use time
 
 int main {
 	if !speech.can_hear {
-		speech.get_model "base.en"          // once: 148 MB, from the web
+		speech.download_model "base.en"          // once: 148 MB, from the web
 	}
 	println speech.hear("lesson.mp3")
 	println "Say something:"
@@ -89,7 +89,7 @@ int main {
 | `str speech.hear Path` | what's said in a sound file (WAV, MP3, FLAC, Ogg Vorbis) |
 | `str speech.hear_for Wait` | what's said to the microphone, for so long (it waits, recording) |
 | `bool speech.can_hear` | whether there's whisper.cpp to hear with, and a model |
-| `str speech.get_model Name` | fetches one of Whisper's models from the web, for `speech.model` to find (once): `"base.en"` (148 MB, English: quick, and good), `"base"` (any language), `"small"` (466 MB, better), `"medium"` (1.5 GB, better still) |
+| `str speech.download_model Name` | fetches one of Whisper's models from the web, for `speech.model` to find (once): `"base.en"` (148 MB, English: quick, and good), `"base"` (any language), `"small"` (466 MB, better), `"medium"` (1.5 GB, better still) |
 | `str speech.model` | the model it hears with: `CABBY_WHISPER_MODEL`, or the first in `speech.model_folder`, or where whisper.cpp's packages put them (`""` for none) |
 | `str speech.model_folder` | where Cabby keeps the models it fetches |
 

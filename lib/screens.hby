@@ -136,7 +136,7 @@ static str screens_gnome_mode_id const json &State, const str &Connector, bool P
 
 // One logical monitor, for ApplyMonitorsConfig: its place, scale, turn,
 // whether it's the main one, and its monitors with their modes.
-object screens.gnome_place {
+object screens_gnome_place {
 	inner long X
 	inner long Y
 	inner double Scale
@@ -221,12 +221,12 @@ object screens.gnome_place {
 }
 
 // the logical monitors as they are now, to be changed and given back
-static list screens.gnome_place screens_gnome_places const json &State {
-	list screens.gnome_place Places
+static list screens_gnome_place screens_gnome_places const json &State {
+	list screens_gnome_place Places
 	json Logical = State[2]
 	for long L = 0; L < Logical.length; L++ {
 		json One = Logical.item_at L
-		screens.gnome_place P
+		screens_gnome_place P
 		P.fill(One.item_at(0).long_or(0), One.item_at(1).long_or(0), One.item_at(2).double_or(1.0),
 			One.item_at(3).long_or(0), One.item_at(4).bool_or(false))
 		json Shows = One.item_at 5
@@ -240,7 +240,7 @@ static list screens.gnome_place screens_gnome_places const json &State {
 }
 
 // asks Mutter to show Places, kept as Settings keeps them
-static bool screens_gnome_apply const json &State, const list screens.gnome_place &Places {
+static bool screens_gnome_apply const json &State, const list screens_gnome_place &Places {
 	dbus.bus Bus = dbus.try_session
 	if !Bus.is_open || Places.length == 0 {
 		return false
@@ -659,7 +659,7 @@ static bool screens_gnome_change const str &Connector, const str &What, const st
 	if State.length < 4 || screens_gnome_monitor(State, Connector) < 0 {
 		return false
 	}
-	list screens.gnome_place Places = screens_gnome_places State
+	list screens_gnome_place Places = screens_gnome_places State
 	long At = screens_gnome_logical State, Connector
 	if What == "on" {
 		if At >= 0 {
@@ -687,7 +687,7 @@ static bool screens_gnome_change const str &Connector, const str &What, const st
 				Scale = Modes.item_at(M).item_at(4).double_or 1.0
 			}
 		}
-		screens.gnome_place P
+		screens_gnome_place P
 		P.fill Right, 0, Scale, 0, false
 		P.add_monitor Connector, Mode
 		Places.add P

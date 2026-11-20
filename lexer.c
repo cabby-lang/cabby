@@ -354,7 +354,7 @@ static Token lex_number(Lexer *L, const char *start)
 		return make(L, TOK_ERROR, start, p);
 	}
 	if (base == 10 && start[0] == '0' && is_digit(start[1])) {
-		lex_error(L, start, "integer literals cannot start with 0; for octal write 0o%.*s",
+		lex_error(L, start, "integer literals can't start with 0; for octal write 0o%.*s",
 			  (int)(suf - start - 1), start + 1);
 		return make(L, TOK_ERROR, start, p);
 	}
