@@ -44,6 +44,11 @@ int64_t rt_str_find(const char *h, int64_t hn, const char *n, int64_t nn);
 bool    rt_str_test(const char *h, int64_t hn, const char *n, int64_t nn, int what);
 int     rt_str_compare(const char *a, int64_t an, const char *b, int64_t bn);
 void    rt_str_trim(const char *d, int64_t n, int64_t *start, int64_t *count);
+/* links (rt.c): an object kept track of without being owned */
+int64_t cby_link_to(void *obj, uint64_t *life);
+void   *cby_link_get(int64_t link, const char *name, const char *kind, const char *file, int line, int col);
+bool    cby_link_is_set(int64_t link);
+void    cby_link_end(uint64_t life);
 char   *rt_str_case(const char *d, int64_t n, bool upper, int64_t *outn);
 char   *rt_str_replace(const char *d, int64_t n, const char *from, int64_t fn, const char *to, int64_t tn,
 		       int64_t *outn);

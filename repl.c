@@ -1092,7 +1092,7 @@ static int complete_word(const char *line, int pos, int *start, char ***items)
 		c.plen = pos - w;
 		static const char *const words[] = {
 			"if", "else", "while", "do", "for", "in", "to", "down", "by", "switch", "case", "default", "break",
-			"continue", "return", "goto", "sizeof", "const", "static", "list", "lookup", "object", "struct",
+			"continue", "return", "goto", "sizeof", "const", "static", "list", "link", "lookup", "object", "struct",
 			"union", "enum", "aka", "callback", "until", "inner", "use", "true", "false", "self", "int", "long", "short", "char", "float",
 			"double", "bool", "str", "void", "unsigned", "signed", "print", "println", "input", "read_line",
 			"end_of_input", "read_char", "read_key", "stdout", "stderr", "exit", "abs", "close_to", "random", "random_seed", "cabby", NULL,

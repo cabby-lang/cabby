@@ -93,6 +93,7 @@ typedef enum {
 	TYPEX_SLICE,   /* T name[]  (parameters only: borrows an array of any length) */
 	TYPEX_PRESET,  /* sema-made declarations: the type is already in `resolved` */
 	TYPEX_LIST,    /* list T: a growable list; inner is T */
+	TYPEX_LINK,    /* link T: points at an object without owning it; inner is T */
 	TYPEX_LOOKUP,  /* lookup K V: values found by key; key is K, inner is V */
 	TYPEX_ADDRESS, /* address T (use addresses): inner is T */
 } TypeExprKind;
@@ -131,6 +132,8 @@ typedef enum {
 	EXPR_BORROW,
 	EXPR_HANDLER,   /* sema: a window's method passed as a handler */
 	EXPR_CALLBACK,  /* sema: a function passed to C as a callback (as.callback.fn) */
+	EXPR_LINK_TO,   /* sema: a link to the object at a place (as.link.operand: the place) */
+	EXPR_LINK_GET,  /* sema: the object a link points at, as a place (as.link.operand: the link); a panic if it's gone */
 	EXPR_AT,        /* sema: what's at an address (A.value, A[i]): a place */     /* inserted by sema where a reference is bound */
 } ExprKind;
 
@@ -252,6 +255,7 @@ struct Expr {
 
 		struct { Expr *operand; bool is_mut; } borrow;
 		struct { Expr *address; Expr *step; } at;   /* EXPR_AT: step may be NULL */
+		struct { Expr *operand; const char *name; } link;   /* EXPR_LINK_TO, EXPR_LINK_GET (name: for its panic) */
 
 		struct {
 			struct FnDecl *method;

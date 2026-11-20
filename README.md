@@ -16,7 +16,7 @@ cabby --check     prog.cby              type- and ownership-check only
 cabby --style     prog.cby              list names and calls that don't follow STYLE.md
 cabby --dump-ast  prog.cby              print the syntax tree
 cabby --dump-tokens prog.cby            print the token stream
-cabby --version                         which Cabby this is: "Cabby 0.42.0 (2026-11-20)"
+cabby --version                         which Cabby this is: "Cabby 0.43.0 (2026-11-20)"
 cabby --license                         Cabby's license (MIT)
 ```
 
@@ -127,7 +127,7 @@ struct    switch    union     unsigned  void      volatile  while
 str       object    bool      true      false     self      use
 in        to        down      by        list      lookup    aka
 is        not       and       or        until     inner
-callback
+callback  link
 ```
 
 These are C89's keywords (all but `typedef`) plus `str` and `object`, and these.
@@ -147,6 +147,8 @@ write.
   is told what to write: `==`, `!`, `&&` or `||` (§10).
 * `callback`, a C function pointer's shape, for C functions that call one
   of yours: `callback int comparer address A, address B` (§11).
+* `link`, pointing at an object without owning it: `link person Best`
+  (§9).
 * `until`, a loop that runs until its condition is true: `until Done { }`,
   and `do { } until Done` (§10).
 * `inner`, for an object's fields and methods that only it (and objects
@@ -716,6 +718,32 @@ block in reverse order, including when the block is left early by `return`,
 `break`, `continue` or `goto`. Temporaries are dropped at the end of their
 statement. A value that has been moved away is not dropped again.
 
+**Links.** `link T Name` points at an object of `T`'s without owning it, so
+objects can point at each other freely: a child at its parent, friends at
+each other, in circles if need be, while each still has one owner.
+
+```
+object person {
+	str Name
+	link person Best
+}
+Ada.Best = Alan                  // a link to Alan; Alan isn't moved
+println Ada.Best.Name            // through it, as if it were Alan
+Ada.Best.is_set                  // false once Alan has been dropped
+Ada.Best.clear                   // points nowhere
+Ada.Best == Grace.Best           // the same object?
+```
+
+Using a link whose object has been dropped is a panic that names it, never
+a read of freed memory: each linked object has a place in a table, whose
+generation changes when it's dropped. Links are 8 bytes and copied, like
+numbers. Since the borrow checker can't see that `Ada.Best` and `Alan` are
+one object, a link reads anything; changes numbers, `bool`s, `char`s, plain
+structs and links (not strings, lists or lookups, which are changed through
+their owner); lends nothing (`.copy` first); and calls only `const` methods
+that take nothing borrowed. A link is used by the worker whose object it
+points at.
+
 ---
 
 ## 10. Statements
@@ -1200,7 +1228,7 @@ Run `cabby` with no file to type Cabby a piece at a time:
 
 ```
 $ cabby
-Cabby 0.42.0 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
+Cabby 0.43.0 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
 Cabby comes with ABSOLUTELY NO WARRANTY, under the MIT License; "cabby.license" for details.
 >>> int add int a, int b {
 ... 	return a + b
@@ -1669,8 +1697,6 @@ was built for (`PREFIX`), then `/usr/local/lib/cabby` and `/usr/lib/cabby`.
 
 ## 15. What is not in Cabby (yet)
 
-* Objects pointing at each other freely (chains and trees can be built from
-  objects holding a `list` of their own kind, or with `use addresses`).
 * Panels and bars for a desktop (a dock, a system tray) in the gui
   library.
 * In 3D (`use world`): shadows, and physics.

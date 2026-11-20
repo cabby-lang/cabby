@@ -18,7 +18,7 @@ syn keyword cabbyRange         in to down by
 syn keyword cabbyStatement     return break continue goto
 syn keyword cabbyLabel         case default
 syn keyword cabbyType          char short int long float double void bool str
-syn keyword cabbyType          signed unsigned handler list lookup file directory process address timer
+syn keyword cabbyType          signed unsigned handler list link lookup file directory process address timer
 syn keyword cabbyType          moment duration date time_of_day date_time weekday month json bytes element html xml
 syn keyword cabbyStorage       const static register volatile extern inner
 syn keyword cabbyStructure     struct union enum object aka callback

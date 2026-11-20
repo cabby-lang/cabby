@@ -83,6 +83,9 @@ typedef enum {
 	TY_OBJECT,  /* object, struct or union (see obj->kind) */
 	TY_HANDLER, /* a method of a gui.window, bound to it: `ok.on_click say_hello`.
 		     * Parameters only; passed to C as two pointers (object, function). */
+	TY_LINK,    /* link T: an object of T's, without owning it; inner is T. 8 bytes: a
+	             * place in the runtime's table of linked objects, and that place's
+	             * generation (rt.c's cby_link_*); 0 points nowhere */
 	TY_ADDRESS, /* address T (use addresses): where a T is in memory; inner is T, or
 		     * NULL for `address` of nothing in particular (C's void *) */
 	TY_CALLBACK,/* `callback int comparer address void, address void`: a C function
@@ -301,6 +304,8 @@ typedef enum {
 	BUILTIN_ADDRESS_NUMBER, /* A.number          -> long: the address as a number */
 	BUILTIN_ADDRESS_IS_NONE,/* A.is_none         -> bool */
 	BUILTIN_ADDRESS_DIFF,   /* A - B             -> long: how many values apart */
+	BUILTIN_LINK_IS_SET,    /* L.is_set          -> bool: it points at an object that's still there */
+	BUILTIN_LINK_CLEAR,     /* L.clear           -> void: it points nowhere */
 	/* use events */
 	BUILTIN_EVENTS_RUN,     /* events.run        waits, calling handlers, until nothing is left */
 	BUILTIN_EVENTS_STOP,    /* events.stop       ends events.run early */
@@ -328,6 +333,7 @@ Type *type_slice(Arena *a, Type *inner, bool is_mut);
 Type *type_array(Arena *a, Type *inner, uint64_t len);
 Type *type_list(Arena *a, Type *inner);
 Type *type_address(Arena *a, Type *inner);
+Type *type_link(Arena *a, Type *inner);
 Type *type_lookup(Arena *a, Type *key, Type *value);
 Type *type_int_named(Arena *a, const Type *base, const char *name);
 bool  type_eq(const Type *a, const Type *b);

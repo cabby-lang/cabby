@@ -1,6 +1,6 @@
 # The Cabby Manual
 
-*For Cabby 0.42.0 (2026-11-20).*
+*For Cabby 0.43.0 (2026-11-20).*
 
 A book for learning Cabby one idea at a time, and a reference to come back
 to afterwards.
@@ -83,7 +83,7 @@ int main {
 **[Part IV: Objects](#part-iv-objects)**
 
 22. [Objects and methods](#chapter-22-objects-and-methods): `object`, `self`, `const` and `static` methods, [what goes where](#what-goes-where)
-23. [Made and dropped](#chapter-23-made-and-dropped): `name { }` when an object is made, `~name` when it's dropped
+23. [Made and dropped](#chapter-23-made-and-dropped): `name { }` when an object is made, `~name` when it's dropped; `link`, pointing at an object without owning it
 24. [Inheritance](#chapter-24-inheritance): `object dog : animal`, overriding, virtual calls
 25. [Multiple inheritance](#chapter-25-multiple-inheritance): several parents, diamonds, method order
 26. [Handlers in your own objects](#chapter-26-handlers-in-your-own-objects): `handler` fields, `.call`, what keeps them safe
@@ -4487,7 +4487,7 @@ same works for a list of structs.
 
 ### Chapter 23: Made and dropped
 
-*Program: `23-destructors.cby`. Topics: `Name { }` and `~Name { }`, when things are made and dropped, and in what order.*
+*Program: `23-destructors.cby`. Topics: `Name { }` and `~Name { }`, when things are made and dropped, and in what order; links.*
 
 A *destructor* is a method named `~` plus the object's name. It runs
 automatically, exactly once, when the object is dropped
@@ -4650,6 +4650,83 @@ It's the natural place to give an object's parts its own methods as
 handlers ([Chapter 26](#chapter-26-handlers-in-your-own-objects)), since
 it runs inside the object.
 
+#### Links: pointing without owning
+
+Every object has one owner, which is what makes dropping it safe: when the
+owner goes, so does it, once. But a child can't own its parent, and two
+friends can't own each other. A **link** points at an object without
+owning it:
+
+<!-- run -->
+```cabby
+object person {
+	str Name
+	int Age
+	link person Best
+
+	str describe const {
+		return Name + ", " + Age.text
+	}
+}
+
+int main {
+	person Ada = {.Name = "Ada", .Age = 36}
+	person Alan = {.Name = "Alan", .Age = 41}
+	Ada.Best = Alan                 // a link to Alan: still Alan's own
+	Alan.Best = Ada
+	println Ada.Best.Name, Ada.Best.Best.Name
+	Ada.Best.Age++                  // Alan's birthday, through the link
+	println Alan.describe
+
+	link person Gone
+	if true {
+		person Brief = {.Name = "Brief"}
+		Gone = Brief
+		println Gone.describe
+	}
+	println Gone.is_set
+}
+```
+
+```text
+Alan Ada
+Alan, 42
+Brief, 0
+false
+```
+
+`link person Best` starts pointing nowhere. Giving it an object kept
+somewhere (a variable, a field, an element of a list, `self`) points it
+there, without moving the object. Through it, `Best.Name` and
+`Best.describe` reach the object as if it were there, and while it is, it
+is. Once the object is dropped, every link to it says so: `.is_set` is
+false, and using it is a panic that names it ("the person 'Gone' pointed
+at is gone"), never a read of memory that's been given back. `.clear`
+points it nowhere again, and `==` says whether two links point at the
+same object. Links are copied, like numbers: they own nothing, so there's
+nothing to drop.
+
+Since a link doesn't own, links can go round in circles: friends, a child
+and its parent, the stops of a route. Something still has to own each
+object; a list of all of them is the usual owner, with links between them.
+
+Cabby's borrow checker can't see that `Ada.Best` and `Alan` are the same
+object, so a link is careful with what could leave something pointing at
+nothing:
+
+* **Read** anything through a link. A string or list is read in place by
+  `println`, comparisons, `.length` and the like; `.copy` keeps a copy.
+* **Change** numbers, `bool`s, `char`s, plain structs and other links
+  through a link. A string, list or lookup is changed through its owner:
+  changing it through a link could free memory something else is still
+  reading.
+* **Lend** a copy, not a part: `show Best.Name.copy`, and
+  `for P in Best.Pets.copy`.
+* **Call** `const` methods that take nothing borrowed, like `describe`.
+
+A link is used by the worker (or program) whose object it points at
+([Chapter 63](#chapter-63-workers)): each one's objects are its own.
+
 #### In short
 
 * `Name { ... }` runs when the object is made; `~Name { ... }` when it is
@@ -4659,6 +4736,8 @@ it runs inside the object.
 * Locals: dropped in reverse order. Fields: after the object's destructor,
   in order.
 * Early `return`, `break`, `continue` and `goto` still drop.
+* `link T Name` points at an object without owning it; `.is_set` says
+  whether it's still there, and using a gone one is a panic.
 
 #### Try this
 
@@ -16829,7 +16908,7 @@ Run `cabby` with no file to type Cabby a piece at a time:
 
 ```text
 $ cabby
-Cabby 0.42.0 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
+Cabby 0.43.0 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
 Cabby comes with ABSOLUTELY NO WARRANTY, under the MIT License; "cabby.license" for details.
 >>> int add int a, int b {
 ... 	return a + b
@@ -16947,6 +17026,7 @@ Every keyword is reserved: none can name a variable or function. `typedef` is re
 | `if` | choose a path | [6](#chapter-6-if-and-else) |
 | `in` | `for i in ...`, `for X in L`, `for K, V in L` | [8](#chapter-8-for-loops-break-and-continue), [15](#chapter-15-lists), [16](#chapter-16-lookups) |
 | `inner` | a field or method only the object (and its children) can use | [24](#chapter-24-inheritance) |
+| `link` | points at an object without owning it: `link person Best` | [23](#chapter-23-made-and-dropped) |
 | `list` | a growable list: `list int Scores` | [15](#chapter-15-lists) |
 | `lookup` | values found by key: `lookup str int Ages` | [16](#chapter-16-lookups) |
 | `object` | a class: fields, methods, destructor, parents | [22](#chapter-22-objects-and-methods) |
@@ -16988,6 +17068,7 @@ handler ([Chapter 51](#chapter-51-your-first-window), [Chapter 26](#chapter-26-h
 | `str` | 16 | moved | owned text |
 | `T name[N]` | N × T | like T | fixed size, `.length` |
 | `list T` | 24 | moved | grows; owns its elements |
+| `link T` | 8 | copied | an object of `T`'s, without owning it; `.is_set`, `.clear` |
 | `lookup K V` | 64 | moved | values by key; owns its keys and values |
 | `struct` | its fields, laid out as C expects | copied if all fields are | |
 | `union` | its largest field | copied | plain-data fields only |
@@ -17155,9 +17236,6 @@ CABBY_GUI_SCRIPT="type 1 Ada; click Say hello; shot greeter.png; close" cabby 51
 
 ### Appendix H: Not in Cabby yet
 
-* Objects pointing at each other freely (a chain or tree can be built
-  from objects holding a `list` of their own kind, or with `use addresses`;
-  see [Chapter 28](#chapter-28-addresses)).
 * Panels and bars of a desktop (a dock, a system tray) in the gui
   library.
 * Shadows and physics in 3D (`use world`).

@@ -81,8 +81,8 @@ expect_error  arrow          'a->b\n' "there is no '->' in Cabby"
 expect_error  ternary        'a ? b : c\n' "there is no '?:' operator"
 
 # --- keywords -------------------------------------------------------------------
-expect_tokens c_keywords 'auto break case char const continue default do double else enum extern float for goto if int long register return short signed sizeof static struct switch typedef union unsigned void volatile while aka is not and or until inner callback\n' \
-	'auto|break|case|char|const|continue|default|do|double|else|enum|extern|float|for|goto|if|int|long|register|return|short|signed|sizeof|static|struct|switch|typedef|union|unsigned|void|volatile|while|aka|is|not|and|or|until|inner|callback|newline|'
+expect_tokens c_keywords 'auto break case char const continue default do double else enum extern float for goto if int long register return short signed sizeof static struct switch typedef union unsigned void volatile while aka is not and or until inner callback link\n' \
+	'auto|break|case|char|const|continue|default|do|double|else|enum|extern|float|for|goto|if|int|long|register|return|short|signed|sizeof|static|struct|switch|typedef|union|unsigned|void|volatile|while|aka|is|not|and|or|until|inner|callback|link|newline|'
 expect_tokens extra_keywords 'str object bool true false self\n' 'str|object|bool|true|false|self|newline|'
 expect_tokens not_keywords   'fn let mut elif pass print\n' 'identifier fn|identifier let|identifier mut|identifier elif|identifier pass|identifier print|'
 

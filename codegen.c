@@ -196,6 +196,7 @@ static const char *llty(CG *G, const Type *t)
 	case TY_HANDLER: return "{ ptr, ptr }";   /* the window, its method */
 	case TY_ADDRESS: return "ptr";
 	case TY_CALLBACK: return "ptr";   /* a C function pointer */
+	case TY_LINK:   return "i64";     /* a place in rt.c's table, and its generation */
 	case TY_ARRAY:  return astr(G, "[%" PRIu64 " x %s]", t->len, llty(G, t->inner));
 	case TY_OBJECT:
 		switch (t->obj->kind) {
@@ -703,7 +704,7 @@ static bool is_place(const Expr *e)
 	switch (e->kind) {
 	case EXPR_IDENT: case EXPR_SELF:
 		return e->as.ident.sym != NULL;
-	case EXPR_FIELD: case EXPR_INDEX: case EXPR_AT:
+	case EXPR_FIELD: case EXPR_INDEX: case EXPR_AT: case EXPR_LINK_GET:
 		return true;
 	default:
 		return false;
@@ -956,6 +957,16 @@ static Op gen_place(CG *G, Expr *e)
 		emit(G, "%s = load i64, ptr %s", off.s, slotp.s);
 		emit(G, "%s = getelementptr i8, ptr %s, i64 %s", blk.s, h.s, off.s);
 		emit(G, "%s = getelementptr %%B.%d, ptr %s, i32 0, i32 %d", r.s, owner, blk.s, e->as.field.field_index);
+		return r;
+	}
+	case EXPR_LINK_GET: {
+		/* where the runtime keeps the object's handle: like an object
+		 * variable's slot (a panic if it's gone) */
+		Op l = gen_val(G, e->as.link.operand), r = tmp(G);
+		const char *nm = e->as.link.name, *kind = e->ty->obj->name;
+		int ni = string_literal_id(G, nm, strlen(nm)), ki = string_literal_id(G, kind, strlen(kind));
+		emit(G, "%s = call ptr @cby_link_get(i64 %s, ptr @.str.%d, ptr @.str.%d, ptr %s, i32 %d, i32 %d)", r.s, l.s, ni,
+		     ki, file_ref(G, e->loc).s, e->loc.line, e->loc.col);
 		return r;
 	}
 	case EXPR_AT: {
@@ -1841,6 +1852,16 @@ static Op gen_str_builtin(CG *G, Expr *e, Op *sret)
 			store(G, e->ty, r, *sret, false);
 		return r;
 	}
+	case BUILTIN_LINK_IS_SET: {
+		Op l = gen_val(G, args->items[0]), r = tmp(G);
+		emit(G, "%s = call i1 @cby_link_is_set(i64 %s)", r.s, l.s);
+		return r;
+	}
+	case BUILTIN_LINK_CLEAR: {
+		Op p = gen_place(G, args->items[0]);
+		emit(G, "store i64 0, ptr %s", p.s);
+		return op("undef");
+	}
 	case BUILTIN_ADDRESSES_OF:
 	case BUILTIN_ADDRESSES_AT:
 	case BUILTIN_ADDRESSES_NONE:
@@ -2163,6 +2184,17 @@ static Op gen_val(CG *G, Expr *e)
 {
 	Type *t = e->ty;
 	switch (e->kind) {
+	case EXPR_LINK_TO: {
+		Op p = gen_place(G, e->as.link.operand), h = tmp(G), r = tmp(G);
+		emit(G, "%s = load ptr, ptr %s", h.s, p.s);
+		emit(G, "%s = call i64 @cby_link_obj(ptr %s)", r.s, h.s);
+		return r;
+	}
+	case EXPR_LINK_GET: {
+		Op p = gen_place(G, e), h = tmp(G);
+		emit(G, "%s = load ptr, ptr %s", h.s, p.s);
+		return h;
+	}
 	case EXPR_INT:
 		return iconst(t, (int64_t)e->as.int_lit.value);
 	case EXPR_FLOAT:
@@ -2376,7 +2408,7 @@ static void gen_init(CG *G, Expr *e, Op dst)
 	/* malloc, then zero in place: calloc misses glibc's fast cache, and
 	 * LLVM drops the zeroing of fields that are set straight after */
 	need_intrinsic(G, "llvm.memset", "declare void @llvm.memset.p0.i64(ptr, i8, i64, i1)");
-	emit(G, "%s = call ptr @rt_alloc(i64 ptrtoint (ptr getelementptr (%%O.%d, ptr null, i32 1) to i64))", h.s, o->id);
+	emit(G, "%s = call ptr @rt_obj_alloc(i64 ptrtoint (ptr getelementptr (%%O.%d, ptr null, i32 1) to i64))", h.s, o->id);
 	emit(G, "call void @llvm.memset.p0.i64(ptr %s, i8 0, i64 ptrtoint (ptr getelementptr (%%O.%d, ptr null, i32 1) to i64), i1 false)",
 	     h.s, o->id);
 	emit(G, "store ptr @\"ci.%d\", ptr %s", o->id, h.s);
@@ -3258,20 +3290,23 @@ static void gen_object_support(CG *G, ObjectInfo *K)
 		if (d)
 			emit(G, "call void %s(ptr %%h)", fn_name(G, d));
 	}
+	/* links to it are gone before its fields are (a field's destructor
+	 * that follows one back finds it gone) */
+	emit(G, "call void @rt_obj_unlink(ptr %%h)");
 	for (int i = 0; i < K->field_count; i++) {
 		Type *ft = K->fields[i].type;
 		if (!type_needs_drop(ft))
 			continue;
 		emit_drop(G, ft, obj_field_static(G, K, h, i));
 	}
-	emit(G, "call void @rt_free(ptr %%h)");
+	emit(G, "call void @rt_obj_free(ptr %%h)");
 	emit_term(G, "ret void");
 	end_function(G, astr(G, "define internal void @\"drop.%d\"(ptr %%h)", K->id));
 
 	/* new.K(): a zeroed object */
 	begin_function(G);
 	need_intrinsic(G, "llvm.memset", "declare void @llvm.memset.p0.i64(ptr, i8, i64, i1)");
-	emit(G, "%%h = call ptr @rt_alloc(i64 ptrtoint (ptr getelementptr (%%O.%d, ptr null, i32 1) to i64))", K->id);
+	emit(G, "%%h = call ptr @rt_obj_alloc(i64 ptrtoint (ptr getelementptr (%%O.%d, ptr null, i32 1) to i64))", K->id);
 	emit(G, "call void @llvm.memset.p0.i64(ptr %%h, i8 0, i64 ptrtoint (ptr getelementptr (%%O.%d, ptr null, i32 1) to i64), i1 false)",
 	     K->id);
 	emit(G, "store ptr @\"ci.%d\", ptr %%h", K->id);
@@ -3680,6 +3715,12 @@ static const char *runtime_decls_rest =
 	"declare ptr @rt_alloc_zeroed(i64)\n"
 	"declare ptr @rt_alloc(i64)\n"
 	"declare void @rt_free(ptr)\n"
+	"declare ptr @rt_obj_alloc(i64)\n"
+	"declare void @rt_obj_free(ptr)\n"
+	"declare void @rt_obj_unlink(ptr)\n"
+	"declare i64 @cby_link_obj(ptr)\n"
+	"declare ptr @cby_link_get(i64, ptr, ptr, ptr, i32, i32)\n"
+	"declare i1 @cby_link_is_set(i64)\n"
 	"declare void @cby_rt_init()\n"
 	"declare i32 @cby_rt_finish(i32)\n"
 	"declare void @cby_str_dup(ptr, ptr, i64)\n"

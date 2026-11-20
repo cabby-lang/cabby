@@ -91,6 +91,7 @@ the patch number with fixes alone.
 | 0.40.0 | 20 November | Lists of objects put in order: `.sort_by` a field or a function's key, `.sort_with` a function comparing two |
 | 0.41.0 | 20 November | `.upper` and `.lower` for Latin, Greek (polytonic too), Cyrillic and Armenian |
 | 0.42.0 | 20 November | Elements at positions written as numbers are borrowed separately: `Scores[0]` lent, `Scores[1]` changed |
+| 0.43.0 | 20 November | `link T`: objects pointing at each other without owning, safely, caught when one is gone |
 
 ---
 
@@ -1569,6 +1570,41 @@ old names need changing:
   through.
 - The note after a refusal names the part that's borrowed: "'Scores[0]'
   is borrowed here".
+
+*Version 0.43.0:* the last known gap before 1.0: objects pointing at each
+other freely.
+
+- **`link person Best`** points at an object without owning it: a child at
+  its parent, friends at each other, the stops of a route, in circles if
+  need be, while each object still has one owner. `Ada.Best = Alan` links
+  to Alan without moving him; `Ada.Best.Name` and `Ada.Best.describe`
+  reach him through it; `.is_set` says whether he's still there; `.clear`
+  points it nowhere; `==` says whether two links point at the same object.
+  Links are 8 bytes, copied like numbers, in lists and fields alike, and a
+  link to a `dog` is a link to an `animal`.
+- **Gone is caught, never read**: each object that's been linked to has a
+  place in the runtime's table (`rt.c`), with a generation that changes
+  when the object is dropped; a link is the place and the generation it
+  had. Using a link whose object has gone is a panic that names it ("the
+  node 'Gone' pointed at is gone"), as is one that points nowhere. A place
+  that's been through every generation is retired. Links to an object are
+  gone after its destructor and before its fields are dropped, so a
+  field's destructor that follows a link back finds it gone, not half
+  taken apart. A link is used by the worker whose object it points at; on
+  another, it's a panic.
+- **Kept safe without the borrow checker seeing it**: since `Ada.Best` and
+  `Alan` are one object it can't tell apart, a link reads anything;
+  changes numbers, bools, chars, plain structs and links (strings, lists
+  and lookups only through their owner, since changing them could free
+  memory something else is reading); lends nothing (`.copy` first); and
+  calls only `const` methods that take nothing borrowed. Each refusal says
+  why and what to write instead.
+- A compiled program's objects carry 16 bytes before the handle for their
+  place in the table (`rt_obj_alloc`); the interpreter's objects carry it
+  too.
+- Chapter 23 has "Links: pointing without owning", and its program a step
+  7; Appendices C and D, README §3 and §9. Appendix H and README §15 no
+  longer list the gap: those lists now hold only what's planned after 1.0.
 
 ## Along the way (dates not recorded)
 

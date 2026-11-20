@@ -115,6 +115,8 @@ struct Array {
 
 struct Object {
 	ObjectInfo *cls;   /* exact class */
+	uint64_t life;     /* its place in the runtime's table of linked objects (rt.c), 0 for none */
+	Value as_value;    /* (itself, as a value: where a link's use of it is, once linked) */
 	Value fields[];    /* in cls->fields slot order */
 };
 
@@ -1065,6 +1067,7 @@ static Value zero_value(const Type *t)
 	case TY_STR:   return (Value){ .kind = V_STR, .as.s = &empty_str };
 	case TY_HANDLER: return (Value){ .kind = V_HANDLER, .as.hv = NULL };   /* not set */
 	case TY_ADDRESS: return (Value){ .kind = V_ADDRESS, .as.ad = NULL };   /* addresses.none */
+	case TY_LINK:  return v_int(0);   /* nowhere */
 	case TY_LIST: {
 		List *l = rt_alloc(sizeof *l);
 		l->len = l->cap = 0;
@@ -1091,6 +1094,7 @@ static Value zero_value(const Type *t)
 			return (Value){ .kind = V_UNION, .as.un = u };
 		}
 		Object *ob = rt_alloc(sizeof *ob + sizeof(Value) * (size_t)o->field_count);
+		ob->life = 0;
 		ob->cls = o;
 		for (int i = 0; i < o->field_count; i++)
 			ob->fields[i] = zero_value(o->fields[i].type);
@@ -1180,6 +1184,12 @@ static void value_drop_now(Interp *I, Value *v)
 					call_function(I, d, &self, NULL, d->loc);
 				}
 			}
+		}
+		/* (links to it are gone before its fields are: a field's destructor
+		 * that follows one back finds it gone) */
+		if (o->life) {
+			cby_link_end(o->life);
+			o->life = 0;
 		}
 		for (int i = 0; i < cls->field_count; i++)
 			value_drop(I, &o->fields[i]);
@@ -1302,6 +1312,7 @@ static Value value_copy(const Value *v, SrcLoc loc)
 			internal_error(loc, "attempt to copy an object");
 		Object *n = rt_alloc(sizeof *n + sizeof(Value) * (size_t)o->cls->field_count);
 		n->cls = o->cls;
+		n->life = 0;
 		for (int i = 0; i < o->cls->field_count; i++)
 			n->fields[i] = value_copy(&o->fields[i], loc);
 		return (Value){ .kind = V_OBJECT, .as.obj = n };
@@ -1669,6 +1680,9 @@ static void encode(const Type *t, const Value *v, unsigned char *dst)
 			encode(t->inner, &a->elems[i], dst + (uint64_t)i * es);
 		break;
 	}
+	case TY_LINK:
+		memcpy(dst, &v->as.i, 8);
+		break;
 	case TY_ADDRESS: {
 		/* memory from C, or the copy of a Cabby value C is being given */
 		AddrVal *a = v->kind == V_ADDRESS ? v->as.ad : NULL;
@@ -1693,6 +1707,11 @@ static void encode(const Type *t, const Value *v, unsigned char *dst)
 static Value decode(const Type *t, const unsigned char *src)
 {
 	switch (t->kind) {
+	case TY_LINK: {
+		int64_t l;
+		memcpy(&l, src, 8);
+		return v_int(l);
+	}
 	case TY_ADDRESS: {
 		void *p;
 		memcpy(&p, src, sizeof p);
@@ -1740,6 +1759,7 @@ static Value decode(const Type *t, const unsigned char *src)
 			return (Value){ .kind = V_UNION, .as.un = u };
 		}
 		Object *ob = rt_alloc(sizeof *ob + sizeof(Value) * (size_t)o->field_count);
+		ob->life = 0;
 		ob->cls = o;
 		for (int i = 0; i < o->field_count; i++)
 			ob->fields[i] = decode(o->fields[i].type, src + o->fields[i].offset);
@@ -1823,7 +1843,7 @@ static bool is_place(const Expr *e)
 	switch (e->kind) {
 	case EXPR_IDENT: case EXPR_SELF:
 		return e->as.ident.sym != NULL;
-	case EXPR_FIELD: case EXPR_INDEX: case EXPR_AT:
+	case EXPR_FIELD: case EXPR_INDEX: case EXPR_AT: case EXPR_LINK_GET:
 		return true;
 	default:
 		return false;
@@ -1881,6 +1901,8 @@ static Value *index_place(Interp *I, Expr *e, Value *base, bool keep)
 	return &a->elems[idx];
 }
 
+static Value *link_get(Interp *I, Expr *e);
+
 static Value *eval_place(Interp *I, Expr *e)
 {
 	switch (e->kind) {
@@ -1930,6 +1952,8 @@ static Value *eval_place(Interp *I, Expr *e)
 		t->proxy_was = proxy_snapshot(p, type_size(e->ty));
 		return &t->cell;
 	}
+	case EXPR_LINK_GET:
+		return link_get(I, e);
 	case EXPR_FIELD: {
 		Value *base = deref_all(eval_read(I, e->as.field.object));
 		if (base->kind == V_UNION) {
@@ -2956,6 +2980,11 @@ static Value eval_str_builtin(Interp *I, Expr *e)
 		return v_int(address_number(eval(I, args->items[0]).as.ad, args->items[0]->ty->inner));
 	case BUILTIN_ADDRESS_IS_NONE:
 		return v_bool(address_is_none(eval(I, args->items[0]).as.ad));
+	case BUILTIN_LINK_IS_SET:
+		return v_bool(cby_link_is_set(eval(I, args->items[0]).as.i));
+	case BUILTIN_LINK_CLEAR:
+		eval_place(I, args->items[0])->as.i = 0;
+		return v_void();
 	case BUILTIN_ADDRESS_DIFF: {
 		AddrVal *a = eval(I, args->items[0]).as.ad, *b = eval(I, args->items[1]).as.ad;
 		Type *el = args->items[0]->ty->inner;
@@ -3686,6 +3715,7 @@ static Value eval_init(Interp *I, Expr *e)
 		return u;
 	}
 	Object *ob = rt_alloc(sizeof *ob + sizeof(Value) * (size_t)o->field_count);
+	ob->life = 0;
 	ob->cls = o;
 	for (int i = 0; i < o->field_count; i++)
 		ob->fields[i].kind = V_UNINIT;
@@ -3698,9 +3728,29 @@ static Value eval_init(Interp *I, Expr *e)
 	return let_go_of(I, h);
 }
 
+/* L's object, for L.Name or L.speak: where it is, as a value (a panic if
+ * it's gone) */
+static Value *link_get(Interp *I, Expr *e)
+{
+	int64_t l = eval(I, e->as.link.operand).as.i;
+	set_panic_loc(e->loc);
+	Object **h = cby_link_get(l, e->as.link.name, e->ty->obj->name, file_of(e->loc), e->loc.line, e->loc.col);
+	return &(*h)->as_value;
+}
+
+/* a link to the object at a place */
+static Value link_to(Interp *I, Expr *e)
+{
+	Object *o = deref_all(eval_place(I, e->as.link.operand))->as.obj;
+	o->as_value = (Value){ .kind = V_OBJECT, .as.obj = o };
+	return v_int(cby_link_to(o, &o->life));
+}
+
 static Value eval(Interp *I, Expr *e)
 {
 	switch (e->kind) {
+	case EXPR_LINK_TO:
+		return link_to(I, e);
 	case EXPR_INT:
 		return v_int(norm((int64_t)e->as.int_lit.value, e->ty));
 	case EXPR_FLOAT:
@@ -3784,6 +3834,7 @@ static Value eval(Interp *I, Expr *e)
 		return value_copy(eval_place(I, e), e->loc);
 	case EXPR_FIELD:
 	case EXPR_AT:
+	case EXPR_LINK_GET:
 		return value_copy(eval_place(I, e), e->loc);
 
 	case EXPR_CAST: {

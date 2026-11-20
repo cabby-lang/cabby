@@ -12,7 +12,7 @@ static const char *const keywords[] = {
 };
 static const char *const types[] = {
 	"char", "short", "int", "long", "float", "double", "void", "bool", "str",
-	"signed", "unsigned", "handler", "list", "lookup", "file", "directory", "process", "address", "timer", "moment", "duration", "date", "time_of_day", "date_time", "weekday",
+	"signed", "unsigned", "handler", "list", "link", "lookup", "file", "directory", "process", "address", "timer", "moment", "duration", "date", "time_of_day", "date_time", "weekday",
 	"month", "json", "bytes", "element", "html", "xml", "const", "static", "register", "volatile",
 	"extern", "struct", "union", "enum", "object", "aka", "callback", "inner", NULL,
 };

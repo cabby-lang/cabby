@@ -3165,6 +3165,260 @@ int main {
 	Grid[1][0] = Scores[10 / 5]
 }
 
+### ok_links
+// expect: quiet
+object person {
+	str Name
+	int Age
+	list str Pets
+	link person Best
+
+	void birthday {
+		Age++
+	}
+	str greet const str &Other const {
+		return Other.copy
+	}
+	str describe const {
+		return Name.copy
+	}
+}
+void show const str &S {
+	println S
+}
+int main {
+	person Ada
+	person Alan
+	Ada.Best = Alan
+	link person L = Ada
+	L.Age = 3
+	L.Age += 1
+	L.Best = Ada
+	println L.Name, L.Name.length, L.Pets.length, L.describe, L.Best.Best.Name == "x"
+	show L.Name.copy
+	for P in L.Pets.copy {
+		println P
+	}
+	list link person All
+	All.add Ada
+	All.add L
+	println All[0] == All[1], L.is_set
+	L.clear
+}
+### err_link_str_replaced
+// expect: a 'str' can't be replaced through a link
+object person {
+	str Name
+	int Age
+	list str Pets
+	link person Best
+
+	void birthday {
+		Age++
+	}
+	str greet const str &Other const {
+		return Other.copy
+	}
+	str describe const {
+		return Name.copy
+	}
+}
+int main {
+	person Ada
+	link person L = Ada
+	L.Name = "x"
+}
+### err_link_list_changed
+// expect: a 'list str' can't be changed through a link
+object person {
+	str Name
+	int Age
+	list str Pets
+	link person Best
+
+	void birthday {
+		Age++
+	}
+	str greet const str &Other const {
+		return Other.copy
+	}
+	str describe const {
+		return Name.copy
+	}
+}
+int main {
+	person Ada
+	link person L = Ada
+	L.Pets.add "cat"
+}
+### err_link_part_lent
+// expect: a part of what a link points at can't be lent
+object person {
+	str Name
+	int Age
+	list str Pets
+	link person Best
+
+	void birthday {
+		Age++
+	}
+	str greet const str &Other const {
+		return Other.copy
+	}
+	str describe const {
+		return Name.copy
+	}
+}
+void show const str &S {
+	println S
+}
+int main {
+	person Ada
+	link person L = Ada
+	show L.Name
+}
+### err_link_part_bound
+// expect: a part of what a link points at can't be lent
+object person {
+	str Name
+	int Age
+	list str Pets
+	link person Best
+
+	void birthday {
+		Age++
+	}
+	str greet const str &Other const {
+		return Other.copy
+	}
+	str describe const {
+		return Name.copy
+	}
+}
+int main {
+	person Ada
+	link person L = Ada
+	const str &N = L.Name
+	println N
+}
+### err_link_loop
+// expect: go through a copy instead (.copy)
+object person {
+	str Name
+	int Age
+	list str Pets
+	link person Best
+
+	void birthday {
+		Age++
+	}
+	str greet const str &Other const {
+		return Other.copy
+	}
+	str describe const {
+		return Name.copy
+	}
+}
+int main {
+	person Ada
+	link person L = Ada
+	for P in L.Pets {
+		println P
+	}
+}
+### err_link_changing_method
+// expect: 'birthday' can change the object: call it through its owner
+object person {
+	str Name
+	int Age
+	list str Pets
+	link person Best
+
+	void birthday {
+		Age++
+	}
+	str greet const str &Other const {
+		return Other.copy
+	}
+	str describe const {
+		return Name.copy
+	}
+}
+int main {
+	person Ada
+	link person L = Ada
+	L.birthday
+}
+### err_link_method_borrows
+// expect: 'greet' takes something borrowed
+object person {
+	str Name
+	int Age
+	list str Pets
+	link person Best
+
+	void birthday {
+		Age++
+	}
+	str greet const str &Other const {
+		return Other.copy
+	}
+	str describe const {
+		return Name.copy
+	}
+}
+int main {
+	person Ada
+	link person L = Ada
+	println L.greet("hi")
+}
+### err_link_to_a_made_object
+// expect: a link points at an object that's kept somewhere
+object person {
+	str Name
+	int Age
+	list str Pets
+	link person Best
+
+	void birthday {
+		Age++
+	}
+	str greet const str &Other const {
+		return Other.copy
+	}
+	str describe const {
+		return Name.copy
+	}
+}
+person make {
+	person P
+	return P
+}
+int main {
+	link person L = make()
+	println L.is_set
+}
+### err_link_to_a_struct
+// expect: a link points at an object, not a 'spot'
+struct spot {
+	int X
+}
+int main {
+	link spot S
+}
+
+### err_links_compared_with_less
+// expect: links can only be compared with == and !=
+object pet {
+	int Age
+}
+int main {
+	pet A
+	link pet L = A
+	link pet M = A
+	println L < M
+}
+
 ### err_callback_not_a_function
 // expect: expected the name of a function for
 use addresses
