@@ -439,6 +439,157 @@ void *rt_alloc_zeroed(size_t size)
 
 void rt_free(void *p) { free(p); }
 
+/* ---- links (link T): pointing at an object without owning it ----
+ * An object that's been linked to has a place in this table, which says
+ * where it is, and which object of that place's it is: the place's
+ * generation, which changes when the object is dropped. A link is the
+ * place's number and the generation it had: 28 bits and 36, in 8 bytes,
+ * and 0 for nowhere. A link whose generation isn't the place's any more
+ * points at something that's gone; that's a panic, never a read of
+ * memory that's been freed. A place that's been through every generation
+ * is retired, not used again. The table is in blocks that never move, so
+ * a place's address stays good. A link is used only on the thread whose
+ * object it is (a worker's objects are its own). */
+#define LINK_PLACE_BITS 28
+#define LINK_PLACE_MASK ((UINT64_C(1) << LINK_PLACE_BITS) - 1)
+#define LINK_GEN_MASK ((UINT64_C(1) << (64 - LINK_PLACE_BITS)) - 1)
+#define LINK_BLOCK 4096
+typedef struct {
+	void *obj;          /* the object's handle (NULL: gone, or free) */
+	uint64_t gen;
+	uint64_t thread;
+} LinkPlace;
+static LinkPlace *link_blocks[(LINK_PLACE_MASK + 1) / LINK_BLOCK];
+static uint64_t link_used = 1;          /* places handed out so far (0 is nowhere) */
+static uint64_t *link_free;             /* places to use again */
+static int64_t link_nfree, link_capfree;
+static pthread_mutex_t link_lock = PTHREAD_MUTEX_INITIALIZER;
+static _Atomic uint64_t link_threads;
+static __thread uint64_t link_thread;
+
+static uint64_t this_thread(void)
+{
+	if (!link_thread)
+		link_thread = ++link_threads;
+	return link_thread;
+}
+
+static LinkPlace *link_place(uint64_t i)
+{
+	LinkPlace *b = i <= LINK_PLACE_MASK ? link_blocks[i / LINK_BLOCK] : NULL;
+	return b ? &b[i % LINK_BLOCK] : NULL;
+}
+
+/* A link to the object obj, whose place (0 for none yet) is kept at *life */
+int64_t cby_link_to(void *obj, uint64_t *life)
+{
+	if (!obj)
+		return 0;
+	if (!*life) {
+		pthread_mutex_lock(&link_lock);
+		uint64_t i;
+		if (link_nfree) {
+			i = link_free[--link_nfree];
+		} else {
+			if (link_used > LINK_PLACE_MASK) {
+				pthread_mutex_unlock(&link_lock);
+				rt_panic(NULL, 0, 0, "too many objects linked to at once (%llu)", (unsigned long long)LINK_PLACE_MASK);
+			}
+			i = link_used++;
+			if (!link_blocks[i / LINK_BLOCK]) {
+				link_blocks[i / LINK_BLOCK] = calloc(LINK_BLOCK, sizeof(LinkPlace));
+				if (!link_blocks[i / LINK_BLOCK]) {
+					pthread_mutex_unlock(&link_lock);
+					rt_panic(NULL, 0, 0, "out of memory");
+				}
+			}
+		}
+		LinkPlace *p = link_place(i);
+		p->obj = obj;
+		p->thread = this_thread();
+		if (!p->gen)
+			p->gen = 1;
+		pthread_mutex_unlock(&link_lock);
+		*life = i;
+	}
+	LinkPlace *p = link_place(*life);
+	return (int64_t)((p->gen & LINK_GEN_MASK) << LINK_PLACE_BITS | *life);
+}
+
+/* The object a link points at, as a place holding its handle; a panic,
+ * naming the link (name) and its kind of object (kind), if it's gone. */
+void *cby_link_get(int64_t link, const char *name, const char *kind, const char *file, int line, int col)
+{
+	uint64_t l = (uint64_t)link, i = l & LINK_PLACE_MASK, gen = l >> LINK_PLACE_BITS;
+	if (!link)
+		rt_panic(file, line, col, "'%s' doesn't point at anything: it was never set, or it was cleared (check "
+			 "first with .is_set)", name);
+	LinkPlace *p = link_place(i);
+	if (!p || !p->obj || (p->gen & LINK_GEN_MASK) != gen)
+		rt_panic(file, line, col, "the %s '%s' pointed at is gone: it was dropped (check first with .is_set)",
+			 kind, name);
+	if (p->thread != this_thread())
+		rt_panic(file, line, col, "'%s' points at a %s of another worker's (or of the program's, from a worker); "
+			 "a link is only used where its object is", name, kind);
+	return &p->obj;
+}
+
+/* whether it points at an object that's still there */
+bool cby_link_is_set(int64_t link)
+{
+	uint64_t l = (uint64_t)link;
+	LinkPlace *p = link ? link_place(l & LINK_PLACE_MASK) : NULL;
+	return p && p->obj && (p->gen & LINK_GEN_MASK) == l >> LINK_PLACE_BITS && p->thread == this_thread();
+}
+
+/* the object at this place is being dropped: every link to it is gone */
+void cby_link_end(uint64_t life)
+{
+	if (!life)
+		return;
+	pthread_mutex_lock(&link_lock);
+	LinkPlace *p = link_place(life);
+	p->obj = NULL;
+	p->gen++;
+	if ((p->gen & LINK_GEN_MASK) != 0) {   /* (else every generation's been used: retired) */
+		if (link_nfree == link_capfree) {
+			link_capfree = link_capfree ? link_capfree * 2 : 256;
+			uint64_t *f = realloc(link_free, sizeof *f * (size_t)link_capfree);
+			if (!f) {
+				pthread_mutex_unlock(&link_lock);
+				rt_panic(NULL, 0, 0, "out of memory");
+			}
+			link_free = f;
+		}
+		link_free[link_nfree++] = life;
+	}
+	pthread_mutex_unlock(&link_lock);
+}
+
+/* A compiled program's objects keep their place 16 bytes before the
+ * handle (16, so the object stays aligned as malloc's are). */
+void *rt_obj_alloc(size_t size)
+{
+	char *p = malloc(size + 16);
+	if (!p)
+		rt_panic(NULL, 0, 0, "out of memory");
+	*(uint64_t *)p = 0;
+	return p + 16;
+}
+
+int64_t cby_link_obj(void *h) { return cby_link_to(h, (uint64_t *)((char *)h - 16)); }
+
+/* (after its destructors, before its fields are dropped: a field's own
+ * destructor that follows a link back to it finds it gone) */
+void rt_obj_unlink(void *h)
+{
+	uint64_t *life = (uint64_t *)((char *)h - 16);
+	cby_link_end(*life);
+	*life = 0;
+}
+
+void rt_obj_free(void *h) { free((char *)h - 16); }
+
 void *rt_realloc(void *p, size_t size)
 {
 	void *n = realloc(p, size ? size : 1);

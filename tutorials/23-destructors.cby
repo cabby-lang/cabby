@@ -1,7 +1,8 @@
 // Tutorial 23: Made and dropped
 //
 // Run it:      cabby 23-destructors.cby
-// Topics:      name { }, ~name, when objects are made and dropped, the order
+// Topics:      name { }, ~name, when objects are made and dropped, the order,
+//              and links: pointing at an object without owning it
 //
 // A destructor is a method named `~` plus the object's name. It runs
 // automatically, exactly once, when the object is dropped (tutorial 13):
@@ -13,6 +14,9 @@
 //
 // The opposite, a part named just the object's name (`lamp { }` below),
 // runs when an object is made: its parts first, then itself.
+//
+// A link (`link room Last`) points at an object without owning it, so it
+// doesn't keep it: once the object is dropped, the link says so.
 
 object room {
 	str Name
@@ -93,6 +97,15 @@ int main {
 		println "  desk in use"
 	}
 
+	println "7. a link points at a room without owning it"
+	link room Last
+	if true {
+		room Porch = {"porch"}
+		Last = Porch                   // a link to the porch; still Porch's
+		println "  the last room was the", Last.Name
+	}
+	println "  is it still there?", Last.is_set
+
 	println "end of main"
 }
 
@@ -100,6 +113,8 @@ int main {
 //  - Add `break` inside the loop in step 3. Is the room still dropped?
 //  - Store a room in an array: `room rooms[2] = {room{"a"}, room{"b"}}`.
 //    In what order are they dropped?
+//  - In step 7, print `Last.Name` after the block instead. What does the
+//    panic say?
 
 // ---------------------------------------------------------------- output
 //> 1. end of a block drops in reverse order
@@ -130,5 +145,9 @@ int main {
 //>   desk made
 //>   desk in use
 //>   lamp dropped
+//> 7. a link points at a room without owning it
+//>   the last room was the porch
+//>   leaving porch
+//>   is it still there? false
 //> end of main
 //>   leaving kept

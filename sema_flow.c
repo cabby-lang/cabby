@@ -142,6 +142,10 @@ static void flow_expr(Flow *F, Expr *e, FState *s)
 		flow_expr(F, e->as.at.address, s);
 		flow_expr(F, e->as.at.step, s);
 		break;
+	case EXPR_LINK_TO:
+	case EXPR_LINK_GET:
+		flow_expr(F, e->as.link.operand, s);
+		break;
 	case EXPR_IDENT:
 	case EXPR_SELF: {
 		Symbol *sym = e->as.ident.sym;

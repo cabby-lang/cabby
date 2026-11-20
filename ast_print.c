@@ -100,6 +100,10 @@ void ast_print_type(FILE *o, const TypeExpr *t)
 		fputs("list ", o);
 		ast_print_type(o, t->inner);
 		break;
+	case TYPEX_LINK:
+		fputs("link ", o);
+		ast_print_type(o, t->inner);
+		break;
 	case TYPEX_LOOKUP:
 		fputs("lookup ", o);
 		ast_print_type(o, t->key);
@@ -236,7 +240,13 @@ void ast_print_expr(FILE *o, const Expr *e)
 		fprintf(o, "(handler %s)", e->as.handler.method->name);
 		break;
 	case EXPR_CALLBACK:
-		fprintf(o, "(callback %s)", e->as.callback.fn->name);
+		fprintf(o, "(callback %s)", e->as.callback.fn ? e->as.callback.fn->name : "field");
+		break;
+	case EXPR_LINK_TO:
+	case EXPR_LINK_GET:
+		fputs(e->kind == EXPR_LINK_TO ? "(link-to " : "(link-get ", o);
+		ast_print_expr(o, e->as.link.operand);
+		fputc(')', o);
 		break;
 	case EXPR_AT:
 		fputs("(at ", o);

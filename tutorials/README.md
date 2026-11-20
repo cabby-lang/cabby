@@ -1,6 +1,6 @@
 # Cabby tutorials
 
-*For Cabby 0.42.0 (2026-11-20).*
+*For Cabby 0.43.0 (2026-11-20).*
 
 A hundred and six short programs, each about one keyword, feature or library, in
 an order where each uses only what came before it. Each one
@@ -105,7 +105,7 @@ between `{` and `}` to run them as one input and see them as a program would. (`
 | | File | Covers |
 |---|---|---|
 | 22 | `22-objects.cby` | `object`, methods, `self`, `const` and `static` methods |
-| 23 | `23-destructors.cby` | `name { }` when an object is made, `~name` when it is dropped, and the order |
+| 23 | `23-destructors.cby` | `name { }` when an object is made, `~name` when it is dropped, and the order; a `link` |
 | 24 | `24-inheritance.cby` | `object a : b`, overriding, virtual calls |
 | 25 | `25-multiple-inheritance.cby` | several parents, diamonds, method order |
 | 26 | `26-your-own-handlers.cby` | `handler` fields, `.call`, `.is_set`, `.clear`: objects that call back their owner |

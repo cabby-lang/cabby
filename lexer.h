@@ -86,6 +86,7 @@
 	K(DOWN,       "down")                \
 	K(BY,         "by")                  \
 	K(LIST,       "list")                \
+	K(LINK,       "link")                \
 	K(LOOKUP,     "lookup")              \
 	K(AKA,        "aka")                 \
 	K(IS,         "is")                  \

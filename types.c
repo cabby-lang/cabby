@@ -65,6 +65,14 @@ Type *type_address(Arena *a, Type *inner)
 	return t;
 }
 
+Type *type_link(Arena *a, Type *inner)
+{
+	Type *t = arena_alloc(a, sizeof *t);
+	t->kind = TY_LINK;
+	t->inner = inner;
+	return t;
+}
+
 Type *type_lookup(Arena *a, Type *key, Type *value)
 {
 	Type *t = arena_alloc(a, sizeof *t);
@@ -107,6 +115,7 @@ bool type_eq(const Type *a, const Type *b)
 	case TY_SLICE:  return a->is_mut == b->is_mut && type_eq(a->inner, b->inner);
 	case TY_ARRAY:  return a->len == b->len && type_eq(a->inner, b->inner);
 	case TY_LIST:   return type_eq(a->inner, b->inner);
+	case TY_LINK:   return type_eq(a->inner, b->inner);
 	case TY_ADDRESS: return (!a->inner && !b->inner) || (a->inner && b->inner && type_eq(a->inner, b->inner));
 	case TY_LOOKUP: return type_eq(a->key, b->key) && type_eq(a->inner, b->inner);
 	case TY_OBJECT: return a->obj == b->obj;
@@ -118,7 +127,7 @@ bool type_eq(const Type *a, const Type *b)
 bool type_is_plain(const Type *t)
 {
 	switch (t->kind) {
-	case TY_BOOL: case TY_INT: case TY_FLOAT: case TY_ERROR: case TY_ADDRESS: case TY_CALLBACK:
+	case TY_BOOL: case TY_INT: case TY_FLOAT: case TY_ERROR: case TY_ADDRESS: case TY_CALLBACK: case TY_LINK:
 		return true;
 	case TY_ARRAY:
 		return type_is_plain(t->inner);
@@ -289,6 +298,7 @@ uint64_t type_size(const Type *t)
 	case TY_HANDLER: return 16;
 	case TY_ADDRESS: return 8;
 	case TY_CALLBACK: return 8;
+	case TY_LINK:  return 8;
 	case TY_ARRAY: return t->len * type_size(t->inner);
 	case TY_OBJECT:
 		return t->obj->kind == OBJ_OBJECT ? 8 : t->obj->size;
@@ -334,6 +344,7 @@ static void fmt(const Type *t, char *buf, size_t size, size_t *n)
 	case TY_FLOAT:  put(buf, size, n, t->bits == 32 ? "float" : "double"); break;
 	case TY_STR:    put(buf, size, n, "str"); break;
 	case TY_LIST:   put(buf, size, n, "list "); fmt(t->inner, buf, size, n); break;
+	case TY_LINK:   put(buf, size, n, "link "); fmt(t->inner, buf, size, n); break;
 	case TY_LOOKUP:
 		put(buf, size, n, "lookup ");
 		fmt(t->key, buf, size, n);

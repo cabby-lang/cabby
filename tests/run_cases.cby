@@ -3630,6 +3630,244 @@ int main {
 	return 0
 }
 
+### links_point_without_owning
+//> Ada 36 true Ada (36)
+//> Alan Ada
+//> 37 42
+//> 3 3 true
+//> true false
+//> Ada
+//> false
+//> false
+object person {
+	str Name
+	int Age
+	link person Best
+	list str Pets
+
+	str describe const {
+		return Name + " (" + Age.text + ")"
+	}
+
+	void birthday {
+		Age++
+	}
+}
+
+int main {
+	person Ada
+	Ada.Name = "Ada"
+	Ada.Age = 36
+	person Alan
+	Alan.Name = "Alan"
+	Alan.Age = 41
+	Ada.Best = Alan
+	Alan.Best = Ada
+	link person L = Ada
+	println L.Name, L.Age, L.is_set, L.describe
+	println L.Best.Name, L.Best.Best.Name
+	L.Age += 1
+	L.Best.Age = 42
+	println Ada.Age, Alan.Age
+	str Copy = L.Name.copy
+	println Copy.length, L.Name.length, L.Name == "Ada"
+	link person M = L
+	println M == L, M != L
+	list person People
+	People.add Ada
+	People.add Alan
+	link person First = People[0]
+	println First.Name
+	People.remove_at 0
+	println First.is_set
+	L.clear
+	println L.is_set
+	return 0
+}
+
+### links_to_derived_objects
+//> Tom ...
+//> Rex woof
+//> woof true false
+//> false
+//> true
+//> false true Rex
+object animal {
+	str Name
+
+	str sound const {
+		return "..."
+	}
+}
+
+object dog : animal {
+	str sound const {
+		return "woof"
+	}
+}
+
+object kennel {
+	list animal Animals
+	list link animal Favourites
+	link animal Loudest
+}
+
+int main {
+	kennel K
+	animal Cat
+	Cat.Name = "Tom"
+	dog Rex
+	Rex.Name = "Rex"
+	K.Animals.add Cat
+	K.Animals.add Rex
+	for i in K.Animals.length {
+		K.Favourites.add K.Animals[i]
+	}
+	K.Loudest = K.Animals[1]
+	for F in K.Favourites {
+		println F.Name, F.sound
+	}
+	println K.Loudest.sound, K.Loudest == K.Favourites[1], K.Loudest == K.Favourites[0]
+	link dog D
+	println D.is_set
+	link animal A = D
+	println A == D
+	K.Animals.remove_at 0
+	println K.Favourites[0].is_set, K.Favourites[1].is_set, K.Favourites[1].Name
+	return 0
+}
+
+### links_gone_with_their_object
+//> root
+//> brief
+//> brief goes, after its parent
+//> false
+//> false
+//> root goes, after its parent
+//> a goes, after its parent
+object node {
+	str Name
+	link node Parent
+	list node Children
+
+	~node {
+		if Parent.is_set {
+			println Name, "leaves", Parent.Name
+		} else {
+			println Name, "goes, after its parent"
+		}
+	}
+}
+
+int main {
+	node Root
+	Root.Name = "root"
+	node A
+	A.Name = "a"
+	A.Parent = Root
+	Root.Children.add A
+	println Root.Children[0].Parent.Name
+	link node Gone
+	{
+		node Brief
+		Brief.Name = "brief"
+		Gone = Brief
+		println Gone.Name
+	}
+	println Gone.is_set
+	link node Never
+	println Never.is_set
+	return 0
+}
+
+### link_used_after_its_object_is_gone
+// panic: the node 'Gone' pointed at is gone: it was dropped (check first with .is_set)
+//> root
+//> brief
+//> brief goes, after its parent
+//> false
+//> false
+object node {
+	str Name
+	link node Parent
+	list node Children
+
+	~node {
+		if Parent.is_set {
+			println Name, "leaves", Parent.Name
+		} else {
+			println Name, "goes, after its parent"
+		}
+	}
+}
+
+int main {
+	node Root
+	Root.Name = "root"
+	node A
+	A.Name = "a"
+	A.Parent = Root
+	Root.Children.add A
+	println Root.Children[0].Parent.Name
+	link node Gone
+	{
+		node Brief
+		Brief.Name = "brief"
+		Gone = Brief
+		println Gone.Name
+	}
+	println Gone.is_set
+	link node Never
+	println Never.is_set
+	println Gone.Name
+	return 0
+}
+
+### link_that_points_nowhere
+// panic: 'Never' doesn't point at anything: it was never set, or it was cleared
+object node {
+	str Name
+}
+
+int main {
+	link node Never
+	println Never.Name
+	return 0
+}
+
+### link_used_by_another_worker
+// panic: 'Watched' points at a pet of another worker's
+use threads
+
+object pet {
+	str Name
+	int Age
+}
+
+object minder : threads.worker {
+	link pet Watched
+	int Seen
+
+	void work {
+		pet Mine
+		Mine.Age = 3
+		link pet Own = Mine
+		Seen = Own.Age
+		Seen += Watched.Age
+	}
+}
+
+int main {
+	pet Rex
+	Rex.Age = 5
+	minder M
+	M.Watched = Rex
+	M.start
+	M.wait
+	println M.Seen
+	return 0
+}
+
 ### csv_read_and_written
 //> 4 [Name, Age, Note]
 //> [Ada, 36, likes "tea", and cake]

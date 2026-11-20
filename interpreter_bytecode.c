@@ -1520,6 +1520,7 @@ static void bc_run(Interp *I, Bytecode *bc)
 			Expr *e = in->q;
 			ObjectInfo *o = e->ty->obj;
 			Object *ob = rt_alloc(sizeof *ob + sizeof(Value) * (size_t)o->field_count);
+			ob->life = 0;
 			ob->cls = o;
 			int from = in->b;
 			for (int j = 0; j < o->field_count; j++)

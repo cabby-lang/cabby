@@ -213,6 +213,19 @@ Type *resolve_type(Checker *C, TypeExpr *te, unsigned flags, const char *where)
 		t = type_address(C->A, inner);
 		break;
 	}
+	case TYPEX_LINK: {
+		Type *inner = resolve_type(C, te->inner, 0, "links");
+		if (type_is_error(inner))
+			break;
+		if (inner->kind != TY_OBJECT || inner->obj->kind != OBJ_OBJECT) {
+			sema_error(te->loc, "a link points at an object, not a '%s'%s", ts(inner),
+				   inner->kind == TY_OBJECT ? " (a struct or union is a value: it's copied, so there's nothing "
+				   "to point at)" : "");
+			break;
+		}
+		t = type_link(C->A, inner);
+		break;
+	}
 	case TYPEX_LIST: {
 		Type *inner = resolve_type(C, te->inner, 0, "list elements");
 		if (type_is_error(inner))

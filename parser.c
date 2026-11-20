@@ -448,7 +448,8 @@ static bool is_qualifier_kw(TokenKind k)
 static bool starts_type(Parser *P, Token t)
 {
 	if (is_builtin_type_kw(t.kind) || t.kind == TOK_KW_CONST || t.kind == TOK_KW_VOLATILE || t.kind == TOK_KW_LIST ||
-	    t.kind == TOK_KW_LOOKUP || t.kind == TOK_KW_STRUCT || t.kind == TOK_KW_UNION || t.kind == TOK_KW_ENUM)
+	    t.kind == TOK_KW_LINK || t.kind == TOK_KW_LOOKUP || t.kind == TOK_KW_STRUCT || t.kind == TOK_KW_UNION ||
+	    t.kind == TOK_KW_ENUM)
 		return true;
 	return t.kind == TOK_IDENT && is_type_name(P, t.start, t.length);
 }
@@ -677,6 +678,21 @@ base:
 		if (!parse_decl_spec(P, &inner, false))
 			return false;
 		TypeExpr *te = ast_type_expr(P->arena, TYPEX_LIST, loc_of(P, lt));
+		te->inner = inner.base;
+		ds->base = te;
+	} else if (check(P, TOK_KW_LINK)) {
+		/* link T: T is an object's type */
+		Token lt = P->cur;
+		advance(P);
+		if (!starts_type(P, P->cur)) {
+			error_at(P, P->cur, "expected the type of the object it points at after 'link' (e.g. 'link pet Friend'), "
+				 "found %s", describe(P->cur));
+			return false;
+		}
+		DeclSpec inner;
+		if (!parse_decl_spec(P, &inner, false))
+			return false;
+		TypeExpr *te = ast_type_expr(P->arena, TYPEX_LINK, loc_of(P, lt));
 		te->inner = inner.base;
 		ds->base = te;
 	} else if (check(P, TOK_KW_LOOKUP)) {
@@ -912,8 +928,8 @@ static void prescan_decl_line(Loader *ld, Token t, Lexer *L, bool in_type)
 {
 	while (is_qualifier_kw(t.kind))
 		t = lexer_next(L);
-	while (t.kind == TOK_KW_LIST || t.kind == TOK_KW_LOOKUP) {
-		if (t.kind == TOK_KW_LIST) {
+	while (t.kind == TOK_KW_LIST || t.kind == TOK_KW_LOOKUP || t.kind == TOK_KW_LINK) {
+		if (t.kind == TOK_KW_LIST || t.kind == TOK_KW_LINK) {
 			t = lexer_next(L);
 			continue;
 		}
@@ -973,7 +989,7 @@ static void prescan_decl_line(Loader *ld, Token t, Lexer *L, bool in_type)
 	default:
 		if (!is_builtin_type_kw(t.kind) && !is_qualifier_kw(t.kind) && t.kind != TOK_IDENT &&
 		    t.kind != TOK_KW_STRUCT && t.kind != TOK_KW_UNION && t.kind != TOK_KW_ENUM &&
-		    t.kind != TOK_ELLIPSIS && t.kind != TOK_KW_LIST && t.kind != TOK_KW_LOOKUP)
+		    t.kind != TOK_ELLIPSIS && t.kind != TOK_KW_LIST && t.kind != TOK_KW_LOOKUP && t.kind != TOK_KW_LINK)
 			return;
 	}
 	LIST_ADD(ld, callables, name.start, name.length);
@@ -1834,7 +1850,8 @@ static Expr *parse_simple(Parser *P, bool allow_bare)
 static bool starts_decl(Parser *P)
 {
 	Token t = P->cur;
-	if (is_builtin_type_kw(t.kind) || is_qualifier_kw(t.kind) || t.kind == TOK_KW_LIST || t.kind == TOK_KW_LOOKUP)
+	if (is_builtin_type_kw(t.kind) || is_qualifier_kw(t.kind) || t.kind == TOK_KW_LIST || t.kind == TOK_KW_LOOKUP ||
+	    t.kind == TOK_KW_LINK)
 		return true;
 	if (t.kind == TOK_KW_STRUCT || t.kind == TOK_KW_UNION || t.kind == TOK_KW_ENUM)
 		return true;
@@ -1956,7 +1973,7 @@ static Stmt *parse_for_range(Parser *P, Stmt *s, int indent)
 	s->as.for_.range = r;
 	TypeExpr *type = NULL;
 	if (is_builtin_type_kw(P->cur.kind) || is_qualifier_kw(P->cur.kind) || check(P, TOK_KW_LIST) ||
-	    check(P, TOK_KW_LOOKUP) ||
+	    check(P, TOK_KW_LOOKUP) || check(P, TOK_KW_LINK) ||
 	    (check(P, TOK_IDENT) && is_type_name(P, P->cur.start, P->cur.length) &&
 	     peek(P).kind != TOK_COMMA && peek(P).kind != TOK_KW_IN)) {
 		DeclSpec ds;

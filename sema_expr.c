@@ -297,6 +297,7 @@ typedef struct {
 	bool via_ref;    /* goes through a reference or slice held in root */
 	bool mutable;
 	bool ok;         /* false for temporaries */
+	bool via_link;   /* reached through a link: what the borrow checker can't see */
 } PlaceInfo;
 
 static bool is_place_expr(const Expr *e)
@@ -307,6 +308,7 @@ static bool is_place_expr(const Expr *e)
 	case EXPR_FIELD:
 	case EXPR_INDEX:
 	case EXPR_AT:
+	case EXPR_LINK_GET:
 		return true;
 	default:
 		return false;
@@ -405,9 +407,38 @@ static PlaceInfo analyze_place(const Expr *e)
 	case EXPR_AT:
 		pi.mutable = true;   /* memory Cabby doesn't track: no root, no loans */
 		return pi;
+	case EXPR_LINK_GET:
+		/* an object no variable here owns: no loans, and what may be done
+		 * with it is limited (link_rules) */
+		pi.mutable = true;
+		pi.via_link = true;
+		return pi;
 	default:
 		return pi;
 	}
+}
+
+/* Through a link, the borrow checker can't see who else holds the object,
+ * so a part of it is never lent, and what could free memory (a string, a
+ * list or a lookup changed) is changed only through its owner. Numbers,
+ * bools, chars, plain structs and links can be changed through a link:
+ * that frees nothing. */
+static bool through_link(const Expr *e)
+{
+	return analyze_place(e).via_link;
+}
+
+static void link_lend_error(SrcLoc loc, const Type *t)
+{
+	sema_error(loc, "a part of what a link points at can't be lent: it could be changed or dropped through its "
+		   "owner while it's lent%s", t && t->kind == TY_STR ? "; lend a copy instead (.copy)" :
+		   t && (t->kind == TY_LIST || t->kind == TY_LOOKUP) ? "; go through a copy instead (.copy)" : "");
+}
+
+static void link_change_error(SrcLoc loc, const Type *t, const char *how)
+{
+	sema_error(loc, "a '%s' can't be %s through a link: anything holding part of it could be left pointing at "
+		   "nothing; change it through its owner", ts(t), how);
 }
 
 /* `addresses.of X` where X is (part of) a variable of this function, which
@@ -484,6 +515,14 @@ static void borrow_place(Checker *C, Expr *place, bool is_mut, SrcLoc loc, Symbo
 		return;
 	}
 	PlaceInfo pi = analyze_place(place);
+	if (pi.via_link && binding) {
+		if (binding->name && strcmp(binding->name, " seq") == 0)
+			sema_error(loc, "a loop can't go through a part of what a link points at: it could be changed or "
+				   "dropped through its owner meanwhile; go through a copy instead (.copy)");
+		else
+			link_lend_error(loc, place->ty);
+		return;
+	}
 	if (!pi.ok)
 		return;
 	if (is_mut && !pi.mutable) {
@@ -636,6 +675,14 @@ bool coerce(Checker *C, Expr **ep, Type *to, const char *what)
 	}
 	if (from->kind == TY_ADDRESS && to->kind == TY_ADDRESS && !to->inner)
 		return true;   /* any address is an address of something (C's void *) */
+	if (from->kind == TY_LINK && to->kind == TY_LINK && object_is_subclass(from->inner->obj, to->inner->obj))
+		return true;   /* a link to a square is a link to a shape (the same 8 bytes) */
+	if (from->kind == TY_OBJECT && from->obj->kind == OBJ_OBJECT && to->kind == TY_LINK &&
+	    object_is_subclass(from->obj, to->inner->obj)) {
+		sema_error(e->loc, "a link points at an object that's kept somewhere (a variable, a field, an element of a "
+			   "list); this one is made here, and would be dropped straight away");
+		return false;
+	}
 	if (from->kind == TY_ADDRESS && to->kind == TY_ADDRESS) {
 		sema_error(e->loc, "expected '%s' for %s, found '%s'; to read the memory as another kind, cast it: "
 			   "(%s)...", ts(to), what, ts(from), ts(to));
@@ -742,6 +789,15 @@ bool bind_ref(Checker *C, Expr **ep, Type *rt, Symbol *binding, const char *what
 			sema_note(a->loc, "a reference must point at a value of exactly the right type; there is no "
 				  "conversion through a borrow");
 		return false;
+	}
+	if (place && through_link(a)) {
+		/* a number or plain struct is copied, and the copy lent; anything
+		 * else could change while it's lent */
+		if (rt->is_mut || binding || !type_is_plain(at)) {
+			link_lend_error(a->loc, at);
+			return false;
+		}
+		place = false;
 	}
 	if (!place) {
 		if (rt->is_mut) {
@@ -942,6 +998,18 @@ static Type *check_binary(Checker *C, Expr *e)
 		return &t_error;
 	if (lt->kind == TY_ADDRESS || rt->kind == TY_ADDRESS)
 		return check_address_binary(C, e, op, lp, rp, lt, rt);
+	if (lt->kind == TY_LINK || rt->kind == TY_LINK) {
+		/* two links: whether they point at the same object (or both nowhere) */
+		bool same = lt->kind == TY_LINK && rt->kind == TY_LINK &&
+			    (object_is_subclass(lt->inner->obj, rt->inner->obj) || object_is_subclass(rt->inner->obj, lt->inner->obj));
+		if ((op == BIN_EQ || op == BIN_NE) && same)
+			return &t_bool;
+		sema_error(e->loc, "%s", op == BIN_EQ || op == BIN_NE ?
+			   (lt->kind == TY_LINK && rt->kind == TY_LINK ? "these links can't point at the same kind of object" :
+			    "a link is compared with another link: whether they point at the same object") :
+			   "links can only be compared with == and !=: whether they point at the same object");
+		return &t_error;
+	}
 	if (lt->kind_name || rt->kind_name)
 		return check_kind_binary(C, e, op, lp, rp, lt, rt);
 
@@ -2021,6 +2089,10 @@ static bool list_change(Checker *C, Expr *recv, const char *name)
 	if (!is_place_expr(recv))
 		return true;
 	PlaceInfo pi = analyze_place(recv);
+	if (pi.via_link) {
+		link_change_error(recv->loc, recv->ty, "changed");
+		return false;
+	}
 	if (pi.ok && !pi.mutable) {
 		if (pi.root->kind == SYM_SELF)
 			sema_error(recv->loc, "'.%s' changes the %s, which a const method can't do", name, what);
@@ -2421,8 +2493,68 @@ static Type *call_type_method(Checker *C, Expr *e, Expr *recv, FnDecl *fn, const
 	return check_args(C, e, fn, full);
 }
 
+/* what a link is called, for its panic: Friend, Rex.Best, Pets[0].Owner */
+static const char *link_name(Checker *C, const Expr *e)
+{
+	char buf[200];
+	size_t n = 0;
+	const Expr *parts[16];
+	int np = 0;
+	while (np < 16 && (e->kind == EXPR_FIELD || e->kind == EXPR_INDEX || e->kind == EXPR_LINK_GET)) {
+		parts[np++] = e;
+		e = e->kind == EXPR_FIELD ? e->as.field.object : e->kind == EXPR_INDEX ? e->as.index.base : e->as.link.operand;
+	}
+	bool from_self = e->kind == EXPR_SELF && np > 0;   /* (a field by its name alone, in a method) */
+	if (e->kind == EXPR_IDENT && e->as.ident.name)
+		n += (size_t)snprintf(buf + n, sizeof buf - n, "%s", e->as.ident.name);
+	else if (e->kind == EXPR_SELF && !from_self)
+		n += (size_t)snprintf(buf + n, sizeof buf - n, "self");
+	else if (!from_self)
+		return "the link";
+	for (int i = np - 1; i >= 0 && n < sizeof buf - 40; i--) {
+		if (parts[i]->kind == EXPR_FIELD)
+			n += (size_t)snprintf(buf + n, sizeof buf - n, "%s%s", n ? "." : "", parts[i]->as.field.name);
+		else if (parts[i]->kind == EXPR_INDEX)
+			n += (size_t)snprintf(buf + n, sizeof buf - n, "[...]");
+	}
+	return arena_strndup(C->A, buf, n);
+}
+
+/* L.Name, L.speak: what the link points at, in place of the link (a panic
+ * when it runs, if that's gone) */
+static Type *through_the_link(Checker *C, Expr **op, Type *lt)
+{
+	Expr *g = ast_expr(C->A, EXPR_LINK_GET, (*op)->loc);
+	g->as.link.operand = *op;
+	g->as.link.name = link_name(C, *op);
+	g->ty = lt->inner;
+	*op = g;
+	return lt->inner;
+}
+
 static Type *builtin_member(Checker *C, Expr *e, Expr *recv, Type *rt, const char *name, int nargs, Ctx ctx)
 {
+	if (rt->kind == TY_LINK) {
+		if (e->kind == EXPR_CALL && e->as.call.args.len) {
+			sema_error(e->loc, "'.%s' takes no arguments", name);
+			return &t_error;
+		}
+		if (strcmp(name, "is_set") == 0) {
+			make_builtin(C, e, BUILTIN_LINK_IS_SET, name, recv, NULL);
+			return &t_bool;
+		}
+		/* .clear: it points nowhere (a change to the link itself) */
+		PlaceInfo pi = analyze_place(recv);
+		if (!is_place_expr(recv) || (pi.ok && !pi.mutable)) {
+			sema_error(e->loc, "'.clear' changes the link, which %s", is_place_expr(recv) ? "is const here"
+				   : "isn't kept anywhere");
+			return &t_error;
+		}
+		if (pi.ok && pi.root)
+			record_access_at(C, pi.root, place_path(C, recv), ACC_WRITE, recv->loc);
+		make_builtin(C, e, BUILTIN_LINK_CLEAR, name, recv, NULL);
+		return &t_void;
+	}
 	FnDecl *tm = type_method(C, rt, name, e->loc);
 	if (tm)
 		return call_type_method(C, e, recv, tm, name);
@@ -2786,9 +2918,13 @@ static Type *check_method_call_on(Checker *C, Expr *call, bool recv_checked)
 	}
 	Type *rt = recv_checked ? recv->ty : check_expr(C, rp, place ? CTX_PLACE : CTX_READ, NULL);
 	recv = *rp;
+	if (!is_err(rt) && rt->kind == TY_LINK && strcmp(name, "is_set") != 0 && strcmp(name, "clear") != 0) {
+		rt = through_the_link(C, rp, rt);
+		recv = *rp;
+	}
 	if (!is_err(rt) && (rt->kind == TY_STR || rt->kind == TY_ARRAY || rt->kind == TY_SLICE || rt->kind == TY_LIST ||
 			    rt->kind == TY_LOOKUP || rt->kind == TY_FILE || rt->kind == TY_HANDLER || rt->kind == TY_ADDRESS ||
-			    type_is_arith(rt))) {
+			    rt->kind == TY_LINK || type_is_arith(rt))) {
 		Type *bt = builtin_member(C, call, recv, rt, name, call->as.call.args.len, CTX_READ);
 		if (bt)
 			return bt;
@@ -2825,6 +2961,23 @@ static Type *check_method_call_on(Checker *C, Expr *call, bool recv_checked)
 	if (m->self_kind == SELF_NONE) {
 		sema_error(callee->loc, "'%s' is a static method; call it as '%s.%s(...)'", name, m->owner->name, name);
 		return &t_error;
+	}
+	if (through_link(recv)) {
+		/* a const method that takes no borrows can't reach anything that
+		 * could change the object, or drop it, while it runs */
+		bool lends = false;
+		for (int k = 0; k < m->params.len; k++) {
+			Type *pt = m->params.items[k]->type->resolved;
+			lends |= pt && (pt->kind == TY_REF || pt->kind == TY_SLICE || pt->kind == TY_HANDLER);
+		}
+		if (m->self_kind != SELF_REF || lends) {
+			sema_error(callee->loc, "through a link, only a const method that takes nothing borrowed can be called; "
+				   "'%s' %s", name, m->self_kind != SELF_REF ? "can change the object: call it through its owner"
+				   : "takes something borrowed, which could be (part of) the same object");
+			for (int k = 0; k < call->as.call.args.len; k++)
+				check_expr(C, &call->as.call.args.items[k], CTX_READ, NULL);
+			return &t_error;
+		}
 	}
 	if (m->is_inner && !inside(C, m->owner->ty->obj))
 		inner_error(C, callee->loc, "method", name, m->owner->ty->obj);
@@ -3396,6 +3549,15 @@ static Type *check_expr_inner(Checker *C, Expr **ep, Ctx ctx, Type *expected)
 			target->as.index.lookup_put = true;
 		}
 		PlaceInfo pi = analyze_place(target);
+		if (pi.via_link && (!type_is_plain(tt) || target->as.index.lookup_put)) {
+			if (target->kind == EXPR_INDEX && target->as.index.lookup_put)
+				sema_error(target->loc, "a lookup can't be added to through a link: what it holds could move while "
+					   "something holds part of it; change it through its owner");
+			else
+				link_change_error(target->loc, tt, compound ? "changed" : "replaced");
+			check_expr(C, vp, CTX_VALUE, tt);
+			return &t_void;
+		}
 		if (!pi.mutable && !e->generated) {
 			if (pi.root->kind == SYM_SELF)
 				sema_error(target->loc, "can't change the object inside a const method");
@@ -3514,6 +3676,8 @@ static Type *check_expr_inner(Checker *C, Expr **ep, Ctx ctx, Type *expected)
 			    lookup_field(ot->obj, e->as.field.name))
 				a->path = place_path(C, e);
 		}
+		if (ot->kind == TY_LINK && strcmp(e->as.field.name, "is_set") != 0 && strcmp(e->as.field.name, "clear") != 0)
+			ot = through_the_link(C, op, ot);
 		if (ot->kind != TY_OBJECT) {
 			Type *bt = builtin_member(C, e, *op, ot, e->as.field.name, 0, ctx);
 			if (bt)
@@ -3742,6 +3906,8 @@ static Type *check_expr_inner(Checker *C, Expr **ep, Ctx ctx, Type *expected)
 	case EXPR_HANDLER:
 	case EXPR_CALLBACK:
 	case EXPR_AT:
+	case EXPR_LINK_TO:
+	case EXPR_LINK_GET:
 		return e->ty;
 	}
 	return &t_error;
@@ -3766,8 +3932,33 @@ static bool converted_by_reading(Checker *C, const Expr *e, const Type *expected
 	return g && g->kind == GN_FN;
 }
 
+/* An object kept somewhere (Rex, Room.Owner, Pets[0], self) given where a
+ * link is wanted: a link to it, made by reading it; it isn't moved. */
+static bool link_wanted(Checker *C, Expr **ep, Ctx ctx, Type *expected, Type **out)
+{
+	Expr *e = *ep;
+	if (!expected || expected->kind != TY_LINK || ctx != CTX_VALUE)
+		return false;
+	if (e->kind != EXPR_IDENT && e->kind != EXPR_SELF && e->kind != EXPR_FIELD &&
+	    !(e->kind == EXPR_INDEX && !e->as.index.is_slice))
+		return false;
+	Type *t = check_expr_inner(C, ep, CTX_READ, NULL);
+	(*ep)->ty = t;
+	if (!is_err(t) && t->kind == TY_OBJECT && t->obj->kind == OBJ_OBJECT && is_place_expr(*ep)) {
+		Expr *l = ast_expr(C->A, EXPR_LINK_TO, (*ep)->loc);
+		l->as.link.operand = *ep;
+		l->ty = type_link(C->A, t);
+		*ep = l;
+	}
+	*out = (*ep)->ty;
+	return true;
+}
+
 Type *check_expr(Checker *C, Expr **ep, Ctx ctx, Type *expected)
 {
+	Type *linked;
+	if (link_wanted(C, ep, ctx, expected, &linked))
+		return linked;
 	if (ctx == CTX_VALUE && converted_by_reading(C, *ep, expected))
 		ctx = CTX_READ;
 	Type *t = check_expr_inner(C, ep, ctx, expected);
