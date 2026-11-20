@@ -36,6 +36,8 @@ static void usage(FILE *f)
 		"                          -o <output>   name the executable (default: the file name without .cby)\n"
 		"                          -O0 .. -O3    optimization level (default -O2)\n"
 		"                          --emit-llvm   write the LLVM IR instead\n"
+		"                          --checked     with AddressSanitizer: reading past the end, use after\n"
+		"                                        free and (on Linux) memory never freed, said where\n"
 		"  --check <file>        type- and ownership-check only\n"
 		"  --style <file>        check, then list names that don't follow STYLE.md\n"
 		"  --dump-ast <file>     print the parsed syntax tree\n"
@@ -133,6 +135,7 @@ int main(int argc, char **argv)
 	const char *output = NULL;
 	bool emit_llvm = false;
 	int opt_level = 2;
+	bool checked = false;
 	int prog_argc = 0;
 	char **prog_argv = NULL;
 
@@ -145,6 +148,10 @@ int main(int argc, char **argv)
 		}
 		if (mode == MODE_COMPILE && strcmp(a, "--emit-llvm") == 0) {
 			emit_llvm = true;
+			continue;
+		}
+		if (mode == MODE_COMPILE && strcmp(a, "--checked") == 0) {
+			checked = true;
 			continue;
 		}
 		if (mode == MODE_COMPILE && a[0] == '-' && a[1] == 'O' && a[2] >= '0' && a[2] <= '3' && !a[3]) {
@@ -260,7 +267,7 @@ int main(int argc, char **argv)
 		break;
 	}
 	case MODE_COMPILE: {
-		CompileOptions co = { output, emit_llvm, opt_level, library_dirs(&arena) };
+		CompileOptions co = { output, emit_llvm, opt_level, library_dirs(&arena), checked };
 		rc = compile_program(&sema, path, &co);
 		break;
 	}

@@ -1,0 +1,159 @@
+// csv.hby — tables in CSV, as spreadsheets save them: read into rows of
+// fields, and written back.
+//
+//     use csv
+//
+//     for Row in csv.read_file "scores.csv" {
+//         println Row[0], Row[1]
+//     }
+//     for R in csv.records_of_file "people.csv" {    the first row names the columns
+//         println R["Name"], R["Age"]
+//     }
+//     csv.write_file "out.csv", Rows
+//
+// Fields in double quotes may hold commas, quotes ("" in them) and line
+// ends, as RFC 4180 has it. Every field is text: a number's turned into
+// one with .to_double or .to_long. Semicolons or tabs between fields
+// (some countries' spreadsheets, and .tsv) are read_separated's.
+//
+// The full reference is csv.md, next to this file.
+
+use files
+use json
+
+// ---- the C side (runtime/csv.c)
+
+extern long cby_csv_parse str text, long separator
+
+// ---- reading
+
+// the rows, each a list of its fields, with Separator between them
+list list str csv.read_separated const str &Text, char Separator {
+	json All
+	All.adopt cby_csv_parse(Text, (long)Separator)
+	list list str Rows
+	for long R = 0; R < All.length; R++ {
+		json One = All.item_at R
+		list str Fields
+		for long F = 0; F < One.length; F++ {
+			Fields.add One.item_at(F).str_
+		}
+		Rows.add Fields
+	}
+	return Rows
+}
+
+// the rows of CSV text, each a list of its fields
+list list str csv.read const str &Text {
+	return csv.read_separated Text, ','
+}
+
+// the rows of a CSV file (a panic if it can't be read, as files.read)
+list list str csv.read_file const str &Path {
+	return csv.read files.read(Path)
+}
+
+// Each row after the first as a lookup, by the names the first row gives
+// its columns: R["Name"]. A row that's short has "" for what's missing;
+// fields past the last named column are left out.
+list lookup str str csv.records const str &Text {
+	list list str Rows = csv.read Text
+	list lookup str str Records
+	if Rows.length == 0 {
+		return Records
+	}
+	for long R = 1; R < Rows.length; R++ {
+		lookup str str One
+		for long C = 0; C < Rows[0].length; C++ {
+			if C < Rows[R].length {
+				One[Rows[0][C]] = Rows[R][C].copy
+			} else {
+				One[Rows[0][C]] = ""
+			}
+		}
+		Records.add One
+	}
+	return Records
+}
+
+list lookup str str csv.records_of_file const str &Path {
+	return csv.records files.read(Path)
+}
+
+// the names of the columns: the first row's fields (empty if there are
+// no rows)
+list str csv.columns const str &Text {
+	list list str Rows = csv.read Text
+	list str Names
+	if Rows.length > 0 {
+		for Name in Rows[0] {
+			Names.add Name.copy
+		}
+	}
+	return Names
+}
+
+// ---- writing
+
+// a field as CSV writes it: in quotes, with "" for a quote, when it holds
+// the separator, a quote, a line end, or spaces at either end
+str csv.field const str &Field, char Separator {
+	bool Quote = Field.contains(Separator) || Field.contains('"') || Field.contains('\n') ||
+	Field.contains('\r') || Field.starts_with(" ") || Field.ends_with(" ")
+	if !Quote {
+		return Field.copy
+	}
+	return "\"" + Field.replace("\"", "\"\"") + "\""
+}
+
+// rows as CSV text, Separator between the fields, a line each
+str csv.text_separated const list list str &Rows, char Separator {
+	str Text = ""
+	for Row in Rows {
+		for long F = 0; F < Row.length; F++ {
+			if F > 0 {
+				Text += Separator
+			}
+			Text += csv.field(Row[F], Separator)
+		}
+		Text += "\n"
+	}
+	return Text
+}
+
+// rows as CSV text
+str csv.text const list list str &Rows {
+	return csv.text_separated Rows, ','
+}
+
+// writes rows to a file, as CSV
+void csv.write_file const str &Path, const list list str &Rows {
+	files.write Path, csv.text(Rows)
+}
+
+// records as CSV text: the columns named first, then each record's
+// values in that order ("" for one it hasn't)
+str csv.records_text const list str &Columns, const list lookup str str &Records {
+	list list str Rows
+	list str Names
+	for Name in Columns {
+		Names.add Name.copy
+	}
+	Rows.add Names
+	for R in Records {
+		list str Fields
+		for Name in Columns {
+			if R.contains Name {
+				Fields.add R[Name].copy
+			} else {
+				Fields.add ""
+			}
+		}
+		Rows.add Fields
+	}
+	return csv.text Rows
+}
+
+void csv.write_records_file const str &Path, const list str &Columns, const list lookup str str &Records {
+	files.write Path, csv.records_text(Columns, Records)
+}

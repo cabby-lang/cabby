@@ -227,7 +227,8 @@ block by the line you typed to allocate it.
 
 Freed memory is never reused while an interpreted program runs, so a
 stale address is always caught. Compiled, none of this is checked: run
-memory-handling code with `cabby prog.cby` first.
+memory-handling code with `cabby prog.cby` first, or compile it with
+`cabby -c --checked` (below).
 
 ## Strings and lists
 
@@ -304,7 +305,13 @@ program ("invalid memory access").
 
 When **compiled**, nothing: an address is just a number, as in C, and
 reading where nothing is crashes the program or, worse, quietly reads
-something else.
+something else. Unless it's compiled with `cabby -c --checked prog.cby`:
+then clang's AddressSanitizer is built in, and reading or writing past
+an array or a block, using memory after it's freed, and (on Linux)
+memory never freed each stop the program with a report of what and
+where (the function, and those that called it). It's about half as
+fast: for testing. It needs AddressSanitizer's runtime (`libclang-rt-dev`
+on Debian, `compiler-rt` on Arch; a Mac's clang has it).
 
 When **interpreted** (`cabby prog.cby`), Cabby checks addresses of its own
 values as the program runs, and panics with a clear message:

@@ -83,6 +83,8 @@ typedef enum {
 		     * Parameters only; passed to C as two pointers (object, function). */
 	TY_ADDRESS, /* address T (use addresses): where a T is in memory; inner is T, or
 		     * NULL for `address` of nothing in particular (C's void *) */
+	TY_CALLBACK,/* `callback int comparer address void, address void`: a C function
+		     * pointer, to a top-level function of that shape (sig) */
 } TypeKind;
 
 typedef struct ObjectInfo ObjectInfo;
@@ -101,6 +103,7 @@ struct Type {
 	const char *name;  /* display name for enums / typedef'd ints (NULL: canonical) */
 	const char *kind_name;   /* `long kind duration`: a kind of its own, not mixed with plain numbers */
 	Type *base;        /* a kind: the number it is kept as */
+	struct FnDecl *sig;/* CALLBACK: the shape of the functions it points to */
 	Type *steps;       /* a kind that steps by another (a moment, by durations), or NULL */
 	bool kind_strict;  /* `strict long kind duration`: plain numbers are never taken as one */
 	const char *methods;     /* kinds and enums: functions named "<methods>.<name>" are its methods */

@@ -1,6 +1,6 @@
 # The Cabby Manual
 
-*For Cabby 0.37.1 (2026-11-20).*
+*For Cabby 0.38.0 (2026-11-20).*
 
 A book for learning Cabby one idea at a time, and a reference to come back
 to afterwards.
@@ -112,7 +112,7 @@ int main {
 **[Part VIII: Every day](#part-viii-every-day)**
 
 39. [Time and dates](#chapter-39-time-and-dates): `use time` and `use dates`, durations, calendars, patterns
-40. [JSON](#chapter-40-json): `use json`, reading and writing the data web services and settings use, structs to JSON and back
+40. [JSON](#chapter-40-json): `use json`, reading and writing the data web services and settings use, structs to JSON and back; tables in CSV
 41. [Downloading](#chapter-41-downloading): `use networks`, fetching pages, files and web services' answers
 42. [Web addresses](#chapter-42-web-addresses): `networks.read_url`, `networks.url`, encoding and decoding
 43. [HTML](#chapter-43-html): `use html`, web pages: reading them with CSS selectors, and making them
@@ -5306,7 +5306,12 @@ panic at prog.cby:6:10: this address is past the end of an array of 4 (at 4)
 ```
 
 When **compiled**, nothing is checked, as in C. So try such a program with
-`cabby prog.cby` first, and compile it once it runs cleanly.
+`cabby prog.cby` first, and compile it once it runs cleanly. Or compile it
+with `cabby -c --checked prog.cby`: the program is built with clang's
+AddressSanitizer, which stops it at reading or writing past the end, at
+memory used after it's freed, and (on Linux) at memory never freed, with
+a report naming the function it happened in. It runs about half as fast,
+so it's for testing, not for the program you give people.
 
 An address is also only good while its value is there. A local variable
 is gone when its function returns, and its block ends; a list's items move
@@ -5455,6 +5460,55 @@ address changes them. They're good until the string gets a new value or
 grows, or the list changes length; after that the interpreter panics,
 saying what changed.
 
+#### C calling back: callbacks
+
+Some C functions call a function of yours: `qsort` asks one which of two
+items comes first, as it sorts; a C library tells one of each event.
+C takes a *function pointer*. `callback` names its shape, as a function
+header without a body, and any function of the program's with that shape
+can be given where it's wanted:
+
+<!-- run -->
+```cabby
+use addresses
+
+callback int comparer address A, address B
+extern void qsort address Base, long Count, long Size, comparer Compare
+
+// which comes first: less than 0 for A, more than 0 for B
+int by_number address A, address B {
+	long X = ((address long)A).value
+	long Y = ((address long)B).value
+	if X < Y {
+		return -1
+	}
+	if X > Y {
+		return 1
+	}
+	return 0
+}
+
+int main {
+	list long Numbers = {42, 7, 19, 3, 88, 1}
+	qsort addresses.of_items(Numbers), Numbers.length, sizeof(long), by_number
+	println Numbers
+}
+```
+
+```text
+[1, 3, 7, 19, 42, 88]
+```
+
+A callback takes and gives what C passes: numbers of 32 bits or more
+(`int`, `long`, `unsigned int`...), `double`, and addresses; C's `void *`
+is a plain `address`, read as what it holds with a cast (`(address
+long)A`). Cabby checks that the function given has the callback's shape,
+and says what's different when it hasn't. A compiled program gives C the
+function itself; the interpreter gives C one that runs it, in the
+interpreter, even when C calls it from a thread of its own. A callback
+can only be a parameter of an `extern` function: it's how C asks for one,
+and Cabby's own code passes handlers instead.
+
 #### A linked list, two ways
 
 A linked list is a chain of nodes, each holding a value and the way to the
@@ -5562,9 +5616,11 @@ reads.
 * `use addresses`; `address int A = addresses.of X`; `A.value`, `A[i]`.
 * `A + n` steps `n` values; `B - A`; compare; `addresses.none`,
   `.is_none`; `addresses.at N`.
-* Plain data only. Checked when interpreted, not when compiled.
+* Plain data only. Checked when interpreted, and compiled with `--checked`.
 * `addresses.allocate N`, `addresses.reallocate A, N`, `addresses.free A`:
   memory by hand, which the interpreter tracks.
+* `callback int comparer address A, address B` is a C function pointer's
+  shape; a function of that shape is given to C by its name.
 
 #### Try this
 
@@ -7697,6 +7753,51 @@ use them:
   and is called without it: `J.long`. An object with a **`text`** method
   is shown by it in `println`.
 
+#### Tables: CSV
+
+A spreadsheet saves a table as **CSV**: a row a line, the fields between
+commas, and a field in double quotes when it holds a comma, a quote (as
+`""`) or a line end. `use csv` reads one into rows, each a `list str` of
+its fields, or into records, a lookup each, by the names the first row
+gives the columns:
+
+<!-- run -->
+```cabby
+use csv
+use files
+
+int main {
+	files.write "people.csv", "Name,Age,Town\nAda,36,London\n\"Lovelace, Ada\",36,\"Ockham \"\"Park\"\"\"\n"
+	for Row in csv.read_file "people.csv" {
+		println Row.length, Row
+	}
+	for P in csv.records_of_file "people.csv" {
+		println P["Name"], "is", P["Age"].to_long + 1, "next year, in", P["Town"]
+	}
+	list list str Rows = {{"Item", "Price"}, {"tea, black", "3.50"}}
+	csv.write_file "prices.csv", Rows
+	print files.read("prices.csv")
+	files.delete "people.csv"
+	files.delete "prices.csv"
+}
+```
+
+```text
+3 [Name, Age, Town]
+3 [Ada, 36, London]
+3 [Lovelace, Ada, 36, Ockham "Park"]
+Ada is 37 next year, in London
+Lovelace, Ada is 37 next year, in Ockham "Park"
+Item,Price
+"tea, black",3.50
+```
+
+Every field is text: `.to_long` and `.to_double` make numbers of them.
+`csv.read` and `csv.records` take the text itself, `csv.text` gives rows
+as text, and `csv.read_separated Text, ';'` reads fields between
+semicolons (as some countries' spreadsheets save them) or tabs.
+`csv.md` has the rest.
+
 #### In short
 
 * `use json`; `json J = json.read Text`; `J["name"]`, `J[i]`, `for X in J`.
@@ -7706,6 +7807,8 @@ use them:
   `.text`, `.pretty`.
 * `json.from S` makes JSON from a struct; `J.fill S` fills one in from
   JSON, by the fields' names.
+* `use csv`: `csv.read_file Path` (rows), `csv.records_of_file Path`
+  (lookups, by the first row's names), `csv.write_file Path, Rows`.
 
 #### Try this
 
@@ -16543,6 +16646,7 @@ Reference material, for looking things up once you know the language.
 | `cabby -c prog.cby -o name` | ...called `name` |
 | `cabby -c prog.cby -O0` | ...with optimization level 0 to 3 (default `-O2`) |
 | `cabby -c prog.cby --emit-llvm` | write the compiled code as LLVM IR (`prog.ll`) instead |
+| `cabby -c --checked prog.cby` | build it with AddressSanitizer: reading past the end, memory used after it's freed, and (on Linux) memory never freed, each stopped and said where. For testing |
 | `cabby --check prog.cby` | check the program without running it |
 | `cabby --style prog.cby` | check, then list names, and calls' parentheses, that don't follow the style guide ([Appendix J](#appendix-j-style-guide)) |
 | `cabby --dump-tokens prog.cby` | show how the program is split into tokens |
@@ -16676,6 +16780,7 @@ Every keyword is reserved: none can name a variable or function. `typedef` is re
 | Keyword | Meaning | Chapter |
 |---|---|---|
 | `aka` | another name for a type: `double aka celsius` | [20](#chapter-20-aka-another-name-for-a-type) |
+| `callback` | a C function pointer's shape: `callback int comparer address A, address B` | [28](#chapter-28-addresses) |
 | `kind` | a number of its own: `long kind meters` (only a keyword there) | [20](#chapter-20-aka-another-name-for-a-type) |
 | `and` `or` `not` `is` | reserved: Cabby writes `&&`, `\|\|`, `!` and `==` | [6](#chapter-6-if-and-else) |
 | `auto` | reserved: Cabby asks for the type to be written | [2](#chapter-2-variables-and-the-basic-types) |
@@ -16945,6 +17050,7 @@ folder):
 | `time.md` | moments, durations, the clock and sleeping (`use time`) |
 | `dates.md` | dates, times of day, time zones, and dates in other languages (`use dates`) |
 | `json.md` | reading and writing JSON, and structs to and from it (`use json`) |
+| `csv.md` | tables in CSV, as spreadsheets save them: rows, records, and writing them (`use csv`) |
 | `html.md` | web pages: reading them with CSS selectors, and making them (`use html`) |
 | `xml.md` | XML documents: reading and writing them (`use xml`) |
 | `bytes.md` | bytes: files that aren't text, numbers in either byte order (`use bytes`) |

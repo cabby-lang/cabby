@@ -235,6 +235,9 @@ void ast_print_expr(FILE *o, const Expr *e)
 	case EXPR_HANDLER:
 		fprintf(o, "(handler %s)", e->as.handler.method->name);
 		break;
+	case EXPR_CALLBACK:
+		fprintf(o, "(callback %s)", e->as.callback.fn->name);
+		break;
 	case EXPR_AT:
 		fputs("(at ", o);
 		ast_print_expr(o, e->as.at.address);

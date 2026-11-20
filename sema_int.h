@@ -154,7 +154,7 @@ const char *ts(const Type *t);   /* type name for messages (ring of buffers) */
 GlobalName *find_global(Checker *C, const char *name, SrcLoc use);
 TypeName   *find_type(Checker *C, const char *name);
 Type       *resolve_type(Checker *C, TypeExpr *te, unsigned flags, const char *where);
-enum { RT_ALLOW_REF = 1, RT_ALLOW_VOID = 2, RT_ALLOW_SLICE = 4, RT_ALLOW_UNSIZED = 8, RT_ALLOW_HANDLER = 16 };
+enum { RT_ALLOW_REF = 1, RT_ALLOW_VOID = 2, RT_ALLOW_SLICE = 4, RT_ALLOW_UNSIZED = 8, RT_ALLOW_HANDLER = 16, RT_ALLOW_CALLBACK = 32 };
 FnDecl     *lookup_method(ObjectInfo *o, const char *name);
 FieldInfo  *lookup_field(ObjectInfo *o, const char *name);
 Builtin     find_builtin(const char *name);

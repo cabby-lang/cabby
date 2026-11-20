@@ -177,6 +177,11 @@ Type *resolve_type(Checker *C, TypeExpr *te, unsigned flags, const char *where)
 			sema_error(te->loc, "a handler can only be a parameter, or a field of an object (not one of %s)", where);
 			t = &t_error;
 		}
+		if (t->kind == TY_CALLBACK && !(flags & RT_ALLOW_CALLBACK)) {
+			sema_error(te->loc, "'%s' is a callback, for C: it can only be a parameter of an extern function "
+				   "(not one of %s)", t->name, where);
+			t = &t_error;
+		}
 		if (t->kind == TY_VOID && !(flags & RT_ALLOW_VOID)) {
 			sema_error(te->loc, "'void' is only valid as a function return type");
 			t = &t_error;
@@ -364,6 +369,13 @@ static void collect_types(Checker *C)
 			k->base = b;
 			k->kind_strict = d->as.typedef_.is_strict;
 			add_type(C, d->as.typedef_.name, d->loc, (TypeName){ .type = k, .file = d->loc.file });
+		} else if (d->kind == DECL_TYPEDEF && d->as.typedef_.callback) {
+			/* its shape is resolved once every type is known (collect_functions) */
+			Type *t = arena_alloc(C->A, sizeof *t);
+			t->kind = TY_CALLBACK;
+			t->name = d->as.typedef_.name;
+			t->sig = d->as.typedef_.callback;
+			add_type(C, d->as.typedef_.name, d->loc, (TypeName){ .type = t, .file = d->loc.file });
 		} else if (d->kind == DECL_TYPEDEF) {
 			add_type(C, d->as.typedef_.name, d->loc,
 				 (TypeName){ .te = d->as.typedef_.type, .file = d->loc.file });
@@ -448,8 +460,41 @@ static bool extern_type_ok(Type *t, bool is_param)
 		return is_param && (t->inner->kind == TY_INT || t->inner->kind == TY_FLOAT || t->inner->kind == TY_BOOL);
 	case TY_ADDRESS:
 		return true;   /* a C pointer */
+	case TY_CALLBACK:
+		return is_param;   /* a C function pointer */
 	default:
 		return false;
+	}
+}
+
+/* what a callback's functions can take and give, as C would: numbers of 32
+ * bits or more, floats and doubles, and addresses (and nothing, given) */
+static bool callback_type_ok(const Type *t, bool is_param)
+{
+	return (t->kind == TY_INT && t->bits >= 32 && !t->kind_name) || t->kind == TY_FLOAT || t->kind == TY_ADDRESS ||
+	       (!is_param && t->kind == TY_VOID);
+}
+
+/* each callback's shape, once every type is known */
+static void collect_callbacks(Checker *C)
+{
+	for (int i = 0; i < C->prog->decls.len; i++) {
+		Decl *d = C->prog->decls.items[i];
+		if (d->kind != DECL_TYPEDEF || !d->as.typedef_.callback)
+			continue;
+		FnDecl *sig = d->as.typedef_.callback;
+		for (int k = 0; k < sig->params.len; k++) {
+			VarDecl *p = sig->params.items[k];
+			Type *t = resolve_type(C, p->type, 0, "a callback's parameters");
+			if (!type_is_error(t) && !callback_type_ok(t, true))
+				sema_error(p->type->loc, "a callback takes what C passes: numbers ('int', 'long', 'unsigned "
+					   "int'...), 'double' or an address, not '%s'", ts(t));
+		}
+		Type *r = resolve_type(C, sig->ret, RT_ALLOW_VOID, "a callback's return type");
+		if (!type_is_error(r) && !callback_type_ok(r, false))
+			sema_error(sig->ret->loc, "a callback gives C a number of 32 bits or more, a 'double', an "
+				   "address or nothing ('void'), not '%s'", ts(r));
+		sig->ret_type = r;
 	}
 }
 
@@ -460,7 +505,8 @@ static void resolve_signature(Checker *C, FnDecl *fn)
 		for (int j = 0; j < i; j++)
 			if (strcmp(fn->params.items[j]->name, p->name) == 0)
 				sema_error(p->loc, "parameter '%s' is declared twice", p->name);
-		Type *t = resolve_type(C, p->type, RT_ALLOW_REF | RT_ALLOW_SLICE, "parameters");
+		Type *t = resolve_type(C, p->type, RT_ALLOW_REF | RT_ALLOW_SLICE | (fn->is_extern ? RT_ALLOW_CALLBACK : 0),
+				       fn->is_extern ? "parameters" : "a Cabby function's parameters");
 		if (fn->is_extern && !type_is_error(t) && t->kind != TY_HANDLER && !extern_type_ok(t, true))
 			sema_error(p->type->loc, "extern functions can take numbers, bool, char, str (passed as a C "
 				   "string) or references to numbers, not '%s'", ts(t));
@@ -473,6 +519,7 @@ static void resolve_signature(Checker *C, FnDecl *fn)
 
 static void collect_functions(Checker *C)
 {
+	collect_callbacks(C);
 	for (int i = 0; i < C->prog->decls.len; i++) {
 		Decl *d = C->prog->decls.items[i];
 		if (d->kind != DECL_FN)

@@ -76,4 +76,5 @@ done
 $t/run_vim_tests.sh
 $t/run_program_tests.sh ./cabby compile
 $t/run_multi_tests.sh ./cabby compile
+$t/run_checked_tests.sh ./cabby
 echo "all tests passed"

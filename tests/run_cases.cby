@@ -3468,6 +3468,85 @@ int main {
 	return 0
 }
 
+### csv_read_and_written
+//> 4 [Name, Age, Note]
+//> [Ada, 36, likes "tea", and cake]
+//> [Alan, 41, two
+//> lines]
+//> [Grace, 85]
+//> Ada|36 Grace|85|
+//> Name,Age,Note
+//> Ada,36,"likes ""tea"", and cake"
+//> Alan,41,"two
+//> lines"
+//> Grace,85
+//> true [[a, b, c;d], [1, 2, 3]]
+//> 0 1 2 " a "
+use csv
+
+int main {
+	str Text = "\xef\xbb\xbfName,Age,Note\r\nAda,36,\"likes \"\"tea\"\", and cake\"\r\n\r\nAlan,41,\"two\nlines\"\nGrace,85\n"
+	list list str Rows = csv.read Text
+	println Rows.length, Rows[0]
+	for long R = 1; R < Rows.length; R++ {
+		println Rows[R]
+	}
+	list lookup str str People = csv.records Text
+	println People[0]["Name"] + "|" + People[0]["Age"], People[2]["Name"] + "|" + People[2]["Age"] + "|" + People[2]["Note"]
+	str Back = csv.text Rows
+	print Back
+	println csv.read(Back).length == Rows.length, csv.read_separated("a;b;\"c;d\"\n1;2;3", ';')
+	println csv.read("").length, csv.read("x").length, csv.read("a,")[0].length, csv.field(" a ", ',')
+	return 0
+}
+
+### callbacks_given_to_c
+//> [1, 3, 7, 19, 42, 88]
+//> found: true
+//> missing: true
+//> on a thread of its own: 7
+//> joined
+use addresses
+
+callback int comparer address A, address B
+extern void qsort address Base, long Count, long Size, comparer Compare
+extern address bsearch address Key, address Base, long Count, long Size, comparer Compare
+callback address starter address Given
+extern int pthread_create address Thread, address Attributes, starter Start, address Given
+extern int pthread_join long Thread, address Result
+
+int by_number address A, address B {
+	long X = ((address long)A).value
+	long Y = ((address long)B).value
+	return (int)(X - Y)
+}
+
+// run on a thread of C's own
+address on_its_own address Given {
+	println "on a thread of its own:", ((address long)Given).value
+	return addresses.none
+}
+
+int main {
+	list long Numbers = {42, 7, 19, 3, 88, 1}
+	qsort addresses.of_items(Numbers), Numbers.length, sizeof(long), by_number
+	println Numbers
+	long Want = 19
+	address long Found = (address long)bsearch(addresses.of(Want), addresses.of_items(Numbers), Numbers.length, sizeof(long), by_number)
+	println "found:", Found != addresses.none
+	long Missing = 5
+	println "missing:", bsearch(addresses.of(Missing), addresses.of_items(Numbers), Numbers.length, sizeof(long), by_number) == addresses.none
+	// (memory of C's own, as the thread reads it after pthread_create has returned)
+	address long Thread = addresses.allocate 1
+	address long Seven = addresses.allocate 1
+	Seven.value = 7
+	pthread_create Thread, addresses.none, on_its_own, Seven
+	pthread_join Thread.value, addresses.none
+	addresses.free Thread
+	addresses.free Seven
+	println "joined"
+}
+
 ### html_raw_text_is_as_it_is
 //> [Mind   the gap.] [x  y]
 //> Mind the gap.

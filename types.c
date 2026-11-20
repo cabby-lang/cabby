@@ -110,6 +110,7 @@ bool type_eq(const Type *a, const Type *b)
 	case TY_ADDRESS: return (!a->inner && !b->inner) || (a->inner && b->inner && type_eq(a->inner, b->inner));
 	case TY_LOOKUP: return type_eq(a->key, b->key) && type_eq(a->inner, b->inner);
 	case TY_OBJECT: return a->obj == b->obj;
+	case TY_CALLBACK: return a->sig == b->sig;
 	default:        return true;
 	}
 }
@@ -117,7 +118,7 @@ bool type_eq(const Type *a, const Type *b)
 bool type_is_plain(const Type *t)
 {
 	switch (t->kind) {
-	case TY_BOOL: case TY_INT: case TY_FLOAT: case TY_ERROR: case TY_ADDRESS:
+	case TY_BOOL: case TY_INT: case TY_FLOAT: case TY_ERROR: case TY_ADDRESS: case TY_CALLBACK:
 		return true;
 	case TY_ARRAY:
 		return type_is_plain(t->inner);
@@ -287,6 +288,7 @@ uint64_t type_size(const Type *t)
 	case TY_SLICE: return 16;
 	case TY_HANDLER: return 16;
 	case TY_ADDRESS: return 8;
+	case TY_CALLBACK: return 8;
 	case TY_ARRAY: return t->len * type_size(t->inner);
 	case TY_OBJECT:
 		return t->obj->kind == OBJ_OBJECT ? 8 : t->obj->size;
@@ -339,6 +341,7 @@ static void fmt(const Type *t, char *buf, size_t size, size_t *n)
 		fmt(t->inner, buf, size, n);
 		break;
 	case TY_HANDLER: put(buf, size, n, "handler"); break;
+	case TY_CALLBACK: put(buf, size, n, t->name ? t->name : "callback"); break;
 	case TY_ADDRESS:
 		put(buf, size, n, "address");
 		if (t->inner) {

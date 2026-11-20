@@ -136,6 +136,7 @@ static void flow_expr(Flow *F, Expr *e, FState *s)
 	switch (e->kind) {
 	case EXPR_INT: case EXPR_FLOAT: case EXPR_BOOL: case EXPR_CHAR: case EXPR_STRING: case EXPR_SIZEOF:
 	case EXPR_HANDLER:
+	case EXPR_CALLBACK:
 		break;
 	case EXPR_AT:
 		flow_expr(F, e->as.at.address, s);

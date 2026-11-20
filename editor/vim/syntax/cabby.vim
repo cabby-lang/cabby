@@ -21,7 +21,7 @@ syn keyword cabbyType          char short int long float double void bool str
 syn keyword cabbyType          signed unsigned handler list lookup file directory process address timer
 syn keyword cabbyType          moment duration date time_of_day date_time weekday month json bytes element html xml
 syn keyword cabbyStorage       const static register volatile extern inner
-syn keyword cabbyStructure     struct union enum object aka
+syn keyword cabbyStructure     struct union enum object aka callback
 syn keyword cabbyBoolean       true false
 syn keyword cabbyReserved      cement auto typedef extended quadruple is not and or
 syn keyword cabbySelf          self

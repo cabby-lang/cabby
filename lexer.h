@@ -94,6 +94,7 @@
 	K(OR,         "or")                  \
 	K(UNTIL,      "until")               \
 	K(INNER,      "inner")               \
+	K(CALLBACK,   "callback")            \
 	                                     \
 	O(PLUS,       "+")                   \
 	O(MINUS,      "-")                   \

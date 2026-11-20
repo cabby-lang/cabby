@@ -369,7 +369,7 @@ static const char *name_hint(const char *n)
 	static const char *const libraries[] = {
 		"archives", "bluetooth", "brightness", "bytes", "databases", "dates", "dbus", "desktop", "emails", "hashes", "html", "images", "json", "linux",
 		"markup", "math", "media", "mime", "networks", "os", "patterns", "power", "printing", "secrets", "speech", "standard", "strings", "system",
-		"threads", "time", "users", "videos", "volume", "xml", "screens", "mouse", "keyboard", NULL };
+		"threads", "time", "users", "videos", "volume", "xml", "screens", "mouse", "keyboard", "csv", NULL };
 	static char said[120];
 	for (int i = 0; libraries[i]; i++)
 		if (strcmp(n, libraries[i]) == 0) {
@@ -1186,6 +1186,47 @@ static int param_index(FnDecl *fn, const char *name)
 /* An argument for a `handler` parameter: the name of one of this object's
  * methods (bound to the object), or a handler parameter passed on. Where it
  * goes is recorded, and checked once every body is known. */
+/* A function of the program's (or C's) passed where C wants a function
+ * pointer: its name, and its shape the callback's */
+static void check_callback_arg(Checker *C, Expr **ap, Type *pt, const char *what)
+{
+	Expr *a = *ap;
+	FnDecl *sig = pt->sig;
+	const char *n = a->kind == EXPR_IDENT ? a->as.ident.name : NULL;
+	GlobalName *g = n && !lookup_local(C, n) ? find_global(C, n, a->loc) : NULL;
+	if (!g || g->kind != GN_FN) {
+		check_expr(C, ap, CTX_READ, NULL);
+		sema_error(a->loc, "expected the name of a function for %s (a '%s': '%s %s ...')", what, pt->name,
+			   ts(sig->ret_type ? sig->ret_type : &t_void), pt->name);
+		return;
+	}
+	FnDecl *f = g->fn;
+	bool same = f->params.len == sig->params.len && f->ret_type && sig->ret_type && type_eq(f->ret_type, sig->ret_type);
+	for (int k = 0; same && k < f->params.len; k++)
+		same = f->params.items[k]->type->resolved && sig->params.items[k]->type->resolved &&
+		       type_eq(f->params.items[k]->type->resolved, sig->params.items[k]->type->resolved);
+	if (!same) {
+		char want[256] = "", got[256] = "";
+		size_t wn = 0, gn = 0;
+		for (int k = 0; k < sig->params.len; k++)
+			wn += (size_t)snprintf(want + wn, sizeof want - (wn < sizeof want ? wn : sizeof want), "%s%s",
+					       k ? ", " : "", ts(sig->params.items[k]->type->resolved));
+		for (int k = 0; k < f->params.len; k++)
+			gn += (size_t)snprintf(got + gn, sizeof got - (gn < sizeof got ? gn : sizeof got), "%s%s",
+					       k ? ", " : "", f->params.items[k]->type->resolved ?
+					       ts(f->params.items[k]->type->resolved) : "?");
+		sema_error(a->loc, "'%s' isn't the shape of a '%s': it takes (%s) and gives '%s', where a '%s' takes "
+			   "(%s) and gives '%s'", n, pt->name, got, f->ret_type ? ts(f->ret_type) : "?", pt->name, want,
+			   ts(sig->ret_type ? sig->ret_type : &t_void));
+		a->ty = &t_error;
+		return;
+	}
+	memset(&a->as, 0, sizeof a->as);
+	a->kind = EXPR_CALLBACK;
+	a->as.callback.fn = f;
+	a->ty = pt;
+}
+
 static void check_handler_arg(Checker *C, Expr **ap, const char *what, FnDecl *to, int to_param, Expr *recv)
 {
 	Expr *a = *ap;
@@ -1384,7 +1425,9 @@ static Type *check_args(Checker *C, Expr *call, FnDecl *fn, const char *fname)
 			check_expr(C, ap, CTX_READ, NULL);
 			continue;
 		}
-		if (pt->kind == TY_HANDLER) {
+		if (pt->kind == TY_CALLBACK) {
+			check_callback_arg(C, ap, pt, what);
+		} else if (pt->kind == TY_HANDLER) {
 			Expr *callee = call->as.call.callee;
 			Expr *recv = callee->kind == EXPR_FIELD ? callee->as.field.object
 				     : fn->owner && fn->self_kind != SELF_NONE ? &self_expr : NULL;
@@ -3604,6 +3647,7 @@ static Type *check_expr_inner(Checker *C, Expr **ep, Ctx ctx, Type *expected)
 
 	case EXPR_BORROW:
 	case EXPR_HANDLER:
+	case EXPR_CALLBACK:
 	case EXPR_AT:
 		return e->ty;
 	}
