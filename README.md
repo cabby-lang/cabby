@@ -16,7 +16,7 @@ cabby --check     prog.cby              type- and ownership-check only
 cabby --style     prog.cby              list names and calls that don't follow STYLE.md
 cabby --dump-ast  prog.cby              print the syntax tree
 cabby --dump-tokens prog.cby            print the token stream
-cabby --version                         which Cabby this is: "Cabby 0.41.0 (2026-11-20)"
+cabby --version                         which Cabby this is: "Cabby 0.42.0 (2026-11-20)"
 cabby --license                         Cabby's license (MIT)
 ```
 
@@ -702,7 +702,10 @@ The rules, all checked before the program runs:
 * Different fields are separate: while `p.Name` is borrowed, `p.Age` can
   still be changed, and a method can go through one field of its object
   while changing another. A method call that can change the object counts
-  as changing all of it.
+  as changing all of it. Elements of an array or a list at positions
+  written as numbers are separate too (`Scores[0]` borrowed, `Scores[1]`
+  changed); at a position worked out as it runs (`Scores[i]`), an element
+  counts as all of them, and `.add` or `.remove_at` changes the whole list.
 * References cannot be returned, stored in fields or put in arrays, so a
   borrow can never outlive what it points to.
 * A string literal is a static string. It converts to an owned `str` (a heap
@@ -1197,7 +1200,7 @@ Run `cabby` with no file to type Cabby a piece at a time:
 
 ```
 $ cabby
-Cabby 0.41.0 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
+Cabby 0.42.0 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
 Cabby comes with ABSOLUTELY NO WARRANTY, under the MIT License; "cabby.license" for details.
 >>> int add int a, int b {
 ... 	return a + b
@@ -1672,8 +1675,8 @@ was built for (`PREFIX`), then `/usr/local/lib/cabby` and `/usr/lib/cabby`.
   library.
 * In 3D (`use world`): shadows, and physics.
 * The `?:` operator, `long double`, and backward `goto`.
-* Borrowing tracks fields separately, but not list elements: while
-  `Scores[0]` is borrowed, `Scores[1]` can't be changed either. Borrows in
-  two branches of an `if` can occasionally conflict when Rust would accept
-  them. Both only ever reject programs; they never let an unsafe one
-  through.
+* Borrowing tells apart elements at positions written as numbers, but not
+  at positions worked out as it runs (`Scores[i]` and `Scores[j]` count as
+  the same). Borrows in two branches of an `if` can occasionally conflict
+  when Rust would accept them. Both only ever reject programs; they never
+  let an unsafe one through.

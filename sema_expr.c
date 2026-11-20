@@ -425,8 +425,10 @@ Symbol *address_of_local(const Expr *e)
 }
 
 /* Which part of its variable a place is: "" for all of it, or the fields
- * after it ("Things", "Shown.Id"). An element of a list or array counts
- * as the whole list. */
+ * and elements after it ("Things", "Shown.Id", "Scores[2]", "Grid[0][1]").
+ * An element is its own part only at a position known before the program
+ * runs, and only in a list or an array (a lookup's [k] can add a key and
+ * move the rest); at a position worked out as it runs, it's all of them. */
 static const char *place_path(Checker *C, const Expr *e)
 {
 	switch (e->kind) {
@@ -443,8 +445,18 @@ static const char *place_path(Checker *C, const Expr *e)
 		}
 		return p;
 	}
-	case EXPR_INDEX:
-		return place_path(C, e->as.index.base);
+	case EXPR_INDEX: {
+		const char *base = place_path(C, e->as.index.base);
+		const Type *bt = e->as.index.base->ty;
+		int64_t k;
+		if (!bt || (bt->kind != TY_ARRAY && bt->kind != TY_LIST) || e->as.index.is_slice || !e->as.index.index ||
+		    !const_eval_int(C, e->as.index.index, &k) || k < 0)
+			return base;
+		size_t nb = strlen(base);
+		char *p = arena_alloc(C->A, nb + 24);
+		snprintf(p, nb + 24, "%s[%lld]", base, (long long)k);
+		return p;
+	}
 	default:
 		return "";
 	}

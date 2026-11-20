@@ -96,8 +96,10 @@ bool paths_overlap(const char *a, const char *b)
 	size_t na = strlen(a), nb = strlen(b), n = na < nb ? na : nb;
 	if (strncmp(a, b, n) != 0)
 		return false;
-	/* "Things" and "Things.x" overlap; "Thing" and "Things" don't */
-	return na == nb || (na < nb ? b[n] == '.' : a[n] == '.');
+	/* "Things" and "Things.x" overlap, and "Scores" and "Scores[2]"; "Thing"
+	 * and "Things" don't, nor "Scores[1]" and "Scores[10]" */
+	char next = na < nb ? b[n] : a[n];
+	return na == nb || next == '.' || next == '[';
 }
 
 void add_source(Checker *C, Symbol *borrower, Symbol *src, SrcLoc loc)

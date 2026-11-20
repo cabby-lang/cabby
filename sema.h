@@ -32,8 +32,10 @@
  *     no lifetime annotations are needed.
  *
  * Known simplifications (all reject, never unsound):
- *  - Loans are per variable, not per field: while `p.name` is borrowed,
- *    `p.age = 3` is rejected too.
+ *  - Loans are per field, and per element at a constant position
+ *    (place_path's "Shown.Id", "Scores[2]"); an element at a position
+ *    worked out as it runs is all of its list or array, and a lookup's
+ *    values are all of it.
  *  - Loan ranges are position intervals, not control-flow paths, so a
  *    borrow in one if-branch can conflict with a write in the other.
  *

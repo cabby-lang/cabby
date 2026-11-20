@@ -517,7 +517,10 @@ void check_loans(Checker *C, FnDecl *fn)
 				continue;
 			}
 			sema_error(a->loc, "%s", msg);
-			sema_note(l->loc, "'%s' is %s here", l->root->name, l->is_mut ? "lent as mutable" : "borrowed");
+			/* (the part that's borrowed: Pets.Name, Scores[0]) */
+			const char *part = l->path ? l->path : "";
+			sema_note(l->loc, "'%s%s%s' is %s here", l->root->name, *part && *part != '[' ? "." : "", part,
+				  l->is_mut ? "lent as mutable" : "borrowed");
 			if (l->borrower && l->borrower->index < C->last_use.len) {
 				SrcLoc u = C->last_use.items[l->borrower->index];
 				if (u.line && (u.line > a->loc.line || (u.line == a->loc.line && u.col > a->loc.col) || l->loop))
