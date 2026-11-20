@@ -439,6 +439,8 @@ void *rt_alloc_zeroed(size_t size)
 
 void rt_free(void *p) { free(p); }
 
+_Noreturn void rt_out_of_memory(void) { rt_panic(NULL, 0, 0, "out of memory"); }
+
 /* ---- links (link T): pointing at an object without owning it ----
  * An object that's been linked to has a place in this table, which says
  * where it is, and which object of that place's it is: the place's
@@ -567,16 +569,8 @@ void cby_link_end(uint64_t life)
 }
 
 /* A compiled program's objects keep their place 16 bytes before the
- * handle (16, so the object stays aligned as malloc's are). */
-void *rt_obj_alloc(size_t size)
-{
-	char *p = malloc(size + 16);
-	if (!p)
-		rt_panic(NULL, 0, 0, "out of memory");
-	*(uint64_t *)p = 0;
-	return p + 16;
-}
-
+ * handle (16, so the object stays aligned as malloc's are): the program
+ * mallocs and frees them itself (codegen's gen_obj_alloc). */
 int64_t cby_link_obj(void *h) { return cby_link_to(h, (uint64_t *)((char *)h - 16)); }
 
 /* (after its destructors, before its fields are dropped: a field's own
@@ -587,8 +581,6 @@ void rt_obj_unlink(void *h)
 	cby_link_end(*life);
 	*life = 0;
 }
-
-void rt_obj_free(void *h) { free((char *)h - 16); }
 
 void *rt_realloc(void *p, size_t size)
 {
@@ -1140,6 +1132,18 @@ static bool letter_follows(const unsigned char *u, int64_t n)
  * (ß is SS, and ı's I is a byte shorter). */
 char *rt_str_case(const char *d, int64_t n, bool upper, int64_t *outn)
 {
+	int64_t plain = 0;
+	while (plain < n && (unsigned char)d[plain] < 0x80)
+		plain++;
+	if (plain == n) {   /* A to Z alone, the usual case: the same length */
+		char *p = alloc_text(n);
+		for (int64_t i = 0; i < n; i++) {
+			char c = d[i];
+			p[i] = upper && c >= 'a' && c <= 'z' ? (char)(c - 32) : !upper && c >= 'A' && c <= 'Z' ? (char)(c + 32) : c;
+		}
+		*outn = n;
+		return p;
+	}
 	/* (at most twice as long: SS for ß, and no letter's other case
 	 * takes more than one byte more) */
 	char *p = alloc_text(n * 2);
