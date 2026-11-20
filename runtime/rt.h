@@ -44,7 +44,7 @@ int64_t rt_str_find(const char *h, int64_t hn, const char *n, int64_t nn);
 bool    rt_str_test(const char *h, int64_t hn, const char *n, int64_t nn, int what);
 int     rt_str_compare(const char *a, int64_t an, const char *b, int64_t bn);
 void    rt_str_trim(const char *d, int64_t n, int64_t *start, int64_t *count);
-char   *rt_str_case(const char *d, int64_t n, bool upper);
+char   *rt_str_case(const char *d, int64_t n, bool upper, int64_t *outn);
 char   *rt_str_replace(const char *d, int64_t n, const char *from, int64_t fn, const char *to, int64_t tn,
 		       int64_t *outn);
 char   *rt_str_repeat(const char *d, int64_t n, int64_t times, int64_t *outn, const char *file, int line, int col);

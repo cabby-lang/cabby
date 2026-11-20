@@ -16,7 +16,7 @@ cabby --check     prog.cby              type- and ownership-check only
 cabby --style     prog.cby              list names and calls that don't follow STYLE.md
 cabby --dump-ast  prog.cby              print the syntax tree
 cabby --dump-tokens prog.cby            print the token stream
-cabby --version                         which Cabby this is: "Cabby 0.40.0 (2026-11-20)"
+cabby --version                         which Cabby this is: "Cabby 0.41.0 (2026-11-20)"
 cabby --license                         Cabby's license (MIT)
 ```
 
@@ -290,7 +290,9 @@ order. Searching: `s.contains t`, `s.starts_with t`, `s.ends_with t`, and
 strings from old ones: `s.replace a, b`, `s.trim`, `s.upper`, `s.lower`,
 `s.repeat n`, and `s.pad_left n`, `s.pad_right n` and `s.centered n`
 (spaces in front, after, or either side, to make it `n` characters wide:
-columns, with `.text(2)` for the decimals). A slice `s[a to b]` is a new string of characters `a` to `b`,
+columns, with `.text(2)` for the decimals). `.upper` and `.lower` know
+the letters of Latin, Greek (Ancient Greek's too), Cyrillic and Armenian:
+`"ἀρχή".upper` is `"ἈΡΧΉ"`, and a Σ ending a word goes down to ς. A slice `s[a to b]` is a new string of characters `a` to `b`,
 both included; `s[a to]` goes to the end and `s[to b]` starts at 0. A slice
 outside the string panics, except that the end may be one before the
 start, giving `""`.
@@ -1195,7 +1197,7 @@ Run `cabby` with no file to type Cabby a piece at a time:
 
 ```
 $ cabby
-Cabby 0.40.0 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
+Cabby 0.41.0 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
 Cabby comes with ABSOLUTELY NO WARRANTY, under the MIT License; "cabby.license" for details.
 >>> int add int a, int b {
 ... 	return a + b
@@ -1664,11 +1666,8 @@ was built for (`PREFIX`), then `/usr/local/lib/cabby` and `/usr/lib/cabby`.
 
 ## 15. What is not in Cabby (yet)
 
-* `.upper` and `.lower` for letters beyond A to Z (é, α).
 * Objects pointing at each other freely (chains and trees can be built from
   objects holding a `list` of their own kind, or with `use addresses`).
-* Sorting a list of objects (by a field, or with a function that compares
-  two).
 * Panels and bars for a desktop (a dock, a system tray) in the gui
   library.
 * In 3D (`use world`): shadows, and physics.

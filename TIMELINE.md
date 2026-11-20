@@ -89,6 +89,7 @@ the patch number with fixes alone.
 | 0.39.1 | 20 November | whisper-cli found off the PATH (Arch's ~/.local/bin); a Mac build skips an Intel Homebrew's libffi |
 | 0.39.2 | 20 November | Pasting keeps (or gives) indentation; tutorials 28 and 40 show callbacks and CSV |
 | 0.40.0 | 20 November | Lists of objects put in order: `.sort_by` a field or a function's key, `.sort_with` a function comparing two |
+| 0.41.0 | 20 November | `.upper` and `.lower` for Latin, Greek (polytonic too), Cyrillic and Armenian |
 
 ---
 
@@ -1537,6 +1538,20 @@ old names need changing:
   runtime merge-sorts with it (`cby_list_sort_by`).
 - Chapter 15 shows them on strings, and Chapter 22 has "Putting objects in
   order"; Appendix H no longer lists it as missing.
+
+*Version 0.41.0:* the second known gap.
+
+- `.upper` and `.lower` change more than A to Z: Latin with its accents
+  and its extended letters (é, ā, æ, þ, ð, ƿ, ȝ, Vietnamese's), Greek
+  with its accents and Ancient Greek's breathings, Cyrillic, Armenian,
+  and the fullwidth letters.
+- As Unicode has it: ß is SS (and ẞ lowers to ß); a capital Σ ending a
+  word lowers to ς; a Greek letter with no capital of its own (ῆ, ῇ) is
+  the capital and its accent as a mark (Η͂, Η͂Ι). So a string can come back
+  a different length.
+- Bytes that aren't UTF-8 are left as they are; A to Z keeps its quick
+  path. The interpreter and compiled programs share `rt_str_case`.
+- README §15 no longer lists this, or sorting objects (0.40.0's).
 
 ## Along the way (dates not recorded)
 

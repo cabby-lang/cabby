@@ -7,7 +7,7 @@
 #ifndef CABBY_VERSION_H
 #define CABBY_VERSION_H
 
-#define CABBY_VERSION "0.40.0"
+#define CABBY_VERSION "0.41.0"
 #define CABBY_VERSION_DATE "2026-11-20"
 
 #endif

@@ -3565,6 +3565,31 @@ int main {
 	return 0
 }
 
+### upper_and_lower_beyond_a_to_z
+//> CAFÉ café
+//> ÆRENDGEWRIT ÞÆT ÐU ǷYNN ȜEOC DĪVĪSA
+//> ἘΝ ἈΡΧΗ͂Ι ἮΝ Ὁ ΛΌΓΟΣ
+//> λόγος οδυσσευς, σοφος σ
+//> STRASSE straße
+//> ПРИВЕТ привет ԲԱՐԵՒ
+//> I i S
+//> 4 6
+//> X?Y
+int main {
+	println "café".upper, "CAFÉ".lower
+	println "Ærendgewrit þæt ðu ƿynn ȝeoc dīvīsa".upper
+	println "ἐν ἀρχῇ ἦν ὁ λόγος".upper
+	println "ΛΌΓΟΣ".lower, "ΟΔΥΣΣΕΥΣ, ΣΟΦΟΣ Σ".lower
+	println "straße".upper, "STRAẞE".lower
+	println "Привет".upper, "ПРИВЕТ".lower, "Բարեւ".upper
+	println "ı".upper, "İ".lower, "ſ".upper
+	str Short = "ıſ".upper + "ab"
+	println Short.length, "ıſ".length + 2
+	str Odd = "x?y"
+	println Odd.upper
+	return 0
+}
+
 ### csv_read_and_written
 //> 4 [Name, Age, Note]
 //> [Ada, 36, likes "tea", and cake]
