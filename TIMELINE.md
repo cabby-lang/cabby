@@ -16,7 +16,9 @@ the end.
 
 Versions are numbered from 14 November: `cabby --version` says which one
 is installed. The minor number goes up with each stage of new things, and
-the patch number with fixes alone.
+the patch number with fixes alone. From 1.0.0 (21 November 2026), the
+major number goes up only with a change that a working program would need
+changing for.
 
 | Version | Date | What it brought |
 |---|---|---|
@@ -95,6 +97,7 @@ the patch number with fixes alone.
 | 0.43.1 | 20 November | The speed check before 1.0: objects made with malloc itself (compiled `objects` 6× faster than C), `.upper`'s quick path back |
 | 0.43.2 | 21 November | The last tests on the three computers: the test scripts on macOS's awk, a ping test's address, a warning on Arch |
 | 0.43.3 | 21 November | `cabby -c --checked` catches a read past an array's end again: `-O1` at most, and `main` marked too |
+| **1.0.0** | 21 November | **Cabby 1.0**: the language and its libraries settled, tested on Debian, Arch and an Apple-processor Mac, and packaged for each |
 
 ---
 
@@ -1652,6 +1655,36 @@ being stopped.
 - Tested here with clang compiling and GCC's AddressSanitizer linking, as
   this computer's clang has no runtime for it: all four checked tests
   pass.
+
+*Version 1.0.0, Cabby 1.0:* the same Cabby as 0.43.3, now called settled.
+
+What 1.0 is, from the plan agreed on 20 November:
+
+- **The language**: C's syntax with tabs for blocks; `str`, lists and
+  lookups; objects with inheritance (multiple too), made and dropped by
+  their single owner, borrowed with every check before the program runs;
+  `link`s between objects that own nothing; handlers; workers; `callback`s
+  and `extern` for C; addresses, checked when interpreted and with
+  `cabby -c --checked`.
+- **Two ways to run it**: interpreted (`cabby prog.cby`, ahead of Python at
+  nine of ten benchmarks and level at the tenth, in a quarter to a half of
+  its memory), and compiled through LLVM (`cabby -c`, within about 1.2× of
+  C's time).
+- **Its libraries**: from files, text, dates, JSON, CSV and XML through
+  networks, servers and encryption to windows (SDL and GTK), terminal
+  windows, games in 2D and 3D, sound and MIDI, speech both ways, video, the
+  desktop's own settings, D-Bus, Bluetooth, printing and email.
+- **Its manual and tutorials**: 107 chapters, each with a program, and a
+  reference page for every library; every example in them runs in the
+  tests.
+- **The last steps before it**: a look at every name (0.39.0); the known
+  gaps closed (sorting objects, `.upper` beyond A to Z, elements borrowed
+  separately, links: 0.40.0 to 0.43.0); the speed check (0.43.1); and
+  `make test` passing on all three computers, with the packages built and
+  installed on each (0.43.2 and 0.43.3).
+
+What comes after is in `Goals.md`: microcontrollers, phones and
+WebAssembly, and the rest of README §15.
 
 ## Along the way (dates not recorded)
 
