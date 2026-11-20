@@ -109,5 +109,10 @@ Getting whisper.cpp:
 | | |
 |---|---|
 | Arch | `whisper.cpp` (in the AUR: `yay -S whisper.cpp`) |
-| Debian | built from its source: `git clone https://github.com/ggml-org/whisper.cpp`, then `cmake -B build && cmake --build build -j`, and `build/bin/whisper-cli` put on the `PATH` |
+| Debian | built from its source: `git clone https://github.com/ggml-org/whisper.cpp`, then `cmake -B build && cmake --build build -j`, and `build/bin/whisper-cli` left where it is or put on the `PATH` |
 | a Mac | `brew install whisper-cpp` |
+
+Cabby looks for `whisper-cli` (or `whisper-cpp`) on the `PATH`, then in
+`~/.local/bin`, `~/whisper.cpp/build/bin` and Homebrew's folders, so a
+build that isn't on the `PATH` is found too. `CABBY_WHISPER` names the
+program, if it's somewhere else.

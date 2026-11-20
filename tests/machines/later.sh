@@ -37,7 +37,8 @@ hearing)
 			echo "  $P: not on the PATH"
 		fi
 	done
-	echo "== whisper-cli anywhere else (a build folder, say)"
+	echo "  CABBY_WHISPER=${CABBY_WHISPER:-(not set)}"
+	echo "== whisper-cli anywhere else (Cabby also looks in ~/.local/bin and ~/whisper.cpp/build/bin)"
 	find "$HOME" /usr/local /opt -name 'whisper-cli' -type f 2> /dev/null | head -5 | sed 's/^/  /'
 	echo "== Models (ggml-*.bin) Cabby looks for, and any elsewhere"
 	echo "  CABBY_WHISPER_MODEL=${CABBY_WHISPER_MODEL:-(not set)}"
@@ -45,15 +46,21 @@ hearing)
 	echo "== What Cabby says"
 	cat > "${TMPDIR:-/tmp}/cabby-hearing.cby" <<'CBY'
 use speech
+use time
 
 int main {
 	println "model folder (speech.download_model's):", speech.model_folder
 	println "model found:", speech.model
 	println "can hear:", speech.can_hear, "| can speak:", speech.can_speak
+	if speech.can_hear {
+		println "Say a sentence to the microphone now (for five seconds)..."
+		println "heard:", speech.hear_for(time.seconds(5))
+	}
 }
 CBY
 	"$CABBY" "${TMPDIR:-/tmp}/cabby-hearing.cby"
 	rm -f "${TMPDIR:-/tmp}/cabby-hearing.cby"
+	echo "== Was what it heard what you said (near enough)?"
 	;;
 *)
 	echo "which check? tests/machines/later.sh screens | beeps | hearing"

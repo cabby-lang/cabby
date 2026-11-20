@@ -273,10 +273,30 @@ list str speech.voices {
 
 // ---- hearing: speech to text, by Whisper (whisper.cpp), on the computer
 
-// whisper.cpp's program, as it's called now ("whisper-cli"), or before
-// ("whisper-cpp", Homebrew's), or "" for none
+// whisper.cpp's program: CABBY_WHISPER, if it's set; as it's called now
+// ("whisper-cli"), or before ("whisper-cpp", Homebrew's), on the PATH;
+// else where it's often put without being on the PATH: ~/.local/bin
+// (which Arch leaves off it), whisper.cpp's own build folder, Homebrew's.
+// "" for none.
 static str speech_whisper {
-	for Program in "whisper-cli,whisper-cpp".split(",") {
+	list str Tries
+	if shell.has("CABBY_WHISPER") && shell.get("CABBY_WHISPER") != "" {
+		Tries.add shell.get("CABBY_WHISPER")
+	}
+	Tries.add "whisper-cli"
+	Tries.add "whisper-cpp"
+	// (not when the tests give their stand-ins)
+	if !shell.has("CABBY_TOOLS") {
+		str Home = directories.home
+		Tries.add Home + "/.local/bin/whisper-cli"
+		Tries.add Home + "/whisper.cpp/build/bin/whisper-cli"
+		Tries.add "/opt/homebrew/bin/whisper-cli"
+		Tries.add "/usr/local/bin/whisper-cli"
+	}
+	for Program in Tries {
+		if Program.contains('/') && !files.exists(Program) {
+			continue
+		}
 		if speech_run(Program + "\x1f--help", "", false) != "\x1e" {
 			return Program.copy
 		}
