@@ -90,6 +90,7 @@ the patch number with fixes alone.
 | 0.39.2 | 20 November | Pasting keeps (or gives) indentation; tutorials 28 and 40 show callbacks and CSV |
 | 0.40.0 | 20 November | Lists of objects put in order: `.sort_by` a field or a function's key, `.sort_with` a function comparing two |
 | 0.41.0 | 20 November | `.upper` and `.lower` for Latin, Greek (polytonic too), Cyrillic and Armenian |
+| 0.42.0 | 20 November | Elements at positions written as numbers are borrowed separately: `Scores[0]` lent, `Scores[1]` changed |
 
 ---
 
@@ -1552,6 +1553,22 @@ old names need changing:
 - Bytes that aren't UTF-8 are left as they are; A to Z keeps its quick
   path. The interpreter and compiled programs share `rt_str_case`.
 - README §15 no longer lists this, or sorting objects (0.40.0's).
+
+*Version 0.42.0:* the third known gap.
+
+- Borrowing tells apart the elements of a list or an array at positions
+  known before the program runs: while `Scores[0]` is borrowed,
+  `Scores[1]` can be changed, and `add_to Totals[0], Totals[2]` lends
+  one element and reads another. `Grid[0][1]` and `Pets[0].Name` are
+  their own parts too.
+- An element at a position worked out as it runs (`Scores[i]`) still
+  counts as all of them, and `.add`, `.remove_at` and the rest change
+  the whole list, since its elements can move. A lookup's values are all
+  of it, since `Ages["Bob"] = 3` can add a key. Like the rest of the
+  borrow checking, it only ever refuses; it never lets an unsafe program
+  through.
+- The note after a refusal names the part that's borrowed: "'Scores[0]'
+  is borrowed here".
 
 ## Along the way (dates not recorded)
 

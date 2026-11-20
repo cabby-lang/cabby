@@ -3114,6 +3114,57 @@ int main {
 	Pets.sort
 }
 
+### err_same_element_twice
+// expect: can't borrow 'Totals' while it is lent as mutable
+void add_to int &Total, const int &Extra {
+	Total += Extra
+}
+int main {
+	int Totals[2] = {10, 20}
+	add_to Totals[0], Totals[0 + 0]
+}
+
+### err_element_at_a_worked_out_position
+// expect: can't change 'Scores' while it is borrowed
+int main {
+	list int Scores = {1, 2, 3}
+	int i = 1
+	const int &First = Scores[0]
+	Scores[i] = 5
+	println First
+}
+
+### err_list_grown_while_an_element_is_borrowed
+// expect: can't lend 'Scores' as mutable while it is also borrowed read-only
+int main {
+	list int Scores = {1, 2, 3}
+	const int &First = Scores[0]
+	Scores.add 4
+	println First
+}
+
+### err_lookup_value_borrowed
+// expect: can't change 'Ages' while it is borrowed
+int main {
+	lookup str int Ages = {"Ada": 36}
+	const int &A = Ages["Ada"]
+	Ages["Bob"] = 3
+	println A
+}
+
+### ok_elements_borrowed_separately
+// expect: quiet
+int main {
+	list int Scores = {1, 2, 3}
+	int &A = Scores[0]
+	int &B = Scores[1]
+	A += B
+	int Grid[2][2]
+	const int &Corner = Grid[0][0]
+	Grid[0][1] = Corner
+	Grid[1][0] = Scores[10 / 5]
+}
+
 ### err_callback_not_a_function
 // expect: expected the name of a function for
 use addresses

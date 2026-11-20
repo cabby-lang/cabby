@@ -1,6 +1,6 @@
 # The Cabby Manual
 
-*For Cabby 0.41.0 (2026-11-20).*
+*For Cabby 0.42.0 (2026-11-20).*
 
 A book for learning Cabby one idea at a time, and a reference to come back
 to afterwards.
@@ -2804,6 +2804,31 @@ The same goes for an object's methods: a method can go through one of its
 lists while changing another field. Calling one of its own methods that can
 change the object counts as changing all of it, though, since that method
 might change the very field being gone through.
+
+Elements of an array, or of a list ([Chapter 15](#chapter-15-lists)),
+are separate in the same way, at positions written as numbers:
+
+<!-- run -->
+```cabby
+void add_to int &Total, const int &Extra {
+	Total += Extra
+}
+
+int main {
+	int Totals[3] = {10, 20, 30}
+	add_to Totals[0], Totals[2]          // one element changed, another read
+	println Totals[0]
+}
+```
+
+```text
+40
+```
+
+At a position worked out as the program runs, `Totals[i]`, Cabby can't
+tell before it runs which element that is, so it counts as all of them;
+and adding to a list or taking from it changes all of it, since the rest
+can move.
 
 #### Which to use
 
@@ -16804,7 +16829,7 @@ Run `cabby` with no file to type Cabby a piece at a time:
 
 ```text
 $ cabby
-Cabby 0.41.0 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
+Cabby 0.42.0 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
 Cabby comes with ABSOLUTELY NO WARRANTY, under the MIT License; "cabby.license" for details.
 >>> int add int a, int b {
 ... 	return a + b
@@ -17137,9 +17162,10 @@ CABBY_GUI_SCRIPT="type 1 Ada; click Say hello; shot greeter.png; close" cabby 51
   library.
 * Shadows and physics in 3D (`use world`).
 * The `?:` operator, `long double`, and backward `goto`.
-* Borrowing tracks fields separately, but not list elements: while
-  `Scores[0]` is borrowed, `Scores[1]` can't be changed either. This only
-  ever refuses programs; it never lets an unsafe one through.
+* Borrowing tells apart elements at positions written as numbers
+  (`Scores[0]`, `Scores[1]`), but not at positions worked out as it runs
+  (`Scores[i]` and `Scores[j]` count as the same). This only ever refuses
+  programs; it never lets an unsafe one through.
 
 [Contents](#contents)
 

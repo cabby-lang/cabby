@@ -3590,6 +3590,46 @@ int main {
 	return 0
 }
 
+### elements_borrowed_separately
+//> 1 [1, 20, 8]
+//> [Grace, Alan!]
+//> 9 3 4
+//> 30 20
+struct spot {
+	int X
+	int Y
+}
+
+void add_to int &Total, const int &Extra {
+	Total += Extra
+}
+
+int main {
+	list int Scores = {1, 2, 3}
+	const int &First = Scores[0]
+	Scores[1] = 20
+	Scores[2] += 5
+	println First, Scores
+
+	list str Names = {"Ada", "Alan"}
+	str &Second = Names[1]
+	Names[0] = "Grace"
+	Second += "!"
+	println Names
+
+	spot Grid[2][2]
+	spot &Corner = Grid[0][0]
+	Grid[1][1].X = 4
+	Grid[0][1].Y = 3
+	Corner.X = 9
+	println Grid[0][0].X, Grid[0][1].Y, Grid[1][1].X
+
+	int Totals[2] = {10, 20}
+	add_to Totals[0], Totals[1]
+	println Totals[0], Totals[1]
+	return 0
+}
+
 ### csv_read_and_written
 //> 4 [Name, Age, Note]
 //> [Ada, 36, likes "tea", and cake]
