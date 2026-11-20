@@ -124,6 +124,19 @@ check('complete_unused_library', s[-1].endswith('secrets.make_private_key'), s)
 s = keys('bluetooth.paired\t')
 check('complete_unused_library_after_its_type', s[-1].endswith('bluetooth.paired_devices'), s)
 
+# Pasting (bracketed, as terminals send it): the pasted indentation is
+# kept when there's some, spaces become tabs, and none gets the usual
+def paste(text):
+    os.write(fd, b'\x1b[200~' + text.replace('\n', '\r').encode() + b'\x1b[201~')
+    out = pump(1.0)
+    text = re.sub(rb'\x1b\[[0-9;?]*[A-Za-z]', b'', out).decode(errors='replace')
+    return [l.strip() for l in text.replace('\r', '\n').split('\n') if l.strip() and not l.strip().startswith('...')]
+
+block = 'for i in 3 {\n\tif i > 0 {\n\t\tprintln "got", i\n\t}\n}\n'
+for name, text in [('tabs', block), ('spaces', block.replace('\t', '    ')), ('none', block.replace('\t', ''))]:
+    s = paste(text)
+    check('paste_' + name, 'got 1' in s and 'got 2' in s and not any('error' in l for l in s), s)
+
 os.kill(pid, 9)
 print('tty session tests: %d failed' % failed)
 sys.exit(1 if failed else 0)

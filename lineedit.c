@@ -18,6 +18,7 @@ struct LineEditor {
 	char **hist;
 	int nhist, caphist;
 	bool pasting;            /* inside a bracketed paste */
+	int paste_unit;          /* spaces a level, in this paste (0: not seen yet) */
 	int added;               /* lines added this session */
 };
 
@@ -442,6 +443,28 @@ static void refresh(Line *L, const char *prompt)
 	free(out);
 }
 
+/* A pasted line's leading spaces as tabs: the first indented line of the
+ * paste says how many spaces a level is (its own count: it's one level
+ * in), and the rest are counted in those. */
+static void spaces_to_tabs(LineEditor *le, Line *L)
+{
+	int n = 0;
+	while (n < L->len && L->buf[n] == ' ')
+		n++;
+	if (n == 0)
+		return;
+	if (le->paste_unit == 0)
+		le->paste_unit = n;
+	int tabs = (n + le->paste_unit / 2) / le->paste_unit;
+	char *rest = strdup(L->buf + n);
+	L->len = L->pos = 0;
+	L->buf[0] = '\0';
+	for (int i = 0; i < tabs; i++)
+		line_insert(L, "\t", 1);
+	line_insert(L, rest, (int)strlen(rest));
+	free(rest);
+}
+
 /* the line is tabs, then " * ", and nothing else */
 static bool comment_leader_only(const Line *L)
 {
@@ -469,9 +492,15 @@ LeStatus le_read(LineEditor *le, const char *prompt, const char *prefill, bool a
 	Line L = { 0 };
 	line_reserve(&L, 0);
 	L.buf[0] = '\0';
-	if (prefill && !le->pasting)
+	if (prefill)
 		line_set(&L, prefill);
 	L.untouched = true;
+	/* A pasted line brings its own indentation when it has some (tabs, or
+	 * spaces, which become tabs); one with none, as text copied from a
+	 * page or a terminal often has, gets the usual indentation. Which it
+	 * is waits for the line's first character. */
+	bool paste_start = le->pasting;
+	bool paste_spaces = false;
 
 	/* history browsing: index nhist is the line being edited */
 	int hidx = le->nhist;
@@ -489,8 +518,23 @@ LeStatus le_read(LineEditor *le, const char *prompt, const char *prefill, bool a
 		}
 		if (c != 9)
 			last_tab_listed = false;
-		if (c == '\r' || c == '\n')
+		if (c == '\r' || c == '\n') {
+			if (paste_start && all_tabs(&L)) {   /* a blank pasted line */
+				L.len = L.pos = 0;
+				L.buf[0] = '\0';
+			}
 			break;
+		}
+		if (paste_start && le->pasting && c != 27) {
+			paste_start = false;
+			if (c == '\t' || c == ' ') {
+				L.len = L.pos = 0;
+				L.buf[0] = '\0';
+				paste_spaces = c == ' ';
+			} else if (c == '}' && auto_dedent && all_tabs(&L)) {
+				line_delete(&L, L.len - 1, L.len);
+			}
+		}
 		switch (c) {
 		case 1:  L.pos = 0; break;                          /* Ctrl-A */
 		case 2:  L.pos = prev_char(&L, L.pos); break;       /* Ctrl-B */
@@ -577,10 +621,8 @@ LeStatus le_read(LineEditor *le, const char *prompt, const char *prefill, bool a
 			else if (num == 3) line_delete(&L, L.pos, next_char(&L, L.pos));
 			else if (num == 200) {
 				le->pasting = true;
-				if (L.untouched) {   /* a pasted block brings its own indentation */
-					L.len = L.pos = 0;
-					L.buf[0] = '\0';
-				}
+				le->paste_unit = 0;
+				paste_start = L.untouched;
 			} else if (num == 201) {
 				le->pasting = false;
 			}
@@ -618,6 +660,8 @@ LeStatus le_read(LineEditor *le, const char *prompt, const char *prefill, bool a
 		refresh(&L, prompt);
 	}
 done:
+	if (status == LE_OK && paste_spaces)
+		spaces_to_tabs(le, &L);
 	if (status == LE_INTERRUPT)
 		fputs("^C", stdout);
 	fputs("\r\n", stdout);

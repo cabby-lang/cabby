@@ -23,9 +23,14 @@ UNAME := $(shell uname -s)
 # whose libraries can't be linked here
 ARCH := $(shell uname -m)
 BREW := brew
+PKG_CONFIG := pkg-config
 ifeq ($(UNAME)-$(ARCH),Darwin-arm64)
 BREW := $(firstword $(wildcard /opt/homebrew/bin/brew) brew)
+PKG_CONFIG := $(firstword $(wildcard /opt/homebrew/bin/pkg-config) pkg-config)
 endif
+# $(call LIB_FOR_HERE,library file,what to give): what to give, if the
+# library is built for this processor (a Mac's lipo says; elsewhere, yes)
+LIB_FOR_HERE = $(if $(filter Darwin,$(UNAME)),$(if $(filter $(ARCH),$(shell lipo -archs $(1) 2>/dev/null)),$(2)),$(2))
 ifeq ($(UNAME),Darwin)
 PLATFORM_DEFS := -D_DARWIN_C_SOURCE
 PLATFORM_SHARED := -Wl,-undefined,dynamic_lookup
@@ -63,8 +68,8 @@ CORE_O  := $(CORE:%.c=$(BUILD)/%.o)
 # The gtk library (`use gtk`, the gui library drawn by GTK, an option)
 # needs GTK 4: found with pkg-config, or (without GTK's development
 # headers) by the libraries' names, using runtime/gtk_min.h.
-GTK_LIBS := $(shell pkg-config --libs gtk4 2>/dev/null)
-GTK_CFLAGS := $(shell pkg-config --cflags gtk4 2>/dev/null)
+GTK_LIBS := $(shell $(PKG_CONFIG) --libs gtk4 2>/dev/null)
+GTK_CFLAGS := $(shell $(PKG_CONFIG) --cflags gtk4 2>/dev/null)
 GUI_WARN := -Wall -Wextra -Wno-unused-parameter -Werror=incompatible-pointer-types -Werror=int-conversion -Werror=implicit-function-declaration
 ifeq ($(strip $(GTK_LIBS)),)
 GTK_LIBS := $(shell for l in libgtk-4.so.1 libgio-2.0.so.0 libgobject-2.0.so.0 libglib-2.0.so.0 libcairo.so.2 libpango-1.0.so.0; do \
@@ -83,12 +88,13 @@ SOUND_TARGETS := lib/libcabbysound.so lib/libcabbysound.a lib/sound.link
 
 # The game library needs SDL 3 (found with pkg-config): sdl3 on Arch,
 # libsdl3-dev on Debian.
-GAME_LIBS := $(shell pkg-config --libs sdl3 2>/dev/null)
-GAME_CFLAGS := $(shell pkg-config --cflags sdl3 2>/dev/null)
+GAME_LIBS := $(shell $(PKG_CONFIG) --libs sdl3 2>/dev/null)
+GAME_CFLAGS := $(shell $(PKG_CONFIG) --cflags sdl3 2>/dev/null)
 ifeq ($(strip $(GAME_LIBS)),)
 # (without pkg-config: where Homebrew puts it, or the usual places)
-SDL_PREFIX := $(firstword $(patsubst %/include/SDL3/SDL.h,%,$(wildcard $(shell $(BREW) --prefix sdl3 2>/dev/null)/include/SDL3/SDL.h \
-	/opt/homebrew/opt/sdl3/include/SDL3/SDL.h /usr/local/opt/sdl3/include/SDL3/SDL.h /usr/local/include/SDL3/SDL.h)))
+SDL_FOUND := $(patsubst %/include/SDL3/SDL.h,%,$(wildcard $(shell $(BREW) --prefix sdl3 2>/dev/null)/include/SDL3/SDL.h \
+	/opt/homebrew/opt/sdl3/include/SDL3/SDL.h /usr/local/opt/sdl3/include/SDL3/SDL.h /usr/local/include/SDL3/SDL.h))
+SDL_PREFIX := $(firstword $(foreach p,$(SDL_FOUND),$(call LIB_FOR_HERE,$(p)/lib/libSDL3.dylib,$(p))))
 ifneq ($(SDL_PREFIX),)
 GAME_LIBS := -L$(SDL_PREFIX)/lib -lSDL3
 GAME_CFLAGS := -I$(SDL_PREFIX)/include
@@ -207,12 +213,13 @@ lib/world.link: Makefile
 # (found with pkg-config: ffmpeg on Arch, libavformat-dev, libavcodec-dev,
 # libswscale-dev and libswresample-dev on Debian, Homebrew's ffmpeg)
 FFMPEG_PKGS := libavformat libavcodec libswscale libswresample libavutil
-VIDEOS_LIBS := $(shell pkg-config --libs $(FFMPEG_PKGS) 2>/dev/null)
-VIDEOS_CFLAGS := $(shell pkg-config --cflags $(FFMPEG_PKGS) 2>/dev/null)
+VIDEOS_LIBS := $(shell $(PKG_CONFIG) --libs $(FFMPEG_PKGS) 2>/dev/null)
+VIDEOS_CFLAGS := $(shell $(PKG_CONFIG) --cflags $(FFMPEG_PKGS) 2>/dev/null)
 # (without pkg-config: where Homebrew puts it, or the usual places)
 ifeq ($(strip $(VIDEOS_LIBS)),)
-FFMPEG_PREFIX := $(firstword $(patsubst %/include/libavformat/avformat.h,%,$(wildcard $(shell $(BREW) --prefix ffmpeg 2>/dev/null)/include/libavformat/avformat.h \
-	/opt/homebrew/opt/ffmpeg/include/libavformat/avformat.h /usr/local/opt/ffmpeg/include/libavformat/avformat.h /usr/local/include/libavformat/avformat.h)))
+FFMPEG_FOUND := $(patsubst %/include/libavformat/avformat.h,%,$(wildcard $(shell $(BREW) --prefix ffmpeg 2>/dev/null)/include/libavformat/avformat.h \
+	/opt/homebrew/opt/ffmpeg/include/libavformat/avformat.h /usr/local/opt/ffmpeg/include/libavformat/avformat.h /usr/local/include/libavformat/avformat.h))
+FFMPEG_PREFIX := $(firstword $(foreach p,$(FFMPEG_FOUND),$(call LIB_FOR_HERE,$(p)/lib/libavformat.dylib,$(p))))
 ifneq ($(FFMPEG_PREFIX),)
 VIDEOS_LIBS := -L$(FFMPEG_PREFIX)/lib -lavformat -lavcodec -lswscale -lswresample -lavutil
 VIDEOS_CFLAGS := -I$(FFMPEG_PREFIX)/include

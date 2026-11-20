@@ -1,6 +1,6 @@
 # Cabby tutorials
 
-*For Cabby 0.39.1 (2026-11-20).*
+*For Cabby 0.39.2 (2026-11-20).*
 
 A hundred and six short programs, each about one keyword, feature or library, in
 an order where each uses only what came before it. Each one
@@ -115,7 +115,7 @@ between `{` and `}` to run them as one input and see them as a program would. (`
 | | File | Covers |
 |---|---|---|
 | 27 | `27-c-functions.cby` | `extern`, `use`, the C library |
-| 28 | `28-addresses.cby` | `use addresses`: `address int`, `addresses.of`, `.value`, stepping, C pointers |
+| 28 | `28-addresses.cby` | `use addresses`: `address int`, `addresses.of`, `.value`, stepping, C pointers, a `callback` for `qsort` |
 | 29 | `29-register-volatile.cby` | `register` `volatile` |
 | 30 | `30-goto.cby` | `goto`, labels |
 
@@ -142,7 +142,7 @@ between `{` and `}` to run them as one input and see them as a program would. (`
 | | File | Covers |
 |---|---|---|
 | 39 | `39-dates.cby` | `use time` and `use dates`: `duration`, `moment`, `date`, patterns like `"d mmmm yyyy"` |
-| 40 | `40-json.cby` | `use json`: `json.read`, `J["name"]`, `.str` `.long` and `_or`, building JSON, `.pretty`, structs with `json.from` and `.fill` |
+| 40 | `40-json.cby` | `use json`: `json.read`, `J["name"]`, `.str` `.long` and `_or`, building JSON, `.pretty`, structs with `json.from` and `.fill`; `use csv`: the songs as a table |
 | 41 | `41-downloads.cby` | `use networks`: `networks.download`, `download_to`, `can_reach`, `status` |
 | 42 | `42-web-addresses.cby` | `networks.read_url` and `networks.url`: an address's parts, its query, encoding, making an address |
 | 43 | `43-html.cby` | `use html`: `html.read`, CSS selectors with `find` and `find_all`, `.text`, `.attribute`, building a page |

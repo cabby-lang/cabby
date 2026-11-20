@@ -1,7 +1,7 @@
 // Tutorial 38: When it fails — a class's marks, read with else
 //
 // Run it:      cabby 38-when-it-fails.cby
-// Or compile:  cabby -c 38-when-it-fails.cby && ./39-when-it-fails
+// Or compile:  cabby -c 38-when-it-fails.cby && ./38-when-it-fails
 // Library:     use files
 // Topics:      else after a declaration, an assignment or a call: else
 //              Value, else { }, and else Why { } with the panic's message

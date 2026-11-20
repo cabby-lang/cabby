@@ -1,7 +1,7 @@
 // Tutorial 43: HTML
 //
 // Run it:      cabby 43-html.cby
-// Or compile:  cabby -c 43-html.cby && ./44-html
+// Or compile:  cabby -c 43-html.cby && ./43-html
 // Library:     use html
 // Topics:      html.read, find, find_all, CSS selectors, .text, .attribute,
 //              building a page with html.element, .add, .add_text, .pretty

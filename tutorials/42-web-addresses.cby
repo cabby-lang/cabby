@@ -1,7 +1,7 @@
 // Tutorial 42: Web addresses — URLs, taken apart and put together
 //
 // Run it:      cabby 42-web-addresses.cby
-// Or compile:  cabby -c 42-web-addresses.cby && ./43-web-addresses
+// Or compile:  cabby -c 42-web-addresses.cby && ./42-web-addresses
 // Library:     use networks (and use files, use directories)
 // Topics:      networks.read_url, networks.url and its parts, text,
 //              Query, networks.url_encode and decode

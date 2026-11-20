@@ -2,7 +2,7 @@
 //
 // Run it:      cabby 45-picture-size.cby
 //              cabby 45-picture-size.cby pictures/cabby.png   (and any pictures of yours)
-// Or compile:  cabby -c 45-picture-size.cby && ./46-picture-size pictures/cabby.png
+// Or compile:  cabby -c 45-picture-size.cby && ./45-picture-size pictures/cabby.png
 // Library:     use bytes (use files brings it too)
 // Topics:      bytes, B[i], .add, .part, hexadecimal, bytes.from_hex,
 //              .starts_with, numbers inside bytes and byte order (add_int,

@@ -1,7 +1,7 @@
 // Tutorial 44: XML
 //
 // Run it:      cabby 44-xml.cby
-// Or compile:  cabby -c 44-xml.cby && ./45-xml
+// Or compile:  cabby -c 44-xml.cby && ./44-xml
 // Library:     use xml
 // Topics:      xml.read, find_all, attributes, xml.can_read, building a
 //              document, .pretty

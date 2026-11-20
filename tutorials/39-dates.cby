@@ -1,7 +1,7 @@
 // Tutorial 39: Time and dates
 //
 // Run it:      cabby 39-dates.cby
-// Or compile:  cabby -c 39-dates.cby && ./40-dates
+// Or compile:  cabby -c 39-dates.cby && ./39-dates
 // Library:     use dates (and use time, which comes with it)
 // Topics:      moment, duration, date, time_of_day, date_time, patterns
 //              like "d mmmm yyyy", weekday and month

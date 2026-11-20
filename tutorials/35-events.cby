@@ -1,7 +1,7 @@
 // Tutorial 35: Timers and the event loop
 //
 // Run it:      cabby 35-events.cby
-// Or compile:  cabby -c 35-events.cby && ./36-events
+// Or compile:  cabby -c 35-events.cby && ./35-events
 // Library:     use events
 // Topics:      timer, every, after, stop, events.run, events.stop, one loop
 //              for timers, processes and windows

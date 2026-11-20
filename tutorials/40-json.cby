@@ -1,18 +1,21 @@
 // Tutorial 40: JSON
 //
 // Run it:      cabby 40-json.cby
-// Or compile:  cabby -c 40-json.cby && ./41-json
-// Library:     use json
+// Or compile:  cabby -c 40-json.cby && ./40-json
+// Libraries:   use json, use csv
 // Topics:      json.read, J["name"], J[i], .str .double .long .bool, the _or
-//              forms, for Item in J, building JSON, .text and .pretty, and
-//              structs to and from JSON (json.from, .fill)
+//              forms, for Item in J, building JSON, .text and .pretty,
+//              structs to and from JSON (json.from, .fill), and the songs
+//              as a CSV table (csv.write_records_file, csv.read_records_file)
 //
 // JSON is how most programs pass data to each other as text: web services
 // answer in it, and programs keep their settings in it. This one reads a
 // small music library, works something out from it, and writes some JSON
-// of its own.
+// of its own. Then it saves the songs as a table a spreadsheet can open
+// (CSV), and reads the table back.
 
 use json
+use csv
 use files
 
 // A song as the program keeps it. json.from and .fill go between it and
@@ -81,8 +84,27 @@ int main {
 		println S.Title, S.Seconds, S.Stars
 	}
 	println json.from Songs[2]                // and back to JSON
+
+	// ---- a table: the songs as CSV, a row each, for a spreadsheet
+	list str Columns = {"Title", "Seconds", "Stars"}
+	list lookup str str Rows
+	for S in Songs {
+		lookup str str Row
+		Row["Title"] = S.Title.copy
+		Row["Seconds"] = S.Seconds.text
+		Row["Stars"] = S.Stars.text
+		Rows.add Row
+	}
+	csv.write_records_file "songs.csv", Columns, Rows
+	print files.read("songs.csv")
+	long Seconds = 0
+	for R in csv.read_records_file "songs.csv" {   // by the first row's names
+		Seconds += R["Seconds"].to_long             // every field is text
+	}
+	println "From the table:", Seconds, "seconds"
 	files.delete "library.json"
 	files.delete "summary.json"
+	files.delete "songs.csv"
 	return 0
 }
 
@@ -92,6 +114,8 @@ int main {
 //  - Save some settings of your own to a file, with a struct and
 //    `json.from(...).pretty`, and read them back with `.fill` the next time
 //    the program runs.
+//  - Give one song a title with a comma in it, "Rain, Again", and look at
+//    how songs.csv keeps it in one field.
 
 // ---------------------------------------------------------------- output
 //> Sam's library has 3 songs
@@ -115,3 +139,8 @@ int main {
 //> Night Train 187 4
 //> Rain (live) 241 3
 //> {"title":"Rain (live)","seconds":241,"stars":3}
+//> Title,Seconds,Stars
+//> Blue Moon,214,5
+//> Night Train,187,4
+//> Rain (live),241,3
+//> From the table: 642 seconds
