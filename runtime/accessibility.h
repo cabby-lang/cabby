@@ -20,6 +20,16 @@
  * come.) */
 
 /* Cabby's D-Bus and JSON (runtime/dbus.c, json.c), from the runtime */
+#ifdef __wasi__
+/* (in a browser there's no D-Bus: no bus is found, and none is served) */
+static int64_t cby_dbus_try_session(void) { return 0; }
+static int64_t cby_dbus_try_address(const char *address) { (void)address; return 0; }
+static void cby_dbus_serve_tree(int64_t id, const char *prefix,
+				void (*fn)(void *ctx, int64_t bus, const char *path, const char *iface, const char *member,
+					   int64_t args),
+				void *ctx) { (void)id; (void)prefix; (void)fn; (void)ctx; }
+extern void cby_dbus_close(int64_t id);
+#else
 extern int64_t cby_dbus_try_session(void);
 extern int64_t cby_dbus_try_address(const char *address);
 extern void cby_dbus_close(int64_t id);
@@ -27,6 +37,7 @@ extern void cby_dbus_serve_tree(int64_t id, const char *prefix,
 				void (*fn)(void *ctx, int64_t bus, const char *path, const char *iface, const char *member,
 					   int64_t args),
 				void *ctx);
+#endif
 extern int64_t cby_dbus_message_new(const char *dest, const char *path, const char *iface, const char *member);
 extern int64_t cby_dbus_signal_new(const char *path, const char *iface, const char *member);
 extern int64_t cby_dbus_answer_new(void);

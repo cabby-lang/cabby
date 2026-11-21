@@ -1,6 +1,6 @@
 # The Cabby Manual
 
-*For Cabby 1.2.0 (2026-11-21).*
+*For Cabby 1.3.0 (2026-11-22).*
 
 A book for learning Cabby one idea at a time, and a reference to come back
 to afterwards.
@@ -16911,7 +16911,7 @@ Run `cabby` with no file to type Cabby a piece at a time:
 
 ```text
 $ cabby
-Cabby 1.2.0 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
+Cabby 1.3.0 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
 Cabby comes with ABSOLUTELY NO WARRANTY, under the MIT License; "cabby.license" for details.
 >>> int add int a, int b {
 ... 	return a + b

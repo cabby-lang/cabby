@@ -3,10 +3,13 @@
 // end, as tests/run_tutorial_tests.sh checks them on a computer.
 //
 //     node tests/run_wasm_tests.cjs [--cases] [--compiled] [names...]
+//     node tests/run_wasm_tests.cjs --play
 //
 // --cases runs the program tests (tests/run_cases.cby) instead; --compiled
 // compiles each with `cabby -c --wasm` and runs what that makes, in place
-// of cabby.wasm interpreting it.
+// of cabby.wasm interpreting it. --play uses the page `make wasm-site`
+// makes (build/wasm-site) as a person would: a window and a game, typed
+// into, clicked and closed, interpreted and compiled.
 //
 // Those that need the computer itself (a window, a server, the desktop)
 // are listed in WASM_SKIP below, with why: in a browser they say what's
@@ -25,7 +28,8 @@ const WASM_SKIP = {
 	'27-c-functions': 'C functions beyond the libraries\' (printf)', '28-addresses': 'callbacks (qsort)',
 	'34-processes': 'other programs', '41-downloads': 'the network',
 	'42-web-addresses': 'the network', '49-archives': 'zlib', '50-databases': 'SQLite', '62-terminal-window': 'a terminal',
-	'63-workers': 'threads', '74-songs': 'sound', '76-keyboard': 'MIDI', '91-chat-server': 'the network',
+	'63-workers': 'threads', '64-done-later': 'threads (a worker)', '65-progress': 'threads (a worker)',
+	'66-painting': 'threads (workers)', '74-songs': 'sound', '76-keyboard': 'MIDI', '91-chat-server': 'the network',
 	'92-web-server': 'the network', '93-websockets': 'the network', '94-encrypted': 'the network',
 	'95-emails': 'the network', '96-the-computer': 'the computer', '97-power-and-volume': 'the computer',
 	'98-users': 'the computer', '99-linux': 'the computer', '100-secrets': 'OpenSSL', '101-desktop': 'the desktop',
@@ -53,6 +57,7 @@ function expect(src) {
 		want: src.split('\n').filter(l => l.startsWith('//>')).map(l => l.replace(/^\/\/> ?/, '')).join('\n'),
 		wantPanic, wantExit: wantPanic ? 101 : parseInt((src.match(/^\/\/ exit: (\d+)$/m) || [0, 0])[1]),
 		args: ((src.match(/^\/\/ args: (.*)$/m) || [])[1] || '').split(' ').filter(Boolean),
+		script: (src.match(/^\/\/ script: (.*)$/m) || [])[1],   // (a game's, as run_tutorial_tests.sh gives it)
 		// (as printf's %b reads it: \\n, \\r, \\t and \\\\)
 		stdin: ((src.match(/^\/\/ (?:input|stdin): (.*)$/m) || [])[1] || '')
 			.replace(/\\(n|r|t|\\)/g, (m, c) => ({ n: '\n', r: '\r', t: '\t', '\\': '\\' })[c]),
@@ -68,10 +73,112 @@ const CASE_SKIP = {
 
 // what a program uses that a browser hasn't
 const NEEDS = /^use (shell|gui|gtk|game|world|tui|tgame|videos|sound|threads|processes|networks|dbus|bluetooth|desktop|os|linux|users|system|printing|speech|secrets|emails|databases|archives|power|volume|media|brightness|keyboard|mouse|screens)$/m;
+// (and once gui and game are built for WebAssembly)
+const NEEDS_THEN = /^use (shell|gtk|world|tui|tgame|videos|sound|threads|processes|networks|dbus|bluetooth|desktop|os|linux|users|system|printing|speech|secrets|emails|databases|archives|power|volume|media|brightness|keyboard|mouse|screens)$/m;
+
+// ---- --play: the page itself, with a window and a game in it
+async function play() {
+	const SITE = path.join(ROOT, 'build', 'wasm-site');
+	if (!fs.existsSync(path.join(SITE, 'index.html'))) {
+		console.log('play: no build/wasm-site (make wasm-site first)');
+		process.exit(1);
+	}
+	const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'cabby-play-'));
+	execFileSync(path.join(ROOT, 'cabby'), ['-c', path.join(TUT, '51-first-window.cby'), '--wasm', '-o', path.join(tmp, 'greeter.wasm')]);
+	const browser = await chromium.launch();
+	const page = await browser.newPage({ viewport: { width: 1000, height: 1000 } });
+	page.on('pageerror', e => console.log('  page error: ' + e.message));
+	await page.route('http://cabby.test/**', route => {
+		const u = decodeURIComponent(new URL(route.request().url()).pathname);
+		const p = u.startsWith('/tmp/') ? path.join(tmp, u.slice(5)) : path.join(SITE, u === '/' ? 'index.html' : u);
+		if (!fs.existsSync(p)) return route.fulfill({ status: 404 });
+		const type = p.endsWith('.wasm') ? 'application/wasm' : p.endsWith('.js') ? 'text/javascript'
+			: p.endsWith('.html') ? 'text/html' : 'application/octet-stream';
+		route.fulfill({ status: 200, contentType: type, body: fs.readFileSync(p) });
+	});
+	await page.goto('http://cabby.test/');
+	await page.waitForFunction(() => document.getElementById('status').textContent === 'Ready');
+	let pass = 0, fail = 0;
+	const check = (what, ok, got) => {
+		if (ok) pass++;
+		else { fail++; console.log(`FAIL ${what}\n  got ${JSON.stringify(got)}`); }
+	};
+	const shown = () => page.waitForFunction(() => !document.getElementById('stage').hidden, null, { timeout: 30000 });
+	const ended = () => page.waitForFunction(() => !document.getElementById('run').disabled, null, { timeout: 30000 });
+	const output = () => page.textContent('#output');
+	const at = async (fx, fy) => {   // (a place in the window, as fractions of its size)
+		const b = await page.locator('#canvas-here canvas').boundingBox();
+		return [b.x + b.width * fx, b.y + b.height * fy];
+	};
+
+	// a window, interpreted: typed into, Enter, then closed (and main carries on)
+	await page.selectOption('#example', 'A window');
+	await page.click('#run');
+	await shown();
+	await page.waitForTimeout(300);
+	await page.mouse.click(...await at(0.5, 60 / 180));
+	await page.keyboard.type('Ada');
+	await page.keyboard.press('Enter');
+	await page.waitForFunction(() => document.getElementById('output').textContent.includes('greeted'), null, { timeout: 10000 }).catch(() => {});
+	// (and as a phone types: through the hidden box)
+	await page.mouse.click(...await at(0.5, 60 / 180));
+	await page.keyboard.press('End');
+	await page.focus('#typing');
+	await page.keyboard.type('!');
+	await page.keyboard.press('Enter');
+	await page.waitForTimeout(500);
+	await page.click('#close-window');
+	await ended();
+	check('a window, typed into and closed', (await output()) === 'greeted Ada\ngreeted Ada!\ngoodbye\n', await output());
+
+	// a game, interpreted: a key held, then closed
+	await page.selectOption('#example', 'A game');
+	await page.click('#run');
+	await shown();
+	await page.focus('#canvas-here canvas');
+	await page.keyboard.down('ArrowLeft');
+	await page.waitForTimeout(600);
+	await page.keyboard.up('ArrowLeft');
+	await page.click('#close-window');
+	await ended();
+	check('a game, played and closed', /^You caught \d+ and missed \d+\n$/.test(await output()), await output());
+
+	// a window compiled with -c --wasm, through the worker (as a page with its own programs has it)
+	const r = await page.evaluate(() => new Promise(res => {
+		const w = new Worker('cabby-worker.js', { type: 'module' });
+		const canvas = document.createElement('canvas').transferControlToOffscreen();
+		let out = '';
+		w.onmessage = e => {
+			if (e.data.out) out += e.data.out;
+			if (e.data.err) out += '[err] ' + e.data.err;
+			if (e.data.window) {
+				const send = input => w.postMessage({ input });
+				setTimeout(() => {
+					send({ kind: 'click', x: 180, y: 60 });
+					send({ kind: 'release', x: 180, y: 60 });
+					for (const ch of 'Grace') send({ kind: 'text', key: ch });
+					send({ kind: 'down', key: 'Return' });
+					send({ kind: 'up', key: 'Return' });
+					setTimeout(() => send({ kind: 'close' }), 500);
+				}, 300);
+			}
+			if (e.data.done !== undefined) { w.terminate(); res(out); }
+		};
+		w.postMessage({ program: '/tmp/greeter.wasm', canvas }, [canvas]);
+	}));
+	check('a compiled window, typed into and closed', r === 'greeted Grace\ngoodbye\n', r);
+
+	console.log(`played (in a browser): ${pass} passed, ${fail} failed`);
+	await browser.close();
+	process.exit(fail ? 1 : 0);
+}
 
 (async () => {
+	if (process.argv.includes('--play'))
+		return play();
 	const cases = process.argv.includes('--cases');
 	const compiled = process.argv.includes('--compiled');
+	const gameBuilt = fs.existsSync(path.join(ROOT, 'lib', 'wasm', 'libcabbygame.a')) && fs.existsSync(path.join(ROOT, 'lib', 'wasm', 'libcabbygui.a'));
 	const tmp = compiled ? fs.mkdtempSync(path.join(os.tmpdir(), 'cabby-wasm-')) : null;
 	const only = process.argv.slice(2).filter(a => !a.startsWith('--'));
 	const jobs = [];
@@ -82,7 +189,7 @@ const NEEDS = /^use (shell|gui|gtk|game|world|tui|tgame|videos|sound|threads|pro
 		for (const c of all) {
 			const name = c.slice(0, c.indexOf('\n')).trim(), src = c.slice(c.indexOf('\n') + 1);
 			if (only.length && !only.includes(name)) continue;
-			if (CASE_SKIP[name] || /^\/\/ only: compile$/m.test(src) || (compiled && /^\/\/ only: run$/m.test(src)) || NEEDS.test(src) || (!compiled && /^extern |callback /m.test(src))) { skip++; continue; }
+			if (CASE_SKIP[name] || /^\/\/ only: compile$/m.test(src) || (compiled && /^\/\/ only: run$/m.test(src)) || (gameBuilt ? NEEDS_THEN : NEEDS).test(src) || (!compiled && /^extern |callback /m.test(src))) { skip++; continue; }
 			jobs.push({ name, file: '/cases/' + name + '.cby', src, cwd: '/', ...expect(src) });
 		}
 	} else {
@@ -90,7 +197,10 @@ const NEEDS = /^use (shell|gui|gtk|game|world|tui|tgame|videos|sound|threads|pro
 			.filter(n => !only.length || only.includes(n)).sort((a, b) => parseInt(a) - parseInt(b));
 		for (const name of names) {
 			const src = fs.readFileSync(path.join(TUT, name + '.cby'), 'utf8');
-			if ((WASM_SKIP[name] && !(compiled && COMPILED_HAS[name])) || /^use (gui|gtk|game|world|tui|tgame|videos|sound)$/m.test(src)) { skip++; continue; }
+			// (a game or a gui window can run, when their libraries are built for WebAssembly)
+			const browserHasnt = gameBuilt ? /^use (gtk|world|tui|tgame|videos|sound)$/m
+				: /^use (gui|gtk|game|world|tui|tgame|videos|sound)$/m;
+			if ((WASM_SKIP[name] && !(compiled && COMPILED_HAS[name])) || browserHasnt.test(src)) { skip++; continue; }
 			jobs.push({ name, file: '/tutorials/' + name + '.cby', src, cwd: '/tutorials', ...expect(src) });
 		}
 	}
@@ -113,6 +223,11 @@ const NEEDS = /^use (shell|gui|gtk|game|world|tui|tgame|videos|sound|threads|pro
 		for (const f of walk(TUT, [], TUT))
 			if ((f.includes('/') || !f.endsWith('.cby')) && !f.endsWith('.md') && fs.statSync(path.join(TUT, f)).size < 4e6)
 				files['/tutorials/' + f] = fs.readFileSync(path.join(TUT, f)).toString('base64');
+	// the fonts a game writes with, where it looks for them (a page gives them the same way)
+	const FONTS = '/usr/share/fonts/truetype/dejavu';
+	for (const f of ['DejaVuSans.ttf', 'DejaVuSans-Bold.ttf', 'DejaVuSans-Oblique.ttf', 'DejaVuSansMono.ttf'])
+		if (fs.existsSync(path.join(FONTS, f)))
+			files[FONTS + '/' + f] = fs.readFileSync(path.join(FONTS, f)).toString('base64');
 	await page.evaluate(async files => {
 		window.cabbyFiles = {};
 		for (const [k, v] of Object.entries(files)) window.cabbyFiles[k] = Uint8Array.from(atob(v), c => c.charCodeAt(0));
@@ -141,7 +256,7 @@ const NEEDS = /^use (shell|gui|gtk|game|world|tui|tgame|videos|sound|threads|pro
 			const wasm = j.wasm ? await WebAssembly.compile(Uint8Array.from(atob(j.wasm), c => c.charCodeAt(0)))
 				: window.cabbyWasm;
 			const res = await runCabby({ wasm, files: { ...window.cabbyFiles, [j.file]: j.src },
-				name: j.wasm ? j.name : 'cabby', args: j.wasm ? j.args : [j.file, ...j.args], env: { CABBY_CWD: j.cwd }, stdin: j.stdin,
+				name: j.wasm ? j.name : 'cabby', args: j.wasm ? j.args : [j.file, ...j.args], env: { CABBY_CWD: j.cwd, ...(j.script ? { CABBY_GUI_SCRIPT: j.script } : {}) }, stdin: j.stdin,
 				stdout: s => { out += s; }, stderr: s => { err += s; } });
 			return { out, err, exit: res.exit };
 		}, j);

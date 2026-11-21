@@ -1,0 +1,47 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index b0c2443..0bb3d8c 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -1490,6 +1490,20 @@ if(ANDROID)
+     endif()
+   endif()
+ 
++elseif(CMAKE_SYSTEM_NAME STREQUAL "WASI")
++  # WebAssembly through WASI (for Cabby): no threads, drawing in software
++  set(SDL_TIME_UNIX 1)
++  sdl_glob_sources("${SDL3_SOURCE_DIR}/src/time/unix/*.c")
++  set(HAVE_SDL_TIME TRUE)
++
++  set(SDL_TIMER_UNIX 1)
++  sdl_glob_sources("${SDL3_SOURCE_DIR}/src/timer/unix/*.c")
++  set(HAVE_SDL_TIMERS TRUE)
++
++  if(SDL_CLOCK_GETTIME)
++    set(HAVE_CLOCK_GETTIME 1)
++  endif()
++
+ elseif(EMSCRIPTEN)
+   # Hide noisy warnings that intend to aid mostly during initial stages of porting a new
+   # project. Uncomment at will for verbose cross-compiling -I/../ path info.
+@@ -3114,7 +3128,7 @@ endif()
+ # We always need to have threads and timers around
+ if(NOT HAVE_SDL_THREADS)
+   # The emscripten platform has been carefully vetted to work without threads
+-  if(EMSCRIPTEN)
++  if(EMSCRIPTEN OR CMAKE_SYSTEM_NAME STREQUAL "WASI")
+     set(SDL_THREADS_DISABLED 1)
+     sdl_glob_sources("${SDL3_SOURCE_DIR}/src/thread/generic/*.c")
+   else()
+diff --git a/src/dynapi/SDL_dynapi.h b/src/dynapi/SDL_dynapi.h
+index 99ef9a9..9bb22f4 100644
+--- a/src/dynapi/SDL_dynapi.h
++++ b/src/dynapi/SDL_dynapi.h
+@@ -51,6 +51,8 @@
+ #define SDL_DYNAMIC_API 0
+ #elif defined(SDL_PLATFORM_EMSCRIPTEN) // probably not useful on Emscripten.
+ #define SDL_DYNAMIC_API 0
++#elif defined(__wasi__) // WebAssembly through WASI: built in, nothing to load
++#define SDL_DYNAMIC_API 0
+ #elif defined(SDL_PLATFORM_PS2) && SDL_PLATFORM_PS2
+ #define SDL_DYNAMIC_API 0
+ #elif defined(SDL_PLATFORM_PSP) && SDL_PLATFORM_PSP

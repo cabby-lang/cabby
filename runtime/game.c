@@ -25,6 +25,7 @@
 #define SDL_LIB_NAME "game"
 #endif
 #include "sdl_common.h"
+#include "sdl_browser.h"
 #include <ctype.h>
 #include <dlfcn.h>
 #include <errno.h>
@@ -1049,7 +1050,8 @@ static void start_sdl(void)
 	SDL_Init(0);
 	started = 1;
 #else
-	if (scripted()) {
+	if (scripted() || IN_BROWSER) {
+		/* (in a browser, drawn the same way, and shown by the page: sdl_browser.h) */
 		SDL_SetHint(SDL_HINT_VIDEO_DRIVER, "offscreen");   /* drawn, but not shown */
 		/* and by SDL's own drawing, which needs no graphics library (a Mac
 		 * has no OpenGL ES for the offscreen driver to find) and draws the
@@ -1403,7 +1405,7 @@ void cby_game_run(int64_t win)
 	}
 #else
 	SDL_WindowFlags flags = SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY;
-	if (!make_window(g->title, g->width, g->height, flags, scripted(), &window, &renderer)) {
+	if (!make_window(g->title, g->width, g->height, flags, scripted() || IN_BROWSER, &window, &renderer)) {
 		fprintf(stderr, "game: can't open a window: %s\n", SDL_GetError());
 		ssh_instead("game", "tgame");
 		exit(1);

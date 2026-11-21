@@ -13,6 +13,7 @@
 
 #define SDL_LIB_NAME "gui"
 #include "sdl_common.h"
+#include "sdl_browser.h"
 #include "video_source.h"
 #include <ctype.h>
 #include <dlfcn.h>
@@ -3868,7 +3869,8 @@ static void start_sdl(void)
 	static int started;
 	if (started)
 		return;
-	if (scripted()) {
+	if (scripted() || IN_BROWSER) {
+		/* (in a browser, drawn the same way, and shown by the page: sdl_browser.h) */
 		SDL_SetHint(SDL_HINT_VIDEO_DRIVER, "offscreen");   /* drawn, but not shown */
 		/* and by SDL's own drawing, which needs no graphics library (a Mac
 		 * has no OpenGL ES for the offscreen driver to find) and draws the
@@ -4023,7 +4025,7 @@ void cby_gui_window_run(int64_t win)
 	start_sdl();
 	if (!w->sw) {
 		SDL_WindowFlags flags = SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY | SDL_WINDOW_HIDDEN;
-		if (!make_window(w->title, w->width, w->height, flags, scripted(), &w->sw, &w->r)) {
+		if (!make_window(w->title, w->width, w->height, flags, scripted() || IN_BROWSER, &w->sw, &w->r)) {
 			fprintf(stderr, "gui: can't open a window: %s\n", SDL_GetError());
 			ssh_instead("gui", "tui");
 			exit(1);

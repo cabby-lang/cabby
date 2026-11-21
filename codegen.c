@@ -2341,7 +2341,7 @@ static void gen_init(CG *G, Expr *e, Op dst)
 	Type *t = e->ty;
 	Expr **slots = e->as.init.slots;
 	if (t->kind == TY_LOOKUP) {
-		memset0(G, dst, 64);
+		memset0(G, dst, type_size(t));   /* (64 bytes, or 48 where a pointer is 4) */
 		for (int i = 0; i < e->as.init.nslots; i += 2) {
 			Op src = entry_alloca(G, llty(G, t->inner), "val");
 			gen_into(G, slots[i + 1], src);
@@ -4433,13 +4433,42 @@ static int compile_wasm(Sema *S, const CompileOptions *opt, const char *out_name
 	fclose(f);
 	char olevel[8];
 	snprintf(olevel, sizeof olevel, "-O%d", opt->opt_level);
+	/* each library's native code built for WebAssembly (lib/wasm/libcabby<name>.a,
+	 * from make wasm: the game library's), and SDL, which draws for it */
+	char *libs[40];
+	int nlibs = 0;
+	char sdl[4096] = "";
+	Program *prog = S->prog;
+	for (int i = 0; i < prog->natives.len && nlibs < 38; i++) {
+		NativeLib *nl = &prog->natives.items[i];
+		char path[4096];
+		snprintf(path, sizeof path, "%s/wasm/libcabby%s.a", nl->dir, nl->name);
+		if (access(path, R_OK) != 0)
+			continue;
+		libs[nlibs++] = strdup(path);
+		snprintf(path, sizeof path, "%s/wasm/libSDL3.a", nl->dir);
+		if (!*sdl && access(path, R_OK) == 0)
+			snprintf(sdl, sizeof sdl, "%s", path);
+	}
+	if (*sdl)
+		libs[nlibs++] = sdl;
 	/* (setjmp as WebAssembly's exceptions, for panics caught by `else`; the
 	 * C library's emulated parts the runtime uses; 8 MB of stack; and no
 	 * names, which only a debugger reads: hello is 17 KB, not 420) */
-	char *argv[] = { cc, "--target=wasm32-wasip1", olevel, "-Wno-override-module", "-mexception-handling", "-mllvm", "-wasm-enable-sjlj",
-			 "-mllvm", "-wasm-use-legacy-eh=false", ll, rt, "-lsetjmp", "-lwasi-emulated-signal",
-			 "-lwasi-emulated-process-clocks", "-lwasi-emulated-mman", "-lwasi-emulated-getpid", "-lm",
-			 "-Wl,-z,stack-size=8388608", "-Wl,--max-memory=2147483648", "-Wl,--strip-all", "-o", (char *)out_name, NULL };
+	char *argv[80];
+	int argc = 0;
+	char *const head[] = { cc, "--target=wasm32-wasip1", olevel, "-Wno-override-module", "-mexception-handling",
+			       "-mllvm", "-wasm-enable-sjlj", "-mllvm", "-wasm-use-legacy-eh=false", ll };
+	for (size_t i = 0; i < sizeof head / sizeof *head; i++)
+		argv[argc++] = head[i];
+	for (int i = 0; i < nlibs; i++)
+		argv[argc++] = libs[i];   /* (before the runtime, whose stand-ins they replace) */
+	char *const tail[] = { rt, "-lsetjmp", "-lwasi-emulated-signal", "-lwasi-emulated-process-clocks",
+			       "-lwasi-emulated-mman", "-lwasi-emulated-getpid", "-lm", "-Wl,-z,stack-size=8388608",
+			       "-Wl,--max-memory=2147483648", "-Wl,--strip-all", "-o", (char *)out_name };
+	for (size_t i = 0; i < sizeof tail / sizeof *tail; i++)
+		argv[argc++] = tail[i];
+	argv[argc] = NULL;
 	int rc = run(argv);
 	unlink(ll);
 	if (rc != 0) {

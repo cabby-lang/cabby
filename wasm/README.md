@@ -11,6 +11,9 @@ anywhere, two ways:
   runs as fast as a native program (2 to 30 times faster than
   interpreted). For programs a page offers ready-made: a demo, a game.
 
+Either way, windows and games (`use gui`, `use game`) show on the page,
+on a canvas, and are played there with the keyboard and the mouse.
+
 ## Building it
 
 It needs **wasi-sdk** 33 or newer (a clang for WebAssembly, with its C library), from
@@ -23,15 +26,26 @@ the Makefile looks for it, or say where it is:
 
 `make wasm` makes `cabby.wasm`, and the runtime that compiled programs
 need (`lib/wasm/libcabbyrt.a`, which `make install` installs too).
+
+For windows and games it needs SDL 3 built for WebAssembly too, once:
+
+    tools/build-sdl-wasm.sh      # (git and cmake; fetches SDL from GitHub)
+
+That puts SDL in `build/wasm-sdl` (with two small changes,
+`tools/sdl-wasi.patch`: no threads, as Emscripten's SDL has none either,
+and nothing loaded as it runs). From then on `make wasm` builds the gui and
+game libraries for WebAssembly as well (`lib/wasm/libcabbygui.a`,
+`libcabbygame.a`), and puts them in `cabby.wasm`.
 `make wasm-site` puts in `build/wasm-site` everything a page needs:
 
 | File | What it is |
 |---|---|
-| `cabby.wasm` | the interpreter (about 1.7 MB; under 600 KB compressed) |
+| `cabby.wasm` | the interpreter (about 1.7 MB, under 600 KB compressed; with gui and game, 2.9 MB and 900 KB) |
 | `cabby.js` | runs it: `runCabby`, with the program's files kept in memory |
 | `cabby-worker.js` | runs it in a Web Worker, so the page doesn't wait on it, and it can be stopped |
 | `cabby-lib.json` | the libraries' headers (`lib/*.hby`), all in one file |
-| `index.html` | a page to try it: an editor, Run and Stop, what the program reads, and what it prints |
+| `index.html` | a page to try it: an editor, Run and Stop, what the program reads, and what it prints, with a window or a game shown under the editor |
+| `fonts/` | DejaVu Sans, the font windows and games write with (fetched only when one opens; its license is beside it) |
 
 To try it on your computer:
 
@@ -47,7 +61,8 @@ To try it on your computer:
 It needs wasi-sdk too: `cabby` looks in `$CABBY_WASI_SDK`, then where it
 was when Cabby was built, then `~/tools/wasi-sdk-*` and `/opt/wasi-sdk`.
 A program is small: `hello` is 16 KB (7 KB compressed), and one reading
-and writing JSON about 100 KB (40 KB). It needs nothing else: not
+and writing JSON about 100 KB (40 KB); a game, with SDL in it, about
+900 KB (250 KB). It needs nothing else: not
 `cabby.wasm`, nor the headers.
 
 A program that uses a library a browser hasn't (a window, the network)
@@ -92,13 +107,55 @@ how. It works anywhere JavaScript runs WebAssembly with exceptions (Chrome
 and Edge 137+, Firefox 131+, Safari 18.4+, on phones too), though a program that sleeps
 holds up whatever it's running in, so in a page it's best in a worker.
 
+## Windows and games
+
+A program's window is drawn by SDL, in software, as Cabby's tests draw
+one off screen, and the page shows each frame on a canvas. What the
+person does there comes back as SDL's own events, so a window or a game
+works as it does on a computer: keys held and pressed, clicks, the mouse
+moving, the wheel, typing into text boxes, and closing (after which
+`main` carries on).
+
+The page gives the worker a canvas with the program, and sends it what
+happens there:
+
+```js
+const canvas = document.querySelector('canvas').transferControlToOffscreen();
+worker.postMessage({ program: 'programs/quest.wasm', canvas }, [canvas]);   // (or source)
+worker.onmessage = e => {
+	if (e.data.window) showIt(e.data.window);   // { title, width, height }: the window opened
+	if (e.data.closed) hideIt();                // it closed
+};
+// as they happen: keys by SDL's names, places in the canvas's own pixels
+worker.postMessage({ input: { kind: 'down', key: 'Left' } });          // and 'up'; with ctrl, shift, alt
+worker.postMessage({ input: { kind: 'text', key: 'a' } });             // what a key types, for text boxes
+worker.postMessage({ input: { kind: 'click', x: 120, y: 40 } });       // and 'release', 'move'
+worker.postMessage({ input: { kind: 'wheel', x: 0, y: -1 } });
+worker.postMessage({ input: { kind: 'close' } });
+```
+
+`index.html` does all of this, and is the example to copy: keys while the
+canvas has the focus, the mouse scaled to the canvas's pixels, a
+"Close the window" button, and for a phone, a row of arrow keys and a
+keyboard button (a hidden text box, which brings up the phone's keyboard).
+
+It needs JSPI, WebAssembly's promise integration (Chrome and Edge 137+,
+Firefox 153+, Safari 27+, on phones too): it lets the program pause while
+it waits for the next frame, so the worker hears the page meanwhile.
+Without it, a window is shown but can't be played. Frames come 60 a
+second, interpreted or compiled.
+
+The page shows one window at a time (the one drawn last); there's no
+sound yet, no files chosen from the computer (`gui`'s file choosers), and
+no 3D (`world`).
+
 ## What a browser hasn't
 
 A browser keeps a page away from the computer itself, so the libraries
 that need it say so when they're used, with a panic such as *'rt_tcp_connect'
 isn't here (in a browser)*:
 
-- windows and games (`gui`, `game`, `world`), and the terminal's (`tui`, `tgame`)
+- 3D (`world`), GTK windows (`gtk`), and the terminal's (`tui`, `tgame`)
 - sound, video, speech, MIDI, printers, Bluetooth, D-Bus and the desktop
 - the network, other programs (`shell`, `processes`) and threads
 - SQLite, zlib, OpenSSL, and the time zones' database
@@ -126,6 +183,7 @@ checks them; those needing what a browser hasn't are counted, not run:
     node tests/run_wasm_tests.cjs                      # the tutorials
     node tests/run_wasm_tests.cjs --cases              # the program tests
     node tests/run_wasm_tests.cjs --compiled [--cases] # each compiled with -c --wasm
+    node tests/run_wasm_tests.cjs --play               # the page, played: a window and a game
 
 (Node can run `cabby.wasm` too, with `wasm/run-node.mjs`, but Node 22's V8
 can crash collecting garbage around WebAssembly's exceptions, so the

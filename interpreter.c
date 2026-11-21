@@ -4355,8 +4355,12 @@ static void interp_invoke(void *obj, void *fn)
 static void load_natives(Program *prog)
 {
 #ifdef __wasi__
-	/* (WebAssembly: no libraries to load; what's in them is missing) */
+	/* (WebAssembly: no libraries to load; what's in them is built in (the
+	 * game library, when SDL was there to build it with), or missing. The
+	 * game's handlers call back here.) */
 	(void)prog;
+	extern void (*cby_invoke_hook)(void *, void *);   /* (in rt.c, for them all) */
+	cby_invoke_hook = interp_invoke;
 	return;
 #endif
 	for (int i = 0; i < prog->natives.len; i++) {
