@@ -12,11 +12,12 @@ cabby prog.cby [args]                   run a program with the interpreter
 cabby -c prog.cby [-o prog]             build a native executable (via LLVM)
 cabby -c prog.cby --emit-llvm           write the LLVM IR (prog.ll) instead
 cabby -c prog.cby --checked             build it with AddressSanitizer, for testing
+cabby -c prog.cby --wasm                build WebAssembly (prog.wasm), to run in a web page
 cabby --check     prog.cby              type- and ownership-check only
 cabby --style     prog.cby              list names and calls that don't follow STYLE.md
 cabby --dump-ast  prog.cby              print the syntax tree
 cabby --dump-tokens prog.cby            print the token stream
-cabby --version                         which Cabby this is: "Cabby 1.1.1 (2026-11-21)"
+cabby --version                         which Cabby this is: "Cabby 1.2.0 (2026-11-21)"
 cabby --license                         Cabby's license (MIT)
 ```
 
@@ -1229,7 +1230,7 @@ Run `cabby` with no file to type Cabby a piece at a time:
 
 ```
 $ cabby
-Cabby 1.1.1 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
+Cabby 1.2.0 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
 Cabby comes with ABSOLUTELY NO WARRANTY, under the MIT License; "cabby.license" for details.
 >>> int add int a, int b {
 ... 	return a + b
@@ -1695,9 +1696,14 @@ more.
 
 **In a browser.** `make wasm-site` builds the interpreter for WebAssembly
 (with wasi-sdk) and puts in `build/wasm-site` what a web page needs to run
-Cabby programs in the visitor's own browser, with a page to try it:
-`wasm/README.md` says how to build it, how a page uses it, and what a
-browser hasn't (windows, sound, the network, threads, other programs).
+Cabby programs in the visitor's own browser, with a page to try it.
+`make wasm` builds the runtime for WebAssembly too, and then
+`cabby -c prog.cby --wasm` compiles a program to `prog.wasm`, which a page
+runs the same way, as fast as a native program (2 to 30 times faster than
+interpreted there). `cabby -c --wasm` finds wasi-sdk in `$CABBY_WASI_SDK`,
+`~/tools` or `/opt/wasi-sdk`. `wasm/README.md` says how to build them, how
+a page uses them, and what a browser hasn't (windows, sound, the network,
+threads, other programs).
 
 `use name` searches `$CABBY_LIB`, then `lib/` next to the `cabby` binary,
 then `../lib/cabby` relative to it, then the `lib/cabby` of the folder it
@@ -1708,8 +1714,7 @@ was built for (`PREFIX`), then `/usr/local/lib/cabby` and `/usr/lib/cabby`.
 * Panels and bars for a desktop (a dock, a system tray) in the gui
   library.
 * In 3D (`use world`): shadows, and physics.
-* In a browser: `cabby -c` making WebAssembly, and windows and games
-  (gui, game).
+* In a browser: windows and games (gui, game).
 * The `?:` operator, `long double`, and backward `goto`.
 * Borrowing tells apart elements at positions written as numbers, but not
   at positions worked out as it runs (`Scores[i]` and `Scores[j]` count as

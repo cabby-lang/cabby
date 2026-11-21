@@ -173,7 +173,55 @@ def wrapper(name, ret, params, libc):
     return proto, text
 
 
+def missing(defined_file, out, files):
+    """--missing: a stand-in for each of Cabby's runtime functions that the
+    libraries declare but the WebAssembly runtime hasn't (a window's, a
+    socket's), for programs compiled for it: it links, and says so if
+    called"""
+    defined = set(open(defined_file).read().split())
+    seen = {}
+    for f in files:
+        for line in open(f, encoding="utf-8", errors="replace"):
+            if line.startswith("extern "):
+                p = parse(line)
+                if p and p[0].startswith(("cby_", "rt_")) and p[0] not in defined and p[0] not in seen and not p[3]:
+                    seen[p[0]] = p
+    n = 0
+    with open(out, "w") as o:
+        o.write("/* made by tools/make-wasm-calls.py --missing; don't edit. Cabby's runtime\n"
+                " * functions that aren't in the WebAssembly runtime (windows, sockets...),\n"
+                " * each saying so when called, for programs compiled with -c --wasm. */\n"
+                "#include <stdint.h>\n#include <stdbool.h>\n#include <stdlib.h>\n#include <stdio.h>\n"
+                "#include \"rt.h\"\n\n"
+                "__attribute__((weak)) _Noreturn void cby_wasm_missing(const char *name)\n{\n"
+                "\trt_panic(NULL, 0, 0, \"'%s' isn't here (in a browser): its library needs the computer itself\", name);\n"
+                "\tabort();\n}\n\n")
+        for name, (_, ret, params, _v) in sorted(seen.items()):
+            rt = c_type(ret, False)
+            decl = []
+            ok = rt is not None
+            for t, ref in params:
+                if t == "handler":
+                    decl += ["void *", "void *"]
+                    continue
+                ct = c_type(t, False)
+                if ct is None or ct == "void":
+                    ok = False
+                    break
+                decl.append(ct + " *" if ref else ct)
+            if not ok:
+                continue
+            ps = ", ".join(f"{d} a{i}" for i, d in enumerate(decl)) or "void"
+            o.write(f"{rt} {name}({ps})\n{{\n")
+            o.write("".join(f"\t(void)a{i};\n" for i in range(len(decl))))
+            o.write(f"\tcby_wasm_missing(\"{name}\");\n}}\n")
+            n += 1
+    print(f"{out}: {n} stand-ins")
+
+
 def main():
+    if sys.argv[1] == "--missing":
+        return missing(sys.argv[2], sys.argv[3], sys.argv[4:])
     out = sys.argv[1]
     files = sys.argv[2:]
     seen = {}

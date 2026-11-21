@@ -767,7 +767,7 @@ void compute_object_layout(Checker *C, ObjectInfo *o)
 	}
 
 	if (o->kind == OBJ_OBJECT) {
-		o->size = o->align = 8;
+		o->size = o->align = (uint64_t)type_ptr_size;   /* (a handle) */
 		return;
 	}
 	uint64_t off = 0, align = 1, size = 0;

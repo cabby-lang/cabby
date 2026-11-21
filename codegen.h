@@ -40,6 +40,7 @@ typedef struct CompileOptions {
 	int opt_level;                 /* passed to clang as -O<n> */
 	const char *const *lib_dirs;   /* where libcabbyrt.a lives */
 	bool checked;                  /* --checked: built with AddressSanitizer */
+	bool wasm;                     /* --wasm: built for WebAssembly (a .wasm, for a browser) */
 } CompileOptions;
 
 /* Writes the LLVM IR module for the program. */
