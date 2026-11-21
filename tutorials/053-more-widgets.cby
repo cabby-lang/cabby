@@ -1,0 +1,136 @@
+// Tutorial 53: More widgets — an order form
+//
+// Run it:      cabby 053-more-widgets.cby
+// Library:     use gui
+// Topics:      check boxes, drop-down lists, sliders, text areas, lists,
+//              columns, separators, set_enabled
+//
+// Tutorials 51 and 52 used labels, buttons and text boxes. Forms usually
+// need more, and every widget works the same way: add it, keep it in a
+// field if a handler needs it later, and attach handlers.
+//
+//   add_check "Text"     a check box       .checked, .set_checked, on_toggle
+//   add_choice           a drop-down list  .add_option, .selected, .text, on_change
+//   add_slider 1, 10     a slider          .value, .set_value, on_change
+//   add_text_area        several lines     .text, .set_text, on_change
+//   add_list             a list to pick    .add_item, .selected, .text, on_select
+//   add_column           stacks things inside a row
+//   add_separator        a dividing line
+//
+// Every widget can also be grayed out with `set_enabled false` and hidden
+// with `set_visible false`.
+
+use gui
+
+object pizza_form : gui.window {
+	gui.entry Name
+	gui.choice Size
+	gui.check Cheese
+	gui.check Olives
+	gui.check Chilli
+	gui.slider HowMany
+	gui.text_area Notes
+	gui.list Orders
+	gui.button Order
+
+	void build {
+		set_title "Pizza order"
+		set_size 420, 600
+
+		add_label "Name:"
+		Name = add_entry
+		Name.on_change check_ready
+
+		// Two columns side by side: a row holding two columns.
+		gui.row Choices = add_row
+		gui.column Left = Choices.add_column
+		gui.column Right = Choices.add_column
+
+		Left.add_label "Size:"
+		Size = Left.add_choice
+		Size.add_option "Small"
+		Size.add_option "Medium"
+		Size.add_option "Large"
+		Size.set_selected 1              // options count from 0: Medium
+
+		Right.add_label "Toppings:"
+		Cheese = Right.add_check "Extra cheese"
+		Olives = Right.add_check "Olives"
+		Chilli = Right.add_check "Chilli"
+		Chilli.on_toggle chilli_warning
+
+		add_label "How many:"
+		HowMany = add_slider 1, 10
+
+		add_label "Notes for the kitchen:"
+		Notes = add_text_area
+
+		Order = add_button "Order"
+		Order.on_click place_order
+		Order.set_enabled false          // not until there is a name
+
+		add_separator
+		add_label "Orders so far:"
+		Orders = add_list
+		Orders.on_select show_order
+	}
+
+	// No name, no order: the button stays grayed out until one is typed.
+	void check_ready {
+		Order.set_enabled Name.text.length > 0
+	}
+
+	void chilli_warning {
+		if Chilli.checked {
+			println "careful: chilli is hot"
+		}
+	}
+
+	void place_order {
+		str What = HowMany.value.text + " x " + Size.text
+		if Cheese.checked {
+			What += " + cheese"
+		}
+		if Olives.checked {
+			What += " + olives"
+		}
+		if Chilli.checked {
+			What += " + chilli"
+		}
+		str Line = Name.text + ": " + What
+		Orders.add_item Line
+		println "ordered:", Line
+		if Notes.text.length > 0 {
+			println "  note:", Notes.text
+		}
+		Name.set_text ""                 // ready for the next customer
+		Notes.set_text ""
+	}
+
+	// `selected` counts from 0, and is -1 when nothing is selected.
+	void show_order {
+		if Orders.selected >= 0 {
+			println "order", Orders.selected + 1, "is", Orders.text
+		}
+	}
+}
+
+int main {
+	pizza_form f
+	f.run
+}
+
+// (For Cabby's test suite: what to do in the window.)
+// script: type 1 Ada; choose 1 Large; check Olives; check Chilli; slide 1 2; write 1 Ring the bell; click Order; type 1 Bo; click Order; select 1 Ada: 2 x Large + olives + chilli; close
+//
+// Try this:
+//  - Add a "Delivery" check box, and only show an address box when it is
+//    ticked (`address.set_visible delivery.checked`).
+//  - Work out a price for each order and show the total in a label.
+
+// ---------------------------------------------------------------- output
+//> careful: chilli is hot
+//> ordered: Ada: 2 x Large + olives + chilli
+//>   note: Ring the bell
+//> ordered: Bo: 2 x Large + olives + chilli
+//> order 1 is Ada: 2 x Large + olives + chilli

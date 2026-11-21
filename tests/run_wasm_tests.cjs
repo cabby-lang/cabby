@@ -25,21 +25,21 @@ const TUT = path.join(ROOT, 'tutorials');
 
 // what each needs that a browser doesn't have
 const WASM_SKIP = {
-	'27-c-functions': 'C functions beyond the libraries\' (printf)', '28-addresses': 'callbacks (qsort)',
-	'34-processes': 'other programs', '41-downloads': 'the network',
-	'42-web-addresses': 'the network', '49-archives': 'zlib', '50-databases': 'SQLite', '62-terminal-window': 'a terminal',
-	'63-workers': 'threads', '64-done-later': 'threads (a worker)', '65-progress': 'threads (a worker)',
-	'66-painting': 'threads (workers)', '74-songs': 'sound', '76-keyboard': 'MIDI', '91-chat-server': 'the network',
-	'92-web-server': 'the network', '93-websockets': 'the network', '94-encrypted': 'the network',
-	'95-emails': 'the network', '96-the-computer': 'the computer', '97-power-and-volume': 'the computer',
-	'98-users': 'the computer', '99-linux': 'the computer', '100-secrets': 'OpenSSL', '101-desktop': 'the desktop',
+	'027-c-functions': 'C functions beyond the libraries\' (printf)', '028-addresses': 'callbacks (qsort)',
+	'034-processes': 'other programs', '041-downloads': 'the network',
+	'042-web-addresses': 'the network', '049-archives': 'zlib', '050-databases': 'SQLite', '062-terminal-window': 'a terminal',
+	'063-workers': 'threads', '064-done-later': 'threads (a worker)', '065-progress': 'threads (a worker)',
+	'066-painting': 'threads (workers)', '074-songs': 'sound', '076-keyboard': 'MIDI', '091-chat-server': 'the network',
+	'092-web-server': 'the network', '093-websockets': 'the network', '094-encrypted': 'the network',
+	'095-emails': 'the network', '096-the-computer': 'the computer', '097-power-and-volume': 'the computer',
+	'098-users': 'the computer', '099-linux': 'the computer', '100-secrets': 'OpenSSL', '101-desktop': 'the desktop',
 	'102-media': 'the desktop', '103-printing': 'printers', '104-speech': 'speech', '105-bluetooth': 'Bluetooth',
 	'106-dbus': 'D-Bus', '107-screens': 'the desktop',
 };
 
 // what compiled WebAssembly has that the interpreter in a browser hasn't:
 // C's functions themselves (printf), and C calling back (qsort)
-const COMPILED_HAS = { '27-c-functions': 1, '28-addresses': 1 };
+const COMPILED_HAS = { '027-c-functions': 1, '028-addresses': 1 };
 
 function walk(dir, out, base) {
 	for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
@@ -84,7 +84,7 @@ async function play() {
 		process.exit(1);
 	}
 	const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'cabby-play-'));
-	execFileSync(path.join(ROOT, 'cabby'), ['-c', path.join(TUT, '51-first-window.cby'), '--wasm', '-o', path.join(tmp, 'greeter.wasm')]);
+	execFileSync(path.join(ROOT, 'cabby'), ['-c', path.join(TUT, '051-first-window.cby'), '--wasm', '-o', path.join(tmp, 'greeter.wasm')]);
 	const browser = await chromium.launch();
 	const page = await browser.newPage({ viewport: { width: 1000, height: 1000 } });
 	page.on('pageerror', e => console.log('  page error: ' + e.message));

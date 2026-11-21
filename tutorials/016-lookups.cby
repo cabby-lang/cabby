@@ -1,0 +1,117 @@
+// Tutorial 16: Lookups
+//
+// Run it:      cabby 016-lookups.cby
+// Keywords:    lookup
+// Topics:      values found by key, adding and replacing, for Key, Value in L,
+//              removing, keys and values, counting, who owns what
+//
+// A list finds its elements by position. A lookup finds its values by a key
+// you choose: a name, a word, an ID number. `lookup str int Ages` holds a
+// whole number for each name; the key type comes first, then the value type.
+//
+//   L[Key]            the value for Key (a panic if Key isn't there)
+//   L[Key] = V        add Key, or replace its value
+//   L.contains Key    true if Key is there
+//   L.remove Key      take out Key and its value
+//   L.clear           empty the lookup
+//   L.length          how many keys it has
+//   L.copy            a second, independent lookup
+//   L.keys            a list of the keys, in the order they were added
+//   L.values          a list of the values, in the same order
+//   for K, V in L     each key and value in turn (for K in L: just the keys)
+//   println L         show it all: {Ada: 36, Alan: 41}
+//
+// Keys can be whole numbers, chars, bools or strings; values can be
+// anything. A key is copied in; a value is moved in, as with a list's .add.
+
+// Counting how often each word turns up: the commonest use of a lookup.
+lookup str int count_words const str &Text {
+	lookup str int Counts
+	for Word in Text.split " " {
+		if Counts.contains Word {
+			Counts[Word] += 1
+		} else {
+			Counts[Word] = 1
+		}
+	}
+	return Counts
+}
+
+// Reading a lookup without taking it: borrow it with `const lookup ... &`.
+int total const lookup str int &Ages {
+	int Sum = 0
+	for Name, Age in Ages {
+		Sum += Age
+	}
+	return Sum
+}
+
+int main {
+	// Making one: empty, or with key: value entries in braces.
+	lookup str int Ages = {"Ada": 36, "Alan": 41}
+	lookup int str Rooms
+	println Ages, Rooms, Ages["Ada"]
+
+	// Setting a value adds a new key, or replaces an old key's value.
+	Ages["Grace"] = 85
+	Ages["Ada"] = 37
+	Ages["Ada"] += 1
+	println Ages, "total:", total(Ages)
+
+	// Check before reading a key that might not be there.
+	if Ages.contains "Bob" {
+		println "Bob is", Ages["Bob"]
+	} else {
+		println "no Bob"
+	}
+
+	// Going through it, in the order the keys were added.
+	for Name, Age in Ages {
+		println " ", Name, "is", Age
+	}
+
+	// Removing, copying, and the keys and values as lists.
+	lookup str int Before = Ages.copy
+	Ages.remove "Alan"
+	println Ages.keys, Ages.values, Before.length
+
+	// Counting.
+	lookup str int Counts = count_words "a rose is a rose is a rose"
+	println Counts
+	for Word, Times in Counts {
+		if Times > 2 {
+			println Word, "comes", Times, "times"
+		}
+	}
+
+	// Values can be lists, objects or other lookups.
+	lookup char list str Starting
+	for Name in Before {
+		if !Starting.contains Name[0] {
+			Starting[Name[0]] = {}
+		}
+		Starting[Name[0]].add Name.copy
+	}
+	println Starting
+}
+
+// Try this:
+//  - Count the letters of a sentence with a `lookup char int`.
+//  - Keep each person's best score from lines like "Ada 9", read with
+//    read_line until end_of_input.
+//  - Make a phone book (`lookup str str`) and look names up with `input`.
+//  - Inside `for Name, Age in Ages`, try `Ages["x"] = 1`. Read the error.
+//  - Read Ages["Bob"] without checking, and read the panic.
+
+// ---------------------------------------------------------------- output
+//> {Ada: 36, Alan: 41} {} 36
+//> {Ada: 38, Alan: 41, Grace: 85} total: 164
+//> no Bob
+//>   Ada is 38
+//>   Alan is 41
+//>   Grace is 85
+//> [Ada, Grace] [38, 85] 3
+//> {a: 3, rose: 3, is: 2}
+//> a comes 3 times
+//> rose comes 3 times
+//> {A: [Ada, Alan], G: [Grace]}

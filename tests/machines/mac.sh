@@ -19,7 +19,7 @@ if [[ -f "$ROOT/lib/libcabbyvideos.so" ]]; then
 	look "A video, with its sound" "Did it play, with a beep each time the colors changed?" env CABBY_SOUND_REPORT=1 "$CABBY" video.cby
 fi
 look "Three dimensions (tutorial 89, the Mac's OpenGL)" "Did the field of coins show, and could you walk round it?" \
-	bash -c "cd '$ROOT/tutorials' && '$CABBY' 89-coins.cby"
+	bash -c "cd '$ROOT/tutorials' && '$CABBY' 089-coins.cby"
 auto "Bluetooth, looking only (no pairing)" env CABBY_BLUETOOTH_REAL=1 "$ROOT/tests/run_bluetooth_tests.sh" "$CABBY"
 if has initdb || [[ -d /opt/homebrew/opt/postgresql@17 ]]; then
 	auto "PostgreSQL: a server of the test's own" "$ROOT/tests/run_postgres_tests.sh" "$CABBY"

@@ -1,0 +1,107 @@
+// Tutorial 49: Archives — zip files, tar files, and gzipped files
+//
+// Run it:      cabby 049-archives.cby
+// Or compile:  cabby -c 049-archives.cby && ./049-archives
+// Library:     use archives (and use files, use directories, use hashes)
+// Topics:      archives.make, list, read, unpack; .zip and .tar.gz;
+//              compress and decompress one file; unpacking safely
+//
+// An archive is many files and folders in one file, squeezed smaller: to
+// email a term's lesson notes, to back up a folder, or to unpack
+// something downloaded. archives makes the kinds every computer opens:
+// .zip, and the .tar.gz Linux backups are made of.
+//
+// This tutorial makes a folder of lesson notes, zips it, looks inside,
+// reads one file without unpacking the rest, unpacks it all somewhere
+// else and checks it's the same, backs it up as a .tar.gz, and squeezes
+// a long log on its own.
+
+use archives
+use files
+use directories
+use hashes
+
+// a folder of notes, with a folder inside
+void make_notes {
+	directories.make "lessons/ada"
+	files.write "lessons/ada/scales.txt", "G major, two octaves. Then D.\n"
+	files.write "lessons/ada/pieces.txt", "Greensleeves, bars 1 to 16.\n"
+	files.write "lessons/grace.txt", "The blues in A: the turnaround, slowly.\n"
+}
+
+// everything in a folder, gone (files first, then the empty folders)
+void remove_folder const str &Folder {
+	for Name in directories.all_files Folder {
+		files.delete Folder + "/" + Name
+	}
+	list str Inner = directories.list Folder
+	for Name in Inner {
+		if directories.exists Folder + "/" + Name {
+			remove_folder Folder + "/" + Name
+		}
+	}
+	directories.remove Folder
+}
+
+int main {
+	make_notes
+
+	// ---- a zip: the folder, and everything in it
+	archives.make "lessons.zip", {"lessons"}
+	println "in lessons.zip:"
+	for Name in archives.list "lessons.zip" {
+		println " ", Name
+	}
+
+	// ---- one file, read straight from inside
+	print archives.read("lessons.zip", "lessons/grace.txt")
+
+	// ---- all of it, unpacked somewhere else: the same as what went in?
+	archives.unpack "lessons.zip", "unpacked"
+	str Before = hashes.sha256_of_file "lessons/ada/pieces.txt"
+	str After = hashes.sha256_of_file "unpacked/lessons/ada/pieces.txt"
+	println "unpacked the same:", Before == After
+
+	// ---- a backup, as a .tar.gz: the kind is by the name
+	archives.make "backup.tar.gz", {"lessons"}
+	println "in backup.tar.gz:", archives.list("backup.tar.gz").length, "things"
+
+	// ---- one file squeezed: a long log of the same few lines
+	for Day in 200 {
+		files.append "practice.log", "Day " + Day.text + ": scales, arpeggios, pieces. Fine.\n"
+	}
+	archives.compress "practice.log"
+	long Size = files.size "practice.log"
+	long Squeezed = files.size "practice.log.gz"
+	println "practice.log:", Size, "bytes; squeezed:", Squeezed < Size / 10
+	files.delete "practice.log"
+	archives.decompress "practice.log.gz"
+	println "back again:", files.size("practice.log") == Size
+
+	// (tidying up)
+	remove_folder "lessons"
+	remove_folder "unpacked"
+	files.delete "lessons.zip"
+	files.delete "backup.tar.gz"
+	files.delete "practice.log"
+	files.delete "practice.log.gz"
+}
+
+// Try this:
+//  - Zip a folder of your own, and open the zip with your file manager.
+//  - Unpack a .tar.gz you've downloaded, and list what's inside first.
+//  - Make a backup with the date in its name: "backup-" + the date +
+//    ".tar.gz" (tutorial 39 has the date).
+
+// ---------------------------------------------------------------- output
+//> in lessons.zip:
+//>   lessons/
+//>   lessons/ada/
+//>   lessons/ada/pieces.txt
+//>   lessons/ada/scales.txt
+//>   lessons/grace.txt
+//> The blues in A: the turnaround, slowly.
+//> unpacked the same: true
+//> in backup.tar.gz: 5 things
+//> practice.log: 8290 bytes; squeezed: true
+//> back again: true

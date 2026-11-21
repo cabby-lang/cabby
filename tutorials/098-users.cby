@@ -1,0 +1,51 @@
+// Tutorial 98: Users — who's on this computer
+//
+// Run it:      cabby 098-users.cby
+// Or compile:  cabby -c 098-users.cby && ./098-users
+// Library:     use users
+// Topics:      users.name, full_name, home, shell, id, is_root, groups,
+//              in_group; users.exists, full_name_of, home_of, groups_of;
+//              users.all, all_groups (and, in the chapter, making users and
+//              groups, which needs the administrator)
+//
+// Everyone who logs in to a computer is a user, with a login name, a home
+// folder, and groups: what they're allowed to do (`sudo` to be the
+// administrator, `audio` to play sound on some Linuxes). This program says
+// who's running it, and who else is here. Making and removing users needs
+// the administrator, so that's in the chapter.
+
+use users
+
+int main {
+	println "You're", users.name, "(" + users.full_name + "), number", users.id
+	println "Your home is", users.home, "and your shell", users.shell
+	println "Your groups:", users.groups
+	if users.is_root {
+		println "You're the administrator (root): careful!"
+	} else if users.in_group("sudo") || users.in_group("wheel") || users.in_group("admin") {
+		println "You can be the administrator, with sudo"
+	}
+	for Name in users.all {
+		if Name != users.name {
+			println "Also here:", Name, "(" + users.full_name_of(Name) + "), at", users.home_of(Name)
+		}
+	}
+	println "There's a root:", users.exists("root"), "and a nobody-at-all:", users.exists("nobody-at-all")
+	println users.all_groups.length, "groups in all"
+}
+
+// Try this:
+//  - Print each user's groups (users.groups_of).
+//  - Say which users are in the same groups as you.
+//  - As the administrator (sudo cabby ...): make a user "guest", give them
+//    a group of their own, and remove them again (see the chapter).
+
+// ---------------------------------------------------------------- output
+// output varies: what one computer said about its users (run as root; a few dozen of its build users left out)
+//> You're root (root), number 0
+//> Your home is /root and your shell /bin/bash
+//> Your groups: [root]
+//> You're the administrator (root): careful!
+//> Also here: ubuntu (Ubuntu), at /home/ubuntu
+//> There's a root: true and a nobody-at-all: false
+//> 49 groups in all

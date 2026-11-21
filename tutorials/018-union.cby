@@ -1,0 +1,71 @@
+// Tutorial 18: union
+//
+// Run it:      cabby 018-union.cby
+// Keywords:    union
+//
+// A union's fields all share the same memory, so it's as big as its
+// largest field. Writing one field and reading another reinterprets the
+// same bytes. That is a famous source of bugs, so Cabby allows only
+// plain-data fields (numbers, chars, bools, arrays and structs of them),
+// so a reinterpretation can give a strange number but never a crash.
+
+union number {
+	float f
+	unsigned int Bits
+	unsigned char Bytes[4]
+}
+
+// A common use: one value that can be one of several kinds, plus a tag
+// saying which.
+enum shape_kind {
+	CIRCLE
+	SQUARE
+}
+
+union size {
+	double Radius
+	int Side
+}
+
+struct shape {
+	int Kind
+	size s
+}
+
+double area shape Sh {
+	if Sh.Kind == CIRCLE {
+		return 3.14159 * Sh.s.Radius * Sh.s.Radius
+	}
+	return (double)(Sh.s.Side * Sh.s.Side)
+}
+
+int main {
+	number n
+	n.f = 1.0f
+	// The bits of the float 1.0, as an integer (IEEE 754: 0x3F800000).
+	println "1.0 is stored as", n.Bits
+
+	// Build a float from its bytes. This machine is little-endian, so the
+	// lowest byte comes first.
+	n.Bits = 0x40490fdb
+	println "bits 0x40490fdb as a float:", n.f
+	println "its top byte:", (int)n.Bytes[3]
+
+	println sizeof(number), "bytes"
+
+	shape a = {CIRCLE, {.Radius = 2.0}}
+	shape b = {SQUARE, {.Side = 3}}
+	println "areas:", area(a), area(b)
+}
+
+// Try this:
+//  - Set n.f = -0.0f and print n.Bits. Only one bit differs from +0.0.
+//  - Add a TRIANGLE kind with a base and height (hint: a struct field
+//    inside the union).
+
+// ---------------------------------------------------------------- output
+//> 1.0 is stored as 1065353216
+//> bits 0x40490fdb as a float: 3.1415927
+//> its top byte: 64
+//> 4 bytes
+//> areas: 12.56636 9.0

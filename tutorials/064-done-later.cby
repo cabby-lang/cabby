@@ -1,0 +1,106 @@
+// Tutorial 64: Done later — a window that carries on while a worker works
+//
+// Run it:      cabby 064-done-later.cby
+// Or compile:  cabby -c 064-done-later.cby && ./064-done-later
+// Library:     use gui, use threads
+// Topics:      on_done; a worker as a window's field; set_enabled; is_done
+//
+// A window's handlers must be quick: while one runs, the window can't
+// redraw, or react to anything. A long job in a handler freezes it. So
+// the job goes to a worker, and the handler only starts it. The window
+// carries on (it can be moved, typed into, closed), and `on_done` has it
+// call one of the window's methods once the worker is done, as a button
+// calls one when it's clicked.
+//
+// The handler is called from the window's own loop, on the main thread,
+// between its other events: so it can change the window as any handler
+// can, and the worker's fields are the window's to read again.
+
+use gui
+use threads
+
+// ---- the job: counting the primes below a number
+
+object prime_counter : threads.worker {
+	int Below                       // given
+	int Primes                      // worked out
+
+	void work {
+		Primes = 0
+		for int N = 2; N < Below; N++ {
+			if is_prime N {
+				Primes++
+			}
+		}
+	}
+
+	bool is_prime int N const {
+		for int D = 2; D * D <= N; D++ {
+			if N % D == 0 {
+				return false
+			}
+		}
+		return true
+	}
+}
+
+// ---- the window
+
+object counter_window : gui.window {
+	gui.entry Limit
+	gui.button Count
+	gui.label Answer
+	prime_counter Counter           // the worker belongs to the window
+
+	void build {
+		set_title "Primes"
+		set_size 320, 160
+		add_label "Count the primes below:"
+		Limit = add_entry
+		Count = add_button "Count"
+		Count.on_click start_counting
+		Answer = add_label ""
+		Counter.on_done show_answer     // once, each time it's done
+	}
+
+	void start_counting {
+		if !Limit.text.is_number {
+			Answer.set_text "Type a number first."
+			return
+		}
+		Counter.Below = Limit.text.to_int
+		println "counting the primes below", Counter.Below
+		Counter.start                   // straight back to the window
+		Count.set_enabled false         // (one count at a time)
+		Answer.set_text "Counting..."
+	}
+
+	// called by the window's loop, once the worker's done
+	void show_answer {
+		Answer.set_text Counter.Primes.text + " primes below " + Counter.Below.text
+		Count.set_enabled true
+		println Counter.Primes, "primes below", Counter.Below
+	}
+}
+
+int main {
+	counter_window W
+	W.run
+}
+
+// (For Cabby's test suite: what to do in the window. "processes" waits
+// until what the window's loop is watching, the worker here, is done.)
+// script: type 1 200000; click Count; processes; type 1 100; click Count; processes; close
+//
+// Try this:
+//  - Type 5000000 and click Count, then move the window about, or type
+//    in it, while it counts.
+//  - A Cancel button: the next chapter's tell and ask_to_stop are how a
+//    window and its worker talk while it works.
+//  - Show how long it took: use time, and time.now (chapter 39).
+
+// ---------------------------------------------------------------- output
+//> counting the primes below 200000
+//> 17984 primes below 200000
+//> counting the primes below 100
+//> 25 primes below 100

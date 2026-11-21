@@ -1,0 +1,102 @@
+// Tutorial 39: Time and dates
+//
+// Run it:      cabby 039-dates.cby
+// Or compile:  cabby -c 039-dates.cby && ./039-dates
+// Library:     use dates (and use time, which comes with it)
+// Topics:      moment, duration, date, time_of_day, date_time, patterns
+//              like "d mmmm yyyy", weekday and month
+//
+// Two kinds of time: the computer's (`use time`: exact moments, and how
+// long things take) and people's (`use dates`: calendar days, clock times
+// and time zones). Each is its own kind of value, so a number of seconds
+// can't be mixed up with a number of days, or with a plain number.
+//
+// The dates here are fixed, so the output is the same whenever it runs;
+// dates.today, dates.now and time.now give the real ones.
+
+use dates
+
+// A library book: when it was borrowed, and when it's due back.
+struct loan {
+	str Title
+	date Borrowed
+}
+
+date due_back const loan &L {
+	return L.Borrowed + 21                  // three weeks: a date steps by days
+}
+
+// How a date is shown, for this program: patterns are written as in a
+// spreadsheet (d, dd, ddd, dddd for the day; m to mmmm for the month).
+str nice date D {
+	return D.format "dddd d mmmm"
+}
+
+int main {
+	date Today = dates.make 2026, 11, 3
+	println "Today is", nice(Today)
+	println "Day", Today.day_of_year, "of", Today.year
+
+	// ---- days apart
+	date Christmas = dates.make Today.year, 12, 25
+	long Left = Christmas - Today           // two dates: the days between
+	println Left, "days until Christmas, a", Christmas.weekday
+
+	// ---- loans
+	loan Book
+	Book.Title = "The Hobbit"
+	Book.Borrowed = dates.read "20/10/2026", "dd/mm/yyyy"
+	date Due = due_back Book
+	println Book.Title, "is due back on", nice(Due)
+	if Due < Today {
+		println "  overdue by", Today - Due, "days"
+	}
+
+	// ---- months
+	date Paid = dates.make 2026, 1, 31
+	for i in 3 {
+		println "  paid", Paid.format("d mmm yyyy")
+		Paid = Paid.add_months 1               // 31 Jan, the end of February, then the 28th on
+	}
+
+	// ---- clock times
+	time_of_day Opens = dates.time 9, 0
+	time_of_day Closes = Opens + time.hours(8) + time.minutes(30)
+	println "Open", Opens.format("h:mm am/pm"), "to", Closes.format("h:mm am/pm")
+	duration Open = Closes - Opens
+	println "That's", Open, "or", Open.minutes, "minutes"
+
+	// ---- a date and a time together
+	time_of_day Evening = dates.time 18, 30
+	date_time Talk = Christmas.at Evening
+	println "Carols:", Talk.format("ddd d mmm, h:mm am/pm")
+
+	// ---- weekends
+	int Weekend = 0
+	for i in 30 {
+		weekday W = (Today + i).weekday
+		if W == SATURDAY || W == SUNDAY {
+			Weekend++
+		}
+	}
+	println Weekend, "weekend days in the next 30"
+	return 0
+}
+
+// Try this:
+//  - Work out your age in days.
+//  - Print a calendar for this month: start at its first day, and step
+//    along a day at a time, starting a new line each `SUNDAY`.
+
+// ---------------------------------------------------------------- output
+//> Today is Tuesday 3 November
+//> Day 307 of 2026
+//> 52 days until Christmas, a Friday
+//> The Hobbit is due back on Tuesday 10 November
+//>   paid 31 Jan 2026
+//>   paid 28 Feb 2026
+//>   paid 28 Mar 2026
+//> Open 9:00 am to 5:30 pm
+//> That's 8 hours 30 minutes or 510.0 minutes
+//> Carols: Fri 25 Dec, 6:30 pm
+//> 8 weekend days in the next 30

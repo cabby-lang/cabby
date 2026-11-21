@@ -1,0 +1,84 @@
+// Tutorial 38: When it fails — a class's marks, read with else
+//
+// Run it:      cabby 038-when-it-fails.cby
+// Or compile:  cabby -c 038-when-it-fails.cby && ./038-when-it-fails
+// Library:     use files
+// Topics:      else after a declaration, an assignment or a call: else
+//              Value, else { }, and else Why { } with the panic's message
+//
+// Something going wrong is a panic, and a panic ends the program: a file
+// that isn't there, text that isn't a number, a position past a list's
+// end. That's right for mistakes, which ought to be found and fixed. But
+// some failures are part of the job: a teacher's file of marks with a
+// typing slip in it shouldn't stop the whole report.
+//
+// An else after a statement catches its panic. Nothing is shown, and the
+// else part is done instead: a value to use, a block to run, or a block
+// told why (Why, a str, says what the panic would have said).
+
+use files
+
+// ---- a mark: "Ana: 17" gives 17
+
+int mark_of const str &Line {
+	long Colon = Line.find ":"
+	str Number = Line[Colon + 1 to].trim     // (all of it, if there's no ':')
+	return Number.to_int                      // (a panic if it isn't a number)
+}
+
+int main {
+	files.write "marks.txt", "Ana: 17\nBo: twelve\nCy: 14\nDee 19\nEd: 16\n"
+
+	// ---- a file that may not be there: else Value
+	str Settings = files.read "settings.txt" else "out of: 20"
+	println "settings:", Settings
+
+	// ---- each line: a bad one is skipped, and told why
+	int Total = 0
+	int Count = 0
+	for Line in files.lines "marks.txt" {
+		int Mark = mark_of Line else Why {
+			println "skipped '" + Line + "':", Why
+			continue
+		}
+		Total += Mark
+		Count++
+	}
+	println Count, "marks, averaging", Total / Count
+
+	// ---- a position past the end: else, on an assignment
+	list str Names = {"Ana", "Cy", "Ed"}
+	str Fourth = "nobody"
+	Fourth = Names[3].copy else "nobody yet"
+	println "fourth:", Fourth
+
+	// ---- after a call on its own: carry on regardless
+	files.delete "settings.txt" else { }
+	files.delete "marks.txt"
+	return 0
+}
+
+// ---------------------------------------------------------------- notes
+//  - Without the else, the first bad line ends the program:
+//      panic at 038-when-it-fails.cby:26:15: "twelve" is not a whole number
+//  - The else catches a panic anywhere in working the statement out:
+//    here, inside mark_of. What mark_of had made is dropped, as when it
+//    returns: destructors run, and a file it had open would be closed.
+//  - After a declaration, an else block has to leave (continue, break or
+//    return): Mark has no value otherwise.
+//  - Checking first (files.exists, .is_int, Names.length) is still the
+//    clearer way when failing is expected; else is for when it's not.
+//
+// Try this:
+//  - Print "no marks" when every line is bad,
+//    rather than dividing by zero.
+//  - Put the settings into `settings.txt`, and read "out of" from it.
+//  - Read a number typed in with `input`, and ask again when it isn't one,
+//    using `else`.
+
+// ---------------------------------------------------------------- output
+//> settings: out of: 20
+//> skipped 'Bo: twelve': "twelve" is not a whole number (check first with .is_int)
+//> skipped 'Dee 19': "Dee 19" is not a whole number (check first with .is_int)
+//> 3 marks, averaging 15
+//> fourth: nobody yet
