@@ -19,7 +19,9 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <limits.h>
+#ifndef __wasi__
 #include <pwd.h>
+#endif
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -39,7 +41,7 @@
 #include <sys/param.h>
 #include <sys/sysctl.h>
 #include <sys/ucred.h>
-#else
+#elif !defined(__wasi__)
 #include <sys/inotify.h>
 #include <sys/statvfs.h>
 #endif
@@ -90,6 +92,7 @@ static char *joined(const char *a, const char *b)
 	return p;
 }
 
+#ifndef __wasi__   /* (WebAssembly, in a browser: only a directory held open, below) */
 /* ============================================================ watching */
 
 typedef struct {
@@ -1532,6 +1535,8 @@ __attribute__((destructor)) static void os_end(void)
 	disks_forget();
 	programs_forget();
 }
+
+#endif   /* __wasi__ */
 
 /* ------------------------------------------------------------ a directory held open
  *

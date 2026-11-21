@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Try Cabby</title>
+<style>
+	:root {
+		--bg: #fbfaf7; --panel: #ffffff; --text: #1d1d1f; --muted: #6b6b70; --line: #e2e0da;
+		--accent: #2f6f4f; --accent-text: #ffffff; --err: #b3261e; --code-bg: #f5f3ee;
+	}
+	@media (prefers-color-scheme: dark) {
+		:root {
+			--bg: #16171a; --panel: #1e1f23; --text: #ececef; --muted: #9a9aa2; --line: #2e3036;
+			--accent: #5fb38a; --accent-text: #0f1512; --err: #ff8a80; --code-bg: #191a1e;
+		}
+	}
+	* { box-sizing: border-box; }
+	body { margin: 0; background: var(--bg); color: var(--text);
+		font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+	main { max-width: 980px; margin: 0 auto; padding: 24px 16px 48px; }
+	h1 { font-size: 1.6rem; margin: 0 0 4px; }
+	p.lead { margin: 0 0 20px; color: var(--muted); }
+	.bar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 8px; }
+	.bar .grow { flex: 1; }
+	button, select { font: inherit; border-radius: 8px; border: 1px solid var(--line); background: var(--panel);
+		color: var(--text); padding: 6px 14px; cursor: pointer; }
+	button.run { background: var(--accent); color: var(--accent-text); border-color: var(--accent); font-weight: 600; }
+	button:disabled { opacity: .5; cursor: default; }
+	textarea, pre { width: 100%; margin: 0; font: 14px/1.5 ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+		tab-size: 4; border: 1px solid var(--line); border-radius: 10px; background: var(--code-bg); color: var(--text); }
+	textarea { padding: 12px 14px; resize: vertical; }
+	#code { min-height: 320px; }
+	#input { min-height: 56px; }
+	pre { min-height: 120px; padding: 12px 14px; white-space: pre-wrap; overflow-wrap: anywhere; }
+	pre .err { color: var(--err); }
+	label { display: block; font-size: .9rem; color: var(--muted); margin: 14px 0 6px; }
+	.status { color: var(--muted); font-size: .9rem; }
+	.hint { color: var(--muted); font-size: .85rem; margin-top: 16px; }
+	kbd { font: .8rem ui-monospace, monospace; border: 1px solid var(--line); border-bottom-width: 2px;
+		border-radius: 4px; padding: 0 4px; }
+</style>
+</head>
+<body>
+<main>
+	<h1>Try Cabby</h1>
+	<p class="lead">Cabby's interpreter, running in this page. Nothing is sent anywhere.</p>
+
+	<div class="bar">
+		<select id="example" aria-label="Example programs"></select>
+		<span class="grow"></span>
+		<span class="status" id="status">Loading…</span>
+		<button id="stop" disabled>Stop</button>
+		<button id="run" class="run" disabled>Run</button>
+	</div>
+	<textarea id="code" spellcheck="false" aria-label="The program"></textarea>
+
+	<label for="input">What the program reads (<code>input</code>, <code>read_line</code>), if anything</label>
+	<textarea id="input" spellcheck="false"></textarea>
+
+	<label for="output">What it prints</label>
+	<pre id="output" aria-live="polite"></pre>
+
+	<p class="hint"><kbd>Tab</kbd> indents (Cabby's blocks are tabs); <kbd>Ctrl</kbd>+<kbd>Enter</kbd> runs.
+	Libraries that need the computer itself (windows, files beyond the page's own, the network, sound) say so
+	when they're used.</p>
+</main>
+<script type="module">
+const EXAMPLES = {
+	'Hello': `int main {
+	println "Hello, Cabby!"
+	str Name = "world"
+	println "Hello, " + Name.upper + "!"
+}
+`,
+	'Lists and lookups': `int main {
+	list int Scores = {85, 97, 72, 90}
+	Scores.sort
+	println Scores, "best:", Scores[Scores.length - 1]
+
+	lookup str int Ages = {"Ada": 36, "Alan": 41}
+	Ages["Grace"] = 85
+	for Name, Age in Ages {
+		println Name, "is", Age
+	}
+}
+`,
+	'Objects': `object animal {
+	str Name
+
+	str sound const {
+		return "..."
+	}
+
+	void speak const {
+		println Name, "says", sound
+	}
+}
+
+object dog : animal {
+	str sound const {
+		return "woof"
+	}
+}
+
+int main {
+	dog Rex = {.Name = "Rex"}
+	Rex.speak
+}
+`,
+	'Links between objects': `object person {
+	str Name
+	link person Best
+}
+
+int main {
+	person Ada = {.Name = "Ada"}
+	person Alan = {.Name = "Alan"}
+	Ada.Best = Alan
+	Alan.Best = Ada
+	println Ada.Best.Name, "and", Ada.Best.Best.Name
+}
+`,
+	'Reading input': `int main {
+	print "What's your name? "
+	str Name = read_line
+	println "Hello,", Name
+}
+`,
+};
+
+const $ = id => document.getElementById(id);
+const code = $('code'), out = $('output'), run = $('run'), stop = $('stop'), status = $('status');
+for (const name of Object.keys(EXAMPLES)) $('example').add(new Option(name, name));
+code.value = EXAMPLES.Hello;
+$('example').onchange = e => { code.value = EXAMPLES[e.target.value]; out.textContent = ''; };
+$('example').onchange({ target: $('example') });
+$('input').value = 'Ada';
+
+// Tab puts a tab in, as Cabby's blocks want
+code.addEventListener('keydown', e => {
+	if (e.key === 'Tab' && !e.ctrlKey && !e.altKey && !e.metaKey) {
+		e.preventDefault();
+		document.execCommand('insertText', false, '\t');
+	} else if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+		e.preventDefault();
+		if (!run.disabled) run.click();
+	} else if (e.key === 'Enter' && !e.shiftKey && !e.altKey) {
+		// (a phone has no Tab key: a new line keeps the indent, and a { adds one)
+		e.preventDefault();
+		const before = code.value.slice(0, code.selectionStart);
+		const line = before.slice(before.lastIndexOf('\n') + 1);
+		const tabs = line.match(/^\t*/)[0] + (/\{\s*$/.test(line) ? '\t' : '');
+		document.execCommand('insertText', false, '\n' + tabs);
+	} else if (e.key === '}' && code.selectionStart === code.selectionEnd) {
+		// (and a } on a line of only tabs takes one back)
+		const before = code.value.slice(0, code.selectionStart);
+		if (/\n\t+$/.test(before)) {
+			e.preventDefault();
+			code.setSelectionRange(code.selectionStart - 1, code.selectionStart);
+			document.execCommand('insertText', false, '}');
+		}
+	}
+});
+
+let worker = null;
+function newWorker() {
+	worker = new Worker(new URL('cabby-worker.js', import.meta.url), { type: 'module' });
+	worker.onmessage = e => {
+		const m = e.data;
+		if (m.out !== undefined) out.append(m.out);
+		else if (m.err !== undefined) {
+			const s = document.createElement('span');
+			s.className = 'err';
+			s.textContent = m.err;
+			out.append(s);
+		} else if (m.done !== undefined) {
+			finished(m.done === 0 ? 'Done' : m.done === 101 ? 'Stopped by a panic' : `Ended with ${m.done}`);
+		}
+	};
+	worker.onerror = e => finished('Something went wrong: ' + e.message);
+}
+let started = 0;
+function finished(text) {
+	run.disabled = false;
+	stop.disabled = true;
+	status.textContent = `${text} (${Math.round(performance.now() - started)} ms)`;
+}
+run.onclick = () => {
+	out.textContent = '';
+	run.disabled = true;
+	stop.disabled = false;
+	status.textContent = 'Running…';
+	started = performance.now();
+	worker.postMessage({ source: code.value, stdin: $('input').value + '\n' });
+};
+stop.onclick = () => {
+	worker.terminate();
+	newWorker();
+	finished('Stopped');
+};
+newWorker();
+// (ready once the worker can fetch what it needs)
+fetch(new URL('cabby-lib.json', import.meta.url), { method: 'HEAD' }).then(r => {
+	if (!r.ok) throw new Error('cabby-lib.json is missing');
+	run.disabled = false;
+	status.textContent = 'Ready';
+}).catch(e => { status.textContent = e.message; });
+</script>
+</body>
+</html>

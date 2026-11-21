@@ -139,6 +139,13 @@ int main(int argc, char **argv)
 	int prog_argc = 0;
 	char **prog_argv = NULL;
 
+#ifdef __wasi__
+	/* (WebAssembly has no folder it was started in: the page, or
+	 * wasm/run-node.mjs, says which, for relative paths) */
+	const char *here = getenv("CABBY_CWD");
+	if (here && *here && chdir(here) != 0)
+		fprintf(stderr, "cabby: can't change to '%s'\n", here);
+#endif
 	for (int i = 1; i < argc; i++) {
 		const char *a = argv[i];
 		Mode m = MODE_NONE;

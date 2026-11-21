@@ -63,6 +63,8 @@ endif
 endif
 CORE_O  := $(CORE:%.c=$(BUILD)/%.o)
 
+
+.PHONY: wasm wasm-site
 .PHONY: install-vim install-extras install-icons uninstall-icons uninstall-vim uninstall all debug test clean install gui gtk game world videos
 
 # The gtk library (`use gtk`, the gui library drawn by GTK, an option)
@@ -429,7 +431,49 @@ uninstall:
 	rm -f $(DESTDIR)$(PREFIX)/bin/cabby
 	rm -rf $(DESTDIR)$(PREFIX)/lib/cabby $(DESTDIR)$(PREFIX)/share/doc/cabby
 
+# ---- cabby.wasm: the interpreter built for WebAssembly, to run in a
+# browser (wasm/README.md). It needs wasi-sdk (WASI_SDK, below): its clang
+# and its C library. No libffi there: a C function is called through a
+# wrapper made for it (wasm/calls.c, from the libraries' extern lines). No
+# compiling, no interactive session, and only the libraries that need
+# nothing of the computer's own.
+WASI_SDK ?= $(firstword $(wildcard $(HOME)/tools/wasi-sdk-*) $(wildcard /opt/wasi-sdk))
+WASM_CC := $(WASI_SDK)/bin/clang
+WASM_STACK := 33554432
+WASM_CFLAGS := --target=wasm32-wasip1 -std=c11 -O2 -D_POSIX_C_SOURCE=200809L -D_DEFAULT_SOURCE \
+	-D_WASI_EMULATED_SIGNAL -D_WASI_EMULATED_PROCESS_CLOCKS -D_WASI_EMULATED_MMAN -D_WASI_EMULATED_GETPID \
+	-mllvm -wasm-enable-sjlj -mllvm -wasm-use-legacy-eh=false -DCABBY_WASM_STACK=$(WASM_STACK) -Iwasm -Iruntime
+WASM_LDFLAGS := -Wl,-z,stack-size=$(WASM_STACK) -Wl,--initial-memory=268435456 -Wl,--max-memory=2147483648 \
+	-lsetjmp -lwasi-emulated-signal -lwasi-emulated-process-clocks -lwasi-emulated-mman -lwasi-emulated-getpid -lm
+WASM_SRC := main.c arena.c diag.c util.c lexer.c ast.c ast_print.c parser.c types.c style.c \
+	sema_decl.c sema_expr.c sema_stmt.c sema_flow.c interpreter.c highlight.c wasm/stubs.c wasm/calls.c \
+	runtime/rt.c runtime/dates.c runtime/json.c runtime/csv.c runtime/markup.c runtime/bytes.c runtime/patterns.c \
+	runtime/hashes.c runtime/archives.c runtime/databases.c runtime/threads.c runtime/emails.c \
+	runtime/secrets.c runtime/zones.c runtime/images.c runtime/linux.c runtime/os.c
+WASM_O := $(WASM_SRC:%.c=build/wasm/%.o)
+
+wasm: cabby.wasm
+
+# build/wasm-site: what a web page needs to run Cabby (wasm/README.md):
+# cabby.wasm, cabby.js, cabby-worker.js, the libraries' headers in one
+# file, and a page to try it (wasm/index.html)
+wasm-site: cabby.wasm
+	@mkdir -p build/wasm-site
+	cp cabby.wasm wasm/cabby.js wasm/cabby-worker.js wasm/index.html build/wasm-site/
+	python3 -c 'import json, glob, os; json.dump({"/lib/" + os.path.basename(f): open(f).read() for f in sorted(glob.glob("lib/*.hby"))}, open("build/wasm-site/cabby-lib.json", "w"))'
+	@echo "build/wasm-site: open it through a web server (python3 -m http.server -d build/wasm-site)"
+cabby.wasm: $(WASM_O)
+	$(WASM_CC) --target=wasm32-wasip1 $(WASM_O) $(WASM_LDFLAGS) -o $@
+
+build/wasm/%.o: %.c
+	@mkdir -p $(dir $@)
+	$(WASM_CC) $(WASM_CFLAGS) -c $< -o $@
+
+wasm/calls.c: tools/make-wasm-calls.py $(wildcard lib/*.hby) $(wildcard tutorials/*.cby)
+	WASI_CLANG=$(WASM_CC) WASI_CFLAGS="--target=wasm32-wasip1 -std=c11 -D_POSIX_C_SOURCE=200809L -D_DEFAULT_SOURCE" \
+		python3 tools/make-wasm-calls.py $@ lib/*.hby tutorials/*.cby tests/*.cby tests/*/*.cby
+
 clean:
-	rm -rf build build-debug cabby lib/libcabbyrt.a lib/libcabbygui.so lib/libcabbygui.a lib/gui.link lib/libcabbytui.so lib/libcabbytui.a lib/tui.link $(PROC_TARGETS) $(SOUND_TARGETS) lib/libcabbygame.so lib/libcabbygame.a lib/game.link lib/libcabbygtk.so lib/libcabbygtk.a lib/gtk.link lib/gtk.hby lib/libcabbytgame.so lib/libcabbytgame.a lib/tgame.link lib/tgame.hby lib/libcabbysdlgui.so lib/libcabbysdlgui.a lib/sdlgui.link lib/sdlgui.hby lib/libcabbyworld.so lib/libcabbyworld.a lib/world.link lib/libcabbyvideos.so lib/libcabbyvideos.a lib/videos.link
+	rm -rf build build-debug cabby cabby.wasm lib/libcabbyrt.a lib/libcabbygui.so lib/libcabbygui.a lib/gui.link lib/libcabbytui.so lib/libcabbytui.a lib/tui.link $(PROC_TARGETS) $(SOUND_TARGETS) lib/libcabbygame.so lib/libcabbygame.a lib/game.link lib/libcabbygtk.so lib/libcabbygtk.a lib/gtk.link lib/gtk.hby lib/libcabbytgame.so lib/libcabbytgame.a lib/tgame.link lib/tgame.hby lib/libcabbysdlgui.so lib/libcabbysdlgui.a lib/sdlgui.link lib/sdlgui.hby lib/libcabbyworld.so lib/libcabbyworld.a lib/world.link lib/libcabbyvideos.so lib/libcabbyvideos.a lib/videos.link
 
 -include $(wildcard $(BUILD)/*.d $(BUILD)/tools/*.d $(BUILD)/runtime/*.d)

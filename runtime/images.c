@@ -672,12 +672,14 @@ static char *img_font_file(const char *name)
 		*italic = 0;
 	snprintf(cmd, sizeof cmd, "fc-match -f '%%{file}' '%s%s%s:fontformat=TrueType' 2>/dev/null", pattern, bold ? ":bold" : "",
 		 italic ? ":italic" : "");
+#ifndef __wasi__   /* (fontconfig is another program: none in a browser) */
 	FILE *p = popen(cmd, "r");
 	if (p) {
 		if (!fgets(path, sizeof path, p))
 			path[0] = 0;
 		pclose(p);
 	}
+#endif
 	FILE *f = path[0] ? fopen(path, "rb") : NULL;
 	if (f) {
 		fclose(f);

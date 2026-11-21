@@ -98,6 +98,7 @@ changing for.
 | 0.43.2 | 21 November | The last tests on the three computers: the test scripts on macOS's awk, a ping test's address, a warning on Arch |
 | 0.43.3 | 21 November | `cabby -c --checked` catches a read past an array's end again: `-O1` at most, and `main` marked too |
 | **1.0.0** | 21 November | **Cabby 1.0**: the language and its libraries settled, tested on Debian, Arch and an Apple-processor Mac, and packaged for each |
+| 1.1.0 | 21 November | Cabby in a browser: the interpreter built for WebAssembly, with a page to try it |
 
 ---
 
@@ -1685,6 +1686,37 @@ What 1.0 is, from the plan agreed on 20 November:
 
 What comes after is in `Goals.md`: microcontrollers, phones and
 WebAssembly, and the rest of README §15.
+
+*Version 1.1.0, Cabby in a browser:* the interpreter built for
+WebAssembly, so a web page can run Cabby programs in the visitor's own
+browser, with nothing installed and nothing sent anywhere. It's the first
+of three steps: next, `cabby -c` making WebAssembly; then windows and
+games (gui, game) in a browser.
+
+- `make wasm-site` builds it with wasi-sdk (WASI preview 1) and puts in
+  `build/wasm-site` what a page needs: `cabby.wasm` (1.7 MB, under 600 KB
+  compressed), `cabby.js` to run it with its files in memory,
+  `cabby-worker.js` to run it in a Web Worker (so the page carries on and
+  a program can be stopped), the libraries' headers in one file, and a
+  page to try it (`index.html`): examples, Run and Stop, what the program
+  reads and what it prints. A new line keeps its indent and a `{` adds
+  one, for phones, which have no Tab key.
+- WebAssembly has no libffi, so each C function in the libraries' `extern`
+  lines is called through a wrapper made for it beforehand
+  (`tools/make-wasm-calls.py` makes `wasm/calls.c`): 35 of C's own and
+  1,295 of Cabby's runtime. Those whose library isn't in the WebAssembly
+  build (windows, sound, sockets) say so when called: *'rt_tcp_connect'
+  isn't here (in a browser)*.
+- What a browser hasn't: windows and games, sound and video, the network,
+  threads, other programs, SQLite, zlib, OpenSSL, time zones, the
+  interactive session and `-c`; and calls nest 1,000 deep, not 25,000.
+  `wasm/README.md` has the list.
+- Tested in Chromium (`tests/run_wasm_tests.cjs`, through Playwright):
+  every tutorial and program test that needs nothing a browser hasn't
+  gives the same output as on the computer: 43 tutorials and 146 program
+  tests. (Node 22's V8 can crash collecting garbage around WebAssembly's
+  exceptions, so the browser is what's tested.)
+- Nothing changes for Cabby on a computer: `make test` passes as before.
 
 ## Along the way (dates not recorded)
 
