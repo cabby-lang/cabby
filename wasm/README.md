@@ -60,6 +60,15 @@ To try it on your computer:
 
 It needs wasi-sdk too: `cabby` looks in `$CABBY_WASI_SDK`, then where it
 was when Cabby was built, then `~/tools/wasi-sdk-*` and `/opt/wasi-sdk`.
+
+And it needs the runtime that `make wasm` builds, which it looks for
+where it finds the libraries' headers. The cabby folder's own `./cabby`
+finds it in that folder's `lib/wasm`; an installed Cabby (`/usr/bin/cabby`,
+from a package) finds it once it's installed too: `sudo make install`
+after `make wasm`, or a package built after `make wasm` (the .deb takes
+it in then). Or point any Cabby at the folder it was built in:
+
+    CABBY_LIB=~/cabby/lib cabby -c prog.cby --wasm
 A program is small: `hello` is 16 KB (7 KB compressed), and one reading
 and writing JSON about 100 KB (40 KB); a game, with SDL in it, about
 900 KB (250 KB). It needs nothing else: not

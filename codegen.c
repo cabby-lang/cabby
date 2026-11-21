@@ -4411,8 +4411,17 @@ static int compile_wasm(Sema *S, const CompileOptions *opt, const char *out_name
 		rt[0] = '\0';
 	}
 	if (!*rt) {
-		fprintf(stderr, "cabby: --wasm needs the runtime built for WebAssembly (lib/wasm/libcabbyrt.a): "
-			"'make wasm' in the cabby folder, with wasi-sdk\n");
+		/* (an installed Cabby has it only if it was built before installing:
+		 * say where it was looked for, and the ways to have it) */
+		fprintf(stderr, "cabby: --wasm needs the runtime built for WebAssembly (wasm/libcabbyrt.a), and it isn't ");
+		if (!opt->lib_dirs || !*opt->lib_dirs)
+			fprintf(stderr, "here (no folder of the libraries was found)");
+		for (const char *const *d = opt->lib_dirs; d && *d; d++)
+			fprintf(stderr, "%s %s", d == opt->lib_dirs ? "in" : ",", *d);
+		fprintf(stderr, ".\n"
+			"  'make wasm' in the cabby folder (with wasi-sdk) builds it, in its lib/wasm; then either\n"
+			"  'sudo make install' there, or use that folder's own ./cabby, or set CABBY_LIB to its lib folder\n"
+			"  (CABBY_LIB=~/cabby/lib cabby -c prog.cby --wasm)\n");
 		return 1;
 	}
 	char cc[4096];

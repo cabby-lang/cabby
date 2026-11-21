@@ -102,6 +102,7 @@ changing for.
 | 1.1.1 | 21 November | The game page's testing section mended (and the manual tests now catch what broke it); `labs` and `strtol` 64-bit in a browser; wasi-sdk 33 builds it too |
 | 1.2.0 | 21 November | `cabby -c --wasm`: programs compiled to WebAssembly, for a web page, as fast as native |
 | 1.3.0 | 22 November | Windows and games in a browser: gui and game shown on the page, and played there |
+| 1.3.1 | 22 November | `cabby -c --wasm` from an installed Cabby: where it looked for the runtime, and how to have it there |
 
 ---
 
@@ -1814,6 +1815,15 @@ at 60 frames a second. The last of the three WebAssembly steps.
   page played as a person would (`node tests/run_wasm_tests.cjs --play`):
   a window typed into, Enter and closed, a game played and closed, and a
   compiled window through the worker.
+
+*Version 1.3.1:* an installed Cabby (from a package) has no runtime for
+WebAssembly unless it was built before packaging, and `cabby -c --wasm`
+only said to run `make wasm`, which an installed Cabby doesn't see. Now
+it says where it looked, and the three ways to have it: `sudo make
+install` after `make wasm`, the cabby folder's own `./cabby`, or
+`CABBY_LIB` pointing at the folder's `lib`. `wasm/README.md` and
+`packaging/README.md` say so too (a .deb built after `make wasm` takes
+the runtime in).
 
 ## Along the way (dates not recorded)
 
