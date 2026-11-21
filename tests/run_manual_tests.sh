@@ -209,15 +209,23 @@ for kindfile in $(ls *.kind 2>/dev/null | sort -n); do
 done
 cd "$OLDPWD"
 
-# Internal links: GitHub's heading anchors (lower case; spaces become
-# hyphens; punctuation other than - and _ dropped; repeats get -1, -2 ...).
-anchors=$(grep -E '^#{1,6} ' "$MANUAL" | sed -E 's/^#+ //' | awk '{
-	s = tolower($0)
-	gsub(/[^a-z0-9 _-]/, "", s)
-	gsub(/ /, "-", s)
-	if (seen[s]++) s = s "-" (seen[s] - 1)
-	print s
-}')
+# Links to headings: GitHub's heading anchors (lower case; spaces become
+# hyphens; punctuation other than - and _ dropped; repeats get -1, -2 ...),
+# from headings outside code blocks (one inside isn't a heading).
+anchors_of() {
+	# (a block ends only at a line of just ```, as on GitHub)
+	awk '!code && /^[[:space:]]*```/ { code = 1; next }
+	code && /^[[:space:]]*```[[:space:]]*$/ { code = 0; next }
+	!code && /^#{1,6} / {
+		s = tolower($0)
+		sub(/^#+ /, "", s)
+		gsub(/[^a-z0-9 _-]/, "", s)
+		gsub(/ /, "-", s)
+		if (seen[s]++) s = s "-" (seen[s] - 1)
+		print s
+	}' "$1"
+}
+anchors=$(anchors_of "$MANUAL")
 links=0
 for link in $(grep -oE '\]\(#[^)]+\)' "$MANUAL" | sed -E 's/^\]\(#//; s/\)$//' | sort -u); do
 	links=$((links + 1))
@@ -226,6 +234,28 @@ for link in $(grep -oE '\]\(#[^)]+\)' "$MANUAL" | sed -E 's/^\]\(#//; s/\)$//' |
 		echo "FAIL: link #$link leads to no heading"
 	fi
 done
+# and those to a heading on another page (page.md#heading), from where this one is
+here=$(dirname "$MANUAL")
+for link in $(grep -oE '\]\([^)#: ]+\.md#[^)]+\)' "$MANUAL" | sed -E 's/^\]\(//; s/\)$//' | sort -u); do
+	links=$((links + 1))
+	page="$here/${link%%#*}"
+	if [ ! -f "$page" ]; then
+		fail=$((fail + 1))
+		echo "FAIL: link $link leads to no page"
+	elif ! grep -qxF -- "${link#*#}" <<<"$(anchors_of "$page")"; then
+		fail=$((fail + 1))
+		echo "FAIL: link $link leads to no heading there"
+	fi
+done
+
+# C's && || == in the words themselves (outside code), where and, or and
+# is were meant: what a find-and-replace on Cabby's code can do to prose
+while IFS= read -r bad; do
+	fail=$((fail + 1))
+	echo "FAIL: $MANUAL:$bad: '&&', '||' or '==' in the words (and, or, is?)"
+done < <(awk '!code && /^[[:space:]]*```/ { code = 1; next }
+	code && /^[[:space:]]*```[[:space:]]*$/ { code = 0; next }
+	!code { s = $0; gsub(/`[^`]*`/, "", s); if (s ~ /&&|\|\||==/) print NR }' "$MANUAL")
 
 note=""
 [ $skipped -gt 0 ] && note=" ($skipped window examples skipped: no virtual display or gui library)"

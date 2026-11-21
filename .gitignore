@@ -25,3 +25,6 @@ __pycache__/
 # Cabby built for WebAssembly (make wasm), and its wrappers, made from the extern lines
 /cabby.wasm
 /wasm/calls.c
+
+# the interactive session's history (it keeps it in ~/.cabby_history)
+.cabby_history
