@@ -15,6 +15,31 @@
 #include <stdlib.h>
 #include <string.h>
 #include <strings.h>
+#ifdef __wasi__
+/* (in a browser no other program runs, fc-match neither: fonts are where
+ * the page puts them, in the places looked in after it) */
+#define popen(cmd, mode) ((void)(cmd), (void)(mode), (FILE *)NULL)
+#define pclose(p) ((void)(p), 0)
+/* and it's one program, with nothing to load: what the libraries look up
+ * by name (in the runtime) is there by its own name */
+#include <dlfcn.h>
+extern void (*rt_idle_hook)(void);
+void cby_events_step(int wait_ms);
+int cby_events_fds(int *fds, int max);
+static inline void *cby_wasm_dlsym(void *lib, const char *name)
+{
+	(void)lib;
+	if (strcmp(name, "rt_idle_hook") == 0)
+		return (void *)&rt_idle_hook;
+	if (strcmp(name, "cby_events_step") == 0)
+		return (void *)cby_events_step;
+	if (strcmp(name, "cby_events_fds") == 0)
+		return (void *)cby_events_fds;
+	return NULL;
+}
+#define dlsym(lib, name) cby_wasm_dlsym(lib, name)
+#define dlopen(name, flags) ((void)(name), (void)(flags), (void *)NULL)
+#endif
 
 #if defined(__GNUC__)
 #pragma GCC diagnostic push
@@ -28,6 +53,12 @@
 #pragma GCC diagnostic ignored "-Wmissing-field-initializers"
 #pragma GCC diagnostic ignored "-Wtype-limits"
 #pragma GCC diagnostic ignored "-Wunused-but-set-variable"
+#endif
+#ifdef __wasi__
+/* (in WebAssembly the libraries are one program: each keeps its own) */
+#define STB_IMAGE_STATIC
+#define STB_IMAGE_WRITE_STATIC
+#define STBTT_STATIC
 #endif
 #define STB_IMAGE_IMPLEMENTATION
 #define STBI_ONLY_PNG
@@ -69,8 +100,12 @@ static _Noreturn void fail(const char *fmt, const char *a)
 
 /* Calling a Cabby method: the interpreter points this at its own way of
  * calling one; a compiled program calls the function directly. */
+#ifdef __wasi__
+extern void (*cby_invoke_hook)(void *obj, void *fn);   /* (one for all the libraries: in rt.c) */
+#else
 static void call_directly(void *obj, void *fn) { ((void (*)(void *))fn)(obj); }
 void (*cby_invoke_hook)(void *obj, void *fn) = call_directly;
+#endif
 
 typedef struct Handler {
 	void *obj, *fn;

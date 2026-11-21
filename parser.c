@@ -186,6 +186,20 @@ static const char *missing_library_hint(const char *header, const char *name, in
 	for (size_t i = 0; i < sizeof needs / sizeof *needs; i++) {
 		if ((int)strlen(needs[i].name) != n || memcmp(name, needs[i].name, (size_t)n) != 0)
 			continue;
+#ifdef __wasi__
+		/* (in a browser, a library is built in, or isn't here: the game one is,
+		 * when Cabby for WebAssembly was built with SDL) */
+		extern void cby_game_run(int64_t) __attribute__((weak));
+		extern int64_t cby_gui_window_new(void) __attribute__((weak));
+		if ((n == 4 && memcmp(name, "game", 4) == 0 && cby_game_run) ||
+		    (n == 3 && memcmp(name, "gui", 3) == 0 && cby_gui_window_new))
+			return NULL;
+		static char here[200];
+		snprintf(here, sizeof here, "the %.*s library isn't here in a browser (of the window libraries, gui and game are)",
+			 n, name);
+		(void)header;
+		return here;
+#endif
 		const char *slash = strrchr(header, '/');
 		char lib[4096];
 		snprintf(lib, sizeof lib, "%.*s/libcabby%.*s.so", slash ? (int)(slash - header) : 1, slash ? header : ".", n, name);

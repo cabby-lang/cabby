@@ -441,7 +441,7 @@ uninstall:
 # wrapper made for it (wasm/calls.c, from the libraries' extern lines). No
 # compiling, no interactive session, and only the libraries that need
 # nothing of the computer's own.
-WASI_SDK ?= $(firstword $(wildcard $(HOME)/tools/wasi-sdk-*) $(wildcard /opt/wasi-sdk))
+WASI_SDK ?= $(firstword $(lastword $(sort $(wildcard $(HOME)/tools/wasi-sdk-*))) $(wildcard /opt/wasi-sdk))
 WASM_CC := $(WASI_SDK)/bin/clang
 ifneq ($(WASI_SDK),)
 CFLAGS += -DCABBY_WASI_SDK='"$(WASI_SDK)"'
@@ -476,16 +476,48 @@ build/wasm/rt-missing.c: tools/make-wasm-calls.py $(WASM_RT_O) $(wildcard lib/*.
 build/wasm/rt-missing.o: build/wasm/rt-missing.c
 	$(WASM_CC) $(WASM_CFLAGS) -c $< -o $@
 
+# lib/wasm/libcabbygame.a and libcabbygui.a: the game and gui libraries for
+# WebAssembly, drawn by SDL in software and shown by the page
+# (wasm/README.md), when SDL has been built for WebAssembly
+# (tools/build-sdl-wasm.sh, into build/wasm-sdl)
+WASM_SDL := build/wasm-sdl
+ifneq ($(wildcard $(WASM_SDL)/lib/libSDL3.a),)
+wasm: lib/wasm/libcabbygame.a lib/wasm/libcabbygui.a lib/wasm/libSDL3.a
+endif
+lib/wasm/libSDL3.a: $(WASM_SDL)/lib/libSDL3.a
+	@mkdir -p lib/wasm
+	cp $< $@
+build/wasm/game.o: runtime/game.c $(GUI_SRC)
+	@mkdir -p build/wasm
+	$(WASM_CC) $(WASM_CFLAGS) -I$(WASM_SDL)/include -c runtime/game.c -o $@
+lib/wasm/libcabbygame.a: build/wasm/game.o
+	@mkdir -p lib/wasm
+	rm -f $@
+	$(WASI_SDK)/bin/llvm-ar rcs $@ $^
+build/wasm/gui.o: runtime/gui.c $(GUI_SRC)
+	@mkdir -p build/wasm
+	$(WASM_CC) $(WASM_CFLAGS) -I$(WASM_SDL)/include -c runtime/gui.c -o $@
+lib/wasm/libcabbygui.a: build/wasm/gui.o
+	@mkdir -p lib/wasm
+	rm -f $@
+	$(WASI_SDK)/bin/llvm-ar rcs $@ $^
+
 # build/wasm-site: what a web page needs to run Cabby (wasm/README.md):
 # cabby.wasm, cabby.js, cabby-worker.js, the libraries' headers in one
 # file, and a page to try it (wasm/index.html)
 wasm-site: cabby.wasm
 	@mkdir -p build/wasm-site
 	cp cabby.wasm wasm/cabby.js wasm/cabby-worker.js wasm/index.html build/wasm-site/
+	mkdir -p build/wasm-site/fonts && cp wasm/fonts/DejaVuSans.ttf wasm/fonts/LICENSE build/wasm-site/fonts/
 	python3 -c 'import json, glob, os; json.dump({"/lib/" + os.path.basename(f): open(f).read() for f in sorted(glob.glob("lib/*.hby"))}, open("build/wasm-site/cabby-lib.json", "w"))'
 	@echo "build/wasm-site: open it through a web server (python3 -m http.server -d build/wasm-site)"
-cabby.wasm: $(WASM_O)
-	$(WASM_CC) --target=wasm32-wasip1 $(WASM_O) $(WASM_LDFLAGS) -o $@
+# (with the game and gui libraries and SDL, when SDL is built for
+# WebAssembly: then `use game` and `use gui` run interpreted in a browser too)
+# (and the runtime's stand-ins, for what those use that isn't here: D-Bus)
+WASM_GAME := $(if $(wildcard $(WASM_SDL)/lib/libSDL3.a),build/wasm/game.o build/wasm/gui.o $(WASM_SDL)/lib/libSDL3.a \
+	build/wasm/rt-missing.o)
+cabby.wasm: $(WASM_O) $(WASM_GAME)
+	$(WASM_CC) --target=wasm32-wasip1 $(WASM_O) $(WASM_GAME) $(WASM_LDFLAGS) -o $@
 
 build/wasm/%.o: %.c
 	@mkdir -p $(dir $@)

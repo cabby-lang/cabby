@@ -101,6 +101,7 @@ changing for.
 | 1.1.0 | 21 November | Cabby in a browser: the interpreter built for WebAssembly, with a page to try it |
 | 1.1.1 | 21 November | The game page's testing section mended (and the manual tests now catch what broke it); `labs` and `strtol` 64-bit in a browser; wasi-sdk 33 builds it too |
 | 1.2.0 | 21 November | `cabby -c --wasm`: programs compiled to WebAssembly, for a web page, as fast as native |
+| 1.3.0 | 22 November | Windows and games in a browser: gui and game shown on the page, and played there |
 
 ---
 
@@ -1775,6 +1776,44 @@ steps; windows and games in a browser are next.
 - Tested in Chromium, each compiled with `-c --wasm`
   (`node tests/run_wasm_tests.cjs --compiled [--cases]`): 45 tutorials and
   134 program tests, the same output as on a computer.
+
+*Version 1.3.0, windows and games in a browser:* a program's window
+(`use gui`) or game (`use game`) shows on the web page, on a canvas, and
+is played there with the keyboard and the mouse, interpreted or compiled,
+at 60 frames a second. The last of the three WebAssembly steps.
+
+- SDL 3, built for WebAssembly by `tools/build-sdl-wasm.sh` (with
+  `tools/sdl-wasi.patch`: no threads, as Emscripten's SDL has none, and
+  nothing loaded as it runs), draws in software and off screen, as it
+  does for Cabby's tests; `runtime/sdl_browser.h` hands each frame to the
+  page, and puts what the person does there into SDL's own events, so gui
+  and game run as they do on a computer, their loops and message boxes
+  and all. `make wasm` builds them (`lib/wasm/libcabbygui.a`,
+  `libcabbygame.a`) once SDL is there, and puts them in `cabby.wasm`
+  (now 2.9 MB, about 900 KB compressed).
+- Waiting pauses the program, through JSPI (WebAssembly's promise
+  integration, in every browser since 2026), so the worker hears the page
+  while a game plays. `cabby-worker.js` takes a canvas with the program,
+  says when a window opens and closes, and takes `{ input }`: keys, typed
+  text, clicks, the mouse, the wheel, and closing (after which `main`
+  carries on).
+- The Try Cabby page shows a window or a game under the editor, with a
+  game and a window among its examples, a "Close the window" button, and
+  for a phone, arrow keys and a keyboard button.
+- A window writes with DejaVu Sans (`wasm/fonts`, with its license),
+  fetched when one first opens; in WebAssembly `fc-match` isn't asked,
+  nor D-Bus (for accessibility).
+- Mended on the way: a lookup written out in braces (`{"a": 1}`) was
+  cleared as 64 bytes compiled for WebAssembly, where it's 48, which could
+  stop a program (`unreachable`); a compiled program in a browser now
+  starts in its folder (`CABBY_CWD`), as the interpreter does; and
+  `runCabby` makes the folders a program starts in and calls home, and
+  answers the WASI calls it hasn't with "not supported".
+- Tested in Chromium: the gui and game tutorials, played by their scripts
+  as on a computer (61 tutorials pass interpreted, 63 compiled), and the
+  page played as a person would (`node tests/run_wasm_tests.cjs --play`):
+  a window typed into, Enter and closed, a game played and closed, and a
+  compiled window through the worker.
 
 ## Along the way (dates not recorded)
 

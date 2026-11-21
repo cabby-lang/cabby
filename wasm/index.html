@@ -39,12 +39,23 @@
 	.hint { color: var(--muted); font-size: .85rem; margin-top: 16px; }
 	kbd { font: .8rem ui-monospace, monospace; border: 1px solid var(--line); border-bottom-width: 2px;
 		border-radius: 4px; padding: 0 4px; }
+	#stage { margin-top: 14px; }
+	#stage canvas { display: block; margin: 0 auto; border-radius: 10px; background: #000;
+		outline: none; touch-action: none; }
+	#stage canvas:focus-visible { box-shadow: 0 0 0 3px var(--accent); }
+	.pad { display: flex; gap: 8px; justify-content: center; margin-top: 8px; }
+	.pad button { min-width: 56px; min-height: 48px; font-size: 1.2rem; user-select: none; -webkit-user-select: none;
+		touch-action: none; }
+	@media (hover: hover) and (pointer: fine) { .pad { display: none; } }
+	#stage .bar label { margin: 0; }
+	/* (a phone's keyboard comes up for a text box: this one, out of sight, passes the typing on) */
+	#typing { position: absolute; left: -9999px; width: 1px; height: 1px; opacity: 0; }
 </style>
 </head>
 <body>
 <main>
 	<h1>Try Cabby</h1>
-	<p class="lead">Cabby's interpreter, running in this page. Nothing is sent anywhere.</p>
+	<p class="lead">Cabby, running in this page. Nothing is sent anywhere.</p>
 
 	<div class="bar">
 		<select id="example" aria-label="Example programs"></select>
@@ -55,6 +66,23 @@
 	</div>
 	<textarea id="code" spellcheck="false" aria-label="The program"></textarea>
 
+	<div id="stage" hidden>
+		<div class="bar">
+			<label id="stage-title">The game</label>
+			<span class="grow"></span>
+			<button id="close-window">Close the window</button>
+		</div>
+		<div id="canvas-here"></div>
+		<div class="pad" aria-label="Keys for a game, for a phone">
+			<button data-key="Left" aria-label="Left">←</button><button data-key="Up" aria-label="Up">↑</button>
+			<button data-key="Down" aria-label="Down">↓</button><button data-key="Right" aria-label="Right">→</button>
+			<button data-key="Space" aria-label="Space">␣</button>
+			<button id="keyboard" aria-label="Type">⌨</button>
+		</div>
+		<textarea id="typing" aria-label="Typing, for the window" autocapitalize="off" autocomplete="off"
+			spellcheck="false"></textarea>
+	</div>
+
 	<label for="input">What the program reads (<code>input</code>, <code>read_line</code>), if anything</label>
 	<textarea id="input" spellcheck="false"></textarea>
 
@@ -62,8 +90,9 @@
 	<pre id="output" aria-live="polite"></pre>
 
 	<p class="hint"><kbd>Tab</kbd> indents (Cabby's blocks are tabs); <kbd>Ctrl</kbd>+<kbd>Enter</kbd> runs.
-	Libraries that need the computer itself (windows, files beyond the page's own, the network, sound) say so
-	when they're used.</p>
+	A game or a window (<code>use game</code>, <code>use gui</code>) shows above, and takes the keyboard and
+	the mouse once it's clicked. Libraries that need the computer itself (files beyond the page's own, the
+	network, sound) say so when they're used.</p>
 </main>
 <script type="module">
 const EXAMPLES = {
@@ -121,6 +150,8 @@ int main {
 	println Ada.Best.Name, "and", Ada.Best.Best.Name
 }
 `,
+	'A game': "// Catch the apples: Left and Right move the basket.\nuse game\n\nconst int WIDTH = 480\nconst int HEIGHT = 360\n\nobject apple_catcher : game.window {\n\tgame.sprite Basket\n\tlist game.sprite Apples\n\tint Caught\n\tint Missed\n\n\tvoid build {\n\t\tset_title \"Catch the apples\"\n\t\tset_size WIDTH, HEIGHT\n\t\tset_background \"skyblue\"\n\t\tadd_rectangle WIDTH, 30, \"forestgreen\", WIDTH / 2, HEIGHT - 15\n\t\tBasket = add_rectangle 70, 20, \"saddlebrown\", WIDTH / 2, HEIGHT - 40\n\t\ton_frame step\n\t\tevery time.milliseconds(700), drop_apple\n\t\tstage.on_draw draw_score\n\t}\n\n\tvoid step {\n\t\tif key_hold(\"left\") && Basket.x > 35 {\n\t\t\tBasket.move -6, 0\n\t\t}\n\t\tif key_hold(\"right\") && Basket.x < WIDTH - 35 {\n\t\t\tBasket.move 6, 0\n\t\t}\n\t\tlong i = 0\n\t\twhile i < Apples.length {\n\t\t\tApples[i].move 0, 3\n\t\t\tdouble Across = Apples[i].x - Basket.x\n\t\t\tdouble Down = Apples[i].y\n\t\t\tif Down >= HEIGHT - 52 && Down <= HEIGHT - 40 && Across > -40 && Across < 40 {\n\t\t\t\tCaught++\n\t\t\t\tApples[i].remove\n\t\t\t\tApples.remove_at i\n\t\t\t} else if Down > HEIGHT - 30 {\n\t\t\t\tMissed++\n\t\t\t\tApples[i].remove\n\t\t\t\tApples.remove_at i\n\t\t\t} else {\n\t\t\t\ti++\n\t\t\t}\n\t\t}\n\t}\n\n\tvoid drop_apple {\n\t\tgame.sprite Apple = add_circle 10, \"red\", random(20, WIDTH - 20), -10\n\t\tApples.add Apple\n\t}\n\n\tvoid draw_score {\n\t\tstage.set_color \"black\"\n\t\tstage.set_font_size 18\n\t\tstage.write 10, 8, \"Caught: \" + Caught.text + \"   Missed: \" + Missed.text\n\t}\n}\n\nint main {\n\tapple_catcher a\n\ta.run\n\tprintln \"You caught\", a.Caught, \"and missed\", a.Missed\n}\n",
+	'A window': "// A window: type a name, then click the button (or press Enter).\nuse gui\n\nobject greeter : gui.window {\n\tgui.label Message\n\tgui.entry Name\n\n\tvoid build {\n\t\tset_title \"Greeter\"\n\t\tset_size 360, 180\n\t\tMessage = add_label \"What's your name?\"\n\t\tName = add_entry\n\t\tgui.button Hello = add_button \"Say hello\"\n\t\tHello.on_click say_hello\n\t\tName.on_enter say_hello\n\t}\n\n\tvoid say_hello {\n\t\tstr Who = Name.text\n\t\tif Who.length == 0 {\n\t\t\tMessage.set_text \"Type your name first!\"\n\t\t\treturn\n\t\t}\n\t\tMessage.set_text \"Hello, \" + Who + \"!\"\n\t\tprintln \"greeted\", Who\n\t}\n}\n\nint main {\n\tgreeter g\n\tg.run\n\tprintln \"goodbye\"\n}\n",
 	'Reading input': `int main {
 	print "What's your name? "
 	str Name = read_line
@@ -174,6 +205,17 @@ function newWorker() {
 			s.className = 'err';
 			s.textContent = m.err;
 			out.append(s);
+		} else if (m.window) {
+			// a game's window: shown, at its size, and listening
+			$('stage').hidden = false;
+			$('stage-title').textContent = m.window.title || 'The game';
+			// (as big as fits: the page's width, half as big again as the game, and most of the screen's height)
+			const { width: w, height: h } = m.window;
+			screen.style.aspectRatio = `${w} / ${h}`;
+			screen.style.width = `min(100%, ${Math.round(w * 1.5)}px, calc(75vh * ${(w / h).toFixed(4)}))`;
+			screen.focus({ preventScroll: true });
+		} else if (m.closed) {
+			$('stage').hidden = true;
 		} else if (m.done !== undefined) {
 			finished(m.done === 0 ? 'Done' : m.done === 101 ? 'Stopped by a panic' : `Ended with ${m.done}`);
 		}
@@ -192,11 +234,85 @@ run.onclick = () => {
 	stop.disabled = false;
 	status.textContent = 'Running…';
 	started = performance.now();
-	worker.postMessage({ source: code.value, stdin: $('input').value + '\n' });
+	// (a new canvas each time: one given to a worker is the worker's)
+	const canvas = newScreen();
+	worker.postMessage({ source: code.value, stdin: $('input').value + '\n', canvas }, [canvas]);
 };
+
+// ---- a game's window: a canvas the worker draws on, and what's done there
+let screen = null;
+function newScreen() {
+	$('stage').hidden = true;
+	screen = document.createElement('canvas');
+	screen.tabIndex = 0;
+	screen.setAttribute('aria-label', 'The game');
+	$('canvas-here').replaceChildren(screen);
+	screen.addEventListener('keydown', e => key(e, 'down'));
+	screen.addEventListener('keyup', e => key(e, 'up'));
+	screen.addEventListener('pointerdown', e => {
+		screen.focus();
+		screen.setPointerCapture(e.pointerId);   // (a drag carries on outside it)
+		send({ kind: 'click', ...at(e) });
+	});
+	screen.addEventListener('pointerup', e => send({ kind: 'release', ...at(e) }));
+	screen.addEventListener('pointermove', e => send({ kind: 'move', ...at(e) }));
+	screen.addEventListener('wheel', e => {
+		e.preventDefault();
+		const lines = e.deltaMode === 1 ? 1 : 1 / 40;   // (pixels, or lines: about 40 pixels a line)
+		send({ kind: 'wheel', x: -e.deltaX * lines, y: -e.deltaY * lines });
+	}, { passive: false });
+	return screen.transferControlToOffscreen();
+}
+const send = input => worker.postMessage({ input });
+// where, in the game's own pixels (the canvas is shown bigger or smaller)
+function at(e) {
+	const r = screen.getBoundingClientRect(), w = screen.width || r.width, h = screen.height || r.height;
+	return { x: (e.clientX - r.left) * w / r.width, y: (e.clientY - r.top) * h / r.height };
+}
+// a key, as SDL names it
+const NAMES = { ArrowLeft: 'Left', ArrowRight: 'Right', ArrowUp: 'Up', ArrowDown: 'Down', ' ': 'Space', Enter: 'Return',
+	Escape: 'Escape', Tab: 'Tab', Backspace: 'Backspace', Delete: 'Delete', Home: 'Home', End: 'End',
+	PageUp: 'PageUp', PageDown: 'PageDown', Insert: 'Insert' };
+function key(e, kind) {
+	let name = NAMES[e.key] || (/^F\d{1,2}$/.test(e.key) ? e.key : null);
+	if (!name && /^(Key[A-Z]|Digit\d)$/.test(e.code))
+		name = e.code.slice(-1);   // (the key itself, whatever Shift makes of it)
+	if (!name && e.key.length === 1)
+		name = e.key;
+	if (!name)
+		return;
+	e.preventDefault();   // (arrows and Space are the game's, not the page's to scroll)
+	const ctrl = e.ctrlKey || e.metaKey;
+	send({ kind, key: name, ctrl, shift: e.shiftKey, alt: e.altKey, repeat: e.repeat });
+	// and what it types, for a window's text boxes
+	if (kind === 'down' && e.key.length === 1 && !ctrl && !e.altKey)
+		send({ kind: 'text', key: e.key });
+}
+// closed as a window is closed: the program carries on after its run
+$('close-window').onclick = () => send({ kind: 'close' });
+// a phone's typing: its keyboard, for a hidden text box, whose typing goes to the window
+$('keyboard').onclick = () => $('typing').focus();
+$('typing').addEventListener('beforeinput', e => {
+	e.preventDefault();
+	const tap = k => { send({ kind: 'down', key: k }); send({ kind: 'up', key: k }); };
+	if (e.inputType === 'insertText' && e.data)
+		for (const ch of e.data)
+			send({ kind: 'text', key: ch });
+	else if (e.inputType === 'insertLineBreak' || e.inputType === 'insertParagraph')
+		tap('Return');
+	else if (e.inputType.startsWith('deleteContentBackward'))
+		tap('Backspace');
+});
+// the keys under it, for a phone
+for (const b of document.querySelectorAll('.pad button[data-key]')) {
+	b.addEventListener('pointerdown', e => { e.preventDefault(); send({ kind: 'down', key: b.dataset.key }); });
+	for (const end of ['pointerup', 'pointerleave', 'pointercancel'])
+		b.addEventListener(end, () => send({ kind: 'up', key: b.dataset.key }));
+}
 stop.onclick = () => {
 	worker.terminate();
 	newWorker();
+	$('stage').hidden = true;
 	finished('Stopped');
 };
 newWorker();

@@ -1335,7 +1335,21 @@ static void on_segv(int sig)
 
 #ifdef __wasi__
 /* (WebAssembly has no signals: running out of stack stops it, a trap) */
-void cby_rt_init(void) { (void)on_segv; }
+/* Calling a Cabby method, for the window libraries (sdl_common.h): in
+ * WebAssembly they're one program, with one of these for all of them,
+ * which the interpreter points at its own way of calling one */
+static void call_directly(void *obj, void *fn) { ((void (*)(void *))fn)(obj); }
+void (*cby_invoke_hook)(void *obj, void *fn) = call_directly;
+
+void cby_rt_init(void)
+{
+	(void)on_segv;
+	/* (WASI has no folder a program starts in: the page says which, as for
+	 * the interpreter, so a program finds the files beside it) */
+	const char *cwd = getenv("CABBY_CWD");
+	if (cwd && *cwd && chdir(cwd) != 0)
+		fprintf(stderr, "cabby: can't go to the folder '%s'\n", cwd);
+}
 #else
 void cby_rt_init(void)
 {

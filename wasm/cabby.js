@@ -15,9 +15,29 @@
 //
 // This is WASI (preview 1), the part cabby.wasm uses: the program's
 // arguments and environment, its clock and random numbers, and files and
-// folders, all in `files`, under one folder, "/". Sleeping waits by looking
-// at the clock, so a program is best run in a Web Worker (cabby-worker.js),
-// where waiting doesn't hold up the page, and which can be stopped.
+// folders, all in `files`, under one folder, "/". A program is best run in a
+// Web Worker (cabby-worker.js), where it doesn't hold up the page, and which
+// can be stopped.
+//
+// A game's window (`use game`) is shown through `display`, and what the
+// person does there is asked of `input`:
+//
+//         display: {
+//             window(title, width, height) {},   // a window opened, its size in pixels
+//             show(rgba, width, height) {},      // a frame: RGBA bytes (a Uint8ClampedArray)
+//             closed() {},                       // the window closed
+//         },
+//         input: max => [],  // what the person did since last asked (max at most): { kind: 'down', key: 'Left' }
+//                            // and 'up' (a key, as SDL names it), 'text' (key: what it typed), 'click',
+//                            // 'release' and 'move' (with x and y, in its pixels), 'wheel' (x and y: how
+//                            // far), 'close'
+//
+// Where the browser has JSPI (WebAssembly's promise integration: Chrome and
+// Edge 137+, Firefox 153+, Safari 27+), waiting (a sleep, a frame's rest)
+// pauses the program and lets everything else run meanwhile, so a worker
+// hears from its page while a game plays. Elsewhere waiting looks at the
+// clock, and a game's window can be shown but not played.
+const jspi = typeof WebAssembly.Suspending === 'function' && typeof WebAssembly.promising === 'function';
 
 const E = { SUCCESS: 0, BADF: 8, EXIST: 20, INVAL: 28, ISDIR: 31, NOENT: 44, NOSYS: 52, NOTDIR: 54, NOTEMPTY: 55 };
 const FT = { CHAR: 2, DIR: 3, FILE: 4 };
@@ -56,8 +76,16 @@ export async function runCabby(options) {
 		d.dir.set(parts[parts.length - 1], newFile(bytes));
 	}
 	const args = [options.name || 'cabby', ...(options.args || [])];   // (a compiled program's name: its argv[0])
-	const env = Object.entries({ CABBY_LIB: '/lib', HOME: '/home', CABBY_CWD: '/', ...(options.env || {}) })
-		.map(([k, v]) => `${k}=${v}`);
+	const envs = { CABBY_LIB: '/lib', HOME: '/home', CABBY_CWD: '/', ...(options.env || {}) };
+	const env = Object.entries(envs).map(([k, v]) => `${k}=${v}`);
+	// (the folders it starts in and calls home are there, given files or not)
+	for (const at of [envs.HOME, envs.CABBY_CWD]) {
+		let d = root;
+		for (const part of splitPath(at || '/')) {
+			if (!d.dir.has(part)) d.dir.set(part, newDir(d));
+			d = d.dir.get(part);
+		}
+	}
 	const stdin = typeof options.stdin === 'string' ? enc.encode(options.stdin) : (options.stdin || new Uint8Array(0));
 	let stdinAt = 0;
 	const outDec = new TextDecoder(), errDec = new TextDecoder();
@@ -175,16 +203,23 @@ export async function runCabby(options) {
 					wait = Math.max(wait, abs ? t - performance.now() : t);
 				}
 			}
+			const done = () => {
+				const v = view();
+				for (let i = 0; i < nsubs; i++) {
+					const e = out + i * 32;
+					v.setBigUint64(e, v.getBigUint64(inp + i * 48, true), true);
+					v.setUint16(e + 8, 0, true);
+					v.setUint8(e + 10, v.getUint8(inp + i * 48 + 8));
+				}
+				v.setUint32(nevents, nsubs, true);
+				return E.SUCCESS;
+			};
+			// (paused, so the rest runs meanwhile; or, without JSPI, by the clock)
+			if (jspi)
+				return new Promise(res => setTimeout(() => res(done()), Math.max(0, wait)));
 			const until = performance.now() + wait;
 			while (performance.now() < until) { /* (a worker's own time) */ }
-			for (let i = 0; i < nsubs; i++) {
-				const e = out + i * 32;
-				v.setBigUint64(e, v.getBigUint64(inp + i * 48, true), true);
-				v.setUint16(e + 8, 0, true);
-				v.setUint8(e + 10, v.getUint8(inp + i * 48 + 8));
-			}
-			v.setUint32(nevents, nsubs, true);
-			return E.SUCCESS;
+			return done();
 		},
 
 		fd_write(fd, iov, n, written) {
@@ -370,11 +405,64 @@ export async function runCabby(options) {
 		path_readlink() { return E.INVAL; },
 	};
 
-	const instance = await WebAssembly.instantiate(options.wasm, { wasi_snapshot_preview1: wasi });
+	if (jspi)
+		wasi.poll_oneoff = new WebAssembly.Suspending(wasi.poll_oneoff);
+
+	// ---- a game's window, on the page (runtime/sdl_browser.h)
+	const display = options.display || {};
+	const input = options.input || (() => []);   // (max => events)
+	const KINDS = { down: 1, up: 2, click: 3, move: 4, close: 5, text: 6, release: 7, wheel: 8 };
+	const cabby = {
+		window(title, w, h) {
+			const b = bytes();
+			let end = title;
+			while (b[end]) end++;
+			display.window?.(new TextDecoder().decode(b.subarray(title, end)), w, h);
+		},
+		show(ptr, w, h) {
+			display.show?.(new Uint8ClampedArray(memory.buffer, ptr, w * h * 4), w, h);
+		},
+		closed() { display.closed?.(); },
+		input(ptr, max) {
+			const evs = input(max) || [];   // (no more than max: the rest, next time)
+			const v = view(), b = bytes();
+			let n = 0;
+			for (const e of evs) {
+				if (n >= max || !KINDS[e.kind]) continue;
+				const at = ptr + n * 32;
+				v.setInt32(at, KINDS[e.kind], true);
+				v.setInt32(at + 4, (e.ctrl ? 1 : 0) | (e.shift ? 2 : 0) | (e.alt ? 4 : 0), true);
+				v.setInt32(at + 8, e.repeat ? 1 : 0, true);
+				v.setFloat32(at + 12, e.x || 0, true);
+				v.setFloat32(at + 16, e.y || 0, true);
+				b.fill(0, at + 20, at + 32);
+				b.set(enc.encode(e.key || '').subarray(0, 11), at + 20);
+				n++;
+			}
+			return n;
+		},
+	};
+
+	// (a WASI call this hasn't, as SDL has a few: not supported, as WASI says it)
+	const imports = { wasi_snapshot_preview1: wasi, cabby };
+	for (const imp of WebAssembly.Module.imports(options.wasm)) {
+		if (imp.kind !== 'function')
+			continue;
+		imports[imp.module] ??= {};
+		if (!(imp.name in imports[imp.module]))
+			imports[imp.module][imp.name] = imp.module === 'wasi_snapshot_preview1' ? () => E.NOSYS : () => {
+				throw new Error(`it needs '${imp.module}.${imp.name}', which isn't here`);
+			};
+	}
+	const instance = await WebAssembly.instantiate(options.wasm, imports);
 	memory = instance.exports.memory;
 	let exit = 0;
 	try {
-		instance.exports._start();
+		// (with JSPI, the program as a promise: it can pause)
+		if (jspi)
+			await WebAssembly.promising(instance.exports._start)();
+		else
+			instance.exports._start();
 	} catch (e) {
 		if (e instanceof Exit) exit = e.code;
 		else if (e instanceof RangeError && /call stack/i.test(e.message)) {

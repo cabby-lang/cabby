@@ -212,7 +212,9 @@ def missing(defined_file, out, files):
             if not ok:
                 continue
             ps = ", ".join(f"{d} a{i}" for i, d in enumerate(decl)) or "void"
-            o.write(f"{rt} {name}({ps})\n{{\n")
+            # (weak: where a library built for WebAssembly has the real one, as
+            # the game library has, that's the one linked)
+            o.write(f"__attribute__((weak)) {rt} {name}({ps})\n{{\n")
             o.write("".join(f"\t(void)a{i};\n" for i in range(len(decl))))
             o.write(f"\tcby_wasm_missing(\"{name}\");\n}}\n")
             n += 1
