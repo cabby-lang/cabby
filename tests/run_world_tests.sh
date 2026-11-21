@@ -2,7 +2,8 @@
 # The world library (3D). tests/world/api.cby prints its numbers (moving,
 # turning, touching, the camera, the mouse, keys, timers), checked against
 # its //> lines. tests/world/scene.cby is looked at: the colors drawn at
-# the places in scene.script must be scene.pixels's, give or take 3 (a
+# the places in scene.script must be scene.pixels's (and shadows.cby's,
+# shadows.script's and shadows.pixels's), give or take 3 (a
 # little either way where a computer's sin and cos differ in the last
 # digit). Under a script, Cabby draws the world itself, the same on every
 # computer; on Linux, it's drawn with OpenGL too (when the computer has
@@ -81,10 +82,12 @@ close_enough() {   # want got tolerance
 kinds=(cabby)
 [[ "$(uname)" != Darwin ]] && kinds+=(opengl)
 cp "$DIR/robot.glb" "$TMP/"
-for name in scene model; do
+for name in scene shadows model; do
 	prog_for $name || { fail=$((fail+1)); continue; }
 	if [[ $name == scene ]]; then
 		script="frames 2; $(cat "$DIR/scene.script"); close"
+	elif [[ $name == shadows ]]; then
+		script="frames 1; $(cat "$DIR/shadows.script"); close"
 	else
 		script=$(sed -n 's/^\/\/ script: //p' "$DIR/model.cby")
 	fi
@@ -97,6 +100,9 @@ for name in scene model; do
 		close_enough "$DIR/$name.pixels" <(grep '^pixel' "$TMP/out") $tol > "$TMP/why" || ok=0
 		if [[ $name == scene ]]; then
 			grep -q '^frames: 2$' "$TMP/out" || { ok=0; echo "  | no 'frames: 2'" >> "$TMP/why"; }
+		elif [[ $name == shadows ]]; then
+			[[ "$(grep '^shadows:' "$TMP/out" | tr '\n' ' ')" == "shadows: true shadows: false " ]] ||
+				{ ok=0; echo "  | not 'shadows: true', then 'shadows: false'" >> "$TMP/why"; }
 		else
 			sed -n 's/^\/\/> \{0,1\}//p' "$DIR/model.cby" > "$TMP/want"
 			grep -v '^pixel' "$TMP/out" > "$TMP/got"

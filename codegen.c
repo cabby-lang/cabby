@@ -2584,7 +2584,9 @@ static const char *c_param_attr(const Type *t)
 
 static bool c_long32(const FnDecl *fn, const Type *t);
 
-static const char *extern_sig(CG *G, FnDecl *fn)
+/* an extern function's parameters: with their attributes (zeroext, for a
+ * declaration), or without (a call's function type, which can't have them) */
+static const char *extern_sig(CG *G, FnDecl *fn, bool attrs)
 {
 	char buf[1024];
 	size_t n = 0;
@@ -2592,7 +2594,7 @@ static const char *extern_sig(CG *G, FnDecl *fn)
 		Type *t = fn->params.items[i]->type->resolved;
 		const char *ty = (t->kind == TY_STR || t->kind == TY_REF) ? "ptr" : t->kind == TY_HANDLER ? "ptr, ptr"
 				 : c_long32(fn, t) ? "i32" : vty(G, t);
-		n += (size_t)snprintf(buf + n, sizeof buf - n, "%s%s%s", i ? ", " : "", ty, c_param_attr(t));
+		n += (size_t)snprintf(buf + n, sizeof buf - n, "%s%s%s", i ? ", " : "", ty, attrs ? c_param_attr(t) : "");
 	}
 	if (fn->is_variadic)
 		n += (size_t)snprintf(buf + n, sizeof buf - n, "%s...", fn->params.len ? ", " : "");
@@ -2640,7 +2642,7 @@ static void declare_extern(CG *G, FnDecl *fn)
 		return;
 	Type *r = fn->ret_type;
 	out(G->decl, "declare%s %s @%s(%s)\n", c_param_attr(r),
-	    r->kind == TY_VOID ? "void" : c_long32(fn, r) ? "i32" : vty(G, r), c_name(fn), extern_sig(G, fn));
+	    r->kind == TY_VOID ? "void" : c_long32(fn, r) ? "i32" : vty(G, r), c_name(fn), extern_sig(G, fn, true));
 }
 
 static Op gen_extern_call(CG *G, Expr *e, FnDecl *fn)
@@ -2686,7 +2688,7 @@ static Op gen_extern_call(CG *G, Expr *e, FnDecl *fn)
 	Type *r = fn->ret_type;
 	bool narrow = c_long32(fn, r);
 	const char *rt = r->kind == TY_VOID ? "void" : narrow ? "i32" : vty(G, r);
-	const char *callee = astr(G, "%s (%s)", rt, extern_sig(G, fn));
+	const char *callee = astr(G, "%s (%s)", rt, extern_sig(G, fn, false));
 	if (r->kind == TY_VOID) {
 		emit(G, "call %s @%s(%.*s)", callee, c_name(fn), (int)n, buf);
 		return op("undef");

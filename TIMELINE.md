@@ -103,6 +103,7 @@ changing for.
 | 1.2.0 | 21 November | `cabby -c --wasm`: programs compiled to WebAssembly, for a web page, as fast as native |
 | 1.3.0 | 22 November | Windows and games in a browser: gui and game shown on the page, and played there |
 | 1.3.1 | 22 November | `cabby -c --wasm` from an installed Cabby: where it looked for the runtime, and how to have it there |
+| 1.4.0 | 22 November | Shadows in 3D (`use world`): the sun's, drawn by OpenGL and by Cabby alike |
 
 ---
 
@@ -1824,6 +1825,26 @@ install` after `make wasm`, the cabby folder's own `./cabby`, or
 `CABBY_LIB` pointing at the folder's `lib`. `wasm/README.md` and
 `packaging/README.md` say so too (a .deb built after `make wasm` takes
 the runtime in).
+
+*Version 1.4.0, shadows:* in a world (`use world`) the sun casts shadows:
+what's in its way shades what's behind it, and where a picture is
+see-through (leaves), its shadow is too. On to begin with;
+`set_shadows false` turns them off, and `set_shadow_reach` says how far
+round the camera they're cast (30 metres).
+
+- The world is drawn first as the sun sees it, keeping only how far each
+  place is: a shadow map, a square round the place ahead of the camera,
+  snapped to its texels so the edges don't crawl as the camera moves.
+  Each pixel is in the sun only if nothing in the map is nearer it,
+  nudged off its surface (so a surface doesn't shadow itself), and
+  looked at nine times round, for a softer edge.
+- The same in both of world's ways of drawing: OpenGL's (a 2048 map, a
+  depth texture) and Cabby's own (1024, for tests and where there's no
+  OpenGL), which agree to the pixel on the new test
+  (`tests/world/shadows.cby`).
+- Mended on the way: compiled, a call to a C function taking a `bool`
+  (or a `char` or `short`) wrote its argument's attribute into the call's
+  type, which LLVM refuses; no library had such a function before.
 
 ## Along the way (dates not recorded)
 

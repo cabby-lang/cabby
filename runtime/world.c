@@ -134,6 +134,20 @@ static M4 m_perspective(float fov_y, float aspect, float near, float far)
 	return r;
 }
 
+/* a lens that keeps sizes as they are, however far: the sun's (its light
+ * comes all one way), from left to right, bottom to top, near to far */
+static M4 m_ortho(float l, float r, float b, float t, float n, float f)
+{
+	M4 m = m_identity();
+	m.m[0] = 2 / (r - l);
+	m.m[5] = 2 / (t - b);
+	m.m[10] = -2 / (f - n);
+	m.m[12] = -(r + l) / (r - l);
+	m.m[13] = -(t + b) / (t - b);
+	m.m[14] = -(f + n) / (f - n);
+	return m;
+}
+
 /* the camera at eye, looking along forward */
 static M4 m_look(V3 eye, V3 forward, V3 up)
 {
@@ -419,6 +433,8 @@ typedef struct World {
 	/* the light */
 	V3 sun;               /* the way the sunlight goes (down, and a little sideways) */
 	Color sun_color, ambient;
+	int no_shadows;       /* set_shadows false */
+	double shadow_reach;  /* how far round the camera shadows are cast, in metres */
 	/* the mouse */
 	int mouse_x, mouse_y;
 	int locked;           /* lock_mouse: hidden, and moved_x/moved_y say how far it went */
@@ -458,7 +474,7 @@ int64_t cby_world_window_new(void)
 		.title = strdup("Cabby"), .width = 800, .height = 600, .background = color("skyblue"),
 		.cx = 0, .cy = 1.6, .cz = 6, .fov = 60,
 		.sun = v_norm(v3(-0.4f, -1, -0.6f)), .sun_color = { 0.85f, 0.85f, 0.8f, 1 }, .ambient = { 0.35f, 0.35f, 0.4f, 1 },
-		.follow_distance = 5, .follow_height = 2,
+		.follow_distance = 5, .follow_height = 2, .shadow_reach = 30,
 	};
 	return ++nworlds;
 }
@@ -536,6 +552,19 @@ void cby_world_set_sun(int64_t id, double x, double y, double z)
 
 void cby_world_set_sun_color(int64_t id, const char *c) { world(id)->sun_color = color(c); }
 void cby_world_set_ambient(int64_t id, const char *c) { world(id)->ambient = color(c); }
+
+void cby_world_set_shadows(int64_t id, bool on) { world(id)->no_shadows = !on; }
+bool cby_world_shadows(int64_t id) { return !world(id)->no_shadows; }
+
+void cby_world_set_shadow_reach(int64_t id, double metres)
+{
+	if (!(metres >= 1 && metres <= 500)) {
+		char n[64];
+		snprintf(n, sizeof n, "%g", metres);
+		fail("shadows can reach from 1 to 500 metres round the camera, not %s", n);
+	}
+	world(id)->shadow_reach = metres;
+}
 
 int64_t cby_world_lamp_new(int64_t id, double x, double y, double z, const char *c, double reach)
 {
@@ -1228,11 +1257,67 @@ typedef struct Lit {
 	float sun_c[3], ambient[3];
 	int nlamps;
 	float lamp_pos[MAX_LAMPS][3], lamp_c[MAX_LAMPS][3], lamp_reach[MAX_LAMPS];
+	/* the shadows: the world as the sun sees it, round the camera (its
+	 * depths in shadow_map, shadow_size on a side), or none */
+	int shadows;
+	M4 shadow_vp;         /* a place in the world, to where it is in the map */
+	const float *shadow_map;
+	int shadow_size;
+	float shadow_texel;   /* a texel's size, in metres */
+	float shadow_bias;    /* a texel, as depth in the map */
 } Lit;
+
+/* Shadows: the sun's view, a square shadow_reach metres each way round the
+ * place ahead of the camera, where shadows are seen; snapped to the map's
+ * texels, so their edges don't crawl as the camera moves. 0: none (turned
+ * off, the sun out, or shining up). */
+#define SHADOW_DEPTH 400.0f   /* (metres, from the sun's side of the square to its far side) */
+static int shadow_view(const World *w, int size, M4 *vp, float *texel)
+{
+	V3 L = w->sun;
+	if (w->no_shadows || L.y > -0.01f || (w->sun_color.r + w->sun_color.g + w->sun_color.b) <= 0)
+		return 0;
+	float reach = (float)w->shadow_reach;
+	V3 f = camera_forward(w);
+	V3 flat = v_len(v3(f.x, 0, f.z)) > 1e-6f ? v_norm(v3(f.x, 0, f.z)) : v3(0, 0, -1);
+	V3 c = v_add(v3((float)w->cx, (float)w->cy, (float)w->cz), v_mul(flat, reach * 0.5f));
+	V3 up = fabsf(L.y) > 0.99f ? v3(0, 0, -1) : v3(0, 1, 0);
+	M4 view = m_look(v3(0, 0, 0), L, up);
+	V3 cv = m_point(&view, c);
+	*texel = 2 * reach / (float)size;
+	float x = floorf(cv.x / *texel) * *texel, y = floorf(cv.y / *texel) * *texel;
+	float depth = -cv.z;
+	*vp = m_mul(m_ortho(x - reach, x + reach, y - reach, y + reach, depth - SHADOW_DEPTH / 2, depth + SHADOW_DEPTH / 2),
+		    view);
+	return 1;
+}
+
+/* how much of the sun reaches a point (0 to 1): its place in the sun's
+ * map, nudged off its surface a texel and a half (so a surface doesn't
+ * shadow itself), against the nine texels round it, for a softer edge */
+static float sun_reaches(const Lit *l, V3 p, V3 n)
+{
+	if (!l->shadows)
+		return 1;
+	V3 q = m_point(&l->shadow_vp, v_add(p, v_mul(n, l->shadow_texel * 1.5f)));
+	int size = l->shadow_size;
+	float fx = (q.x * 0.5f + 0.5f) * (float)size, fy = (q.y * 0.5f + 0.5f) * (float)size, d = q.z * 0.5f + 0.5f;
+	if (fx < 0 || fy < 0 || fx >= (float)size || fy >= (float)size || d >= 1)
+		return 1;   /* (beyond what the sun's map holds: lit) */
+	int ix = (int)fx, iy = (int)fy, seen = 0;
+	for (int dy = -1; dy <= 1; dy++)
+		for (int dx = -1; dx <= 1; dx++) {
+			int x = ix + dx, y = iy + dy;
+			if (x < 0 || y < 0 || x >= size || y >= size || d - l->shadow_bias <= l->shadow_map[(size_t)y * size + x])
+				seen++;
+		}
+	return (float)seen / 9.0f;
+}
 
 static void lighting(int64_t id, Lit *l)
 {
 	World *w = world(id);
+	l->shadows = 0;   /* (each renderer makes its map, and says so) */
 	l->sun = v_mul(w->sun, -1);
 	l->sun_c[0] = w->sun_color.r, l->sun_c[1] = w->sun_color.g, l->sun_c[2] = w->sun_color.b;
 	l->ambient[0] = w->ambient.r, l->ambient[1] = w->ambient.g, l->ambient[2] = w->ambient.b;
@@ -1278,6 +1363,8 @@ static void light_at(const Lit *l, V3 p, V3 n, float out[3])
 	float d = v_dot(n, l->sun);
 	if (d < 0)
 		d = 0;
+	if (d > 0)
+		d *= sun_reaches(l, p, n);
 	for (int k = 0; k < 3; k++)
 		out[k] = l->ambient[k] + l->sun_c[k] * d;
 	for (int i = 0; i < l->nlamps; i++) {

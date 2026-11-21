@@ -1,6 +1,6 @@
 # Cabby tutorials
 
-*For Cabby 1.3.1 (2026-11-22).*
+*For Cabby 1.4.0 (2026-11-22).*
 
 A hundred and six short programs, each about one keyword, feature or library, in
 an order where each uses only what came before it. Each one
