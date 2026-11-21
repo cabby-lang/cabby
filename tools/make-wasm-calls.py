@@ -59,6 +59,10 @@ def c_type(t, libc):
     return None
 
 
+# C's own that take or give a C long, which is 32 bits in WebAssembly (a
+# Cabby long is 64): each is called as its long long twin instead
+LONG_TWINS = {"labs": "llabs", "atol": "atoll", "strtol": "strtoll", "strtoul": "strtoull"}
+
 TYPE_WORDS = {"int", "long", "char", "double", "float", "short", "bool", "unsigned", "signed", "address", "str", "void"}
 
 
@@ -146,7 +150,7 @@ def wrapper(name, ret, params, libc):
             decl.append(ct)
             args.append(f"*({ct} *)a[{slot}]")
         slot += 1
-    call = f"{name}({', '.join(args)})"
+    call = f"{LONG_TWINS.get(name, name) if libc else name}({', '.join(args)})"
     if rt == "void":
         body = f"\t{call};\n"
     elif rt.endswith("*"):

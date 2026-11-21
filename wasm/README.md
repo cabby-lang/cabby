@@ -6,7 +6,7 @@ as `cabby prog.cby`: the same checks, the same messages, the same results.
 
 ## Building it
 
-It needs **wasi-sdk** (a clang for WebAssembly, with its C library), from
+It needs **wasi-sdk** 33 or newer (a clang for WebAssembly, with its C library), from
 <https://github.com/WebAssembly/wasi-sdk/releases>: unpack the one for your
 computer (`x86_64-linux`, `arm64-linux`, `arm64-macos`) into `~/tools`, where
 the Makefile looks for it, or say where it is:

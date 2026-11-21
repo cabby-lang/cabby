@@ -293,26 +293,28 @@ stage.set_color "white"
 stage.fill_rectangle 20, 20, 320, Lines * stage.line_height + 20
 stage.set_color "#2b2b38"
 stage.write_wrapped 30, 30, 300, Message
-``` `save` keeps a picture of the whole
-stage, sprites && all, as a PNG file. Its `redraw` does nothing, since
-the stage == drawn every frame anyway.
+```
+
+`save` keeps a picture of the whole stage, sprites and all, as a PNG
+file. Its `redraw` does nothing, since the stage is drawn every frame
+anyway.
 
 ## Testing a game without a person
 
 Under `CABBY_GUI_SCRIPT` (as for [gui](gui.md#testing-a-window-without-a-person)),
-the game == drawn off screen (no display == needed), frames only run when
-the script says, && `random` gives the same numbers every time, so a test
+the game is drawn off screen (no display is needed), frames only run when
+the script says, and `random` gives the same numbers every time, so a test
 sees the same game every time. Commands, separated by `;`:
 
 | Command | Does |
 |---|---|
 | `frames <n>` | runs n frames |
 | `wait <ms>` | runs that long's frames (`wait 1000` is `frames 60`) |
-| `hold <key>` | the key goes down, && stays down |
+| `hold <key>` | the key goes down, and stays down |
 | `release <key>` | the key comes up |
-| `tap <key>` | the key goes down for one frame, && comes up in the next |
+| `tap <key>` | the key goes down for one frame, and comes up in the next |
 | `key <name>` | calls the stage's `on_key` with that key |
-| `press 1 <x> <y>`, `point 1 <x> <y>` | clicks the stage there, || moves the mouse there |
+| `press 1 <x> <y>`, `point 1 <x> <y>` | clicks the stage there, or moves the mouse there |
 | `shortcut <keys>` | presses a shortcut: `shortcut P` |
 | `shot <file.png>` | saves a picture of the stage |
 | `close` | closes the window |
