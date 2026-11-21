@@ -29,6 +29,8 @@ walk through it. This page is the complete reference.
 * [Light](#light)
 * [The camera](#the-camera)
 * [Touching](#touching)
+* [Joined shapes](#joined-shapes)
+* [Physics](#physics)
 * [Text over the world](#text-over-the-world)
 * [Keys and the mouse](#keys-and-the-mouse)
 * [Frames and timers](#frames-and-timers)
@@ -94,6 +96,7 @@ seen from above), as a person turns.
 | `void set_title const str &Title` | The window's title. |
 | `void set_size int Width, int Height` | The window's size to begin with, in pixels (800 by 600). Made bigger, more of the world is seen. |
 | `void set_background const str &Color` | The sky: `"skyblue"` to begin with. |
+| `void set_gravity double G`, `double gravity` | How fast things fall: see [Physics](#physics). |
 | `void show_message const str &Text` | Shows a message, with an OK button. |
 | `void add_shortcut const str &Keys, handler h` | Calls `h` for these keys: `"P"`, `"F5"`, `"Ctrl+S"`. |
 | `world.shape add_box double Width, double Height, double Depth, const str &Color, double X, double Y, double Z` | A box, Width across (x), Height high (y), Depth deep (z), its middle at X, Y, Z. |
@@ -135,6 +138,9 @@ sections below.
 | `double distance_to const world.shape &Other` | How far its middle is from the other's. |
 | `double top`, `double bottom` | The height of its top and bottom: `Lid.move_to 0, Box.top + 0.05, 0`. |
 | `bool same_as const world.shape &Other` | True for two names for one shape. |
+| `void join const world.shape &Other`, `void unjoin`, `bool joined`, `double world_x`, `world_y`, `world_z` | See [Joined shapes](#joined-shapes). |
+| `void set_falls bool On`, `bool falls`, `bool on_ground`, `void set_solid bool On`, `bool solid` | See [Physics](#physics). |
+| `void set_velocity double X, double Y, double Z`, `void push double X, double Y, double Z`, `double velocity_x`, `velocity_y`, `velocity_z`, `void set_bounce double Bounce`, `void set_friction double Friction` | See [Physics](#physics). |
 
 A shape is turned round y first, then tilted, then rolled: so `turn` always
 turns it as a person turns, however it's tilted.
@@ -312,6 +318,107 @@ and right for boxes standing straight; for balls it's true a little early,
 at the corners of their boxes. A plane is touched by anything resting on
 it. `touching Shape, "coins"` gives every coin the shape touches.
 
+## Joined shapes
+
+A shape joined to another moves and turns with it: a car's wheels, a hat
+on a head, a lamp's shade. `Wheel.join Car` joins it where it is; from
+then on its `x`, `y`, `z` and angles are counted from the car (along the
+car's own directions), so `Car.turn 90` carries the wheel round with it,
+and `Wheel.roll_by 10` still spins it on the car. `world_x`, `world_y` and
+`world_z` say where it is in the world, joined or not.
+
+| Member | What it does |
+|---|---|
+| `void join const world.shape &Other` | Joined to Other, staying where it is. A shape is joined to one other at a time (joining again moves it), and not to itself or to one joined to it. |
+| `void unjoin`, `bool joined` | On its own again, where it is. |
+| `double world_x`, `world_y`, `world_z` | Where its middle is in the world. |
+
+Hiding or removing a shape hides or removes what's joined to it. A
+joined shape doesn't fall by itself: what it's joined to does, and it
+lands with it (a car on its wheels).
+
+## Physics
+
+A shape that **falls** is pulled down by gravity, lands on what's solid,
+bounces, and is stopped by what it runs into, all by itself, each frame
+after `on_frame`'s handler:
+
+```cabby
+Ball.set_falls true
+```
+
+Everything is **solid** to begin with: the ground, walls, other shapes.
+`set_solid false` lets falling things through (a coin to be picked up, a
+ghost), and `touches` still sees them.
+
+| Member | What it does |
+|---|---|
+| `void set_falls bool On`, `bool falls` | Falling, landing and bouncing, or not (to begin with). |
+| `bool on_ground` | Standing on something: for jumping only when it can (`if Hero.on_ground { Hero.push 0, 5, 0 }`). |
+| `void set_velocity double X, double Y, double Z` | How fast it's going each way, in metres a second. |
+| `void push double X, double Y, double Z` | As much again, added: a jump, a kick. |
+| `double velocity_x`, `velocity_y`, `velocity_z` | How fast it's going now. |
+| `void set_bounce double Bounce` | How much of its speed it keeps bouncing back: 0, none (a sack); 1, all (a superball); 0.3 to begin with. Slower than a metre a second, it doesn't bounce, and comes to rest. |
+| `void set_friction double Friction` | How quickly it slows on the ground: 0 is ice, 0.5 to begin with. A ball rolls on, a tenth as slowed. |
+| `void set_solid bool On`, `bool solid` | Whether falling things land on it and are stopped by it (true to begin with). |
+| `void set_gravity double G`, `double gravity` | The world's (world.window's): 9.8 metres a second, each second, the Earth's, to begin with. The Moon's is 1.6; 0, nothing falls. |
+
+A shape with a velocity that **doesn't** fall just moves by it, each
+frame, through whatever's there: a platform, a lift, a door. What stands
+on it rides along.
+
+Moving a falling shape by hand (`move_forward`, `move_to`) works as
+before, and what's solid still stops it: a hero who falls is walked with
+`move_forward` and can't walk through walls. Two falling shapes push
+each other apart, and stack.
+
+A ball is a ball; any other shape is the box round it, as it stands (see
+[Touching](#touching)): a cylinder lands as a box would, and a turned box
+on its box. It's quick, and right for the shapes games are mostly made
+of.
+
+A ball dropped from four metres, bouncing lower each time until it rests
+on the ground:
+
+<!-- gui: frames 400 -->
+```cabby
+use world
+
+object bouncing : world.window {
+	world.shape Ball
+	int Landings
+	bool WasDown
+
+	void build {
+		add_plane 20, 20, "forestgreen", 0, 0, 0
+		Ball = add_ball 0.5, "orange", 0, 4, 0
+		Ball.set_falls true
+		Ball.set_bounce 0.7
+		on_frame step
+	}
+
+	void step {
+		if Ball.on_ground && !WasDown {
+			Landings++
+		}
+		WasDown = Ball.on_ground
+		if frame == 300 {
+			close
+		}
+	}
+}
+
+int main {
+	bouncing B
+	B.run
+	println "landed", B.Landings, "times, and rests at", B.Ball.y
+}
+```
+
+```text
+landed 7 times, and rests at 0.5
+```
+
 ## Text over the world
 
 `add_text "Score: 0", 10, 10` writes text in front of everything, its top
@@ -398,9 +505,7 @@ needed and the picture is the same on every computer, to the pixel.
 
 ## Not in world yet
 
-* Shapes joined together, moving as one (a car and its wheels): for now,
-  each is moved with the other
-* Physics: falling, bouncing, pushing (`touches` and moving by hand for
-  now)
+* Physics beyond boxes and balls: a shape's own outline, things that tip
+  over and spin when they're hit
 * Sounds placed in the world, louder nearer
 * A terminal twin, as tgame is game's

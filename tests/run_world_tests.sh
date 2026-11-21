@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # The world library (3D). tests/world/api.cby prints its numbers (moving,
-# turning, touching, the camera, the mouse, keys, timers), checked against
-# its //> lines. tests/world/scene.cby is looked at: the colors drawn at
+# turning, touching, the camera, the mouse, keys, timers), and physics.cby
+# its (falling, landing, joined shapes), checked against their //> lines. tests/world/scene.cby is looked at: the colors drawn at
 # the places in scene.script must be scene.pixels's (and shadows.cby's,
 # shadows.script's and shadows.pixels's), give or take 3 (a
 # little either way where a computer's sin and cos differ in the last
@@ -38,21 +38,23 @@ prog_for() {
 	fi
 }
 
-# api: its output
-if prog_for api; then
-	script=$(sed -n 's/^\/\/ script: //p' "$DIR/api.cby")
-	sed -n 's/^\/\/> \{0,1\}//p' "$DIR/api.cby" > "$TMP/want"
-	(cd "$TMP" && export CABBY_GUI_SCRIPT="$script"; timeout 60 "${prog[@]}") > "$TMP/got" 2> "$TMP/err"
-	if cmp -s "$TMP/want" "$TMP/got"; then
-		pass=$((pass+1))
+# api and physics: their output
+for name in api physics; do
+	if prog_for $name; then
+		script=$(sed -n 's/^\/\/ script: //p' "$DIR/$name.cby")
+		sed -n 's/^\/\/> \{0,1\}//p' "$DIR/$name.cby" > "$TMP/want"
+		(cd "$TMP" && export CABBY_GUI_SCRIPT="$script"; timeout 60 "${prog[@]}") > "$TMP/got" 2> "$TMP/err"
+		if cmp -s "$TMP/want" "$TMP/got"; then
+			pass=$((pass+1))
+		else
+			fail=$((fail+1)); echo "FAIL world/$name ($MODE)"
+			diff "$TMP/want" "$TMP/got" | head -20 | sed 's/^/  | /'
+			head -5 "$TMP/err" | sed 's/^/  ! /'
+		fi
 	else
-		fail=$((fail+1)); echo "FAIL world/api ($MODE)"
-		diff "$TMP/want" "$TMP/got" | head -20 | sed 's/^/  | /'
-		head -5 "$TMP/err" | sed 's/^/  ! /'
+		fail=$((fail+1))
 	fi
-else
-	fail=$((fail+1))
-fi
+done
 
 # scene: its colors, drawn by Cabby, and (on Linux) by OpenGL
 close_enough() {   # want got tolerance

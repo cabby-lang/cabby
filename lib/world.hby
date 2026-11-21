@@ -132,6 +132,26 @@ extern void cby_world_shape_set_picture_size long shape, double metres
 extern void cby_world_shape_set_group long shape, str group
 extern long cby_world_shape_group_length long shape
 extern int cby_world_shape_touches long shape, long other
+extern double cby_world_shape_world_x long shape
+extern double cby_world_shape_world_y long shape
+extern double cby_world_shape_world_z long shape
+extern void cby_world_shape_join long shape, long other
+extern void cby_world_shape_unjoin long shape
+extern long cby_world_shape_joined_to long shape
+extern int cby_world_shape_falls long shape
+extern void cby_world_shape_set_falls long shape, int on
+extern int cby_world_shape_solid long shape
+extern void cby_world_shape_set_solid long shape, int on
+extern int cby_world_shape_on_ground long shape
+extern void cby_world_shape_set_velocity long shape, double x, double y, double z
+extern void cby_world_shape_push long shape, double x, double y, double z
+extern double cby_world_shape_velocity_x long shape
+extern double cby_world_shape_velocity_y long shape
+extern double cby_world_shape_velocity_z long shape
+extern void cby_world_shape_set_bounce long shape, double bounce
+extern void cby_world_shape_set_friction long shape, double friction
+extern void cby_world_set_gravity long win, double g
+extern double cby_world_gravity long win
 extern double cby_world_shape_distance_to long shape, long other
 extern double cby_world_shape_top long shape
 extern double cby_world_shape_bottom long shape
@@ -377,6 +397,97 @@ object world.shape {
 			Names.add s
 		}
 		return Names
+	}
+
+	// ---- joined: moving and turning with another (a car's wheels)
+
+	// joined to Other, staying where it is: from then on its place and
+	// angles are counted from Other's, which carries it
+	void join const world.shape &Other const {
+		cby_world_shape_join Id, Other.Id
+	}
+
+	// back on its own, where it is
+	void unjoin const {
+		cby_world_shape_unjoin Id
+	}
+
+	bool joined const {
+		return cby_world_shape_joined_to(Id) != 0
+	}
+
+	// where its middle is in the world, joined or not (x, y and z are
+	// counted from what it's joined to, while it is)
+	double world_x const {
+		return cby_world_shape_world_x Id
+	}
+
+	double world_y const {
+		return cby_world_shape_world_y Id
+	}
+
+	double world_z const {
+		return cby_world_shape_world_z Id
+	}
+
+	// ---- physics
+
+	// falling: pulled down by the world's gravity, landing on what's solid,
+	// bouncing, and stopped by what it runs into
+	void set_falls bool On const {
+		cby_world_shape_set_falls Id, On
+	}
+
+	bool falls const {
+		return cby_world_shape_falls(Id) != 0
+	}
+
+	// what falls lands on it, and is stopped by it (true to begin with);
+	// false, things go through it: a coin, a ghost
+	void set_solid bool On const {
+		cby_world_shape_set_solid Id, On
+	}
+
+	bool solid const {
+		return cby_world_shape_solid(Id) != 0
+	}
+
+	// standing on something (it fell, and landed)
+	bool on_ground const {
+		return cby_world_shape_on_ground(Id) != 0
+	}
+
+	// how fast it's going, in metres a second, each way: a falling shape
+	// is moved by it, and so is one that doesn't fall (a platform, a door)
+	void set_velocity double X, double Y, double Z const {
+		cby_world_shape_set_velocity Id, X, Y, Z
+	}
+
+	// as much again, added: a jump is push 0, 5, 0
+	void push double X, double Y, double Z const {
+		cby_world_shape_push Id, X, Y, Z
+	}
+
+	double velocity_x const {
+		return cby_world_shape_velocity_x Id
+	}
+
+	double velocity_y const {
+		return cby_world_shape_velocity_y Id
+	}
+
+	double velocity_z const {
+		return cby_world_shape_velocity_z Id
+	}
+
+	// how much of its speed it keeps, bouncing back: 0 none, 1 all (0.3)
+	void set_bounce double Bounce const {
+		cby_world_shape_set_bounce Id, Bounce
+	}
+
+	// how quickly it slows on the ground: 0 ice, 0.5 to begin with
+	void set_friction double Friction const {
+		cby_world_shape_set_friction Id, Friction
 	}
 
 	// the same shape: true for two names for one
@@ -690,6 +801,20 @@ object world.window {
 	}
 
 	// how wide it sees, in degrees from top to bottom (60 to begin with)
+	// how fast things fall, in metres a second, each second: 9.8 (the
+	// Earth's) to begin with; the Moon's is 1.6
+	void set_gravity double G {
+		open
+		cby_world_set_gravity Win, G
+	}
+
+	double gravity const {
+		if Win == 0 {
+			return 9.8
+		}
+		return cby_world_gravity Win
+	}
+
 	void set_field_of_view double Degrees {
 		open
 		cby_world_set_field_of_view Win, Degrees

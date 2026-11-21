@@ -1,0 +1,207 @@
+// Physics, for run_world_tests.sh: falling, landing, bouncing, stacking,
+// jumping, walls, platforms, joined shapes, things that aren't solid,
+// gravity and friction, each in a world of its own, run for a few seconds
+// by its script, and its numbers printed.
+use world
+
+// ---- a ball that bounces, then rests; two crates falling onto each other
+object falling : world.window {
+	world.shape Ball
+	world.shape Lower
+	world.shape Upper
+	bool Bounced
+
+	void build {
+		add_plane 20, 20, "green", 0, 0, 0
+		Ball = add_ball 0.5, "orange", 0, 3, 0
+		Ball.set_falls true
+		Ball.set_bounce 0.6
+		Lower = add_box 1, 1, 1, "brown", 3, 1, 0
+		Lower.set_falls true
+		Upper = add_box 1, 1, 1, "brown", 3.2, 4, 0
+		Upper.set_falls true
+		on_frame step
+	}
+
+	void step {
+		if Ball.velocity_y > 0.5 {
+			Bounced = true
+		}
+		if frame == 240 {
+			println "bounced:", Bounced, "resting at", Ball.y, Ball.on_ground
+			println "stacked at", Lower.y, Upper.y, Upper.on_ground
+			close
+		}
+	}
+}
+
+// ---- a jump, and a wall
+object jumping : world.window {
+	world.shape Hero
+	world.shape Runner
+	double Highest
+
+	void build {
+		add_plane 20, 20, "green", 0, 0, 0
+		Hero = add_box 1, 1, 1, "blue", 0, 0.5, 0
+		Hero.set_falls true
+		Runner = add_box 1, 1, 1, "red", 0, 0.5, 4
+		Runner.set_falls true
+		add_box 1, 2, 3, "gray", 3, 1, 4     // the wall
+		on_frame step
+	}
+
+	void step {
+		if frame == 10 && Hero.on_ground {
+			Hero.push 0, 5, 0
+		}
+		if frame > 10 && Hero.y > Highest {
+			Highest = Hero.y
+		}
+		Runner.set_velocity 3, Runner.velocity_y, 0   // running into the wall
+		if frame == 120 {
+			println "jumped to", Highest.text(1), "and landed:", Hero.y, Hero.on_ground
+			println "stopped by the wall at", Runner.x
+			close
+		}
+	}
+}
+
+// ---- a platform that moves, and what stands on it
+object riding : world.window {
+	world.shape Platform
+	world.shape Rider
+
+	void build {
+		Platform = add_box 3, 0.2, 3, "gray", 0, 1, 0
+		Platform.set_velocity 1, 0, 0
+		Rider = add_box 0.5, 0.5, 0.5, "red", 0, 1.5, 0
+		Rider.set_falls true
+		on_frame step
+	}
+
+	void step {
+		if frame == 120 {
+			println "platform at", Platform.x.text(2), "rider at", Rider.x.text(2), Rider.y.text(2), Rider.on_ground
+			close
+		}
+	}
+}
+
+// ---- a car and its wheel, joined; turned, it carries the wheel round
+object driving : world.window {
+	world.shape Car
+	world.shape Wheel
+	world.shape Back
+
+	void build {
+		add_plane 20, 20, "green", 0, 0, 0
+		Car = add_box 2, 0.5, 1, "red", 0, 2, 0
+		Wheel = add_cylinder 0.3, 0.2, "black", 1, 1.6, 0
+		Wheel.join Car
+		Back = add_cylinder 0.3, 0.2, "black", -1, 1.6, 0
+		Back.join Car
+		Car.set_falls true
+		println "wheel, counted from the car:", Wheel.x, Wheel.y.text(2), Wheel.joined
+		on_frame step
+	}
+
+	void step {
+		if frame == 1 {
+			Car.turn 90
+			println "turned: the wheel at", Wheel.world_x.text(2), Wheel.world_z.text(2)
+		}
+		if frame == 120 {
+			println "landed on its wheel: the car at", Car.y.text(2), "the wheel at", Wheel.world_y.text(2)
+			Wheel.unjoin
+			println "unjoined:", Wheel.joined, Wheel.x.text(2), Wheel.z.text(2)
+			Car.remove
+			println "the car removed: the wheel it let go of is there, removed:", Wheel.removed, "and the one it held, removed:", Back.removed
+			close
+		}
+	}
+}
+
+// ---- what isn't solid is fallen through; the Moon's gravity; friction
+object other : world.window {
+	world.shape Coin
+	world.shape Ball
+	world.shape Moon
+	world.shape Rough
+	world.shape Ice
+
+	void build {
+		add_plane 40, 40, "green", 0, 0, 0
+		Coin = add_box 1, 0.1, 1, "gold", 0, 1, 0
+		Coin.set_solid false
+		Ball = add_ball 0.25, "white", 0, 2, 0
+		Ball.set_falls true
+		Rough = add_box 1, 1, 1, "brown", 5, 0.5, 0
+		Rough.set_falls true
+		Rough.set_velocity 3, 0, 0
+		Ice = add_box 1, 1, 1, "lightblue", 5, 0.5, 5
+		Ice.set_falls true
+		Ice.set_friction 0
+		Ice.set_velocity 3, 0, 0
+		on_frame step
+	}
+
+	void step {
+		if frame == 120 {
+			println "through the coin:", Ball.y, Ball.on_ground, "solid:", Coin.solid
+			println "slid", (Rough.x - 5).text(2), "metres; on ice,", (Ice.x - 5).text(2), "and still going at", Ice.velocity_x
+			close
+		}
+	}
+}
+
+object moon : world.window {
+	world.shape Rock
+
+	void build {
+		set_gravity 1.6
+		Rock = add_ball 0.5, "gray", 0, 10, 0
+		Rock.set_falls true
+		on_frame step
+	}
+
+	void step {
+		if frame == 60 {
+			println "with the Moon's gravity,", gravity, "fallen", (10 - Rock.y).text(2), "metres in a second"
+			close
+		}
+	}
+}
+
+int main {
+	falling F
+	F.run
+	jumping J
+	J.run
+	riding R
+	R.run
+	driving D
+	D.run
+	other O
+	O.run
+	moon M
+	M.run
+}
+
+// (for run_world_tests.sh: a script for the six windows, each closing itself)
+// script: frames 1000; frames 1000; frames 1000; frames 1000; frames 1000; frames 1000
+
+// ---------------------------------------------------------------- output
+//> bounced: true resting at 0.5 true
+//> stacked at 0.5 1.5 true
+//> jumped to 1.7 and landed: 0.5 true
+//> stopped by the wall at 2.0
+//> platform at 1.98 rider at 1.72 1.35 true
+//> wheel, counted from the car: 1.0 -0.40 true
+//> turned: the wheel at 0.00 -1.00
+//> landed on its wheel: the car at 0.50 the wheel at 0.10
+//> unjoined: false 0.00 -1.00
+//> the car removed: the wheel it let go of is there, removed: false and the one it held, removed: true
+//> through the coin: 0.25 true solid: false
+//> slid 0.94 metres; on ice, 5.95 and still going at 3.0
+//> with the Moon's gravity, 1.6 fallen 0.79 metres in a second

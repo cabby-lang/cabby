@@ -397,6 +397,15 @@ typedef struct Shape {
 	int picture;          /* (index into pictures; -1: none) */
 	double tile;          /* metres a copy of the picture covers (0: once, stretched) */
 	char *group;
+	/* joined to another (its id; 0: not): then x, y, z and the angles are
+	 * counted from it, which carries it */
+	int64_t joined;
+	/* physics: it falls (and lands, and bounces), or it's moved by its
+	 * velocity alone; solid, others land on it and are stopped by it */
+	int falls, solid, on_ground;
+	double vx, vy, vz;    /* metres a second */
+	double bounce, friction;
+	int64_t standing_on;  /* (what it landed on this frame: it's carried by it) */
 } Shape;
 
 static Shape *shapes;
@@ -434,6 +443,7 @@ typedef struct World {
 	V3 sun;               /* the way the sunlight goes (down, and a little sideways) */
 	Color sun_color, ambient;
 	int no_shadows;       /* set_shadows false */
+	double gravity;       /* metres a second, each second, down */
 	double shadow_reach;  /* how far round the camera shadows are cast, in metres */
 	/* the mouse */
 	int mouse_x, mouse_y;
@@ -474,7 +484,7 @@ int64_t cby_world_window_new(void)
 		.title = strdup("Cabby"), .width = 800, .height = 600, .background = color("skyblue"),
 		.cx = 0, .cy = 1.6, .cz = 6, .fov = 60,
 		.sun = v_norm(v3(-0.4f, -1, -0.6f)), .sun_color = { 0.85f, 0.85f, 0.8f, 1 }, .ambient = { 0.35f, 0.35f, 0.4f, 1 },
-		.follow_distance = 5, .follow_height = 2, .shadow_reach = 30,
+		.follow_distance = 5, .follow_height = 2, .shadow_reach = 30, .gravity = 9.8,
 	};
 	return ++nworlds;
 }
@@ -600,7 +610,7 @@ static int64_t new_shape(int64_t id, int mesh, double w, double h, double d, con
 	shapes = realloc(shapes, sizeof *shapes * (size_t)(nshapes + 1));
 	shapes[nshapes] = (Shape){ .world = (int)id, .alive = 1, .visible = 1, .mesh = mesh, .x = x, .y = y, .z = z,
 				   .w = w, .h = h, .d = d, .scale = 1, .color = color(c), .picture = -1, .group = strdup(""),
-				   .model = -1 };
+				   .model = -1, .solid = 1, .bounce = 0.3, .friction = 0.5 };
 	return ++nshapes;
 }
 
@@ -636,11 +646,26 @@ int64_t cby_world_shape_world(int64_t id) { return shape(id)->world; }
 double cby_world_shape_x(int64_t id) { return shape(id)->x; }
 double cby_world_shape_y(int64_t id) { return shape(id)->y; }
 double cby_world_shape_z(int64_t id) { return shape(id)->z; }
+static V3 shape_place(const Shape *s);
+/* (in doubles, for a shape on its own: its x, y and z themselves) */
+static void place_d(const Shape *s, double *x, double *y, double *z)
+{
+	if (!s->joined) {
+		*x = s->x, *y = s->y, *z = s->z;
+		return;
+	}
+	V3 p = shape_place(s);
+	*x = p.x, *y = p.y, *z = p.z;
+}
+double cby_world_shape_world_x(int64_t id) { double x, y, z; place_d(shape(id), &x, &y, &z); return x; }
+double cby_world_shape_world_y(int64_t id) { double x, y, z; place_d(shape(id), &x, &y, &z); return y; }
+double cby_world_shape_world_z(int64_t id) { double x, y, z; place_d(shape(id), &x, &y, &z); return z; }
 double cby_world_shape_angle(int64_t id) { return shape(id)->yaw; }
 double cby_world_shape_tilt(int64_t id) { return shape(id)->pitch; }
 double cby_world_shape_roll(int64_t id) { return shape(id)->roll; }
 double cby_world_shape_scale(int64_t id) { return shape(id)->scale; }
 int cby_world_shape_visible(int64_t id) { return shape(id)->visible; }
+static int shown(const Shape *s);
 int cby_world_shape_removed(int64_t id) { return !shape(id)->alive; }
 
 void cby_world_shape_move_to(int64_t id, double x, double y, double z)
@@ -697,7 +722,14 @@ void cby_world_shape_set_roll(int64_t id, double degrees) { shape(id)->roll = wr
 void cby_world_shape_roll_by(int64_t id, double degrees) { Shape *s = shape(id); s->roll = wrap_degrees(s->roll + degrees); }
 void cby_world_shape_set_scale(int64_t id, double k) { shape(id)->scale = k > 0 ? k : 0; }
 void cby_world_shape_set_visible(int64_t id, int on) { shape(id)->visible = on != 0; }
-void cby_world_shape_remove(int64_t id) { shape(id)->alive = 0; }
+void cby_world_shape_remove(int64_t id)
+{
+	shape(id)->alive = 0;
+	/* (and what's joined to it, as a car's wheels go with it) */
+	for (int i = 0; i < nshapes; i++)
+		if (shapes[i].joined == id && shapes[i].alive)
+			cby_world_shape_remove(i + 1);
+}
 void cby_world_shape_set_color(int64_t id, const char *c) { shape(id)->color = color(c); }
 
 void cby_world_shape_set_size(int64_t id, double w, double h, double d)
@@ -821,13 +853,97 @@ double cby_world_shape_animation_time(int64_t id)
 	return s->model < 0 || s->pose->anim < 0 ? 0 : s->pose->time;
 }
 
-/* where a shape is drawn: its matrix */
-static M4 shape_matrix(const Shape *s)
+/* where a shape is and how it's turned, unsized: its own, or (joined) on
+ * top of what it's joined to's */
+static M4 shape_rigid(const Shape *s)
 {
 	M4 m = m_translate((float)s->x, (float)s->y, (float)s->z);
 	m = m_mul(m, m_rotate_y(radians(s->yaw)));
 	m = m_mul(m, m_rotate_x(radians(s->pitch)));
 	m = m_mul(m, m_rotate_z(radians(s->roll)));
+	if (s->joined >= 1 && s->joined <= nshapes)
+		m = m_mul(shape_rigid(&shapes[s->joined - 1]), m);
+	return m;
+}
+
+/* where its middle is, in the world */
+static V3 shape_place(const Shape *s)
+{
+	M4 m = shape_rigid(s);
+	return v3(m.m[12], m.m[13], m.m[14]);
+}
+
+/* drawn: it, and what it's joined to, there and not hidden */
+static int shown(const Shape *s)
+{
+	for (int depth = 0; s && depth < 64; depth++) {
+		if (!s->alive || !s->visible || s->scale <= 0)
+			return 0;
+		s = s->joined >= 1 && s->joined <= nshapes ? &shapes[s->joined - 1] : NULL;
+	}
+	return 1;
+}
+
+/* how a shape is turned, in the world: round y, x and z as its own and
+ * those of what it's joined to, added (right for turns round y, as a car
+ * turns, and near enough for small tilts) */
+static void world_angles(const Shape *s, double *yaw, double *pitch, double *roll)
+{
+	*yaw = *pitch = *roll = 0;
+	for (int depth = 0; s && depth < 64; depth++) {
+		*yaw += s->yaw, *pitch += s->pitch, *roll += s->roll;
+		s = s->joined >= 1 && s->joined <= nshapes ? &shapes[s->joined - 1] : NULL;
+	}
+}
+
+static double wrap_degrees(double a);
+
+/* back in the world, where it is: its place and angles the world's */
+void cby_world_shape_unjoin(int64_t id)
+{
+	Shape *s = shape(id);
+	if (!s->joined)
+		return;
+	V3 p = shape_place(s);
+	double yaw, pitch, roll;
+	world_angles(s, &yaw, &pitch, &roll);
+	s->joined = 0;
+	s->x = p.x, s->y = p.y, s->z = p.z;
+	s->yaw = wrap_degrees(yaw), s->pitch = wrap_degrees(pitch), s->roll = wrap_degrees(roll);
+}
+
+/* joined to another, staying where it is: its place then counted from the
+ * other's, in the other's own directions, and its angles from the other's */
+void cby_world_shape_join(int64_t id, int64_t to)
+{
+	Shape *s = shape(id), *t = shape(to);
+	if (s->world != t->world)
+		fail("%s", "a shape can be joined only to one in the same world");
+	for (int64_t up = to; up; up = shapes[up - 1].joined)
+		if (up == id)
+			fail("%s", "a shape can't be joined to itself, or to one joined to it");
+	cby_world_shape_unjoin(id);
+	V3 p = shape_place(s);
+	M4 r = shape_rigid(t);
+	V3 d = v_sub(p, v3(r.m[12], r.m[13], r.m[14]));
+	/* (its turning undone: the rotation's transpose) */
+	V3 local = v3(r.m[0] * d.x + r.m[1] * d.y + r.m[2] * d.z, r.m[4] * d.x + r.m[5] * d.y + r.m[6] * d.z,
+		      r.m[8] * d.x + r.m[9] * d.y + r.m[10] * d.z);
+	double yaw, pitch, roll;
+	world_angles(t, &yaw, &pitch, &roll);
+	s->x = local.x, s->y = local.y, s->z = local.z;
+	s->yaw = wrap_degrees(s->yaw - yaw), s->pitch = wrap_degrees(s->pitch - pitch), s->roll = wrap_degrees(s->roll - roll);
+	s->joined = to;
+	s->falls = 0;   /* (it's carried: what it's joined to falls, if anything does) */
+	s->vx = s->vy = s->vz = 0;
+}
+
+int64_t cby_world_shape_joined_to(int64_t id) { return shape(id)->joined; }
+
+/* where a shape is drawn: its matrix */
+static M4 shape_matrix(const Shape *s)
+{
+	M4 m = shape_rigid(s);
 	float k = (float)s->scale;
 	if (s->model >= 0)
 		return m_mul(m, m_scale(k, k, k));   /* (a model is its own size) */
@@ -871,8 +987,10 @@ int cby_world_shape_touches(int64_t a, int64_t b) { return touching(shape(a), sh
 
 double cby_world_shape_distance_to(int64_t a, int64_t b)
 {
-	Shape *s = shape(a), *t = shape(b);
-	return sqrt((s->x - t->x) * (s->x - t->x) + (s->y - t->y) * (s->y - t->y) + (s->z - t->z) * (s->z - t->z));
+	double px, py, pz, qx, qy, qz;
+	place_d(shape(a), &px, &py, &pz);
+	place_d(shape(b), &qx, &qy, &qz);
+	return sqrt((px - qx) * (px - qx) + (py - qy) * (py - qy) + (pz - qz) * (pz - qz));
 }
 
 /* the top of the shape, and its bottom: where to stand something on it */
@@ -1117,7 +1235,7 @@ static int64_t pick(int64_t id, double px, double py, int width, int height)
 	float best_t = 1e30f;
 	for (int i = 0; i < nshapes; i++) {
 		Shape *sh = &shapes[i];
-		if (sh->world != id || !sh->alive || !sh->visible)
+		if (sh->world != id || !shown(sh))
 			continue;
 		V3 lo, hi;
 		shape_box(sh, &lo, &hi);
@@ -1531,6 +1649,347 @@ static void find_events(void)
 	}
 }
 
+/* ------------------------------------------------------------- physics
+ *
+ * Each frame, after its handlers: a shape that falls is pulled down by
+ * the world's gravity, moved by its velocity, and pushed out of what's
+ * solid that it went into (in small steps, so it can't pass through a
+ * thin plane), its velocity turned back as much as it bounces; standing
+ * on something, it's on the ground, slowed by its friction, and carried
+ * by what it stands on if that moves by its velocity. A shape with a
+ * velocity that doesn't fall just moves by it (a platform, a door). What's
+ * joined to a falling shape lands with it. A ball is a ball; anything else
+ * is the box round it, as it stands. */
+
+#define PHYSICS_DT (1.0 / 60.0)
+
+/* (in doubles: a shape at rest stays where it is, to the last digit) */
+typedef struct D3 {
+	double x, y, z;
+} D3;
+
+typedef struct Body {
+	int ball;
+	D3 c;          /* a ball's middle */
+	double r;
+	D3 lo, hi;     /* the box round it */
+} Body;
+
+static void body_of(const Shape *s, Body *b)
+{
+	b->ball = s->model < 0 && s->mesh == MESH_BALL;
+	if (s->joined || s->model >= 0) {
+		/* (joined, or a model: the box round it as it's drawn) */
+		V3 lo, hi;
+		shape_box(s, &lo, &hi);
+		b->lo = (D3){ lo.x, lo.y, lo.z }, b->hi = (D3){ hi.x, hi.y, hi.z };
+		V3 c = shape_place(s);
+		b->c = (D3){ c.x, c.y, c.z };
+	} else {
+		/* a shape of its own: its box from its place, size and angles */
+		const Mesh *m = &meshes[s->mesh];
+		double k = s->scale, h = s->mesh == MESH_PLANE ? 0 : s->h;
+		double e[3] = { s->w * k / 2, h * k / 2, s->d * k / 2 };
+		double off[3] = { (m->lo.x + m->hi.x) / 2 * s->w * k, (m->lo.y + m->hi.y) / 2 * h * k, (m->lo.z + m->hi.z) / 2 * s->d * k };
+		double y = s->yaw * M_PI / 180, p = s->pitch * M_PI / 180, r = s->roll * M_PI / 180;
+		double cy = 1, sy = 0, cp = 1, sp = 0, cr = 1, sr = 0;
+		if (s->yaw != 0 || s->pitch != 0 || s->roll != 0)   /* (most aren't turned) */
+			cy = cos(y), sy = sin(y), cp = cos(p), sp = sin(p), cr = cos(r), sr = sin(r);
+		/* (its turning, round y, then x, then z, as shape_rigid's) */
+		double R[3][3] = { { cy * cr + sy * sp * sr, -cy * sr + sy * sp * cr, sy * cp },
+				   { cp * sr, cp * cr, -sp },
+				   { -sy * cr + cy * sp * sr, sy * sr + cy * sp * cr, cy * cp } };
+		double c[3] = { s->x, s->y, s->z }, lo[3], hi[3];
+		for (int a = 0; a < 3; a++) {
+			double ext = 0, mid = c[a];
+			for (int q = 0; q < 3; q++) {
+				ext += fabs(R[a][q]) * e[q];
+				mid += R[a][q] * off[q];
+			}
+			lo[a] = mid - ext, hi[a] = mid + ext;
+		}
+		b->lo = (D3){ lo[0], lo[1], lo[2] }, b->hi = (D3){ hi[0], hi[1], hi[2] };
+		b->c = (D3){ s->x, s->y, s->z };
+	}
+	b->r = s->w / 2 * s->scale;
+}
+
+/* how far a goes into b, and which way pushes it out (n, from b to a): 0 if
+ * they don't meet. A plane is pushed off from its top or its bottom,
+ * whichever side the other is on. */
+static int contact(const Body *a, const Body *b, int b_plane, D3 *n, double *depth)
+{
+	if (a->ball && b->ball) {
+		D3 d = { a->c.x - b->c.x, a->c.y - b->c.y, a->c.z - b->c.z };
+		double len = sqrt(d.x * d.x + d.y * d.y + d.z * d.z), r = a->r + b->r;
+		if (len >= r)
+			return 0;
+		*n = len > 1e-9 ? (D3){ d.x / len, d.y / len, d.z / len } : (D3){ 0, 1, 0 };
+		*depth = r - len;
+		return 1;
+	}
+	if (a->ball || b->ball) {
+		/* a ball and a box: the box's nearest point to the ball's middle */
+		const Body *ball = a->ball ? a : b, *box = a->ball ? b : a;
+		D3 c = ball->c;
+		D3 q = { fmax(box->lo.x, fmin(c.x, box->hi.x)), fmax(box->lo.y, fmin(c.y, box->hi.y)),
+			 fmax(box->lo.z, fmin(c.z, box->hi.z)) };
+		D3 d = { c.x - q.x, c.y - q.y, c.z - q.z };
+		double len = sqrt(d.x * d.x + d.y * d.y + d.z * d.z);
+		if (len >= ball->r)
+			return 0;
+		D3 out;
+		double in;
+		if (b_plane && box == b) {
+			double top = (box->lo.y + box->hi.y) / 2;
+			out = (D3){ 0, c.y >= top ? 1 : -1, 0 };
+			in = ball->r - fabs(c.y - top);
+		} else if (len > 1e-9) {
+			out = (D3){ d.x / len, d.y / len, d.z / len };
+			in = ball->r - len;
+		} else {
+			/* (its middle inside the box: out the nearest side) */
+			double dx0 = c.x - box->lo.x, dx1 = box->hi.x - c.x, dy0 = c.y - box->lo.y, dy1 = box->hi.y - c.y,
+			       dz0 = c.z - box->lo.z, dz1 = box->hi.z - c.z;
+			double m = fmin(fmin(fmin(dx0, dx1), fmin(dy0, dy1)), fmin(dz0, dz1));
+			out = m == dy1 ? (D3){ 0, 1, 0 } : m == dy0 ? (D3){ 0, -1, 0 } : m == dx0 ? (D3){ -1, 0, 0 }
+			      : m == dx1 ? (D3){ 1, 0, 0 } : m == dz0 ? (D3){ 0, 0, -1 } : (D3){ 0, 0, 1 };
+			in = ball->r + m;
+		}
+		*n = box == b ? out : (D3){ -out.x, -out.y, -out.z };
+		*depth = in;
+		return in > 0;
+	}
+	/* two boxes: out the way that's least far */
+	double ox = fmin(a->hi.x, b->hi.x) - fmax(a->lo.x, b->lo.x);
+	double oy = fmin(a->hi.y, b->hi.y) - fmax(a->lo.y, b->lo.y);
+	double oz = fmin(a->hi.z, b->hi.z) - fmax(a->lo.z, b->lo.z);
+	if (ox <= 0 || (oy <= 0 && !b_plane) || oz <= 0)
+		return 0;
+	double ay = (a->lo.y + a->hi.y) / 2, by = (b->lo.y + b->hi.y) / 2;
+	if (b_plane || (oy <= ox && oy <= oz)) {
+		*n = (D3){ 0, ay >= by ? 1 : -1, 0 };
+		*depth = b_plane ? (ay >= by ? by - a->lo.y : a->hi.y - by) : oy;
+	} else if (ox <= oz) {
+		*n = (D3){ (a->lo.x + a->hi.x) / 2 >= (b->lo.x + b->hi.x) / 2 ? 1 : -1, 0, 0 };
+		*depth = ox;
+	} else {
+		*n = (D3){ 0, 0, (a->lo.z + a->hi.z) / 2 >= (b->lo.z + b->hi.z) / 2 ? 1 : -1 };
+		*depth = oz;
+	}
+	return 1;
+}
+
+/* the falling shape a shape is part of: itself, or what it's joined to */
+static int64_t root_of(int64_t id)
+{
+	for (int depth = 0; depth < 64 && shapes[id - 1].joined; depth++)
+		id = shapes[id - 1].joined;
+	return id;
+}
+
+/* one falling shape, met with everything solid: pushed out, its velocity
+ * turned back, and whether it's on the ground */
+static int64_t *own_parts;
+static int cap_own_parts;
+
+/* (each shape's body as it stands, worked out again only when it moves;
+ * and each shape's root) */
+static Body *still;
+static int64_t *roots;
+static int cap_still;
+
+/* a falling shape moved: its parts' bodies, again */
+static void moved(int64_t world_id, int64_t id)
+{
+	for (int k = 0; k < nshapes; k++)
+		if (roots[k] == id && shapes[k].world == world_id && shapes[k].alive && shapes[k].solid)
+			body_of(&shapes[k], &still[k]);
+}
+
+static void physics_meet(int64_t world_id, int64_t id)
+{
+	Shape *s = &shapes[id - 1];
+	/* it, and what's joined to it (a car's wheels land too) */
+	int nown = 0;
+	for (int k = 0; k < nshapes; k++) {
+		Shape *part = &shapes[k];
+		if (part->world != world_id || !part->alive || !part->solid || roots[k] != id)
+			continue;
+		if (nown == cap_own_parts)
+			own_parts = realloc(own_parts, sizeof *own_parts * (size_t)(cap_own_parts = cap_own_parts * 2 + 8));
+		own_parts[nown++] = k + 1;
+	}
+	for (int pass = 0; pass < 2; pass++)
+		for (int j = 0; j < nshapes; j++) {
+			Shape *o = &shapes[j];
+			if (o->world != world_id || !o->alive || !o->solid || roots[j] == id)
+				continue;
+			Body b = still[j];
+			for (int k = 0; k < nown; k++) {
+				Body a = still[own_parts[k] - 1];
+				/* (quickly: their boxes apart, they don't meet) */
+				if (a.lo.x > b.hi.x || b.lo.x > a.hi.x || a.lo.y > b.hi.y || b.lo.y > a.hi.y || a.lo.z > b.hi.z ||
+				    b.lo.z > a.hi.z)
+					continue;
+				D3 n;
+				double depth;
+				if (!contact(&a, &b, o->model < 0 && o->mesh == MESH_PLANE, &n, &depth) || depth <= 0)
+					continue;
+				/* (both falling: each pushed half the way; but one standing on
+				 * something holds, as the ground holds it, and the other is
+				 * pushed all the way) */
+				int both = o->falls && !o->joined;
+				if (both && ((n.y > 0.7 && o->on_ground) || (n.y < -0.7 && s->on_ground))) {
+					if (n.y > 0.7) {
+						both = 0;
+					} else {
+						/* (it's the one standing: the other goes up off it) */
+						o->y -= n.y * depth;
+						moved(world_id, roots[j]);
+						b = still[j];
+						if (o->vy < 0)
+							o->vy = 0;
+						o->on_ground = 1;
+						o->standing_on = id;
+						continue;
+					}
+				}
+				double share = both ? 0.5 : 1.0;
+				s->x += n.x * depth * share, s->y += n.y * depth * share, s->z += n.z * depth * share;
+				moved(world_id, id);
+				if (both) {
+					o->x -= n.x * depth * 0.5, o->y -= n.y * depth * 0.5, o->z -= n.z * depth * 0.5;
+					moved(world_id, roots[j]);
+					b = still[j];
+				}
+				/* the velocity into it, turned back as much as it bounces
+				 * (slowly, not at all: it comes to rest) */
+				double rvx = s->vx - (both ? o->vx : 0), rvy = s->vy - (both ? o->vy : 0), rvz = s->vz - (both ? o->vz : 0);
+				double vn = rvx * n.x + rvy * n.y + rvz * n.z;
+				if (vn < 0) {
+					double e = vn < -1.0 ? (s->bounce + (both ? o->bounce : s->bounce)) / 2 : 0;
+					double j_ = -(1 + e) * vn * share;
+					s->vx += j_ * n.x, s->vy += j_ * n.y, s->vz += j_ * n.z;
+					if (both)
+						o->vx -= j_ * n.x, o->vy -= j_ * n.y, o->vz -= j_ * n.z;
+				}
+				if (n.y > 0.7) {
+					s->on_ground = 1;
+					s->standing_on = j + 1;
+				}
+				if (both && n.y < -0.7) {
+					o->on_ground = 1;
+					o->standing_on = id;
+				}
+			}
+		}
+}
+
+static void physics_step(int64_t world_id)
+{
+	World *w = world(world_id);
+	int any = 0;
+	for (int i = 0; i < nshapes && !any; i++)
+		any = shapes[i].world == world_id && shapes[i].alive && shapes[i].falls;
+	if (any) {
+		if (nshapes > cap_still) {
+			cap_still = nshapes * 2;
+			still = realloc(still, sizeof *still * (size_t)cap_still);
+			roots = realloc(roots, sizeof *roots * (size_t)cap_still);
+		}
+		for (int i = 0; i < nshapes; i++)
+			roots[i] = root_of(i + 1);
+		for (int i = 0; i < nshapes; i++)
+			if (shapes[i].world == world_id && shapes[i].alive && shapes[i].solid)
+				body_of(&shapes[i], &still[i]);
+	}
+	for (int i = 0; i < nshapes; i++) {
+		Shape *s = &shapes[i];
+		if (s->world != world_id || !s->alive || s->joined)
+			continue;
+		if (!s->falls) {
+			if (s->vx != 0 || s->vy != 0 || s->vz != 0) {
+				s->x += s->vx * PHYSICS_DT, s->y += s->vy * PHYSICS_DT, s->z += s->vz * PHYSICS_DT;
+				/* (and as it stands now, for what falls on it) */
+				for (int k = 0; any && k < nshapes; k++)
+					if (roots[k] == i + 1 && shapes[k].alive && shapes[k].solid)
+						body_of(&shapes[k], &still[k]);
+			}
+			continue;
+		}
+		/* carried by what it stood on, if that moves by its velocity */
+		if (s->standing_on >= 1 && s->standing_on <= nshapes) {
+			Shape *g = &shapes[s->standing_on - 1];
+			if (g->alive && !g->falls)
+				s->x += g->vx * PHYSICS_DT, s->y += g->vy * PHYSICS_DT, s->z += g->vz * PHYSICS_DT;   /* (its body: below) */
+		}
+		s->vy -= w->gravity * PHYSICS_DT;
+		/* in steps no longer than half its smallest size */
+		double speed = sqrt(s->vx * s->vx + s->vy * s->vy + s->vz * s->vz) * PHYSICS_DT;
+		double small = fmin(s->w, fmin(s->mesh == MESH_PLANE ? s->w : s->h, s->d)) * s->scale / 2;
+		int steps = small > 0 ? (int)ceil(speed / small) : 1;
+		if (steps < 1)
+			steps = 1;
+		if (steps > 16)
+			steps = 16;
+		s->on_ground = 0;
+		s->standing_on = 0;
+		for (int k = 0; k < steps; k++) {
+			double dt = PHYSICS_DT / steps;
+			s->x += s->vx * dt, s->y += s->vy * dt, s->z += s->vz * dt;
+			moved(world_id, i + 1);
+			physics_meet(world_id, i + 1);
+		}
+		/* on the ground, slowed by its friction (a ball rolls on, mostly) */
+		if (s->on_ground) {
+			double h = sqrt(s->vx * s->vx + s->vz * s->vz);
+			double slow = s->friction * w->gravity * PHYSICS_DT * (s->mesh == MESH_BALL && s->model < 0 ? 0.1 : 1);
+			double k = h > slow ? (h - slow) / h : 0;
+			s->vx *= k, s->vz *= k;
+		}
+	}
+}
+
+int cby_world_shape_falls(int64_t id) { return shape(id)->falls; }
+void cby_world_shape_set_falls(int64_t id, int on)
+{
+	Shape *s = shape(id);
+	if (on && s->joined)
+		fail("%s", "a joined shape is carried by what it's joined to: unjoin it first, or let that fall");
+	s->falls = on != 0;
+}
+int cby_world_shape_solid(int64_t id) { return shape(id)->solid; }
+void cby_world_shape_set_solid(int64_t id, int on) { shape(id)->solid = on != 0; }
+int cby_world_shape_on_ground(int64_t id) { return shape(id)->on_ground; }
+void cby_world_shape_set_velocity(int64_t id, double x, double y, double z)
+{
+	Shape *s = shape(id);
+	s->vx = x, s->vy = y, s->vz = z;
+}
+void cby_world_shape_push(int64_t id, double x, double y, double z)
+{
+	Shape *s = shape(id);
+	s->vx += x, s->vy += y, s->vz += z;
+}
+double cby_world_shape_velocity_x(int64_t id) { return shape(id)->vx; }
+double cby_world_shape_velocity_y(int64_t id) { return shape(id)->vy; }
+double cby_world_shape_velocity_z(int64_t id) { return shape(id)->vz; }
+void cby_world_shape_set_bounce(int64_t id, double b)
+{
+	if (!(b >= 0 && b <= 1))
+		fail("%s", "a bounce is from 0 (none) to 1 (as high as it fell)");
+	shape(id)->bounce = b;
+}
+void cby_world_shape_set_friction(int64_t id, double f)
+{
+	if (!(f >= 0))
+		fail("%s", "friction is 0 (ice) or more (0.5 to begin with)");
+	shape(id)->friction = f;
+}
+void cby_world_set_gravity(int64_t id, double g) { world(id)->gravity = g; }
+double cby_world_gravity(int64_t id) { return world(id)->gravity; }
+
 static void step(int64_t id)
 {
 	World *w = world(id);
@@ -1566,6 +2025,8 @@ static void step(int64_t id)
 			t->alive = 0;
 		invoke(h);
 	}
+	if (!worlds[id - 1].closing)
+		physics_step(id);
 	w = &worlds[id - 1];
 	for (int i = 0; i < w->nkeys; i++)
 		w->keys[i].pressed = w->keys[i].released = 0;
