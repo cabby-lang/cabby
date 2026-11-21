@@ -194,9 +194,13 @@ static const char *missing_library_hint(const char *header, const char *name, in
 		if ((n == 4 && memcmp(name, "game", 4) == 0 && cby_game_run) ||
 		    (n == 3 && memcmp(name, "gui", 3) == 0 && cby_gui_window_new))
 			return NULL;
-		static char here[200];
-		snprintf(here, sizeof here, "the %.*s library isn't here in a browser (of the window libraries, gui and game are)",
-			 n, name);
+		static char here[300];
+		if ((n == 4 && memcmp(name, "game", 4) == 0) || (n == 3 && memcmp(name, "gui", 3) == 0))
+			snprintf(here, sizeof here, "the %.*s library isn't in this cabby.wasm: it was built without SDL "
+				 "(tools/build-sdl-wasm.sh in the cabby folder, then make wasm-site, puts it in)", n, name);
+		else
+			snprintf(here, sizeof here, "the %.*s library isn't here in a browser (of the window libraries, "
+				 "only gui and game can be)", n, name);
 		(void)header;
 		return here;
 #endif

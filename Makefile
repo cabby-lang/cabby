@@ -511,6 +511,7 @@ wasm-site: cabby.wasm
 	mkdir -p build/wasm-site/fonts && cp wasm/fonts/DejaVuSans.ttf wasm/fonts/LICENSE build/wasm-site/fonts/
 	python3 -c 'import json, glob, os; json.dump({"/lib/" + os.path.basename(f): open(f).read() for f in sorted(glob.glob("lib/*.hby"))}, open("build/wasm-site/cabby-lib.json", "w"))'
 	@echo "build/wasm-site: open it through a web server (python3 -m http.server -d build/wasm-site)"
+	@$(if $(WASM_GAME),true,echo "  (without windows and games: SDL isn't built for WebAssembly; tools/build-sdl-wasm.sh, then make wasm-site again)")
 # (with the game and gui libraries and SDL, when SDL is built for
 # WebAssembly: then `use game` and `use gui` run interpreted in a browser too)
 # (and the runtime's stand-ins, for what those use that isn't here: D-Bus)

@@ -1871,6 +1871,10 @@ moves and turns with it.
   its directions; `world_x`, `world_y` and `world_z` where it is in the
   world; hiding or removing what it's joined to hides or removes it; and
   a falling shape lands on what's joined to it (a car on its wheels).
+- In a browser, a `cabby.wasm` built without SDL now says so for `use gui`
+  and `use game` (and how to put them in: `tools/build-sdl-wasm.sh`, then
+  `make wasm-site`), where it said they weren't in a browser at all; and
+  `make wasm-site` says when it's building without them.
 - Tested by `tests/world/physics.cby` (a bounce coming to rest, a stack,
   a jump, a wall, a platform, a car and its wheels, a coin, friction,
   ice, the Moon's gravity), interpreted and compiled.
