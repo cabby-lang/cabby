@@ -55,6 +55,17 @@ typedef unsigned int GLbitfield;
 #define GL_NEAREST_MIPMAP_LINEAR 0x2702
 #define GL_CLAMP_TO_EDGE 0x812F
 #define GL_TRIANGLE_STRIP 0x0005
+#define GL_FRAMEBUFFER 0x8D40
+#define GL_DEPTH_ATTACHMENT 0x8D00
+#define GL_DEPTH_COMPONENT 0x1902
+#define GL_DEPTH_COMPONENT24 0x81A6
+#define GL_FRAMEBUFFER_COMPLETE 0x8CD5
+#define GL_TEXTURE_COMPARE_MODE 0x884C
+#define GL_TEXTURE_COMPARE_FUNC 0x884D
+#define GL_COMPARE_REF_TO_TEXTURE 0x884E
+#define GL_LEQUAL 0x0203
+#define GL_TEXTURE1 0x84C1
+#define GL_NONE 0
 
 #define GL_FUNCTIONS(X) \
 	X(void, glEnable, (GLenum)) \
@@ -107,7 +118,14 @@ typedef unsigned int GLbitfield;
 	X(void, glReadPixels, (GLint, GLint, GLsizei, GLsizei, GLenum, GLenum, void *)) \
 	X(void, glFinish, (void)) \
 	X(void, glBlendFunc, (GLenum, GLenum)) \
-	X(void, glDrawArrays, (GLenum, GLint, GLsizei))
+	X(void, glDrawArrays, (GLenum, GLint, GLsizei)) \
+	X(void, glGenFramebuffers, (GLsizei, GLuint *)) \
+	X(void, glDeleteFramebuffers, (GLsizei, const GLuint *)) \
+	X(void, glBindFramebuffer, (GLenum, GLuint)) \
+	X(void, glFramebufferTexture2D, (GLenum, GLenum, GLenum, GLuint, GLint)) \
+	X(GLenum, glCheckFramebufferStatus, (GLenum)) \
+	X(void, glDrawBuffer, (GLenum)) \
+	X(void, glReadBuffer, (GLenum))
 
 #define GL_DECLARE(ret, name, args) static ret(*name) args;
 GL_FUNCTIONS(GL_DECLARE)
@@ -146,7 +164,26 @@ static const char *gl_fragment_shader =
 	"uniform vec3 uLampPos[8];\n"
 	"uniform vec3 uLampColor[8];\n"
 	"uniform float uLampReach[8];\n"
+	"uniform int uShadows;\n"
+	"uniform mat4 uShadowVP;\n"
+	"uniform sampler2DShadow uShadowMap;\n"
+	"uniform float uShadowSize;\n"
+	"uniform float uShadowTexel;\n"
+	"uniform float uShadowBias;\n"
 	"out vec4 outColor;\n"
+	/* (as world.c's sun_reaches: nudged off the surface, nine texels round it) */
+	"float sunReaches(vec3 n) {\n"
+	"	if (uShadows == 0) return 1.0;\n"
+	"	vec4 q = uShadowVP * vec4(vPos + n * uShadowTexel * 1.5, 1.0);\n"
+	"	vec3 c = q.xyz * 0.5 + 0.5;\n"
+	"	if (c.x < 0.0 || c.y < 0.0 || c.x >= 1.0 || c.y >= 1.0 || c.z >= 1.0) return 1.0;\n"
+	"	vec2 at = (floor(c.xy * uShadowSize) + 0.5) / uShadowSize;\n"
+	"	float seen = 0.0;\n"
+	"	for (int dy = -1; dy <= 1; dy++)\n"
+	"		for (int dx = -1; dx <= 1; dx++)\n"
+	"			seen += texture(uShadowMap, vec3(at + vec2(dx, dy) / uShadowSize, c.z - uShadowBias));\n"
+	"	return seen / 9.0;\n"
+	"}\n"
 	"void main() {\n"
 	"	vec3 base = uColor.rgb;\n"
 	"	if (uHasPicture != 0) {\n"
@@ -156,7 +193,9 @@ static const char *gl_fragment_shader =
 	"	}\n"
 	"	vec3 n = normalize(vNormal);\n"
 	"	if (!gl_FrontFacing) n = -n;\n"
-	"	vec3 light = uAmbient + uSunColor * max(dot(n, uSun), 0.0);\n"
+	"	float sd = max(dot(n, uSun), 0.0);\n"
+	"	if (sd > 0.0) sd *= sunReaches(n);\n"
+	"	vec3 light = uAmbient + uSunColor * sd;\n"
 	"	for (int i = 0; i < uLamps; i++) {\n"
 	"		vec3 to = uLampPos[i] - vPos;\n"
 	"		float d = length(to);\n"
@@ -168,6 +207,28 @@ static const char *gl_fragment_shader =
 	"	}\n"
 	"	outColor = vec4(clamp(base * light, 0.0, 1.0), 1.0);\n"
 	"}\n";
+
+/* the world as the sun sees it, for the shadows: only how far each texel
+ * is (a picture's see-through places cast none) */
+static const char *gl_shadow_vertex =
+	"#version 330 core\n"
+	"layout(location = 0) in vec3 aPos;\n"
+	"layout(location = 2) in vec2 aUV;\n"
+	"uniform mat4 uMVP;\n"
+	"out vec2 vUV;\n"
+	"void main() { vUV = aUV; gl_Position = uMVP * vec4(aPos, 1.0); }\n";
+
+static const char *gl_shadow_fragment =
+	"#version 330 core\n"
+	"in vec2 vUV;\n"
+	"uniform sampler2D uPicture;\n"
+	"uniform int uHasPicture;\n"
+	"uniform vec2 uTile;\n"
+	"void main() { if (uHasPicture != 0 && texture(uPicture, vUV * uTile).a < 0.5) discard; }\n";
+
+#define GL_SHADOW 2048
+static GLuint gl_shadow_program, gl_shadow_fbo, gl_shadow_texture;
+static GLint us_mvp, us_picture, us_has_picture, us_tile;
 
 /* the texts over the world: the overlay (world_text.h), as a texture over
  * the whole window */
@@ -192,7 +253,7 @@ static GLint u_overlay;
 
 static GLuint gl_program;
 static GLint u_mvp, u_model, u_normals, u_color, u_picture, u_has_picture, u_tile, u_sun, u_sun_color, u_ambient, u_lamps,
-	u_lamp_pos, u_lamp_color, u_lamp_reach;
+	u_lamp_pos, u_lamp_color, u_lamp_reach, u_shadows, u_shadow_vp, u_shadow_map, u_shadow_size, u_shadow_texel, u_shadow_bias;
 static GLuint *gl_textures;   /* by picture (0: not made yet) */
 static int ngl_textures;
 
@@ -281,6 +342,44 @@ static int gl_start(void)
 	u_lamp_pos = glGetUniformLocation(gl_program, "uLampPos");
 	u_lamp_color = glGetUniformLocation(gl_program, "uLampColor");
 	u_lamp_reach = glGetUniformLocation(gl_program, "uLampReach");
+	u_shadows = glGetUniformLocation(gl_program, "uShadows");
+	u_shadow_vp = glGetUniformLocation(gl_program, "uShadowVP");
+	u_shadow_map = glGetUniformLocation(gl_program, "uShadowMap");
+	u_shadow_size = glGetUniformLocation(gl_program, "uShadowSize");
+	u_shadow_texel = glGetUniformLocation(gl_program, "uShadowTexel");
+	u_shadow_bias = glGetUniformLocation(gl_program, "uShadowBias");
+	/* the shadows' own: their shaders, and a depth texture drawn into
+	 * (without them, no shadows: the world is still drawn) */
+	vs = gl_compile(GL_VERTEX_SHADER, gl_shadow_vertex);
+	fs = vs ? gl_compile(GL_FRAGMENT_SHADER, gl_shadow_fragment) : 0;
+	gl_shadow_program = vs && fs ? gl_link(vs, fs) : 0;
+	if (gl_shadow_program) {
+		us_mvp = glGetUniformLocation(gl_shadow_program, "uMVP");
+		us_picture = glGetUniformLocation(gl_shadow_program, "uPicture");
+		us_has_picture = glGetUniformLocation(gl_shadow_program, "uHasPicture");
+		us_tile = glGetUniformLocation(gl_shadow_program, "uTile");
+		glGenTextures(1, &gl_shadow_texture);
+		glBindTexture(GL_TEXTURE_2D, gl_shadow_texture);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT24, GL_SHADOW, GL_SHADOW, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_FUNC, GL_LEQUAL);
+		glGenFramebuffers(1, &gl_shadow_fbo);
+		glBindFramebuffer(GL_FRAMEBUFFER, gl_shadow_fbo);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, gl_shadow_texture, 0);
+		glDrawBuffer(GL_NONE);
+		glReadBuffer(GL_NONE);
+		if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+			glDeleteFramebuffers(1, &gl_shadow_fbo);
+			glDeleteTextures(1, &gl_shadow_texture);
+			glDeleteProgram(gl_shadow_program);
+			gl_shadow_fbo = gl_shadow_texture = gl_shadow_program = 0;
+		}
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	}
 	return 1;
 }
 
@@ -306,6 +405,12 @@ static void gl_stop(void)
 	gl_program = 0;
 	glDeleteProgram(gl_overlay_program);
 	gl_overlay_program = 0;
+	if (gl_shadow_program) {
+		glDeleteProgram(gl_shadow_program);
+		glDeleteFramebuffers(1, &gl_shadow_fbo);
+		glDeleteTextures(1, &gl_shadow_texture);
+		gl_shadow_program = gl_shadow_fbo = gl_shadow_texture = 0;
+	}
 	glDeleteTextures(1, &gl_overlay_texture);
 	glDeleteVertexArrays(1, &gl_empty_vao);
 	gl_overlay_texture = gl_empty_vao = 0;
@@ -381,9 +486,61 @@ static void gl_overlay(int64_t id, int w, int h, float k)
 	glDisable(GL_BLEND);
 }
 
+/* the sun's map, drawn into the shadow texture: into lit, if there is one */
+static void gl_shadows(int64_t id, Lit *lit)
+{
+	World *wo = world(id);
+	M4 vp;
+	float texel;
+	if (!gl_shadow_program || !shadow_view(wo, GL_SHADOW, &vp, &texel))
+		return;
+	glBindFramebuffer(GL_FRAMEBUFFER, gl_shadow_fbo);
+	glViewport(0, 0, GL_SHADOW, GL_SHADOW);
+	glClear(GL_DEPTH_BUFFER_BIT);
+	glEnable(GL_DEPTH_TEST);
+	glDepthFunc(GL_LESS);
+	glDisable(GL_CULL_FACE);   /* (both sides cast, as world_soft.h's) */
+	glUseProgram(gl_shadow_program);
+	glUniform1i(us_picture, 0);
+	glActiveTexture(GL_TEXTURE0);
+	for (int i = 0; i < nshapes; i++) {
+		Shape *sh = &shapes[i];
+		if (sh->world != id || !sh->alive || !sh->visible || sh->scale <= 0)
+			continue;
+		int np = shape_parts(sh, wo->frames);
+		for (int pi = 0; pi < np; pi++) {
+			Part *pt = &parts[pi];
+			Mesh *me = pt->mesh;
+			if (!me || !me->nv || !me->ni)
+				continue;
+			gl_mesh(me);
+			M4 mvp = m_mul(vp, pt->model);
+			glUniformMatrix4fv(us_mvp, 1, GL_FALSE, mvp.m);
+			if (pt->picture >= 0) {
+				glBindTexture(GL_TEXTURE_2D, gl_texture(pt->picture));
+				glUniform1i(us_has_picture, 1);
+				glUniform2f(us_tile, pt->us, pt->vs);
+			} else {
+				glUniform1i(us_has_picture, 0);
+			}
+			glBindVertexArray(me->gl_vao);
+			glDrawElements(GL_TRIANGLES, me->ni, GL_UNSIGNED_INT, (void *)0);
+		}
+	}
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	lit->shadows = 1;
+	lit->shadow_vp = vp;
+	lit->shadow_size = GL_SHADOW;
+	lit->shadow_texel = texel;
+	lit->shadow_bias = texel / SHADOW_DEPTH;
+}
+
 static void gl_draw(int64_t id, int w, int h, float k)
 {
 	World *wo = world(id);
+	Lit lit;
+	lighting(id, &lit);
+	gl_shadows(id, &lit);
 	glViewport(0, 0, w, h);
 	glClearColor(wo->background.r, wo->background.g, wo->background.b, 1);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -393,8 +550,16 @@ static void gl_draw(int64_t id, int w, int h, float k)
 	glCullFace(GL_BACK);
 	glEnable(GL_MULTISAMPLE);
 	glUseProgram(gl_program);
-	Lit lit;
-	lighting(id, &lit);
+	glUniform1i(u_shadows, lit.shadows);
+	glUniform1i(u_shadow_map, 1);
+	glActiveTexture(GL_TEXTURE1);
+	glBindTexture(GL_TEXTURE_2D, gl_shadow_texture);
+	if (lit.shadows) {
+		glUniformMatrix4fv(u_shadow_vp, 1, GL_FALSE, lit.shadow_vp.m);
+		glUniform1fv(u_shadow_size, 1, (float[]){ (float)lit.shadow_size });
+		glUniform1fv(u_shadow_texel, 1, &lit.shadow_texel);
+		glUniform1fv(u_shadow_bias, 1, &lit.shadow_bias);
+	}
 	glUniform3fv(u_sun, 1, &lit.sun.x);
 	glUniform3fv(u_sun_color, 1, lit.sun_c);
 	glUniform3fv(u_ambient, 1, lit.ambient);

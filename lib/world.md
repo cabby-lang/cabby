@@ -210,8 +210,47 @@ Every shape is lit by three kinds of light, added together:
   `remove`. A lamp carried by the walker is moved with it each frame. The
   eight nearest the camera are lit, if there are more.
 
-There are no shadows yet: a shape facing away from the sun is darker, but
-it doesn't darken what's behind it.
+**Shadows.** The sun casts them: what's in its way shades what's behind
+it, from the ground under a ball to a wall's shadow across a path, and
+where a picture is see-through (leaves), its shadow is too. They're cast
+in the 30 metres round the camera, ahead of it, and move with it.
+Lamps cast none.
+
+| Member | What it does |
+|---|---|
+| `void set_shadows bool On`, `bool shadows` | Shadows, on to begin with: `set_shadows false` for none. |
+| `void set_shadow_reach double Metres` | How far round the camera they're cast: 30 to begin with, from 1 to 500. Further, a larger world is shadowed, and its shadows' edges are a little blurrier. |
+
+With the sun out (`set_sun_color "black"`) or shining up, there are none.
+
+A ball a metre and a half up, the sun shining a little sideways: its
+shadow falls on the ground a metre and a half to its right.
+
+<!-- gui: frames 1; pixel 133 100; pixel 60 100; close -->
+```cabby
+use world
+
+object noon : world.window {
+	void build {
+		set_size 200, 200
+		add_plane 20, 20, "gray", 0, 0, 0
+		add_ball 0.5, "orange", 0, 1.5, 0
+		set_sun 1, -1, 0             // shining to the right, and down
+		move_camera_to 0, 8, 0.001   // looking straight down
+		point_camera_at 0, 0, 0
+	}
+}
+
+int main {
+	noon N
+	N.run
+}
+```
+
+```text
+pixel 133 100: #2d2d33
+pixel 60 100: #7a7a7c
+```
 
 ## The camera
 
@@ -333,6 +372,12 @@ draws the world itself, the same way, lit the same: slower (fine for a
 window 800 by 600 and a few hundred shapes), and with sharper edges and
 pictures. `CABBY_WORLD_DRAWING=cabby` asks for that anyway.
 
+Shadows are drawn the same way by both: the world drawn first as the sun
+sees it, keeping only how far each place is (a map 2048 by 2048 with
+OpenGL, 1024 when Cabby draws), and each pixel in the sun only if nothing
+in that map is nearer the sun, looked at nine times round, for a softer
+edge.
+
 ## Testing a world without a person
 
 With `CABBY_GUI_SCRIPT` set, a world follows a script instead of waiting
@@ -353,7 +398,6 @@ needed and the picture is the same on every computer, to the pixel.
 
 ## Not in world yet
 
-* Shadows
 * Shapes joined together, moving as one (a car and its wheels): for now,
   each is moved with the other
 * Physics: falling, bouncing, pushing (`touches` and moving by hand for

@@ -17,7 +17,7 @@ cabby --check     prog.cby              type- and ownership-check only
 cabby --style     prog.cby              list names and calls that don't follow STYLE.md
 cabby --dump-ast  prog.cby              print the syntax tree
 cabby --dump-tokens prog.cby            print the token stream
-cabby --version                         which Cabby this is: "Cabby 1.3.1 (2026-11-22)"
+cabby --version                         which Cabby this is: "Cabby 1.4.0 (2026-11-22)"
 cabby --license                         Cabby's license (MIT)
 ```
 
@@ -1230,7 +1230,7 @@ Run `cabby` with no file to type Cabby a piece at a time:
 
 ```
 $ cabby
-Cabby 1.3.1 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
+Cabby 1.4.0 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
 Cabby comes with ABSOLUTELY NO WARRANTY, under the MIT License; "cabby.license" for details.
 >>> int add int a, int b {
 ... 	return a + b
@@ -1715,7 +1715,7 @@ was built for (`PREFIX`), then `/usr/local/lib/cabby` and `/usr/lib/cabby`.
 
 * Panels and bars for a desktop (a dock, a system tray) in the gui
   library.
-* In 3D (`use world`): shadows, and physics.
+* In 3D (`use world`): physics.
 * In a browser: sound, 3D (`use world`), and gui's file choosers.
 * The `?:` operator, `long double`, and backward `goto`.
 * Borrowing tells apart elements at positions written as numbers, but not

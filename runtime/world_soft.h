@@ -2,7 +2,8 @@
  * for test scripts, and where there's no OpenGL. Triangles are cut where
  * they cross in front of the camera, then filled a pixel at a time, the
  * nearest kept (a depth for every pixel), each pixel lit as the shaders
- * light it (world_gl.h). Floats, worked in one order, with no fused
+ * light it (world_gl.h), and shaded where the sun's map (below) says
+ * something nearer the sun is in the way. Floats, worked in one order, with no fused
  * multiply-adds (world.c is built with -ffp-contract=off), so the picture
  * is the same to the pixel on every computer. */
 
@@ -148,6 +149,123 @@ static void soft_clip(Frame *f, const SoftShape *s, const SoftV *a, const SoftV 
 		soft_triangle(f, s, &out[0], &out[2], &out[3]);
 }
 
+/* ---- shadows: the world as the sun sees it, its nearest depth at each of
+ * the map's texels (world.c's shadow_view says where the sun looks from) */
+
+#define SOFT_SHADOW 1024
+static float *soft_shadow_map;
+
+static void soft_shadow_triangle(const float (*q)[3], const float *uv, const Picture *pic, float us, float vs)
+{
+	float sx[3], sy[3];
+	for (int i = 0; i < 3; i++) {
+		sx[i] = (q[i][0] * 0.5f + 0.5f) * (float)SOFT_SHADOW;
+		sy[i] = (q[i][1] * 0.5f + 0.5f) * (float)SOFT_SHADOW;
+	}
+	float area = (sx[1] - sx[0]) * (sy[2] - sy[0]) - (sy[1] - sy[0]) * (sx[2] - sx[0]);
+	if (area == 0)
+		return;
+	float minx = fminf(sx[0], fminf(sx[1], sx[2])), maxx = fmaxf(sx[0], fmaxf(sx[1], sx[2]));
+	float miny = fminf(sy[0], fminf(sy[1], sy[2])), maxy = fmaxf(sy[0], fmaxf(sy[1], sy[2]));
+	int x0 = (int)floorf(minx), x1 = (int)ceilf(maxx), y0 = (int)floorf(miny), y1 = (int)ceilf(maxy);
+	if (x0 < 0)
+		x0 = 0;
+	if (y0 < 0)
+		y0 = 0;
+	if (x1 > SOFT_SHADOW)
+		x1 = SOFT_SHADOW;
+	if (y1 > SOFT_SHADOW)
+		y1 = SOFT_SHADOW;
+	float inv = 1.0f / area;
+	for (int y = y0; y < y1; y++) {
+		float py = (float)y + 0.5f;
+		for (int x = x0; x < x1; x++) {
+			float px = (float)x + 0.5f;
+			float w0 = ((sx[2] - sx[1]) * (py - sy[1]) - (sy[2] - sy[1]) * (px - sx[1])) * inv;
+			float w1 = ((sx[0] - sx[2]) * (py - sy[2]) - (sy[0] - sy[2]) * (px - sx[2])) * inv;
+			float w2 = 1.0f - w0 - w1;
+			if (w0 < 0 || w1 < 0 || w2 < 0)
+				continue;
+			float d = (w0 * q[0][2] + w1 * q[1][2] + w2 * q[2][2]) * 0.5f + 0.5f;
+			float *at = &soft_shadow_map[(size_t)y * SOFT_SHADOW + x];
+			if (d < 0 || d >= *at)
+				continue;
+			if (pic) {
+				/* (where the picture is see-through, so is its shadow: leaves) */
+				float tu = (w0 * uv[0] + w1 * uv[2] + w2 * uv[4]) * us, tv = (w0 * uv[1] + w1 * uv[3] + w2 * uv[5]) * vs;
+				tu -= floorf(tu);
+				tv -= floorf(tv);
+				int ux = (int)(tu * (float)pic->w), vy = (int)(tv * (float)pic->h);
+				if (ux >= pic->w)
+					ux = pic->w - 1;
+				if (vy >= pic->h)
+					vy = pic->h - 1;
+				if (pic->rgba[((size_t)vy * pic->w + ux) * 4 + 3] < 128)
+					continue;
+			}
+			*at = d;
+		}
+	}
+}
+
+/* the sun's map, for this frame, into lit (nothing if there are no shadows) */
+static void soft_shadows(int64_t id, Lit *lit)
+{
+	World *wo = world(id);
+	M4 vp;
+	float texel;
+	if (!shadow_view(wo, SOFT_SHADOW, &vp, &texel))
+		return;
+	if (!soft_shadow_map)
+		soft_shadow_map = malloc(sizeof *soft_shadow_map * SOFT_SHADOW * SOFT_SHADOW);
+	if (!soft_shadow_map)
+		return;
+	for (size_t i = 0; i < (size_t)SOFT_SHADOW * SOFT_SHADOW; i++)
+		soft_shadow_map[i] = 1;
+	float (*q)[3] = NULL;
+	int cap = 0;
+	for (int i = 0; i < nshapes; i++) {
+		Shape *sh = &shapes[i];
+		if (sh->world != id || !sh->alive || !sh->visible || sh->scale <= 0)
+			continue;
+		int np = shape_parts(sh, wo->frames);
+		for (int pi = 0; pi < np; pi++) {
+			Part *pt = &parts[pi];
+			const Mesh *me = pt->mesh;
+			if (!me || !me->nv)
+				continue;
+			M4 m = m_mul(vp, pt->model);
+			if (me->nv > cap) {
+				cap = me->nv;
+				q = realloc(q, sizeof *q * (size_t)cap);
+			}
+			for (int k = 0; k < me->nv; k++) {
+				const float *src = me->v + VERT * k;
+				for (int r = 0; r < 3; r++)
+					q[k][r] = m.m[r] * src[0] + m.m[4 + r] * src[1] + m.m[8 + r] * src[2] + m.m[12 + r];
+			}
+			const Picture *pic = pt->picture >= 0 ? &pictures[pt->picture] : NULL;
+			for (int k = 0; k + 2 < me->ni; k += 3) {
+				float tri[3][3], uv[6];
+				for (int c = 0; c < 3; c++) {
+					uint32_t vi = me->ix[k + c];
+					memcpy(tri[c], q[vi], sizeof tri[c]);
+					uv[c * 2] = me->v[VERT * vi + 6];
+					uv[c * 2 + 1] = me->v[VERT * vi + 7];
+				}
+				soft_shadow_triangle(tri, uv, pic, pt->us, pt->vs);
+			}
+		}
+	}
+	free(q);
+	lit->shadows = 1;
+	lit->shadow_vp = vp;
+	lit->shadow_map = soft_shadow_map;
+	lit->shadow_size = SOFT_SHADOW;
+	lit->shadow_texel = texel;
+	lit->shadow_bias = texel / SHADOW_DEPTH;
+}
+
 static void soft_draw(int64_t id, Frame *f, int w, int h)
 {
 	World *wo = world(id);
@@ -167,6 +285,7 @@ static void soft_draw(int64_t id, Frame *f, int w, int h)
 	}
 	Lit lit;
 	lighting(id, &lit);
+	soft_shadows(id, &lit);
 	M4 vp = m_mul(lens_of(wo, (float)w / (float)h), view_of(wo));
 	SoftV *vs = NULL;
 	int cap = 0;

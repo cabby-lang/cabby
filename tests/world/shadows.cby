@@ -1,0 +1,38 @@
+// Shadows, for run_world_tests.sh to look at, from above: the sun slanting
+// to +x, so a box a metre up shades the ground a metre to its right; a
+// plane a metre up with a picture that's see-through on one half, which
+// shades the ground under its other half only; then shadows turned off.
+use world
+use images
+
+object sunlit : world.window {
+	void build {
+		set_size 200, 200
+		images.picture Half = images.new 16, 16
+		for Y in 16 {
+			for X in 8 {
+				Half.set_pixel_rgb X, Y, 255, 255, 255
+			}
+		}
+		Half.save "half.png"
+		add_plane 20, 20, "gray", 0, 0, 0
+		add_box 1, 0.2, 1, "white", -2, 1, 0
+		world.shape Leaf = add_plane 1, 1, "white", 2, 1, 0
+		Leaf.set_picture "half.png"
+		set_sun 1, -1, 0
+		move_camera_to 0, 8, 0.001
+		point_camera_at 0, 0, 0
+		on_key turn_off
+	}
+
+	void turn_off {
+		set_shadows false
+		println "shadows:", shadows
+	}
+}
+
+int main {
+	sunlit S
+	println "shadows:", S.shadows
+	S.run
+}
