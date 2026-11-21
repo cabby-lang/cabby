@@ -99,7 +99,7 @@ changing for.
 | 0.43.3 | 21 November | `cabby -c --checked` catches a read past an array's end again: `-O1` at most, and `main` marked too |
 | **1.0.0** | 21 November | **Cabby 1.0**: the language and its libraries settled, tested on Debian, Arch and an Apple-processor Mac, and packaged for each |
 | 1.1.0 | 21 November | Cabby in a browser: the interpreter built for WebAssembly, with a page to try it |
-| 1.1.1 | 21 November | The game page's testing section mended (and the manual tests now catch what broke it); `labs` and `strtol` 64-bit in a browser |
+| 1.1.1 | 21 November | The game page's testing section mended (and the manual tests now catch what broke it); `labs` and `strtol` 64-bit in a browser; wasi-sdk 33 builds it too |
 
 ---
 
@@ -1735,6 +1735,9 @@ games (gui, game) in a browser.
   their `long long` twins, as a C `long` is 32 bits in WebAssembly and a
   Cabby `long` is 64: `labs(-5000000000)` was cut short (and warned of
   as `wasm/calls.c` was built).
+- The browser build builds with wasi-sdk 33 as well as 34: 33's C
+  library has no `pipe` (a worker's, for its messages), so it's declared
+  for it, with a stand-in, weak, where the C library hasn't one.
 - `.cabby_history` taken out of the repository: an interactive session's
   history from October, kept there by mistake (the session keeps it in
   `~/.cabby_history`).

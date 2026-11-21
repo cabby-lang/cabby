@@ -21,6 +21,9 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <poll.h>
+#ifdef __wasi__
+int pipe(int fd[2]);   /* (wasi-sdk 33 and older don't declare it: wasm/stubs.c) */
+#endif
 
 /* ------------------------------------------------------------ the interpreter's lock
  *

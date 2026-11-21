@@ -37,3 +37,14 @@ int dlclose(void *h) { (void)h; return 0; }
 
 /* nor other programs */
 int system(const char *command) { (void)command; return -1; }
+
+/* a pipe (a worker's, for its messages), which wasi-sdk 34 has and 33 and
+ * older don't: weak, so where the C library has one, either will do.
+ * Workers can't start in a browser anyway (there are no threads). */
+#include <errno.h>
+__attribute__((weak)) int pipe(int fd[2])
+{
+	(void)fd;
+	errno = ENOSYS;
+	return -1;
+}
