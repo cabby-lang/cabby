@@ -107,6 +107,7 @@ changing for.
 | 1.5.0 | 22 November | Physics in 3D: falling, landing, bouncing, stacking and platforms; shapes joined together |
 | 1.6.0 | 22 November | Cabby Quest in 3D, part 1: the town, its trees, houses and hero made of joined shapes, walked round tile by tile |
 | 1.6.1 | 22 November | The tutorials' files numbered with three digits (`001-hello.cby` to `108-quest-3d.cby`), so they're listed in order |
+| 1.7.0 | 22 November | Cabby Quest in 3D, part 2: the areas joined edge to edge, trees all round, the bakery's door and inside, the hills drawn |
 
 ---
 
@@ -1900,6 +1901,18 @@ manager's) is in order, 100 to 108 after 99 rather than after 10. The
 chapters keep their numbers; every mention of a file (the manual, the
 READMEs, each tutorial's "Run it" line, the tests) was changed with it.
 The names in this timeline's earlier entries are as they were then.
+
+*Version 1.7.0, Cabby Quest in 3D, part 2:* tutorial 109, and chapter
+109 of the manual. The town's `join` lines read as the 2D quest's are
+(tutorial 79): the woods, the meadow and the hills built beyond its
+edges, seen from the town (a long way, in 3D), and walked into with no
+fade, the area's name at the top left; the areas at the corners built
+too. A ring of trees three deep round every area, where no map reaches.
+The bakery's door a way: the light (the sun, the light all round and the
+sky) going down, the bakery built in the dark, and the light coming up
+on the hero inside, its walls, floor, oven, table and doormat; out by
+the mat. The hills drawn as they'll be climbed: high ground, cliffs,
+steps, a bridge high enough to walk under, ledges and tall grass.
 
 ## Along the way (dates not recorded)
 
