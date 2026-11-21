@@ -11,7 +11,9 @@
 #include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
+#ifndef __wasi__
 #include <pwd.h>
+#endif
 #include <sys/stat.h>
 
 void (*rt_panic_hook)(int line, int col) = NULL;
@@ -669,7 +671,9 @@ char rt_read_char(const char *file, int line, int col)
 	return c;
 }
 
+#ifndef __wasi__
 #include <termios.h>
+#endif
 #include <poll.h>
 
 /* read_key: one key, the moment it's pressed, without Enter. A letter (or
@@ -705,15 +709,21 @@ int64_t rt_read_key(char *out, const char *file, int line, int col)
 		rt_panic(file, line, col, "read_key after the end of the input (stop when end_of_input is true)");
 	fflush(stdout);
 	rt_flush_files();
+#ifdef __wasi__
+	bool term = false;   /* (a browser's input is given whole) */
+#else
 	bool term = isatty(0);
 	struct termios was, raw;
+#endif
 	if (term) {
+#ifndef __wasi__
 		tcgetattr(0, &was);
 		raw = was;
 		raw.c_lflag &= (tcflag_t)~(ICANON | ECHO);   /* Ctrl-C still stops the program */
 		raw.c_cc[VMIN] = 1;
 		raw.c_cc[VTIME] = 0;
 		tcsetattr(0, TCSANOW, &raw);
+#endif
 	}
 	int c = key_byte(term, -1);
 	const char *name = NULL;
@@ -764,8 +774,10 @@ int64_t rt_read_key(char *out, const char *file, int line, int col)
 			out[n++] = (char)b;
 		}
 	}
+#ifndef __wasi__
 	if (term)
 		tcsetattr(0, TCSANOW, &was);
+#endif
 	if (name) {
 		n = (int)strlen(name);
 		memcpy(out, name, (size_t)n);
@@ -1321,6 +1333,10 @@ static void on_segv(int sig)
 	_exit(RT_PANIC_EXIT);
 }
 
+#ifdef __wasi__
+/* (WebAssembly has no signals: running out of stack stops it, a trap) */
+void cby_rt_init(void) { (void)on_segv; }
+#else
 void cby_rt_init(void)
 {
 	static char altstack[64 * 1024];
@@ -1336,6 +1352,7 @@ void cby_rt_init(void)
 	sigaction(SIGSEGV, &sa, NULL);
 	sigaction(SIGBUS, &sa, NULL);
 }
+#endif
 
 int cby_rt_finish(int status)
 {
@@ -2734,8 +2751,12 @@ char *rt_dirs_home(int64_t *len)
 {
 	const char *h = getenv("HOME");
 	if (!h || !*h) {
+#ifdef __wasi__
+		h = "/";
+#else
 		struct passwd *pw = getpwuid(getuid());
 		h = pw && pw->pw_dir ? pw->pw_dir : "/";
+#endif
 	}
 	*len = (int64_t)strlen(h);
 	return path_z(h, *len);
@@ -2784,6 +2805,7 @@ void rt_texts_free(rt_text *t, int64_t count)
 
 /* ------------------------------------------------------------- the shell */
 
+#ifndef __wasi__
 #include <sys/wait.h>
 
 /* how a command ended, for a panic: "exit status 1" */
@@ -2862,6 +2884,19 @@ int32_t rt_shell_status(const char *c, int64_t n, const char *file, int line, in
 	return exit_status(st);
 }
 
+#else
+/* WebAssembly (in a browser): no other programs to run */
+char *rt_shell_run(const char *c, int64_t n, int64_t *len, const char *file, int line, int col)
+{
+	rt_panic(file, line, col, "other programs can't be run here (in a browser)");
+}
+
+int32_t rt_shell_status(const char *c, int64_t n, const char *file, int line, int col)
+{
+	rt_panic(file, line, col, "other programs can't be run here (in a browser)");
+}
+#endif
+
 static char *env_name(const char *name, int64_t n, const char *what, const char *file, int line, int col)
 {
 	char *z = tmp_z(name, n);
@@ -2908,6 +2943,7 @@ void rt_shell_unset(const char *name, int64_t n, const char *file, int line, int
 	tmp_free(z);
 }
 
+#ifndef __wasi__
 /* ---- a program run with its arguments as they are (no shell, so nothing
  * needs quoting), or a shell command given input: for shell.hby's
  * run_with, run_program and program_status. The arguments come as one
@@ -3047,6 +3083,17 @@ int64_t cby_shell_program(const char *joined, int through_shell, const char *inp
 	shell_out_len = used;
 	return (int64_t)used;
 }
+
+#else
+static _Thread_local char *shell_out;
+static _Thread_local size_t shell_out_len;
+static _Thread_local int32_t shell_last;
+
+int64_t cby_shell_program(const char *joined, int through_shell, const char *input, int has_input, int capture, int must_work)
+{
+	rt_panic(NULL, 0, 0, "other programs can't be run here (in a browser)");
+}
+#endif
 
 void cby_shell_take(char *dst)
 {

@@ -21,3 +21,7 @@ __pycache__/
 /tutorials/[0-9]*-*
 !/tutorials/[0-9]*-*.cby
 *.ll
+
+# Cabby built for WebAssembly (make wasm), and its wrappers, made from the extern lines
+/cabby.wasm
+/wasm/calls.c

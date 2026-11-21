@@ -16,7 +16,7 @@ cabby --check     prog.cby              type- and ownership-check only
 cabby --style     prog.cby              list names and calls that don't follow STYLE.md
 cabby --dump-ast  prog.cby              print the syntax tree
 cabby --dump-tokens prog.cby            print the token stream
-cabby --version                         which Cabby this is: "Cabby 1.0.0 (2026-11-21)"
+cabby --version                         which Cabby this is: "Cabby 1.1.0 (2026-11-21)"
 cabby --license                         Cabby's license (MIT)
 ```
 
@@ -28,7 +28,8 @@ Source files use the `.cby` extension; header files use `.hby`.
 
 Each version is numbered MAJOR.MINOR.PATCH (`version.h` has it): the minor
 number goes up with each stage of new things, and the patch number with
-fixes alone. [TIMELINE.md](TIMELINE.md) says what each version brought.
+fixes alone; the major number, only for a change that breaks programs
+already written. [TIMELINE.md](TIMELINE.md) says what each version brought.
 
 Cabby is free to use, change and share, in open or closed programs, under
 the MIT License: see [LICENSE](LICENSE). It comes as it is, with no
@@ -1228,7 +1229,7 @@ Run `cabby` with no file to type Cabby a piece at a time:
 
 ```
 $ cabby
-Cabby 1.0.0 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
+Cabby 1.1.0 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
 Cabby comes with ABSOLUTELY NO WARRANTY, under the MIT License; "cabby.license" for details.
 >>> int add int a, int b {
 ... 	return a + b
@@ -1692,6 +1693,12 @@ Each installs under `/usr` (or Homebrew's folders), with the manual, the
 Vim files and, on Linux, the file icons. `packaging/README.md` says
 more.
 
+**In a browser.** `make wasm-site` builds the interpreter for WebAssembly
+(with wasi-sdk) and puts in `build/wasm-site` what a web page needs to run
+Cabby programs in the visitor's own browser, with a page to try it:
+`wasm/README.md` says how to build it, how a page uses it, and what a
+browser hasn't (windows, sound, the network, threads, other programs).
+
 `use name` searches `$CABBY_LIB`, then `lib/` next to the `cabby` binary,
 then `../lib/cabby` relative to it, then the `lib/cabby` of the folder it
 was built for (`PREFIX`), then `/usr/local/lib/cabby` and `/usr/lib/cabby`.
@@ -1701,6 +1708,8 @@ was built for (`PREFIX`), then `/usr/local/lib/cabby` and `/usr/lib/cabby`.
 * Panels and bars for a desktop (a dock, a system tray) in the gui
   library.
 * In 3D (`use world`): shadows, and physics.
+* In a browser: `cabby -c` making WebAssembly, and windows and games
+  (gui, game).
 * The `?:` operator, `long double`, and backward `goto`.
 * Borrowing tells apart elements at positions written as numbers, but not
   at positions worked out as it runs (`Scores[i]` and `Scores[j]` count as

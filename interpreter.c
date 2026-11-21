@@ -14,6 +14,10 @@
 
 #include "diag.h"
 #include "runtime/rt.h"
+#ifdef __wasi__
+/* (WebAssembly: C functions are found among wasm/calls.c's wrappers) */
+#define dlsym(h, name) ((void *)cby_wasm_find(name))
+#endif
 
 /* ============================================================== values */
 
@@ -3402,7 +3406,11 @@ static Value call_extern(Interp *I, Expr *e, FnDecl *fn)
 		/* (C's printf is Cabby's, which follows stderr ...) */
 		fn->backend = dlsym(RTLD_DEFAULT, strcmp(fn->name, "printf") == 0 ? "cby_printf" : fn->name);
 		if (!fn->backend)
+#ifdef __wasi__
+			panic_at(e->loc, "the C function '%s' isn't here (in a browser)", fn->name);
+#else
 			panic_at(e->loc, "external function '%s' was not found in any loaded library", fn->name);
+#endif
 	}
 	ExprVec *args = &e->as.call.args;
 	int emark = g_next;
@@ -4346,6 +4354,11 @@ static void interp_invoke(void *obj, void *fn)
 
 static void load_natives(Program *prog)
 {
+#ifdef __wasi__
+	/* (WebAssembly: no libraries to load; what's in them is missing) */
+	(void)prog;
+	return;
+#endif
 	for (int i = 0; i < prog->natives.len; i++) {
 		NativeLib *nl = &prog->natives.items[i];
 		char path[4096];
@@ -4454,6 +4467,13 @@ int interpret(Sema *sema, int argc, char **argv)
 	rt_invoke_hook = interp_invoke;   /* timers call methods through the interpreter */
 	load_natives(sema->prog);
 	RunArgs ra = { &I, 0 };
+#ifdef __wasi__
+	/* (WebAssembly: one thread. Its calls' own stack is the browser's,
+	 * which holds about 1500 of the interpreter's nested calls at the
+	 * most: 1000, so a panic says so before the browser stops it) */
+	I.max_depth = 1000;
+	run_main(&ra);
+#else
 	if (on_main_thread(sema->prog)) {
 		/* macOS draws windows only from the program's first thread: a
 		 * window program runs there, on its stack (as many nested calls as
@@ -4475,6 +4495,7 @@ int interpret(Sema *sema, int argc, char **argv)
 			run_main(&ra);
 		pthread_attr_destroy(&attr);
 	}
+#endif
 
 	fflush(stdout);
 	release_temps(&I, 0);
