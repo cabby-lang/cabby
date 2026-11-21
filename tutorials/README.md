@@ -1,6 +1,6 @@
 # Cabby tutorials
 
-*For Cabby 1.5.0 (2026-11-22).*
+*For Cabby 1.6.0 (2026-11-22).*
 
 A hundred and six short programs, each about one keyword, feature or library, in
 an order where each uses only what came before it. Each one
@@ -260,6 +260,12 @@ between `{` and `}` to run them as one input and see them as a program would. (`
 | 105 | `105-bluetooth.cby` | `use bluetooth`: the devices known, and a search |
 | 106 | `106-dbus.cby` | `use dbus`: the services on the session bus, and who shows notifications |
 | 107 | `107-screens.cby` | `use screens`, `use mouse`, `use keyboard`: the monitors, the mouse and touchpad, and the keyboard's layouts |
+
+**Part XIX: Cabby Quest in 3D**
+
+| | File | Covers |
+|---|---|---|
+| 108 | `108-quest-3d.cby` | Cabby Quest in 3D, part 1: the town's map read into a world of shapes; trees, signs, houses and the hero joined together (`join`); walking tile by tile; a camera from above; signs |
 
 Every keyword in the language appears in at least one tutorial. The manual's
 appendices and the main README (installed as

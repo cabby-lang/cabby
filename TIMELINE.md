@@ -105,6 +105,7 @@ changing for.
 | 1.3.1 | 22 November | `cabby -c --wasm` from an installed Cabby: where it looked for the runtime, and how to have it there |
 | 1.4.0 | 22 November | Shadows in 3D (`use world`): the sun's, drawn by OpenGL and by Cabby alike |
 | 1.5.0 | 22 November | Physics in 3D: falling, landing, bouncing, stacking and platforms; shapes joined together |
+| 1.6.0 | 22 November | Cabby Quest in 3D, part 1: the town, its trees, houses and hero made of joined shapes, walked round tile by tile |
 
 ---
 
@@ -1878,6 +1879,18 @@ moves and turns with it.
 - Tested by `tests/world/physics.cby` (a bounce coming to rest, a stack,
   a jump, a wall, a platform, a car and its wheels, a coin, friction,
   ice, the Moon's gravity), interpreted and compiled.
+
+*Version 1.6.0, Cabby Quest in 3D, part 1:* tutorial 108, and chapter
+108 of the manual (Part XIX, Cabby Quest in 3D). The quest's own map,
+`quest/town.txt`, read as part 1 reads it, into a world: each tile a
+metre of ground, the path and water laid on the grass, flowers, and what
+stands there made of shapes joined together: a tree a trunk with its
+leaves, a sign a post with its board, a house its walls with a door and
+a sloping roof. The hero is a body with legs, a head and a hat joined to
+it, turned as one and walking tile by tile as in part 2, legs swinging;
+the camera above and behind, as FireRed's, not turning; signs read over
+the world. Built of Cabby's own shapes, for now: models made in Blender
+can take the place of the hero and the townspeople later.
 
 ## Along the way (dates not recorded)
 
