@@ -104,6 +104,7 @@ changing for.
 | 1.3.0 | 22 November | Windows and games in a browser: gui and game shown on the page, and played there |
 | 1.3.1 | 22 November | `cabby -c --wasm` from an installed Cabby: where it looked for the runtime, and how to have it there |
 | 1.4.0 | 22 November | Shadows in 3D (`use world`): the sun's, drawn by OpenGL and by Cabby alike |
+| 1.5.0 | 22 November | Physics in 3D: falling, landing, bouncing, stacking and platforms; shapes joined together |
 
 ---
 
@@ -1845,6 +1846,34 @@ round the camera they're cast (30 metres).
 - Mended on the way: compiled, a call to a C function taking a `bool`
   (or a `char` or `short`) wrote its argument's attribute into the call's
   type, which LLVM refuses; no library had such a function before.
+
+*Version 1.5.0, physics and joined shapes:* in a world, a shape that
+falls (`set_falls true`) is pulled down by gravity, lands on what's
+solid, bounces (`set_bounce`), slows on the ground (`set_friction`) and is
+stopped by what it runs into; `on_ground` says it's standing, and
+`push 0, 5, 0` is a jump. A shape joined to another (`Wheel.join Car`)
+moves and turns with it.
+
+- Each frame, after its handlers: falling shapes moved by their velocity
+  in steps no longer than half their size (so they can't pass through a
+  thin plane), pushed out of what's solid the shortest way, their
+  velocity turned back as much as they bounce (and not at all slower
+  than a metre a second, so they come to rest). A ball is a ball; other
+  shapes are the box round them, worked out in doubles from their place,
+  size and angles, so a shape at rest stays where it is to the last
+  digit.
+- Two falling shapes push each other apart, and stack; one standing on
+  something holds, as the ground does. A shape with a velocity that
+  doesn't fall moves by it (a platform, a lift), and what stands on it
+  rides along. `set_solid false`: fallen through, as a coin is.
+  `set_gravity` for the world (9.8; the Moon's, 1.6).
+- Joined: its place and angles counted from what it's joined to, along
+  its directions; `world_x`, `world_y` and `world_z` where it is in the
+  world; hiding or removing what it's joined to hides or removes it; and
+  a falling shape lands on what's joined to it (a car on its wheels).
+- Tested by `tests/world/physics.cby` (a bounce coming to rest, a stack,
+  a jump, a wall, a platform, a car and its wheels, a coin, friction,
+  ice, the Moon's gravity), interpreted and compiled.
 
 ## Along the way (dates not recorded)
 

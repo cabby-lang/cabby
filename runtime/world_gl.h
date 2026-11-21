@@ -505,7 +505,7 @@ static void gl_shadows(int64_t id, Lit *lit)
 	glActiveTexture(GL_TEXTURE0);
 	for (int i = 0; i < nshapes; i++) {
 		Shape *sh = &shapes[i];
-		if (sh->world != id || !sh->alive || !sh->visible || sh->scale <= 0)
+		if (sh->world != id || !shown(sh))
 			continue;
 		int np = shape_parts(sh, wo->frames);
 		for (int pi = 0; pi < np; pi++) {
@@ -574,7 +574,7 @@ static void gl_draw(int64_t id, int w, int h, float k)
 	M4 vp = m_mul(lens_of(wo, (float)w / (float)h), view_of(wo));
 	for (int i = 0; i < nshapes; i++) {
 		Shape *sh = &shapes[i];
-		if (sh->world != id || !sh->alive || !sh->visible || sh->scale <= 0)
+		if (sh->world != id || !shown(sh))
 			continue;
 		int np = shape_parts(sh, wo->frames);
 		for (int pi = 0; pi < np; pi++) {
