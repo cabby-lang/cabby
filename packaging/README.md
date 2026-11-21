@@ -46,6 +46,12 @@ The package's dependencies come from what it's linked with:
   only loaded when a program asks for them.
 - **Suggests:** the rest (PostgreSQL, eSpeak NG, CUPS, BlueZ).
 
+For `cabby -c --wasm` (compiling for a browser, `wasm/README.md`), run
+`make wasm` first: the package then takes in the runtime for WebAssembly
+too (`/usr/lib/cabby/wasm`). (The Arch and Mac packages are built from a
+fresh copy, without it: there, `CABBY_LIB` points `cabby` at a folder
+where `make wasm` was run.)
+
 ## Mac
 
 `build-tap.sh` needs Homebrew. It makes the source tarball and a formula
