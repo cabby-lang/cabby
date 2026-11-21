@@ -2,12 +2,18 @@
 // (Chromium, through Playwright), each checked against the output at its
 // end, as tests/run_tutorial_tests.sh checks them on a computer.
 //
-//     node tests/run_wasm_tests.cjs [names...]
+//     node tests/run_wasm_tests.cjs [--cases] [--compiled] [names...]
+//
+// --cases runs the program tests (tests/run_cases.cby) instead; --compiled
+// compiles each with `cabby -c --wasm` and runs what that makes, in place
+// of cabby.wasm interpreting it.
 //
 // Those that need the computer itself (a window, a server, the desktop)
 // are listed in WASM_SKIP below, with why: in a browser they say what's
 // missing instead.
 const fs = require('fs');
+const os = require('os');
+const { execFileSync } = require('child_process');
 const path = require('path');
 const { chromium } = require('playwright');
 
@@ -26,6 +32,10 @@ const WASM_SKIP = {
 	'102-media': 'the desktop', '103-printing': 'printers', '104-speech': 'speech', '105-bluetooth': 'Bluetooth',
 	'106-dbus': 'D-Bus', '107-screens': 'the desktop',
 };
+
+// what compiled WebAssembly has that the interpreter in a browser hasn't:
+// C's functions themselves (printf), and C calling back (qsort)
+const COMPILED_HAS = { '27-c-functions': 1, '28-addresses': 1 };
 
 function walk(dir, out, base) {
 	for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
@@ -53,6 +63,7 @@ function expect(src) {
 const CASE_SKIP = {
 	directory_held: "a held directory's path after it's moved (WASI can't say where an open folder is)",
 	dates_zones_languages_loosely: 'the time zones database (/usr/share/zoneinfo)',
+	callbacks_given_to_c: 'threads (pthread_create)',
 };
 
 // what a program uses that a browser hasn't
@@ -60,6 +71,8 @@ const NEEDS = /^use (shell|gui|gtk|game|world|tui|tgame|videos|sound|threads|pro
 
 (async () => {
 	const cases = process.argv.includes('--cases');
+	const compiled = process.argv.includes('--compiled');
+	const tmp = compiled ? fs.mkdtempSync(path.join(os.tmpdir(), 'cabby-wasm-')) : null;
 	const only = process.argv.slice(2).filter(a => !a.startsWith('--'));
 	const jobs = [];
 	let skip = 0;
@@ -69,7 +82,7 @@ const NEEDS = /^use (shell|gui|gtk|game|world|tui|tgame|videos|sound|threads|pro
 		for (const c of all) {
 			const name = c.slice(0, c.indexOf('\n')).trim(), src = c.slice(c.indexOf('\n') + 1);
 			if (only.length && !only.includes(name)) continue;
-			if (CASE_SKIP[name] || /^\/\/ only: compile$/m.test(src) || NEEDS.test(src) || /^extern |callback /m.test(src)) { skip++; continue; }
+			if (CASE_SKIP[name] || /^\/\/ only: compile$/m.test(src) || (compiled && /^\/\/ only: run$/m.test(src)) || NEEDS.test(src) || (!compiled && /^extern |callback /m.test(src))) { skip++; continue; }
 			jobs.push({ name, file: '/cases/' + name + '.cby', src, cwd: '/', ...expect(src) });
 		}
 	} else {
@@ -77,7 +90,7 @@ const NEEDS = /^use (shell|gui|gtk|game|world|tui|tgame|videos|sound|threads|pro
 			.filter(n => !only.length || only.includes(n)).sort((a, b) => parseInt(a) - parseInt(b));
 		for (const name of names) {
 			const src = fs.readFileSync(path.join(TUT, name + '.cby'), 'utf8');
-			if (WASM_SKIP[name] || /^use (gui|gtk|game|world|tui|tgame|videos|sound)$/m.test(src)) { skip++; continue; }
+			if ((WASM_SKIP[name] && !(compiled && COMPILED_HAS[name])) || /^use (gui|gtk|game|world|tui|tgame|videos|sound)$/m.test(src)) { skip++; continue; }
 			jobs.push({ name, file: '/tutorials/' + name + '.cby', src, cwd: '/tutorials', ...expect(src) });
 		}
 	}
@@ -107,11 +120,28 @@ const NEEDS = /^use (shell|gui|gtk|game|world|tui|tgame|videos|sound|threads|pro
 	}, files);
 	let pass = 0, fail = 0;
 	for (const j of jobs) {
+		if (compiled) {
+			// (compiled here, from a copy beside the files it uses)
+			const here = cases ? null : path.join(TUT, path.basename(j.file));
+			const src = here || path.join(tmp, path.basename(j.file));
+			const out = path.join(tmp, path.basename(j.file).replace(/\.cby$/, '.wasm'));
+			if (!here) fs.writeFileSync(src, j.src);
+			try {
+				execFileSync(path.join(ROOT, 'cabby'), ['-c', src, '--wasm', '-o', out], { stdio: 'pipe', cwd: ROOT });
+			} catch (e) {
+				fail++;
+				console.log(`FAIL ${j.name} (didn't compile)\n  ` + String(e.stderr).split('\n').slice(0, 4).join('\n  '));
+				continue;
+			}
+			j.wasm = fs.readFileSync(out).toString('base64');
+		}
 		const r = await page.evaluate(async j => {
 			const { runCabby } = await import('http://cabby.test/wasm/cabby.js');
 			let out = '', err = '';
-			const res = await runCabby({ wasm: window.cabbyWasm, files: { ...window.cabbyFiles, [j.file]: j.src },
-				args: [j.file, ...j.args], env: { CABBY_CWD: j.cwd }, stdin: j.stdin,
+			const wasm = j.wasm ? await WebAssembly.compile(Uint8Array.from(atob(j.wasm), c => c.charCodeAt(0)))
+				: window.cabbyWasm;
+			const res = await runCabby({ wasm, files: { ...window.cabbyFiles, [j.file]: j.src },
+				name: j.wasm ? j.name : 'cabby', args: j.wasm ? j.args : [j.file, ...j.args], env: { CABBY_CWD: j.cwd }, stdin: j.stdin,
 				stdout: s => { out += s; }, stderr: s => { err += s; } });
 			return { out, err, exit: res.exit };
 		}, j);
@@ -127,7 +157,7 @@ const NEEDS = /^use (shell|gui|gtk|game|world|tui|tgame|videos|sound|threads|pro
 			if (r.err) console.log('  err| ' + r.err.split('\n').slice(0, 4).join('\n  err| '));
 		}
 	}
-	console.log(`${cases ? 'program tests' : 'tutorials'} (in a browser): ${pass} passed, ${fail} failed, ` +
+	console.log(`${cases ? 'program tests' : 'tutorials'} (${compiled ? 'compiled, ' : ''}in a browser): ${pass} passed, ${fail} failed, ` +
 		`${skip} that need the computer itself`);
 	await browser.close();
 	process.exit(fail ? 1 : 0);

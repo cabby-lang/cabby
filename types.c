@@ -270,38 +270,46 @@ bool int_fits(const Type *t, int64_t v, bool v_unsigned)
 	return t->bits == 64 || (uint64_t)v < ((uint64_t)1 << t->bits);
 }
 
+/* how big a pointer is where the program runs: this computer's, or 4 for
+ * WebAssembly (cabby -c --wasm sets it before the program is checked) */
+int type_ptr_size = (int)sizeof(void *);
+
 uint64_t type_align(const Type *t)
 {
+	const uint64_t P = (uint64_t)type_ptr_size;
 	switch (t->kind) {
 	case TY_BOOL:  return 1;
 	case TY_INT:
 	case TY_FLOAT: return t->bits / 8;
 	case TY_ARRAY: return type_align(t->inner);
 	case TY_OBJECT:
-		return t->obj->kind == OBJ_OBJECT ? 8 : (t->obj->align ? t->obj->align : 1);
-	default:       return 8;
+		return t->obj->kind == OBJ_OBJECT ? P : (t->obj->align ? t->obj->align : 1);
+	case TY_FILE: case TY_REF: case TY_HANDLER: case TY_ADDRESS: case TY_CALLBACK:
+		return P;
+	default:       return 8;   /* (a str, list, lookup or slice: they hold a 64-bit length) */
 	}
 }
 
 uint64_t type_size(const Type *t)
 {
+	const uint64_t P = (uint64_t)type_ptr_size;
 	switch (t->kind) {
 	case TY_BOOL:  return 1;
 	case TY_INT:
 	case TY_FLOAT: return t->bits / 8;
 	case TY_STR:   return 16;
 	case TY_LIST:  return 24;
-	case TY_LOOKUP: return 64;
-	case TY_FILE:  return 8;
-	case TY_REF:   return 8;
+	case TY_LOOKUP: return 4 * P + 32;   /* (four pointers, four 64-bit numbers) */
+	case TY_FILE:  return P;
+	case TY_REF:   return P;
 	case TY_SLICE: return 16;
-	case TY_HANDLER: return 16;
-	case TY_ADDRESS: return 8;
-	case TY_CALLBACK: return 8;
+	case TY_HANDLER: return 2 * P;
+	case TY_ADDRESS: return P;
+	case TY_CALLBACK: return P;
 	case TY_LINK:  return 8;
 	case TY_ARRAY: return t->len * type_size(t->inner);
 	case TY_OBJECT:
-		return t->obj->kind == OBJ_OBJECT ? 8 : t->obj->size;
+		return t->obj->kind == OBJ_OBJECT ? P : t->obj->size;
 	default:       return 0;
 	}
 }

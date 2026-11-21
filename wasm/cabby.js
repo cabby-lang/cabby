@@ -6,6 +6,7 @@
 //         wasm: await WebAssembly.compileStreaming(fetch('cabby.wasm')),
 //         files: { '/lib/files.hby': '...', '/prog.cby': 'int main {\n\tprintln "Hi"\n}\n' },
 //         args: ['/prog.cby'],
+//         name: 'cabby',     // argv[0] (a program compiled with -c --wasm: its own name)
 //         stdin: 'what input() and read_line read',
 //         stdout: text => ..., stderr: text => ...,
 //     });
@@ -54,7 +55,7 @@ export async function runCabby(options) {
 		const bytes = typeof content === 'string' ? enc.encode(content) : new Uint8Array(content);
 		d.dir.set(parts[parts.length - 1], newFile(bytes));
 	}
-	const args = ['cabby', ...(options.args || [])];
+	const args = [options.name || 'cabby', ...(options.args || [])];   // (a compiled program's name: its argv[0])
 	const env = Object.entries({ CABBY_LIB: '/lib', HOME: '/home', CABBY_CWD: '/', ...(options.env || {}) })
 		.map(([k, v]) => `${k}=${v}`);
 	const stdin = typeof options.stdin === 'string' ? enc.encode(options.stdin) : (options.stdin || new Uint8Array(0));
@@ -376,8 +377,12 @@ export async function runCabby(options) {
 		instance.exports._start();
 	} catch (e) {
 		if (e instanceof Exit) exit = e.code;
-		else {
-			stderr(outDec.decode() + `cabby.wasm stopped: ${e.message}\n`);
+		else if (e instanceof RangeError && /call stack/i.test(e.message)) {
+			// (the browser's own stack, full: as Cabby says it on a computer)
+			stderr(outDec.decode() + 'panic: stack overflow: too many nested calls\n');
+			exit = 101;
+		} else {
+			stderr(outDec.decode() + `${options.name || 'cabby.wasm'} stopped: ${e.message}\n`);
 			exit = 134;
 		}
 	}

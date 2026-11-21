@@ -344,6 +344,10 @@ install: all
 	rm -f $(DESTDIR)$(PREFIX)/lib/cabby/libcabby*.so $(DESTDIR)$(PREFIX)/lib/cabby/*.link
 	for f in $(GUI_TARGETS) $(GTK_TARGETS) $(TGAME_TARGETS) lib/libcabbytui.so lib/libcabbytui.a lib/tui.link lib/libcabbyprocesses.so lib/libcabbyprocesses.a lib/processes.link $(SOUND_TARGETS) $(GAME_TARGETS) $(WORLD_TARGETS) $(VIDEOS_TARGETS); do \
 		if [ -f $$f ]; then install -m 644 $$f $(DESTDIR)$(PREFIX)/lib/cabby/; fi; done
+	@# the runtime for WebAssembly (cabby -c --wasm), when make wasm has built it
+	rm -rf $(DESTDIR)$(PREFIX)/lib/cabby/wasm
+	if [ -f lib/wasm/libcabbyrt.a ]; then install -d $(DESTDIR)$(PREFIX)/lib/cabby/wasm && \
+		install -m 644 lib/wasm/libcabbyrt.a $(DESTDIR)$(PREFIX)/lib/cabby/wasm/; fi
 	install -d $(DESTDIR)$(PREFIX)/share/doc/cabby/tutorials/geometry
 	install -m 644 README.md STYLE.md $(DESTDIR)$(PREFIX)/share/doc/cabby/
 	install -m 644 tutorials/README.md tutorials/tutorials.md tutorials/*.cby $(DESTDIR)$(PREFIX)/share/doc/cabby/tutorials/
@@ -439,6 +443,9 @@ uninstall:
 # nothing of the computer's own.
 WASI_SDK ?= $(firstword $(wildcard $(HOME)/tools/wasi-sdk-*) $(wildcard /opt/wasi-sdk))
 WASM_CC := $(WASI_SDK)/bin/clang
+ifneq ($(WASI_SDK),)
+CFLAGS += -DCABBY_WASI_SDK='"$(WASI_SDK)"'
+endif
 WASM_STACK := 33554432
 WASM_CFLAGS := --target=wasm32-wasip1 -std=c11 -O2 -D_POSIX_C_SOURCE=200809L -D_DEFAULT_SOURCE \
 	-D_WASI_EMULATED_SIGNAL -D_WASI_EMULATED_PROCESS_CLOCKS -D_WASI_EMULATED_MMAN -D_WASI_EMULATED_GETPID \
@@ -452,7 +459,22 @@ WASM_SRC := main.c arena.c diag.c util.c lexer.c ast.c ast_print.c parser.c type
 	runtime/secrets.c runtime/zones.c runtime/images.c runtime/linux.c runtime/os.c
 WASM_O := $(WASM_SRC:%.c=build/wasm/%.o)
 
-wasm: cabby.wasm
+wasm: cabby.wasm lib/wasm/libcabbyrt.a
+
+# lib/wasm/libcabbyrt.a: the runtime for programs compiled for WebAssembly
+# (cabby -c --wasm), with a stand-in for each of the runtime's functions
+# that isn't in it (made from the libraries' extern lines), so that a
+# program using one still builds, and says so if it's called
+WASM_RT_O := $(filter build/wasm/runtime/%,$(WASM_O))
+lib/wasm/libcabbyrt.a: $(WASM_RT_O) build/wasm/rt-missing.o
+	@mkdir -p lib/wasm
+	rm -f $@
+	$(WASI_SDK)/bin/llvm-ar rcs $@ $^
+build/wasm/rt-missing.c: tools/make-wasm-calls.py $(WASM_RT_O) $(wildcard lib/*.hby)
+	$(WASI_SDK)/bin/llvm-nm --defined-only -j $(WASM_RT_O) | sort -u > build/wasm/rt-defined.txt
+	python3 tools/make-wasm-calls.py --missing build/wasm/rt-defined.txt $@ lib/*.hby
+build/wasm/rt-missing.o: build/wasm/rt-missing.c
+	$(WASM_CC) $(WASM_CFLAGS) -c $< -o $@
 
 # build/wasm-site: what a web page needs to run Cabby (wasm/README.md):
 # cabby.wasm, cabby.js, cabby-worker.js, the libraries' headers in one
@@ -474,6 +496,6 @@ wasm/calls.c: tools/make-wasm-calls.py $(wildcard lib/*.hby) $(wildcard tutorial
 		python3 tools/make-wasm-calls.py $@ lib/*.hby tutorials/*.cby tests/*.cby tests/*/*.cby
 
 clean:
-	rm -rf build build-debug cabby cabby.wasm lib/libcabbyrt.a lib/libcabbygui.so lib/libcabbygui.a lib/gui.link lib/libcabbytui.so lib/libcabbytui.a lib/tui.link $(PROC_TARGETS) $(SOUND_TARGETS) lib/libcabbygame.so lib/libcabbygame.a lib/game.link lib/libcabbygtk.so lib/libcabbygtk.a lib/gtk.link lib/gtk.hby lib/libcabbytgame.so lib/libcabbytgame.a lib/tgame.link lib/tgame.hby lib/libcabbysdlgui.so lib/libcabbysdlgui.a lib/sdlgui.link lib/sdlgui.hby lib/libcabbyworld.so lib/libcabbyworld.a lib/world.link lib/libcabbyvideos.so lib/libcabbyvideos.a lib/videos.link
+	rm -rf build build-debug cabby cabby.wasm lib/wasm lib/libcabbyrt.a lib/libcabbygui.so lib/libcabbygui.a lib/gui.link lib/libcabbytui.so lib/libcabbytui.a lib/tui.link $(PROC_TARGETS) $(SOUND_TARGETS) lib/libcabbygame.so lib/libcabbygame.a lib/game.link lib/libcabbygtk.so lib/libcabbygtk.a lib/gtk.link lib/gtk.hby lib/libcabbytgame.so lib/libcabbytgame.a lib/tgame.link lib/tgame.hby lib/libcabbysdlgui.so lib/libcabbysdlgui.a lib/sdlgui.link lib/sdlgui.hby lib/libcabbyworld.so lib/libcabbyworld.a lib/world.link lib/libcabbyvideos.so lib/libcabbyvideos.a lib/videos.link
 
 -include $(wildcard $(BUILD)/*.d $(BUILD)/tools/*.d $(BUILD)/runtime/*.d)

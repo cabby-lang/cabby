@@ -9,6 +9,7 @@
 #include <sys/stat.h>
 #include <sys/wait.h>
 #include <unistd.h>
+#include <dirent.h>
 
 #include "diag.h"
 #include "runtime/rt.h"
@@ -180,6 +181,10 @@ static bool is_agg(const Type *t)
 	}
 }
 
+/* --wasm: for WebAssembly (wasm32-wasip1), where a pointer, a size and a C
+ * long are 32 bits (a Cabby long is still 64) */
+static bool codegen_wasm;
+
 static const char *llty(CG *G, const Type *t)
 {
 	switch (t->kind) {
@@ -212,7 +217,10 @@ static const char *llty(CG *G, const Type *t)
 /* SSA (register) type. */
 static const char *vty(CG *G, const Type *t) { return t->kind == TY_BOOL ? "i1" : llty(G, t); }
 
-static uint64_t size_of(const Type *t) { return t->kind == TY_OBJECT && t->obj->kind == OBJ_OBJECT ? 8 : type_size(t); }
+static uint64_t size_of(const Type *t)
+{
+	return t->kind == TY_OBJECT && t->obj->kind == OBJ_OBJECT ? (uint64_t)type_ptr_size : type_size(t);
+}
 
 static int64_t norm(int64_t v, const Type *t)
 {
@@ -498,13 +506,13 @@ static void emit_drop(CG *G, Type *t, Op ptr)
 		/* a list that may hold more lists (a chain of nodes) is dropped
 		 * through the runtime, which keeps the nesting shallow */
 		if (may_nest(t->inner))
-			emit(G, "call void @cby_drop_nested(ptr %s, i64 24, ptr @\"ldrop.%d\")", ptr.s, list_id(G, t->inner));
+			emit(G, "call void @cby_drop_nested(ptr %s, i64 %" PRIu64 ", ptr @\"ldrop.%d\")", ptr.s, type_size(t), list_id(G, t->inner));
 		else
 			emit(G, "call void @\"ldrop.%d\"(ptr %s)", list_id(G, t->inner), ptr.s);
 		break;
 	case TY_LOOKUP:
 		if (may_nest(t->inner) || (t->key && may_nest(t->key)))
-			emit(G, "call void @cby_drop_nested(ptr %s, i64 64, ptr @\"kdrop.%d\")", ptr.s, lookup_id(G, t));
+			emit(G, "call void @cby_drop_nested(ptr %s, i64 %" PRIu64 ", ptr @\"kdrop.%d\")", ptr.s, type_size(t), lookup_id(G, t));
 		else
 			emit(G, "call void @\"kdrop.%d\"(ptr %s)", lookup_id(G, t), ptr.s);
 		break;
@@ -2574,13 +2582,16 @@ static const char *c_param_attr(const Type *t)
 	return "";
 }
 
+static bool c_long32(const FnDecl *fn, const Type *t);
+
 static const char *extern_sig(CG *G, FnDecl *fn)
 {
 	char buf[1024];
 	size_t n = 0;
 	for (int i = 0; i < fn->params.len; i++) {
 		Type *t = fn->params.items[i]->type->resolved;
-		const char *ty = (t->kind == TY_STR || t->kind == TY_REF) ? "ptr" : t->kind == TY_HANDLER ? "ptr, ptr" : vty(G, t);
+		const char *ty = (t->kind == TY_STR || t->kind == TY_REF) ? "ptr" : t->kind == TY_HANDLER ? "ptr, ptr"
+				 : c_long32(fn, t) ? "i32" : vty(G, t);
 		n += (size_t)snprintf(buf + n, sizeof buf - n, "%s%s%s", i ? ", " : "", ty, c_param_attr(t));
 	}
 	if (fn->is_variadic)
@@ -2590,15 +2601,46 @@ static const char *extern_sig(CG *G, FnDecl *fn)
 
 /* an extern function's C name (C's printf is Cabby's, which follows stderr
  * and the files a call is sent to) */
-static const char *c_name(const FnDecl *fn) { return strcmp(fn->name, "printf") == 0 ? "cby_printf" : fn->name; }
+static const char *c_name(const FnDecl *fn)
+{
+	if (strcmp(fn->name, "printf") == 0)
+		return "cby_printf";
+	/* (in WebAssembly a C long is 32 bits: these, as their long long twins,
+	 * keep a Cabby long's 64) */
+	static const char *const twins[][2] = { { "labs", "llabs" }, { "atol", "atoll" }, { "strtol", "strtoll" },
+						{ "strtoul", "strtoull" } };
+	if (codegen_wasm)
+		for (size_t i = 0; i < sizeof twins / sizeof *twins; i++)
+			if (strcmp(fn->name, twins[i][0]) == 0)
+				return twins[i][1];
+	return fn->name;
+}
+
+/* A Cabby long that's a C long or size_t, 32 bits in WebAssembly: one of
+ * C's own functions (not Cabby's runtime, whose are 64), other than those
+ * whose C type is 64 bits there too (long long, time_t, off_t) */
+static bool c_long32(const FnDecl *fn, const Type *t)
+{
+	if (!codegen_wasm || t->kind != TY_INT || t->bits != 64)
+		return false;
+	const char *n = c_name(fn);
+	if (strncmp(n, "cby_", 4) == 0 || strncmp(n, "rt_", 3) == 0)
+		return false;
+	static const char *const wide[] = { "llabs", "atoll", "strtoll", "strtoull", "time", "difftime", "lseek",
+					    "clock", "imaxabs", "mktime", "timegm", NULL };
+	for (const char *const *w = wide; *w; w++)
+		if (strcmp(n, *w) == 0)
+			return false;
+	return true;
+}
 
 static void declare_extern(CG *G, FnDecl *fn)
 {
 	if (!mark_declared(G, astr(G, "extern.%s", fn->name)))
 		return;
 	Type *r = fn->ret_type;
-	out(G->decl, "declare%s %s @%s(%s)\n", c_param_attr(r), r->kind == TY_VOID ? "void" : vty(G, r), c_name(fn),
-	    extern_sig(G, fn));
+	out(G->decl, "declare%s %s @%s(%s)\n", c_param_attr(r),
+	    r->kind == TY_VOID ? "void" : c_long32(fn, r) ? "i32" : vty(G, r), c_name(fn), extern_sig(G, fn));
 }
 
 static Op gen_extern_call(CG *G, Expr *e, FnDecl *fn)
@@ -2628,6 +2670,12 @@ static Op gen_extern_call(CG *G, Expr *e, FnDecl *fn)
 			emit(G, "%s = extractvalue { ptr, ptr } %s, 1", f.s, h.s);
 			v = op("%s, ptr %s", o.s, f.s);
 			ty = "ptr";
+		} else if (fixed && c_long32(fn, pt)) {
+			/* (a C long, 32 bits: the Cabby long cut to it) */
+			Op w = gen_val(G, a);
+			v = tmp(G);
+			emit(G, "%s = trunc i64 %s to i32", v.s, w.s);
+			ty = "i32";
 		} else {
 			v = gen_val(G, a);
 			ty = vty(G, a->ty);
@@ -2636,7 +2684,8 @@ static Op gen_extern_call(CG *G, Expr *e, FnDecl *fn)
 				      fixed ? c_param_attr(pt) : "", v.s);
 	}
 	Type *r = fn->ret_type;
-	const char *rt = r->kind == TY_VOID ? "void" : vty(G, r);
+	bool narrow = c_long32(fn, r);
+	const char *rt = r->kind == TY_VOID ? "void" : narrow ? "i32" : vty(G, r);
 	const char *callee = astr(G, "%s (%s)", rt, extern_sig(G, fn));
 	if (r->kind == TY_VOID) {
 		emit(G, "call %s @%s(%.*s)", callee, c_name(fn), (int)n, buf);
@@ -2644,6 +2693,12 @@ static Op gen_extern_call(CG *G, Expr *e, FnDecl *fn)
 	}
 	Op res = tmp(G);
 	emit(G, "%s = call %s @%s(%.*s)", res.s, callee, c_name(fn), (int)n, buf);
+	if (narrow) {
+		/* (and a C long back to a Cabby long) */
+		Op w = tmp(G);
+		emit(G, "%s = %s i32 %s to i64", w.s, r->is_signed ? "sext" : "zext", res.s);
+		return w;
+	}
 	return res;
 }
 
@@ -2904,7 +2959,7 @@ static void gen_recovering(CG *G, Stmt *s)
 	Op t = tmp(G), j = tmp(G), ok = tmp(G);
 	Op body = lbl(G, "try"), fail = lbl(G, "caught"), done = lbl(G, "tried");
 	emit(G, "%s = call ptr @cby_try_begin()", t.s);
-	emit(G, "%s = call i32 @_setjmp(ptr %s)", j.s, t.s);
+	emit(G, "%s = call i32 @%s(ptr %s)", j.s, codegen_wasm ? "setjmp" : "_setjmp", t.s);   /* (WebAssembly's is setjmp) */
 	emit(G, "%s = icmp eq i32 %s, 0", ok.s, j.s);
 	emit_term(G, "br i1 %s, label %%%s, label %%%s", ok.s, body.s, fail.s);
 	place_label(G, body);
@@ -3108,6 +3163,10 @@ static bool codegen_checked;   /* --checked */
  * main too, or what's inlined into it goes unchecked */
 static const char *checked_attrs(void)
 {
+	/* (in WebAssembly, `else`'s setjmp is its exceptions, which a function
+	 * from IR has only when it says so) */
+	if (codegen_wasm)
+		return " \"target-features\"=\"+exception-handling\"";
 	const char *san = getenv("CABBY_SANITIZE");
 	return codegen_checked || (san && *san == '1') ? " sanitize_address" : "";
 }
@@ -3292,9 +3351,11 @@ static void gen_fdrop_helper(CG *G, int id)
 static void gen_obj_alloc(CG *G, Op h, int id)
 {
 	Op raw = tmp(G), none = tmp(G), bad = lbl(G, "nomem"), ok = lbl(G, "mem");
-	need_intrinsic(G, "extern.malloc", "declare ptr @malloc(i64)");   /* (a program's own extern malloc is the same) */
-	emit(G, "%s = call ptr @malloc(i64 add (i64 ptrtoint (ptr getelementptr (%%O.%d, ptr null, i32 1) to i64), i64 16))",
-	     raw.s, id);
+	/* (a program's own extern malloc is the same; a size is 32 bits in WebAssembly) */
+	const char *sz = codegen_wasm ? "i32" : "i64";
+	need_intrinsic(G, "extern.malloc", codegen_wasm ? "declare ptr @malloc(i32)" : "declare ptr @malloc(i64)");
+	emit(G, "%s = call ptr @malloc(%s add (%s ptrtoint (ptr getelementptr (%%O.%d, ptr null, i32 1) to %s), %s 16))",
+	     raw.s, sz, sz, id, sz, sz);
 	emit(G, "%s = icmp eq ptr %s, null", none.s, raw.s);
 	emit_term(G, "br i1 %s, label %%%s, label %%%s, !prof !0", none.s, bad.s, ok.s);
 	place_label(G, bad);
@@ -3648,7 +3709,9 @@ static void gen_main_wrapper(CG *G)
 	FnDecl *m = G->S->main_fn;
 	bool args = m->params.len == 2;
 	bool ret_int = m->ret_type->kind != TY_VOID;
-	out(G->funcs, "define i32 @main(i32 %%argc, ptr %%argv)%s {\n", checked_attrs());
+	/* (WASI's start calls the C main(argc, argv) by its own name) */
+	out(G->funcs, "define i32 @%s(i32 %%argc, ptr %%argv)%s {\n", codegen_wasm ? "__main_argc_argv" : "main",
+	    checked_attrs());
 	out(G->funcs, "\tcall void @cby_rt_init()\n");
 	if (args) {
 		out(G->funcs, "\t%%args = call ptr @cby_args(i32 %%argc, ptr %%argv)\n");
@@ -4230,8 +4293,9 @@ void codegen_emit(Sema *S, FILE *o)
 	fclose(G.decl);
 	fclose(G.funcs);
 	fprintf(o, "; generated by cabby from %s\n\n", S->prog->main_file);
-	fprintf(o, "%s\n%s\n%s%s%s%s\n%s\n!0 = !{!\"branch_weights\", i32 1, i32 2000}\n", G.types_buf, G.glob_buf,
-		runtime_decls, runtime_decls_files, runtime_decls_rest, G.decl_buf, G.func_buf);
+	fprintf(o, "%s\n%s\n%s%s%s%s%s\n%s\n!0 = !{!\"branch_weights\", i32 1, i32 2000}\n", G.types_buf, G.glob_buf,
+		runtime_decls, runtime_decls_files, runtime_decls_rest,
+		codegen_wasm ? "declare i32 @setjmp(ptr) returns_twice\n" : "", G.decl_buf, G.func_buf);
 	free(G.types_buf);
 	free(G.glob_buf);
 	free(G.decl_buf);
@@ -4296,6 +4360,94 @@ static bool clang_new_enough(const char *cc)
 	return ok;
 }
 
+/* ---- for WebAssembly (--wasm): wasi-sdk's clang, and the runtime built
+ * for it (lib/wasm/libcabbyrt.a, from make wasm) */
+
+/* wasi-sdk: $CABBY_WASI_SDK, the one Cabby was built with, or one in
+ * ~/tools or /opt */
+static const char *find_wasi_sdk(char *buf, size_t size)
+{
+	const char *tries[4] = { getenv("CABBY_WASI_SDK"), NULL, NULL, "/opt/wasi-sdk" };
+#ifdef CABBY_WASI_SDK
+	tries[1] = CABBY_WASI_SDK;
+#endif
+	char home_tools[4096] = "";
+	const char *home = getenv("HOME");
+	if (home && *home) {
+		/* (the newest of ~/tools/wasi-sdk-*) */
+		snprintf(home_tools, sizeof home_tools, "%s/tools", home);
+		DIR *d = opendir(home_tools);
+		char best[256] = "";
+		if (d) {
+			struct dirent *e;
+			while ((e = readdir(d)))
+				if (strncmp(e->d_name, "wasi-sdk", 8) == 0 && strcmp(e->d_name, best) > 0)
+					snprintf(best, sizeof best, "%s", e->d_name);
+			closedir(d);
+		}
+		if (*best) {
+			size_t n = strlen(home_tools);
+			snprintf(home_tools + n, sizeof home_tools - n, "/%s", best);
+			tries[2] = home_tools;
+		}
+	}
+	for (int i = 0; i < 4; i++) {
+		if (!tries[i] || !*tries[i])
+			continue;
+		snprintf(buf, size, "%s/bin/clang", tries[i]);
+		if (access(buf, X_OK) == 0)
+			return buf;
+	}
+	return NULL;
+}
+
+static int compile_wasm(Sema *S, const CompileOptions *opt, const char *out_name)
+{
+	char rt[4096] = "";
+	for (const char *const *d = opt->lib_dirs; d && *d; d++) {
+		snprintf(rt, sizeof rt, "%s/wasm/libcabbyrt.a", *d);
+		if (access(rt, R_OK) == 0)
+			break;
+		rt[0] = '\0';
+	}
+	if (!*rt) {
+		fprintf(stderr, "cabby: --wasm needs the runtime built for WebAssembly (lib/wasm/libcabbyrt.a): "
+			"'make wasm' in the cabby folder, with wasi-sdk\n");
+		return 1;
+	}
+	char cc[4096];
+	if (!find_wasi_sdk(cc, sizeof cc)) {
+		fprintf(stderr, "cabby: --wasm needs wasi-sdk (https://github.com/WebAssembly/wasi-sdk/releases), "
+			"unpacked into ~/tools or /opt/wasi-sdk, or set CABBY_WASI_SDK to where it is\n");
+		return 1;
+	}
+	char ll[] = "/tmp/cabby-XXXXXX.ll";
+	int fd = mkstemps(ll, 3);
+	if (fd < 0) {
+		fprintf(stderr, "cabby: can't create a temporary file\n");
+		return 1;
+	}
+	FILE *f = fdopen(fd, "w");
+	codegen_checked = false;
+	codegen_emit(S, f);
+	fclose(f);
+	char olevel[8];
+	snprintf(olevel, sizeof olevel, "-O%d", opt->opt_level);
+	/* (setjmp as WebAssembly's exceptions, for panics caught by `else`; the
+	 * C library's emulated parts the runtime uses; 8 MB of stack; and no
+	 * names, which only a debugger reads: hello is 17 KB, not 420) */
+	char *argv[] = { cc, "--target=wasm32-wasip1", olevel, "-Wno-override-module", "-mexception-handling", "-mllvm", "-wasm-enable-sjlj",
+			 "-mllvm", "-wasm-use-legacy-eh=false", ll, rt, "-lsetjmp", "-lwasi-emulated-signal",
+			 "-lwasi-emulated-process-clocks", "-lwasi-emulated-mman", "-lwasi-emulated-getpid", "-lm",
+			 "-Wl,-z,stack-size=8388608", "-Wl,--max-memory=2147483648", "-Wl,--strip-all", "-o", (char *)out_name, NULL };
+	int rc = run(argv);
+	unlink(ll);
+	if (rc != 0) {
+		fprintf(stderr, "cabby: building WebAssembly with '%s' failed (see the messages above)\n", cc);
+		return 1;
+	}
+	return 0;
+}
 
 int compile_program(Sema *S, const char *src_path, const CompileOptions *opt)
 {
@@ -4311,10 +4463,19 @@ int compile_program(Sema *S, const char *src_path, const CompileOptions *opt)
 			*dot = '\0';
 		if (opt->emit_llvm)
 			strncat(out_name, ".ll", sizeof out_name - strlen(out_name) - 1);
+		else if (opt->wasm)
+			strncat(out_name, ".wasm", sizeof out_name - strlen(out_name) - 1);
 		else if (strcmp(out_name, base) == 0)
 			strncat(out_name, ".out", sizeof out_name - strlen(out_name) - 1);
 	}
 
+	codegen_wasm = opt->wasm;
+	if (opt->wasm && opt->checked) {
+		fprintf(stderr, "cabby: --checked and --wasm can't go together (AddressSanitizer isn't there in WebAssembly)\n");
+		return 1;
+	}
+	if (opt->wasm && !opt->emit_llvm)
+		return compile_wasm(S, opt, out_name);
 	if (opt->emit_llvm) {
 		FILE *f = fopen(out_name, "w");
 		if (!f) {

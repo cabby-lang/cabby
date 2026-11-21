@@ -28,3 +28,4 @@ __pycache__/
 
 # the interactive session's history (it keeps it in ~/.cabby_history)
 .cabby_history
+/lib/wasm/

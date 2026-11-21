@@ -3867,6 +3867,30 @@ int cby_printf(const char *fmt, ...)
 {
 	va_list ap;
 	va_start(ap, fmt);
+#ifdef __wasi__
+	/* (a C long is 32 bits in WebAssembly, and a Cabby long 64: %ld is
+	 * read as %lld) */
+	char wide[1024];
+	size_t w = 0;
+	for (const char *f = fmt; *f && w < sizeof wide - 2; f++) {
+		wide[w++] = *f;
+		if (*f != '%')
+			continue;
+		if (f[1] == '%') {
+			wide[w++] = *++f;
+			continue;
+		}
+		while (f[1] && strchr("-+ #0123456789.*", f[1]) && w < sizeof wide - 2)
+			wide[w++] = *++f;
+		if (f[1] == 'l' && f[2] != 'l' && w < sizeof wide - 3) {
+			wide[w++] = 'l';
+			wide[w++] = *++f;
+		}
+	}
+	wide[w] = '\0';
+	if (strlen(fmt) < sizeof wide - 2)
+		fmt = wide;
+#endif
 	int n = vfprintf(out_stream(), fmt, ap);
 	va_end(ap);
 	size_t fl = strlen(fmt);

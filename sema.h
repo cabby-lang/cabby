@@ -351,6 +351,7 @@ Type *type_promote(Type *t);            /* C integer promotion */
 Type *type_common(Type *a, Type *b);    /* C usual arithmetic conversions */
 bool  int_fits(const Type *t, int64_t v, bool v_unsigned);
 uint64_t type_size(const Type *t);
+extern int type_ptr_size;   /* a pointer's size where the program runs (4: WebAssembly) */
 uint64_t type_align(const Type *t);
 const char *type_str(const Type *t, char *buf, size_t size);
 

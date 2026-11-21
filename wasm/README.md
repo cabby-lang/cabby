@@ -1,8 +1,15 @@
 # Cabby in a browser
 
-Cabby's interpreter, built for WebAssembly, runs a program in a web page,
-with nothing installed and nothing sent anywhere. It's the same interpreter
-as `cabby prog.cby`: the same checks, the same messages, the same results.
+Cabby runs in a web page, with nothing installed and nothing sent
+anywhere, two ways:
+
+- **Interpreted**: Cabby's interpreter, built for WebAssembly
+  (`cabby.wasm`), runs a program from its source, so a page can take a
+  program typed into it. It's the same interpreter as `cabby prog.cby`:
+  the same checks, the same messages, the same results.
+- **Compiled**: `cabby -c prog.cby --wasm` makes `prog.wasm`, which a page
+  runs as fast as a native program (2 to 30 times faster than
+  interpreted). For programs a page offers ready-made: a demo, a game.
 
 ## Building it
 
@@ -14,8 +21,9 @@ the Makefile looks for it, or say where it is:
     make wasm-site                          # (finds ~/tools/wasi-sdk-*)
     make wasm-site WASI_SDK=/opt/wasi-sdk
 
-`make wasm` makes just `cabby.wasm`. `make wasm-site` puts in
-`build/wasm-site` everything a page needs:
+`make wasm` makes `cabby.wasm`, and the runtime that compiled programs
+need (`lib/wasm/libcabbyrt.a`, which `make install` installs too).
+`make wasm-site` puts in `build/wasm-site` everything a page needs:
 
 | File | What it is |
 |---|---|
@@ -30,6 +38,20 @@ To try it on your computer:
     python3 -m http.server -d build/wasm-site    # then open http://localhost:8000
 
 (A page loaded straight from a file, `file://`, can't start a worker.)
+
+## Compiling for it
+
+    cabby -c prog.cby --wasm               # prog.wasm
+    cabby -c prog.cby --wasm -o game.wasm
+
+It needs wasi-sdk too: `cabby` looks in `$CABBY_WASI_SDK`, then where it
+was when Cabby was built, then `~/tools/wasi-sdk-*` and `/opt/wasi-sdk`.
+A program is small: `hello` is 16 KB (7 KB compressed), and one reading
+and writing JSON about 100 KB (40 KB). It needs nothing else: not
+`cabby.wasm`, nor the headers.
+
+A program that uses a library a browser hasn't (a window, the network)
+still builds, and says so with a panic when it gets there.
 
 ## Using it from a web page
 
@@ -55,6 +77,15 @@ The program is `/home/prog.cby`, run from `/home`, so `files` given as
 `/home/x` are just `x` to it. To stop one, `worker.terminate()` and make a
 new worker. A worker runs one program at a time.
 
+A compiled program is sent the same way, as `program`: its address (from
+where `cabby-worker.js` is, or a full one), or its bytes. It's fetched and
+compiled once, however often it runs; `cabby.wasm` isn't fetched at all
+for it.
+
+```js
+worker.postMessage({ program: 'programs/quest.wasm', args: ['--easy'], stdin: '' });
+```
+
 Without a worker, `runCabby` in `cabby.js` runs one directly, and gives back
 every file as it was left (what the program wrote too). Its comments say
 how. It works anywhere JavaScript runs WebAssembly with exceptions (Chrome
@@ -71,16 +102,20 @@ isn't here (in a browser)*:
 - sound, video, speech, MIDI, printers, Bluetooth, D-Bus and the desktop
 - the network, other programs (`shell`, `processes`) and threads
 - SQLite, zlib, OpenSSL, and the time zones' database
-- C functions beyond the libraries' own (`extern`): there's no libffi, so
-  each C function is called through a wrapper made for it beforehand
-  (`wasm/calls.c`, made by `tools/make-wasm-calls.py` from every `extern`
-  line in the libraries, tutorials and tests); variadic ones (`printf`) and
-  callbacks (`qsort`) can't be
-- the interactive session, and compiling (`-c`)
+- interpreted, C functions beyond the libraries' own (`extern`): there's
+  no libffi, so each C function is called through a wrapper made for it
+  beforehand (`wasm/calls.c`, made by `tools/make-wasm-calls.py` from
+  every `extern` line in the libraries, tutorials and tests); variadic
+  ones (`printf`) and callbacks (`qsort`) can't be. Compiled, they all
+  work, as on a computer.
+- the interactive session, and compiling (`-c`) in the page itself
 
 Files are the program's own: those it's given and those it writes, kept in
-memory until it ends. Calls can be 1,000 deep (a browser's stack is small),
-where a computer allows 25,000 or more.
+memory until it ends. Interpreted, calls can be 1,000 deep (a browser's
+stack is small), where a computer allows 25,000 or more; compiled, many
+thousands, until the browser's stack is full (a panic: *stack overflow*).
+The address checks the interpreter makes (reading past the end, an address
+kept too long) aren't made by compiled programs, in a browser or out.
 
 ## Testing it
 
@@ -88,8 +123,9 @@ The tutorials and the program tests, run by `cabby.wasm` in Chromium (through
 Playwright, which `npm install playwright` gives) and checked as `make test`
 checks them; those needing what a browser hasn't are counted, not run:
 
-    node tests/run_wasm_tests.cjs           # the tutorials
-    node tests/run_wasm_tests.cjs --cases   # the program tests
+    node tests/run_wasm_tests.cjs                      # the tutorials
+    node tests/run_wasm_tests.cjs --cases              # the program tests
+    node tests/run_wasm_tests.cjs --compiled [--cases] # each compiled with -c --wasm
 
 (Node can run `cabby.wasm` too, with `wasm/run-node.mjs`, but Node 22's V8
 can crash collecting garbage around WebAssembly's exceptions, so the

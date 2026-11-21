@@ -38,6 +38,7 @@ static void usage(FILE *f)
 		"                          --emit-llvm   write the LLVM IR instead\n"
 		"                          --checked     with AddressSanitizer: reading past the end, use after\n"
 		"                                        free and (on Linux) memory never freed, said where\n"
+		"                          --wasm        build WebAssembly (prog.wasm), to run in a browser\n"
 		"  --check <file>        type- and ownership-check only\n"
 		"  --style <file>        check, then list names that don't follow STYLE.md\n"
 		"  --dump-ast <file>     print the parsed syntax tree\n"
@@ -136,6 +137,7 @@ int main(int argc, char **argv)
 	bool emit_llvm = false;
 	int opt_level = 2;
 	bool checked = false;
+	bool wasm = false;
 	int prog_argc = 0;
 	char **prog_argv = NULL;
 
@@ -159,6 +161,11 @@ int main(int argc, char **argv)
 		}
 		if (mode == MODE_COMPILE && strcmp(a, "--checked") == 0) {
 			checked = true;
+			continue;
+		}
+		if (mode == MODE_COMPILE && strcmp(a, "--wasm") == 0) {
+			wasm = true;
+			type_ptr_size = 4;   /* (wasm32: before the program is checked, which lays out its structs) */
 			continue;
 		}
 		if (mode == MODE_COMPILE && a[0] == '-' && a[1] == 'O' && a[2] >= '0' && a[2] <= '3' && !a[3]) {
@@ -274,7 +281,7 @@ int main(int argc, char **argv)
 		break;
 	}
 	case MODE_COMPILE: {
-		CompileOptions co = { output, emit_llvm, opt_level, library_dirs(&arena), checked };
+		CompileOptions co = { output, emit_llvm, opt_level, library_dirs(&arena), checked, wasm };
 		rc = compile_program(&sema, path, &co);
 		break;
 	}

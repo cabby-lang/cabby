@@ -100,6 +100,7 @@ changing for.
 | **1.0.0** | 21 November | **Cabby 1.0**: the language and its libraries settled, tested on Debian, Arch and an Apple-processor Mac, and packaged for each |
 | 1.1.0 | 21 November | Cabby in a browser: the interpreter built for WebAssembly, with a page to try it |
 | 1.1.1 | 21 November | The game page's testing section mended (and the manual tests now catch what broke it); `labs` and `strtol` 64-bit in a browser; wasi-sdk 33 builds it too |
+| 1.2.0 | 21 November | `cabby -c --wasm`: programs compiled to WebAssembly, for a web page, as fast as native |
 
 ---
 
@@ -1741,6 +1742,39 @@ games (gui, game) in a browser.
 - `.cabby_history` taken out of the repository: an interactive session's
   history from October, kept there by mistake (the session keeps it in
   `~/.cabby_history`).
+
+*Version 1.2.0, compiled for a browser:* `cabby -c prog.cby --wasm` makes
+`prog.wasm`, a program a web page runs as it runs the interpreter, but as
+fast as a native program: 2 to 30 times faster than interpreted there
+(fib 3 ms, against 88 interpreted). The second of the three WebAssembly
+steps; windows and games in a browser are next.
+
+- `make wasm` builds the runtime for WebAssembly too
+  (`lib/wasm/libcabbyrt.a`, installed by `make install`), with a stand-in
+  for each runtime function that isn't in it (1,008: windows, sound,
+  sockets), so a program using one builds, and says so when it gets
+  there: *'cby_gui_window_new' isn't here (in a browser)*, at its line.
+- `cabby -c --wasm` finds wasi-sdk in `$CABBY_WASI_SDK`, where it was when
+  Cabby was built, `~/tools` or `/opt/wasi-sdk`. Programs are small, with
+  no names kept (only a debugger reads them): hello is 16 KB, 7 KB
+  compressed.
+- What changed in compiling, for wasm32, where a pointer is 4 bytes: the
+  sizes and layouts of what holds a pointer (a lookup is 48 bytes there,
+  not 64; an object's handle 4) follow the target; `malloc` takes a
+  32-bit size; C's own functions (`strlen`, `qsort`) take a C `long` as 32
+  bits, and `labs`, `strtol` and the like are their `long long` twins;
+  `printf`'s `%ld` reads a Cabby long's 64 bits; `main` is WASI's
+  `__main_argc_argv`; and `else`'s setjmp is WebAssembly's exceptions.
+- Compiled, a browser has what the interpreter there hasn't: `printf`, and
+  C calling back (`qsort`), so tutorials 27 and 28 run there too.
+- `cabby-worker.js` runs a compiled program as well as source:
+  `{ program: 'prog.wasm' }` (or its bytes), compiled once however often
+  it runs, without fetching the interpreter. `runCabby` takes the
+  program's `name`, and a browser's full call stack is the panic *stack
+  overflow*, as on a computer.
+- Tested in Chromium, each compiled with `-c --wasm`
+  (`node tests/run_wasm_tests.cjs --compiled [--cases]`): 45 tutorials and
+  134 program tests, the same output as on a computer.
 
 ## Along the way (dates not recorded)
 

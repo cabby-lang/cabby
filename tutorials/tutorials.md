@@ -1,6 +1,6 @@
 # The Cabby Manual
 
-*For Cabby 1.1.1 (2026-11-21).*
+*For Cabby 1.2.0 (2026-11-21).*
 
 A book for learning Cabby one idea at a time, and a reference to come back
 to afterwards.
@@ -16871,6 +16871,7 @@ Reference material, for looking things up once you know the language.
 | `cabby -c prog.cby -O0` | ...with optimization level 0 to 3 (default `-O2`) |
 | `cabby -c prog.cby --emit-llvm` | write the compiled code as LLVM IR (`prog.ll`) instead |
 | `cabby -c --checked prog.cby` | build it with AddressSanitizer: reading past the end, memory used after it's freed, and (on Linux) memory never freed, each stopped and said where. For testing |
+| `cabby -c prog.cby --wasm` | compile to WebAssembly (`prog.wasm`), to run in a web page (`wasm/README.md`) |
 | `cabby --check prog.cby` | check the program without running it |
 | `cabby --style prog.cby` | check, then list names, and calls' parentheses, that don't follow the style guide ([Appendix J](#appendix-j-style-guide)) |
 | `cabby --dump-tokens prog.cby` | show how the program is split into tokens |
@@ -16879,7 +16880,8 @@ Reference material, for looking things up once you know the language.
 
 Running and compiling give the same results, the same panic messages, and
 the same exit status. Compiling needs clang 15 or newer (`$CABBY_CC` chooses
-another clang).
+another clang); `--wasm` needs wasi-sdk instead, and the runtime built for
+it (`make wasm`).
 
 **Where `use` looks.** `use name` searches `$CABBY_LIB`, then `lib/` next to
 the `cabby` program, then `../lib/cabby` relative to it, then
@@ -16909,7 +16911,7 @@ Run `cabby` with no file to type Cabby a piece at a time:
 
 ```text
 $ cabby
-Cabby 1.1.1 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
+Cabby 1.2.0 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
 Cabby comes with ABSOLUTELY NO WARRANTY, under the MIT License; "cabby.license" for details.
 >>> int add int a, int b {
 ... 	return a + b
