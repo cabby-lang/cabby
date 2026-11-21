@@ -106,6 +106,7 @@ changing for.
 | 1.4.0 | 22 November | Shadows in 3D (`use world`): the sun's, drawn by OpenGL and by Cabby alike |
 | 1.5.0 | 22 November | Physics in 3D: falling, landing, bouncing, stacking and platforms; shapes joined together |
 | 1.6.0 | 22 November | Cabby Quest in 3D, part 1: the town, its trees, houses and hero made of joined shapes, walked round tile by tile |
+| 1.6.1 | 22 November | The tutorials' files numbered with three digits (`001-hello.cby` to `108-quest-3d.cby`), so they're listed in order |
 
 ---
 
@@ -1891,6 +1892,14 @@ it, turned as one and walking tile by tile as in part 2, legs swinging;
 the camera above and behind, as FireRed's, not turning; signs read over
 the world. Built of Cabby's own shapes, for now: models made in Blender
 can take the place of the hero and the townspeople later.
+
+*Version 1.6.1:* the tutorials' files renamed with three-digit numbers,
+`01-hello.cby` becoming `001-hello.cby` and `68-games.cby`
+`068-games.cby`, so that a list of them by name (GitHub's, a file
+manager's) is in order, 100 to 108 after 99 rather than after 10. The
+chapters keep their numbers; every mention of a file (the manual, the
+READMEs, each tutorial's "Run it" line, the tests) was changed with it.
+The names in this timeline's earlier entries are as they were then.
 
 ## Along the way (dates not recorded)
 

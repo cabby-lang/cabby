@@ -1,0 +1,123 @@
+// Tutorial 61: A phrasebook — text in any language, and emoji
+//
+// Run it:      cabby 061-phrasebook.cby
+// Or compile:  cabby -c 061-phrasebook.cby && ./061-phrasebook
+// Library:     use gui
+// Topics:      text in other scripts: right to left (Hebrew, Arabic) and
+//              joined (Arabic); emoji in color; text boxes for them
+//
+// Choose a language, and the window greets you in it, with a picture to
+// go with it. Text is just text, in any script: a label, a button, a
+// canvas or a text box shows it as it should be. Hebrew and Arabic go
+// right to left, with numbers and English words in them left to right,
+// where they belong; Arabic's letters join up, as it's written; and an
+// emoji is drawn in color, from the computer's emoji font.
+//
+// Nothing needs doing for any of it: what's in a str is shown as it's
+// meant to be. (str holds text as UTF-8, so it holds any language.)
+
+use gui
+
+object phrasebook : gui.window {
+	gui.choice Language
+	gui.label Greeting
+	gui.label Thanks
+	gui.entry Yours
+	gui.label Echo
+	gui.canvas Card
+
+	void build {
+		set_title "Phrasebook"
+		set_size 420, 330
+		Language = add_choice
+		Language.add_option "English"
+		Language.add_option "Deutsch"
+		Language.add_option "Latina"
+		Language.add_option "Ἑλληνικά"
+		Language.add_option "Englisc"
+		Language.add_option "עברית"
+		Language.add_option "العربية"
+		Language.on_change chosen
+		Greeting = add_label ""
+		Thanks = add_label ""
+		add_label "Type your own:"
+		Yours = add_entry
+		Yours.on_change typed
+		Echo = add_label ""
+		Card = add_canvas 380, 70
+		Card.on_draw draw
+		chosen
+	}
+
+	void chosen {
+		str Hello = ""
+		str Thank = ""
+		int Which = Language.selected
+		if Which == 0 {
+			Hello = "Hello! 👋"
+			Thank = "Thank you 🙏"
+		} else if Which == 1 {
+			Hello = "Guten Tag! 👋"
+			Thank = "Danke schön 🙏"
+		} else if Which == 2 {
+			Hello = "Salve! 🏛️"
+			Thank = "Gratias tibi ago"
+		} else if Which == 3 {
+			Hello = "Χαίρετε! 🏺"
+			Thank = "Εὐχαριστῶ"
+		} else if Which == 4 {
+			Hello = "Wes hāl! ⚔️"
+			Thank = "Ic þancie þē"
+		} else if Which == 5 {
+			Hello = "שלום! 👋"
+			Thank = "תודה רבה 🙏"
+		} else {
+			Hello = "مرحبا! 👋"
+			Thank = "شكرا جزيلا 🙏"
+		}
+		Greeting.set_text Hello
+		Thanks.set_text Thank
+		Card.redraw
+		println Language.text + ":", Hello, "/", Thank
+	}
+
+	void typed {
+		Echo.set_text "You typed: " + Yours.text
+	}
+
+	void draw {
+		Card.fill_with "lightyellow"
+		Card.set_color "saddlebrown"
+		Card.set_font_size 28
+		Card.write 12, 14, Greeting.text
+	}
+}
+
+int main {
+	phrasebook P
+	P.run
+}
+
+// Try this:
+//  - Add a language of your own: Japanese (こんにちは), Hindi (नमस्ते),
+//    Russian (Здравствуйте). Each is shown in its own script.
+//  - Type Hebrew or Arabic into the box (with the desktop's keyboard for
+//    it): the cursor moves as the text goes, right to left.
+//  - Put an English word and a number into a Hebrew sentence:
+//    "המחיר הוא 25 shekel". The number and the word stay as they're read.
+//
+// (Without an emoji font, an emoji is drawn as the usual fonts draw it,
+// in one color, or as a box. Linux's is Noto Color Emoji, the package
+// noto-fonts-emoji on Arch and fonts-noto-color-emoji on Debian; a Mac has
+// Apple Color Emoji. Arabic joined as it's written, and emoji made of
+// several (a family, a flag), need HarfBuzz for some of it: Linux has it,
+// and a Mac has it with Homebrew's harfbuzz. Without it, Cabby joins
+// Arabic's letters itself.)
+
+// script: choose 1 Latina; choose 1 עברית; choose 1 العربية; type 1 שלום; close
+
+// ---------------------------------------------------------------- output
+//> English: Hello! 👋 / Thank you 🙏
+//> Latina: Salve! 🏛️ / Gratias tibi ago
+//> עברית: שלום! 👋 / תודה רבה 🙏
+//> العربية: مرحبا! 👋 / شكرا جزيلا 🙏

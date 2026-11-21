@@ -1,0 +1,54 @@
+// Tutorial 33: Splitting a program into files
+//
+// Run it:      cabby 033-your-own-headers.cby
+// Topics:      use local, headers (.hby), implementation files, static
+//
+// Read the two files in the geometry folder first:
+//
+//   geometry/geometry.hby   the declarations: a struct, an object, and two
+//                           function prototypes
+//   geometry/geometry.cby   the function bodies, and a private helper
+//
+// `use local path` reads the header path.hby, relative to this file (the
+// .hby is added for you). If a .cby with the same name sits next to it,
+// that is compiled into the program as well, so geometry.cby comes along
+// automatically. (`use Name` without `local` looks in Cabby's library
+// directory instead; tutorial 27.)
+//
+// Each file is included once per program, however many files use it.
+
+use local geometry/geometry
+
+int main {
+	vec2 a = {0.0, 0.0}
+	vec2 b = {3.0, 4.0}
+	println "distance:", distance(a, b)
+
+	polygon Square = {.Name = "square"}
+	Square.add 0.0, 0.0
+	Square.add 2.0, 0.0
+	Square.add 2.0, 2.0
+	Square.add 0.0, 2.0
+	println Square.Name, "perimeter:", perimeter(Square)
+
+	polygon Tri = {.Name = "triangle"}
+	Tri.add 0.0, 0.0
+	Tri.add 3.0, 0.0
+	Tri.add 0.0, 4.0
+	println Tri.Name, "perimeter:", perimeter(Tri)
+
+	// geometry.cby's `square` helper is static, so it's private to that
+	// file: calling `square(3.0)` here is an error. (`Square`, with a
+	// capital, is our polygon: a variable, not a function.)
+}
+
+// Try this:
+//  - Add `double area const polygon &p` to the header and write its body
+//    in geometry.cby (the "shoelace" formula: half the absolute value of
+//    the sum of x[i] * y[i+1] - x[i+1] * y[i]).
+//  - Remove `static` from the helper and rename it, then call it from here.
+
+// ---------------------------------------------------------------- output
+//> distance: 5.0
+//> square perimeter: 8.0
+//> triangle perimeter: 12.0

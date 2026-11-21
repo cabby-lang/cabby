@@ -116,7 +116,7 @@ def main():
     picture = sys.argv[2] if len(sys.argv) > 2 else None
     here = os.path.dirname(os.path.abspath(__file__))
     tutorials = os.path.join(here, "..", "tutorials")
-    which = os.environ.get("TGAME_TUTORIAL", "68-games.cby")
+    which = os.environ.get("TGAME_TUTORIAL", "068-games.cby")
     with open(os.path.join(tutorials, which)) as f:
         src = f.read()
     src = re.sub(r"^use game$", "use tgame", src, flags=re.M)

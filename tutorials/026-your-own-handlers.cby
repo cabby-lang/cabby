@@ -1,0 +1,128 @@
+// Tutorial 26: Handlers in your own objects
+//
+// Run it:      cabby 026-your-own-handlers.cby
+// Or compile:  cabby -c 026-your-own-handlers.cby && ./026-your-own-handlers
+// Topics:      handler fields, .call, .is_set, .clear, giving an object
+//              one of your methods, `rocket { }`, inner methods
+//
+// An object can say "something happened" without knowing who is
+// listening. It keeps a handler in a field, its owner gives it one of the
+// owner's own methods, and the object calls it with `.call` when the
+// moment comes. (The windows of Part IX work this way: a button is given
+// a method to call, `Save.on_click save`.)
+//
+// A handler can only be given to something that is part of the object
+// whose method it is (one of its fields), so it can never outlive that
+// object. Cabby checks this before the program runs.
+
+// A countdown that says when it steps and when it reaches zero. It doesn't
+// know who is listening; whoever owns it decides.
+object countdown {
+	int Left
+	handler Step                     // called on every step
+	handler Done                     // called on reaching zero
+
+	void on_step handler h {
+		Step = h
+	}
+
+	void on_done handler h {
+		Done = h
+	}
+
+	void start int From {
+		Left = From
+	}
+
+	void tick {
+		if Left == 0 {
+			return
+		}
+		Left--
+		Step.call                    // nothing happens if it isn't set
+		if Left == 0 {
+			Done.call
+		}
+	}
+}
+
+// A rocket owns a countdown, and gives it two of its own methods as soon as
+// it is made. They're inner: only the countdown calls them, never anyone
+// outside.
+object rocket {
+	str Name
+	countdown Count
+	bool Launched
+
+	rocket {
+		Count.on_step say_number
+		Count.on_done launch
+	}
+
+	void prepare const str &Called, int Seconds {
+		Name = Called.copy
+		Count.start Seconds
+	}
+
+	inner void say_number {
+		println Name, "in", Count.Left
+	}
+
+	inner void launch {
+		Launched = true
+		println Name, "lift off!"
+	}
+
+	// No more numbers: just the launch.
+	void go_quiet {
+		Count.Step.clear
+	}
+}
+
+int main {
+	rocket Apollo
+	Apollo.prepare "Apollo", 3
+	until Apollo.Launched {
+		Apollo.Count.tick
+	}
+
+	// Handlers move with their object: these rockets are moved into a list.
+	list rocket Fleet
+	rocket Gemini
+	Gemini.prepare "Gemini", 2
+	Fleet.add Gemini
+	rocket Mercury
+	Mercury.prepare "Mercury", 4
+	Mercury.go_quiet
+	Fleet.add Mercury
+	for i in Fleet.length {
+		until Fleet[i].Launched {
+			Fleet[i].Count.tick
+		}
+	}
+
+	// A countdown nobody listens to.
+	countdown Quiet
+	Quiet.start 2
+	Quiet.tick
+	Quiet.tick
+	println "quiet countdown:", Quiet.Left, "left, step handler set:", Quiet.Step.is_set
+}
+
+// Try this:
+//  - Give `countdown` a third handler, `Halfway`, called when it is halfway
+//    through, and have the rocket print "halfway there".
+//  - In `prepare`, make a local `countdown Spare` and give it `launch`.
+//    Read the error: why would that be unsafe?
+//  - Call `Apollo.launch` from main, and read that error too.
+
+// ---------------------------------------------------------------- output
+//> Apollo in 2
+//> Apollo in 1
+//> Apollo in 0
+//> Apollo lift off!
+//> Gemini in 1
+//> Gemini in 0
+//> Gemini lift off!
+//> Mercury lift off!
+//> quiet countdown: 0 left, step handler set: false

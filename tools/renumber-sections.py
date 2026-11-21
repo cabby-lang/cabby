@@ -4,7 +4,7 @@ they appear (the sections of earlier tutorials keep their numbers). With
 --part 78, it numbers part 78's sections instead, in each file given: the
 later tutorials, which have the same sections in the same order.
 
-    python3 tools/renumber-sections.py tutorials/79-quest-areas.cby
+    python3 tools/renumber-sections.py tutorials/079-quest-areas.cby
     python3 tools/renumber-sections.py --part 78 tutorials/*-quest-*.cby"""
 import re, sys, os
 

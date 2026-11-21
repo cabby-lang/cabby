@@ -1,6 +1,6 @@
 # The Cabby Manual
 
-*For Cabby 1.6.0 (2026-11-22).*
+*For Cabby 1.6.1 (2026-11-22).*
 
 A book for learning Cabby one idea at a time, and a reference to come back
 to afterwards.
@@ -13,7 +13,7 @@ inheritance, calls straight into the C library, and a `gui` library for
 windows.
 
 Each chapter goes with one of the tutorial programs in this folder
-(`01-hello.cby` to `106-dbus.cby`). The chapter explains; the program
+(`001-hello.cby` to `106-dbus.cby`). The chapter explains; the program
 lets you see it all working together and change it. Read a chapter, run its
 program, then try the exercises at the end.
 
@@ -237,7 +237,7 @@ is laid out, how it prints, and the kinds of values it can hold.
 
 ### Chapter 1: Hello, Cabby
 
-*Program: `01-hello.cby`. Topics: `main`, `print`, `println`, comments, layout.*
+*Program: `001-hello.cby`. Topics: `main`, `print`, `println`, comments, layout.*
 
 #### The smallest program
 
@@ -384,7 +384,7 @@ a wrongly placed brace can't silently change what a program means.
 
 * Indent a line with spaces and read the error.
 * Return 3 from `main`, run the program, then type `echo $?` in the shell.
-* Compile `01-hello.cby` with `cabby -c` and run the result.
+* Compile `001-hello.cby` with `cabby -c` and run the result.
 
 [Contents](#contents) · [Chapter 2 →](#chapter-2-variables-and-the-basic-types)
 
@@ -392,7 +392,7 @@ a wrongly placed brace can't silently change what a program means.
 
 ### Chapter 2: Variables and the basic types
 
-*Program: `02-variables.cby`. Keywords: `int` `double` `char` `bool` `true` `false` `str`.*
+*Program: `002-variables.cby`. Keywords: `int` `double` `char` `bool` `true` `false` `str`.*
 
 #### Declaring a variable
 
@@ -565,7 +565,7 @@ cheap? true expensive? false
 
 ### Chapter 3: Integer types
 
-*Program: `03-integers.cby`. Keywords: `char` `short` `int` `long` `signed` `unsigned` `sizeof`.*
+*Program: `003-integers.cby`. Keywords: `char` `short` `int` `long` `signed` `unsigned` `sizeof`.*
 
 #### Sizes
 
@@ -717,7 +717,7 @@ for a `long` an `unsigned long` (`unsigned long Most =
 
 ### Chapter 4: Floating point
 
-*Program: `04-floating-point.cby`. Keywords: `float` `double`.*
+*Program: `004-floating-point.cby`. Keywords: `float` `double`.*
 
 #### double and float
 
@@ -894,7 +894,7 @@ inf -inf NaN
 
 ### Chapter 5: Constants
 
-*Program: `05-const.cby`. Keywords: `const`.*
+*Program: `005-const.cby`. Keywords: `const`.*
 
 `const` in front of a declaration means the value can't be changed after it
 is set. Cabby checks this before the program runs, so a constant really is
@@ -970,7 +970,7 @@ programs choose between paths and repeat things.
 
 ### Chapter 6: If and else
 
-*Program: `06-if-else.cby`. Keywords: `if` `else`.*
+*Program: `006-if-else.cby`. Keywords: `if` `else`.*
 
 #### Choosing a path
 
@@ -1144,7 +1144,7 @@ bit 2 is set
 
 ### Chapter 7: While, until and do
 
-*Program: `07-while-do.cby`. Keywords: `while` `until` `do`.*
+*Program: `007-while-do.cby`. Keywords: `while` `until` `do`.*
 
 #### while
 
@@ -1268,7 +1268,7 @@ stops the line you typed.
 
 * The Collatz sequence: start at a number; halve it if it's even, otherwise
   triple it and add one; stop at 1. How many steps does 27 take?
-  (`07-while-do.cby` does it for 6.)
+  (`007-while-do.cby` does it for 6.)
 
 [← Chapter 6](#chapter-6-if-and-else) · [Contents](#contents) · [Chapter 8 →](#chapter-8-for-loops-break-and-continue)
 
@@ -1276,7 +1276,7 @@ stops the line you typed.
 
 ### Chapter 8: For loops, break and continue
 
-*Program: `08-for-break-continue.cby`. Keywords: `for` `in` `to` `down` `by` `break` `continue`.*
+*Program: `008-for-break-continue.cby`. Keywords: `for` `in` `to` `down` `by` `break` `continue`.*
 
 #### Counting loops
 
@@ -1454,7 +1454,7 @@ powers of 2: 1 2 4 8 16 32 64
 * Assign to the counter of a `for i in` loop and read the error.
 * FizzBuzz: print 1 to 30, but "fizz" for multiples of 3, "buzz" for
   multiples of 5 and "fizzbuzz" for both.
-* `08-for-break-continue.cby` prints the primes below 30 with a loop inside
+* `008-for-break-continue.cby` prints the primes below 30 with a loop inside
   a loop. Change it to print the primes below 100.
 
 [← Chapter 7](#chapter-7-while-until-and-do) · [Contents](#contents) · [Chapter 9 →](#chapter-9-switch)
@@ -1463,7 +1463,7 @@ powers of 2: 1 2 4 8 16 32 64
 
 ### Chapter 9: Switch
 
-*Program: `09-switch.cby`. Keywords: `switch` `case` `default`.*
+*Program: `009-switch.cby`. Keywords: `switch` `case` `default`.*
 
 `switch` chooses where to go by an integer, `char` or enum value. Each
 `case` label names one constant value; `default` catches every value that no
@@ -1573,7 +1573,7 @@ for you without a garbage collector.
 
 ### Chapter 10: Functions
 
-*Program: `10-functions.cby`. Keywords: `void` `return`.*
+*Program: `010-functions.cby`. Keywords: `void` `return`.*
 
 #### Defining a function
 
@@ -1797,7 +1797,7 @@ passed as an `int` without a cast.
 
 ### Chapter 11: Arrays
 
-*Program: `11-arrays.cby`. Topics: fixed-size arrays, `.length`, array parameters.*
+*Program: `011-arrays.cby`. Topics: fixed-size arrays, `.length`, array parameters.*
 
 #### Declaring arrays
 
@@ -1949,7 +1949,7 @@ it ([Chapter 13](#chapter-13-ownership-moves-and-drops)).
 
 ### Chapter 12: Strings
 
-*Program: `12-strings.cby`. Keywords: `str`.*
+*Program: `012-strings.cby`. Keywords: `str`.*
 
 #### What a str is
 
@@ -2490,7 +2490,7 @@ more bytes in UTF-8, so they count as more than one in `.length` and `s[i]`.
 
 ### Chapter 13: Ownership: moves and drops
 
-*Program: `13-ownership.cby`.*
+*Program: `013-ownership.cby`.*
 
 This is the heart of Cabby. There is no garbage collector and no `free()`.
 Instead, four rules decide when memory is released:
@@ -2655,7 +2655,7 @@ nothing is dropped after it.
 
 ### Chapter 14: References: borrowing
 
-*Program: `14-references.cby`. Topics: `T &`, `const T &`, the borrowing rules.*
+*Program: `014-references.cby`. Topics: `T &`, `const T &`, the borrowing rules.*
 
 Moving a value into a function every time it needs to look at it would be
 tiresome. Instead, you can *borrow* it: a reference lets a function, or a
@@ -2858,7 +2858,7 @@ can move.
 
 ### Chapter 15: Lists
 
-*Program: `15-lists.cby`. Keywords: `list`.*
+*Program: `015-lists.cby`. Keywords: `list`.*
 
 An array's size is fixed when it's declared. A *list* grows and shrinks as
 the program runs: add to the end, put things in the middle, take them out.
@@ -3267,7 +3267,7 @@ Alan has 1 marks
 
 ### Chapter 16: Lookups
 
-*Program: `16-lookups.cby`. Keywords: `lookup`.*
+*Program: `016-lookups.cby`. Keywords: `lookup`.*
 
 A list finds its elements by position: `Scores[0]`, `Scores[1]`. A
 *lookup* finds its values by a *key* you choose, such as a name, a word or
@@ -3585,7 +3585,7 @@ is comes 2 times
 
 ### Chapter 17: Structs
 
-*Program: `17-struct.cby`. Keywords: `struct`.*
+*Program: `017-struct.cby`. Keywords: `struct`.*
 
 A struct groups values under one name. It's plain data: fields only, with no
 methods (for those, see objects in [Chapter 22](#chapter-22-objects-and-methods)).
@@ -3687,7 +3687,7 @@ moves instead of copying, and drops its string when it is dropped.
 
 ### Chapter 18: Unions
 
-*Program: `18-union.cby`. Keywords: `union`.*
+*Program: `018-union.cby`. Keywords: `union`.*
 
 A union's fields all share the same memory, so it's as big as its largest
 field. Writing one field and reading another reinterprets the same bytes.
@@ -3779,7 +3779,7 @@ areas: 12.56636 9.0
 
 ### Chapter 19: Enums
 
-*Program: `19-enum.cby`. Keywords: `enum`.*
+*Program: `019-enum.cby`. Keywords: `enum`.*
 
 An enum gives names to `int` constants. Each name is one more than the one
 before, starting at 0, unless you give it a value:
@@ -3852,7 +3852,7 @@ Enums make good `switch` values and good tags for unions
 
 ### Chapter 20: aka: another name for a type
 
-*Program: `20-aka.cby`. Keywords: `aka`.*
+*Program: `020-aka.cby`. Keywords: `aka`.*
 
 `aka` gives an existing type a second name. Write the type, then `aka`,
 then the new name, at the top level of a file; it reads as "double, also
@@ -4026,7 +4026,7 @@ steps by whole days.
 
 ### Chapter 21: Static and global variables
 
-*Program: `21-static-and-globals.cby`. Keywords: `static`.*
+*Program: `021-static-and-globals.cby`. Keywords: `static`.*
 
 #### Globals
 
@@ -4123,7 +4123,7 @@ listening.
 
 ### Chapter 22: Objects and methods
 
-*Program: `22-objects.cby`. Keywords: `object` `self`, and `const` and `static` on methods.*
+*Program: `022-objects.cby`. Keywords: `object` `self`, and `const` and `static` on methods.*
 
 #### Fields and methods
 
@@ -4491,7 +4491,7 @@ same works for a list of structs.
 
 ### Chapter 23: Made and dropped
 
-*Program: `23-destructors.cby`. Topics: `Name { }` and `~Name { }`, when things are made and dropped, and in what order; links.*
+*Program: `023-destructors.cby`. Topics: `Name { }` and `~Name { }`, when things are made and dropped, and in what order; links.*
 
 A *destructor* is a method named `~` plus the object's name. It runs
 automatically, exactly once, when the object is dropped
@@ -4755,7 +4755,7 @@ A link is used by the worker (or program) whose object it points at
 
 ### Chapter 24: Inheritance
 
-*Program: `24-inheritance.cby`. Topics: `object child : parent`, overriding, virtual calls.*
+*Program: `024-inheritance.cby`. Topics: `object child : parent`, overriding, virtual calls.*
 
 `object dog : animal` makes a dog a kind of animal: it has every field and
 method an animal has, and can add its own or replace (*override*) some.
@@ -4990,7 +4990,7 @@ too. An override must be inner exactly when the method it overrides is.
 
 ### Chapter 25: Multiple inheritance
 
-*Program: `25-multiple-inheritance.cby`. Topics: several parents, diamonds, method order.*
+*Program: `025-multiple-inheritance.cby`. Topics: several parents, diamonds, method order.*
 
 An object may have several parents. It gets the fields and methods of all of
 them:
@@ -5125,7 +5125,7 @@ error: 'catbot' inherits two fields named 'Owner', from 'pet' and 'robot'
 
 ### Chapter 26: Handlers in your own objects
 
-*Program: `26-your-own-handlers.cby`. Topics: `handler` fields, `.call`, `.is_set`, `.clear`.*
+*Program: `026-your-own-handlers.cby`. Topics: `handler` fields, `.call`, `.is_set`, `.clear`.*
 
 #### An object that calls back
 
@@ -5290,7 +5290,7 @@ be going at the same moment.
 
 #### Try this
 
-* In `26-your-own-handlers.cby`, give `countdown` a third handler,
+* In `026-your-own-handlers.cby`, give `countdown` a third handler,
   `Halfway`, and have the rocket print "halfway there".
 * Make a `bank_account` object with an `on_low` handler, called when the
   balance drops below 10, and a `customer` object that owns one.
@@ -5307,7 +5307,7 @@ itself, through addresses; and the C-like corners of the language.
 
 ### Chapter 27: Calling C
 
-*Program: `27-c-functions.cby`. Keywords: `extern` `use`.*
+*Program: `027-c-functions.cby`. Keywords: `extern` `use`.*
 
 Cabby can call any function in the C library. Its types match C's on 64-bit
 Linux and macOS, so C sees exactly what it expects.
@@ -5448,7 +5448,7 @@ int main {
 
 ### Chapter 28: Addresses
 
-*Program: `28-addresses.cby`. Library: `use addresses`.*
+*Program: `028-addresses.cby`. Library: `use addresses`.*
 
 #### Where a value is
 
@@ -5852,7 +5852,7 @@ reads.
 
 #### Try this
 
-* In `28-addresses.cby`, write `void swap address int A, address int B`.
+* In `028-addresses.cby`, write `void swap address int A, address int B`.
 * Read one past the end of an array with `cabby`, then compiled, and
   compare.
 * Remove the `addresses.free` line from the squares example and run it
@@ -5864,7 +5864,7 @@ reads.
 
 ### Chapter 29: Register and volatile
 
-*Program: `29-register-volatile.cby`. Keywords: `register` `volatile`.*
+*Program: `029-register-volatile.cby`. Keywords: `register` `volatile`.*
 
 Two storage hints. Neither changes what a correct program
 prints.
@@ -5929,9 +5929,9 @@ compiled code as LLVM IR, where you can see `load volatile` and
 
 #### Try this
 
-* In `29-register-volatile.cby`, uncomment `bump Total` and read the
+* In `029-register-volatile.cby`, uncomment `bump Total` and read the
   error.
-* Compile it with `cabby -c 29-register-volatile.cby --emit-llvm`, and
+* Compile it with `cabby -c 029-register-volatile.cby --emit-llvm`, and
   look for `load volatile` and `store volatile` in the `.ll` file.
 
 [← Chapter 28](#chapter-28-addresses) · [Contents](#contents) · [Chapter 30 →](#chapter-30-goto-and-labels)
@@ -5940,7 +5940,7 @@ compiled code as LLVM IR, where you can see `load volatile` and
 
 ### Chapter 30: Goto and labels
 
-*Program: `30-goto.cby`. Keywords: `goto`.*
+*Program: `030-goto.cby`. Keywords: `goto`.*
 
 `goto name` jumps to the line labeled `name:`. A label is indented like any
 other line of its block.
@@ -6013,7 +6013,7 @@ This part covers all of these, and finishes with a whole program.
 
 ### Chapter 31: Command-line arguments and exit status
 
-*Program: `31-main-arguments.cby`.*
+*Program: `031-main-arguments.cby`.*
 
 `main` can take the program's command-line arguments:
 
@@ -6150,7 +6150,7 @@ caller decides where it goes. The rule:
 
 #### Try this
 
-* Run `31-main-arguments.cby` with no arguments, then type `echo $?`.
+* Run `031-main-arguments.cby` with no arguments, then type `echo $?`.
 * Run it again with `2> /dev/null` on the end: the usage message goes,
   because it went to stderr.
 * Return the number of arguments as the exit status.
@@ -6161,7 +6161,7 @@ caller decides where it goes. The rule:
 
 ### Chapter 32: Files, directories and commands
 
-*Program: `32-files.cby`. Libraries: `files`, `directories`.*
+*Program: `032-files.cby`. Libraries: `files`, `directories`.*
 
 So far a program's data has lasted only as long as the program. Files keep
 it: a list of scores, a program's settings, notes to read next time. Two
@@ -6623,7 +6623,7 @@ false
 
 ### Chapter 33: Splitting a program into files
 
-*Program: `33-your-own-headers.cby`, with the folder `geometry/`. Topics: `use local`, headers.*
+*Program: `033-your-own-headers.cby`, with the folder `geometry/`. Topics: `use local`, headers.*
 
 #### Headers and implementation files
 
@@ -6810,7 +6810,7 @@ are written: open `lib/brightness.hby` and you'll find
 
 ### Chapter 34: Processes
 
-*Program: `34-processes.cby`. Library: `use processes`.*
+*Program: `034-processes.cby`. Library: `use processes`.*
 
 #### A program you talk to
 
@@ -6991,7 +6991,7 @@ one.
 
 #### Try this
 
-* In `34-processes.cby`, start `bc` (a calculator), send it `6 * 7`, and
+* In `034-processes.cby`, start `bc` (a calculator), send it `6 * 7`, and
   read its answer.
 * Run `ls -l` with `on_line`, and print only the lines that have `.cby`
   in them.
@@ -7039,7 +7039,7 @@ the output, with the line in `error_line`.
 
 ### Chapter 35: Timers and the event loop
 
-*Program: `35-events.cby`. Library: `use events`.*
+*Program: `035-events.cby`. Library: `use events`.*
 
 #### Waiting for things to happen
 
@@ -7171,7 +7171,7 @@ you can always see where a program waits, and why.
 
 #### Try this
 
-* In `35-events.cby`, add a second timer that prints "still waiting"
+* In `035-events.cby`, add a second timer that prints "still waiting"
   every 300 ms, and stops when the kettle boils.
 * Make a timer that prints the time once a second, and stops itself after
   five. (Windows have timers of their own: [Chapter 54](#chapter-54-timers).)
@@ -7182,7 +7182,7 @@ you can always see where a program waits, and why.
 
 ### Chapter 36: A whole program: reverse
 
-*Program: `36-reverse.cby`, with the folder `reverse/`.*
+*Program: `036-reverse.cby`, with the folder `reverse/`.*
 
 This program puts several chapters together: command-line arguments
 ([31](#chapter-31-command-line-arguments-and-exit-status)), a header and its
@@ -7218,7 +7218,7 @@ str reverse_str const str &Text {
 }
 ```
 
-And the program, run as `cabby 36-reverse.cby stressed`:
+And the program, run as `cabby 036-reverse.cby stressed`:
 
 <!-- run: stressed -->
 ```cabby
@@ -7288,7 +7288,7 @@ happen.
 
 ### Chapter 37: Panics
 
-*Program: `37-panics.cby`.*
+*Program: `037-panics.cby`.*
 
 Most mistakes are caught before a Cabby program runs: type errors, using a
 moved value, conflicting borrows. A few can only be noticed while it runs.
@@ -7355,7 +7355,7 @@ checks, before and while a program runs.
 
 #### Try this
 
-* In `37-panics.cby`, fix the loop so it stops at the right place.
+* In `037-panics.cby`, fix the loop so it stops at the right place.
 * Uncomment each panic in turn, and read its message.
 
 [← Chapter 36](#chapter-36-a-whole-program-reverse) · [Contents](#contents) · [Chapter 38 →](#chapter-38-a-classs-marks)
@@ -7364,7 +7364,7 @@ checks, before and while a program runs.
 
 ### Chapter 38: A class's marks
 
-*Program: `38-when-it-fails.cby`, a teacher's file of marks, read even when lines in it are wrong. Library: `use files`.*
+*Program: `038-when-it-fails.cby`, a teacher's file of marks, read even when lines in it are wrong. Library: `use files`.*
 
 A file that might not be there is read with a value to use if it isn't:
 
@@ -7422,7 +7422,7 @@ and `exit` aren't panics, and aren't caught.
 
 #### Try this
 
-* In `38-when-it-fails.cby`, print "no marks" when every line is bad,
+* In `038-when-it-fails.cby`, print "no marks" when every line is bad,
   rather than dividing by zero.
 * Put the settings into `settings.txt`, and read "out of" from it.
 * Read a number typed in with `input`, and ask again when it isn't one,
@@ -7440,7 +7440,7 @@ archives and databases.
 
 ### Chapter 39: Time and dates
 
-*Program: `39-dates.cby`. Libraries: `use time`, `use dates`.*
+*Program: `039-dates.cby`. Libraries: `use time`, `use dates`.*
 
 #### Two kinds of time
 
@@ -7607,7 +7607,7 @@ open for 8 hours 30 minutes
 
 #### Try this
 
-* In `39-dates.cby`, work out your age in days.
+* In `039-dates.cby`, work out your age in days.
 * Print a calendar for this month: start at its first day, and step
   along a day at a time, starting a new line each `SUNDAY`.
 
@@ -7793,7 +7793,7 @@ true
 
 ### Chapter 40: JSON
 
-*Program: `40-json.cby`. Libraries: `use json`, `use csv`.*
+*Program: `040-json.cby`. Libraries: `use json`, `use csv`.*
 
 #### What JSON is
 
@@ -8040,7 +8040,7 @@ semicolons (as some countries' spreadsheets save them) or tabs.
 
 #### Try this
 
-* In `40-json.cby`, add a song with no title, and make the program show
+* In `040-json.cby`, add a song with no title, and make the program show
   "(no title)" for it instead of panicking.
 * Save some settings of your own to a file, with a struct and
   `json.from(...).pretty`, and read them back with `.fill` the next time
@@ -8087,7 +8087,7 @@ window: false false false false false true
 
 ### Chapter 41: Downloading
 
-*Program: `41-downloads.cby`. Library: `use networks`.*
+*Program: `041-downloads.cby`. Library: `use networks`.*
 
 `networks.download` fetches what's at an address on the internet, as a
 `str`: a web page, a web service's JSON, or any other bytes.
@@ -8383,7 +8383,7 @@ int main {
 
 ### Chapter 42: Web addresses
 
-*Program: `42-web-addresses.cby`. Library: `use networks`.*
+*Program: `042-web-addresses.cby`. Library: `use networks`.*
 
 A web address has parts:
 
@@ -8442,7 +8442,7 @@ all text.
 
 #### Try this
 
-* Download the weather address in `42-web-addresses.cby` with
+* Download the weather address in `042-web-addresses.cby` with
   `networks.download` (it's a real one), and read it with `json.read`.
 * Take apart an address from your browser's address bar, and print every
   name and value in its query.
@@ -8479,7 +8479,7 @@ q=fish%20%26%20chips&page=3
 
 ### Chapter 43: HTML
 
-*Program: `43-html.cby`. Library: `use html`.*
+*Program: `043-html.cby`. Library: `use html`.*
 
 #### HTML in five minutes
 
@@ -8697,7 +8697,7 @@ page to open in a browser, build an `html` element holding a `head` and a
 
 #### Try this
 
-* In `43-html.cby`, print the cheapest item on the menu, and how many are
+* In `043-html.cby`, print the cheapest item on the menu, and how many are
   sold out.
 * Download a page you like, and print every link on it with its text.
 * Make a page listing your music students (or anything you keep a list
@@ -8810,7 +8810,7 @@ int main {
 
 ### Chapter 44: XML
 
-*Program: `44-xml.cby`. Library: `use xml`.*
+*Program: `044-xml.cby`. Library: `use xml`.*
 
 #### XML: HTML's strict cousin
 
@@ -8908,7 +8908,7 @@ with nothing inside is written `<read/>`.
 
 #### Try this
 
-* In `44-xml.cby`, count the stories in each category.
+* In `044-xml.cby`, count the stories in each category.
 * Download a news feed from a site you read (its "RSS" link), and print its
   headlines.
 
@@ -8948,7 +8948,7 @@ int main {
 
 ### Chapter 45: Bytes
 
-*Program: `45-picture-size.cby`. Library: `use bytes` (`use files` brings
+*Program: `045-picture-size.cby`. Library: `use bytes` (`use files` brings
 it too).*
 
 #### Text, and files that aren't text
@@ -9162,8 +9162,8 @@ flag, byte by byte: open `flag.bmp` in any picture viewer.
 
 #### Try this
 
-* Run `45-picture-size.cby` with the pictures in your own Pictures folder
-  after it (`cabby 45-picture-size.cby ~/Pictures/*.png`).
+* Run `045-picture-size.cby` with the pictures in your own Pictures folder
+  after it (`cabby 045-picture-size.cby ~/Pictures/*.png`).
 * Change the flag's colors and size (keep `WIDTH` a multiple of 3), and
   look at it in a picture viewer.
 * A WAV sound file keeps its number of channels at byte 22 (a short), and
@@ -9237,7 +9237,7 @@ abcabc!!
 
 ### Chapter 46: Changing files in place
 
-*Program: `46-save-game.cby`. Library: `use files`.*
+*Program: `046-save-game.cby`. Library: `use files`.*
 
 #### Going straight to the part you want
 
@@ -9359,7 +9359,7 @@ already exists (a picture, a sound) and has to be read or written exactly.
 
 #### Try this
 
-* In `46-save-game.cby`, give everyone an extra life: for each slot, move
+* In `046-save-game.cby`, give everyone an extra life: for each slot, move
   to its lives, read the short, and write it back one bigger.
 * Write a function `remove_player`, which moves the last slot into the
   removed one's place, then makes the count one smaller. (The file stays
@@ -9372,7 +9372,7 @@ already exists (a picture, a sound) and has to be read or written exactly.
 
 ### Chapter 47: Patterns
 
-*Program: `47-patterns.cby`, a music teacher's notes. Library: `use
+*Program: `047-patterns.cby`, a music teacher's notes. Library: `use
 patterns`.*
 
 A **pattern** describes what some text looks like. `\d{1,2}:\d{2}` is
@@ -9480,7 +9480,7 @@ among it.
 
 #### Try this
 
-* Find the students' names in `47-patterns.cby`: a capital letter, then
+* Find the students' names in `047-patterns.cby`: a capital letter, then
   small ones, before a comma (`"[[:upper:]][[:lower:]]+,"`).
 * Change every time to the 12-hour clock, with `replace_all` and two
   patterns.
@@ -9524,7 +9524,7 @@ true false [year, month]
 
 ### Chapter 48: Hashes
 
-*Program: `48-hashes.cby`. Libraries: `use hashes`, with `use files` and
+*Program: `048-hashes.cby`. Libraries: `use hashes`, with `use files` and
 `use directories`.*
 
 A **hash** is a fingerprint. The same text, or file, always gives the
@@ -9622,7 +9622,7 @@ true
 
 ### Chapter 49: Archives
 
-*Program: `49-archives.cby`, a term's lesson notes. Library: `use
+*Program: `049-archives.cby`, a term's lesson notes. Library: `use
 archives`.*
 
 An **archive** is many files and folders in one file, squeezed smaller:
@@ -9753,7 +9753,7 @@ the cake is in the cupboard
 
 ### Chapter 50: Databases
 
-*Program: `50-databases.cby`, a recipe book. Library: `use databases`.*
+*Program: `050-databases.cby`, a recipe book. Library: `use databases`.*
 
 A **database** keeps records in **tables**: rows of the same columns, as
 a spreadsheet's. Then it answers questions about them, however many rows
@@ -9832,7 +9832,7 @@ look inside.
 
 #### Try this
 
-* Keep the database: take out `50-databases.cby`'s `files.delete` lines,
+* Keep the database: take out `050-databases.cby`'s `files.delete` lines,
   run it twice, and see what `CREATE TABLE IF NOT EXISTS` and `UNIQUE` do
   the second time.
 * Ask for every recipe that needs milk.
@@ -9900,7 +9900,7 @@ the part's last chapter.
 
 ### Chapter 51: Your first window
 
-*Program: `51-first-window.cby`. Library: `use gui`.*
+*Program: `051-first-window.cby`. Library: `use gui`.*
 
 #### A window is an object
 
@@ -10191,7 +10191,7 @@ and `lib/gui.md`). On a Mac, gui's can't be read aloud by VoiceOver yet.
 
 ### Chapter 52: A small app
 
-*Program: `52-small-app.cby`. Topics: rows, several handlers, `on_change`, numbers as text.*
+*Program: `052-small-app.cby`. Topics: rows, several handlers, `on_change`, numbers as text.*
 
 A tip calculator puts together what a typical small app needs: a box to type
 into, buttons side by side, and results that update as you type.
@@ -10309,7 +10309,7 @@ panic on those, so check with `.is_number` first.
 
 ### Chapter 53: More widgets
 
-*Program: `53-more-widgets.cby`. Topics: check boxes, drop-down lists, sliders, text areas, lists, columns.*
+*Program: `053-more-widgets.cby`. Topics: check boxes, drop-down lists, sliders, text areas, lists, columns.*
 
 Labels, buttons and text boxes get a long way, but forms usually need
 more. Every widget below works the same way as the ones you know: add it,
@@ -10477,7 +10477,7 @@ closes up around it.
 
 #### Try this
 
-* In `53-more-widgets.cby`, add a "Delivery" check box that shows an
+* In `053-more-widgets.cby`, add a "Delivery" check box that shows an
   address box only while it is ticked.
 
 #### More examples
@@ -10569,7 +10569,7 @@ done: 1.0
 
 ### Chapter 54: Timers
 
-*Program: `54-timers.cby`. Topics: `every`, `after`, `stop_timers`, progress bars.*
+*Program: `054-timers.cby`. Topics: `every`, `after`, `stop_timers`, progress bars.*
 
 A timer is a handler that the clock calls instead of a click:
 
@@ -10656,7 +10656,7 @@ hours, read the real time from the system on each tick instead.
 
 #### Try this
 
-* Add a "Pause" button to `54-timers.cby` that stops the timer without
+* Add a "Pause" button to `054-timers.cby` that stops the timer without
   resetting, so "Start" carries on from where it was.
 
 [← Chapter 53](#chapter-53-more-widgets) · [Contents](#contents) · [Chapter 55 →](#chapter-55-dialogs-and-several-windows)
@@ -10665,7 +10665,7 @@ hours, read the real time from the system on each tick instead.
 
 ### Chapter 55: Dialogs and several windows
 
-*Program: `55-dialogs.cby`. Topics: `show_message`, `ask`, `ask_open_file`, `ask_save_file`, images, more windows.*
+*Program: `055-dialogs.cby`. Topics: `show_message`, `ask`, `ask_open_file`, `ask_save_file`, images, more windows.*
 
 #### Dialogs
 
@@ -10809,7 +10809,7 @@ script answers them, with `answer yes`, `answer no`, `pick <path>` or
 
 #### Try this
 
-* In `55-dialogs.cby`, add a "Quit" button that asks first, and calls
+* In `055-dialogs.cby`, add a "Quit" button that asks first, and calls
   `close` if the answer is yes.
 
 [← Chapter 54](#chapter-54-timers) · [Contents](#contents) · [Chapter 56 →](#chapter-56-menus-and-shortcuts)
@@ -10818,7 +10818,7 @@ script answers them, with `answer yes`, `answer no`, `pick <path>` or
 
 ### Chapter 56: Menus and shortcuts
 
-*Program: `56-menus.cby`. Library: `use gui` (or `use tui`).*
+*Program: `056-menus.cby`. Library: `use gui` (or `use tui`).*
 
 #### A menu bar
 
@@ -10916,7 +10916,7 @@ Alt and the F keys work as in a window.
 
 #### Try this
 
-* In `56-menus.cby`, add a "Join lines" item, with `Ctrl+J`.
+* In `056-menus.cby`, add a "Join lines" item, with `Ctrl+J`.
 * Add a "View" menu with "Bigger" and "Smaller" items that change the
   window's size with `set_size`.
 
@@ -10926,7 +10926,7 @@ Alt and the F keys work as in a window.
 
 ### Chapter 57: Tabs and scrolling
 
-*Program: `57-tabs.cby`. Library: `use gui` (or `use tui`).*
+*Program: `057-tabs.cby`. Library: `use gui` (or `use tui`).*
 
 When a window has more to show than fits, there are two ways to share its
 space: **tabs**, which show one page at a time, and a **scrolling
@@ -11014,7 +11014,7 @@ out of sight (with Tab) scrolls to it; the mouse wheel scrolls too.
 
 #### Try this
 
-* In `57-tabs.cby`, add a fourth page, "Notes", with a text area.
+* In `057-tabs.cby`, add a fourth page, "Notes", with a text area.
 * Put the "For more" page's amounts for every ingredient in a scrolling
   column.
 
@@ -11024,7 +11024,7 @@ out of sight (with Tab) scrolls to it; the mouse wheel scrolls too.
 
 ### Chapter 58: Tables
 
-*Program: `58-tables.cby`. Library: `use gui` (or `use tui`).*
+*Program: `058-tables.cby`. Library: `use gui` (or `use tui`).*
 
 A **table** shows rows and columns of text, with a heading over each
 column: scores, a list of files, the planets. `add_table` takes the
@@ -11109,7 +11109,7 @@ sort by the column before or after, and a click on a heading sorts by it.
 
 #### Try this
 
-* In `58-tables.cby`, add text boxes and an "Add" button for a planet of
+* In `058-tables.cby`, add text boxes and an "Add" button for a planet of
   your own.
 * Read a table's rows from a file of comma-separated values: `files.lines`,
   then `.split ","` for each line.
@@ -11168,7 +11168,7 @@ int main {
 
 ### Chapter 59: Numbers, colors and fonts
 
-*Program: `59-choosers.cby`. Library: `use gui` (or `use tui`).*
+*Program: `059-choosers.cby`. Library: `use gui` (or `use tui`).*
 
 Some choices are easier to make than to type. Three widgets make them:
 
@@ -11230,7 +11230,7 @@ Badge.set_font Font.font          // "Serif Bold 28": the family, bold, 28 pixel
 Badge.write 24, 60, Name.text
 ```
 
-`59-choosers.cby` draws a name badge that way, and redraws it each time a
+`059-choosers.cby` draws a name badge that way, and redraws it each time a
 choice changes.
 
 #### In a terminal
@@ -11251,9 +11251,9 @@ name, for the program to use; a canvas uses its size.
 
 #### Try this
 
-* In `59-choosers.cby`, add a second color button for the badge's
+* In `059-choosers.cby`, add a second color button for the badge's
   background.
-* Add a color button to `60-drawing.cby` for the color of the bars.
+* Add a color button to `060-drawing.cby` for the color of the bars.
 
 [← Chapter 58](#chapter-58-tables) · [Contents](#contents) · [Chapter 60 →](#chapter-60-drawing)
 
@@ -11261,7 +11261,7 @@ name, for the program to use; a canvas uses its size.
 
 ### Chapter 60: Drawing
 
-*Program: `60-drawing.cby`. Library: `use gui` (or `use tui`).*
+*Program: `060-drawing.cby`. Library: `use gui` (or `use tui`).*
 
 #### A canvas
 
@@ -11466,7 +11466,7 @@ terminal (see `tui.md`).
 
 #### Try this
 
-* In `60-drawing.cby`, draw each bar's millimeters just above it.
+* In `060-drawing.cby`, draw each bar's millimeters just above it.
 * Draw a clock face: twelve short lines around a circle (for each hour,
   work out the ends with `sin` and `cos`, from `use math`), and the hands from
   `dates.time_now`, with a timer calling `redraw` every second.
@@ -11572,7 +11572,7 @@ a roof with 3 corners
 
 ### Chapter 61: A phrasebook
 
-*Program: `61-phrasebook.cby`, greetings in seven languages. Library: `use gui`.*
+*Program: `061-phrasebook.cby`, greetings in seven languages. Library: `use gui`.*
 
 Choose a language from the drop-down, and the window greets you in it:
 English, German, Latin, Greek, Old English, Hebrew and Arabic, each with
@@ -11635,7 +11635,7 @@ text in order itself.
 
 ### Chapter 62: Windows in a terminal
 
-*Program: `62-terminal-window.cby`. Library: `use tui`.*
+*Program: `062-terminal-window.cby`. Library: `use tui`.*
 
 #### The same window, drawn in text
 
@@ -11749,9 +11749,9 @@ CABBY_TUI_SCRIPT='type 1 Ada; key tab; key enter; screen' cabby greet.cby
 
 #### Try this
 
-* In `62-terminal-window.cby`, change `tui` to `gui` everywhere and run it
+* In `062-terminal-window.cby`, change `tui` to `gui` everywhere and run it
   again.
-* Take `55-dialogs.cby` and change it to `tui`. What happens to the
+* Take `055-dialogs.cby` and change it to `tui`. What happens to the
   picture?
 
 [← Chapter 61](#chapter-61-a-phrasebook) · [Contents](#contents) · [Chapter 63 →](#chapter-63-workers)
@@ -11769,7 +11769,7 @@ few rules of its own, keep that from happening.
 
 ### Chapter 63: Workers
 
-*Program: `63-workers.cby`. Library: `use threads`; reference:
+*Program: `063-workers.cby`. Library: `use threads`; reference:
 `lib/threads.md`.*
 
 A **worker** is an object of yours, made from `threads.worker` as a window
@@ -11867,7 +11867,7 @@ the "3n + 1" game alongside them.
 
 ### Chapter 64: Done later
 
-*Program: `64-done-later.cby`, a window that counts primes. Libraries:
+*Program: `064-done-later.cby`, a window that counts primes. Libraries:
 `use gui`, `use threads`.*
 
 A window's handlers must be quick: while one runs, the window can't
@@ -11934,7 +11934,7 @@ window's loop is watching (the worker, here) is done.
 
 ### Chapter 65: Progress
 
-*Program: `65-progress.cby`, tutorial 64's window with a progress bar and
+*Program: `065-progress.cby`, tutorial 64's window with a progress bar and
 a Cancel button. Libraries: `use gui`, `use threads`.*
 
 A worker can say how it's going while it works, and be asked to stop.
@@ -12000,7 +12000,7 @@ video files, as `sound` opens sound files, and `gui` shows them.
 
 ### Chapter 66: Painting
 
-*Program: `66-painting.cby`, the Mandelbrot set, painted by a worker.
+*Program: `066-painting.cby`, the Mandelbrot set, painted by a worker.
 Libraries: `use gui`, `use threads`, `use images`.*
 
 `images.new 360, 20` makes a picture of 360 by 20 pixels, transparent to
@@ -12123,7 +12123,7 @@ true
 
 ### Chapter 67: A video player
 
-*Program: `67-video-player.cby`, a window that plays a video, given one or not. Library: `use videos`, with `use gui`.*
+*Program: `067-video-player.cby`, a window that plays a video, given one or not. Library: `use videos`, with `use gui`.*
 
 A video is opened, and asked what's in it:
 
@@ -12170,7 +12170,7 @@ seconds of colors, with a beep as each one starts), or the file named
 after it:
 
 ```text
-cabby 67-video-player.cby ~/Videos/lesson.mp4
+cabby 067-video-player.cby ~/Videos/lesson.mp4
 ```
 
 The picture and sound are kept together by the clock. The sound plays as
@@ -12251,7 +12251,7 @@ terminals say when a key is let go). Ctrl+C or Ctrl+Q ends the game.
 
 ### Chapter 68: Sprites and frames
 
-*Program: `68-games.cby`. Library: `use game`.*
+*Program: `068-games.cby`. Library: `use game`.*
 
 A game is a window with a **stage**, and **sprites** on it: pictures or
 shapes that move. A `game.window` is built the same way as a
@@ -12395,7 +12395,7 @@ A test script can play a game. `frames 60` runs 60 frames; `hold left`
 and `release left` press and let go of a key; `tap space` is a key down
 for one frame. While a script runs, frames only run when it says, and
 `random` gives the same numbers every time, so the game goes the same way
-every time. `68-games.cby` is tested like that.
+every time. `068-games.cby` is tested like that.
 
 #### In short
 
@@ -12408,7 +12408,7 @@ every time. `68-games.cby` is tested like that.
 
 #### Try this
 
-* In `68-games.cby`, make the apples fall faster as more are caught.
+* In `068-games.cby`, make the apples fall faster as more are caught.
 * Make a sprite that turns with the left and right keys and moves forward
   with the up key, as a spaceship does.
 
@@ -12464,7 +12464,7 @@ true false
 
 ### Chapter 69: A walking character
 
-*Program: `69-walking.cby`, with its pictures in `pictures/`. Library: `use game`.*
+*Program: `069-walking.cby`, with its pictures in `pictures/`. Library: `use game`.*
 
 In the old handheld adventure games, the world is a grid of **tiles** and
 the hero walks from one to the next, legs moving as they go. All it takes
@@ -12473,7 +12473,7 @@ pictures, `animate`, and counting frames.
 
 #### Walking pictures
 
-A walk is a few pictures shown in turn. The hero in `69-walking.cby` has
+A walk is a few pictures shown in turn. The hero in `069-walking.cby` has
 three for each way they can face: standing, left foot forward, and right
 foot forward.
 
@@ -12587,7 +12587,7 @@ in the same place in each, and transparent round the edges.
 
 ### Chapter 70: Touching
 
-*Program: `70-touching.cby`. Library: `use game`.*
+*Program: `070-touching.cby`. Library: `use game`.*
 
 Games are full of things meeting: a bullet and a rock, a basket and an
 apple, a hero and a wall. `A.touches B` says whether two sprites touch:
@@ -12641,7 +12641,7 @@ instead. `Rock.set_group "rock"` puts a sprite in one; then
 * `sprites_in "rock"` is every rock on the stage, and
 * `Bullet.touching "rock"` every rock that bullet touches.
 
-So the apples of `68-games.cby` need no list at all:
+So the apples of `068-games.cby` need no list at all:
 
 ```cabby
 void drop_apple {
@@ -12681,7 +12681,7 @@ if !Bullet.on_stage {
 
 #### Turning and moving forward
 
-`70-touching.cby` steers a ship: `turn` turns it (degrees, clockwise),
+`070-touching.cby` steers a ship: `turn` turns it (degrees, clockwise),
 and `move_forward` moves it the way it faces. A bullet starts where the
 ship is, facing the same way, and flies on with `move_forward` too.
 
@@ -12694,8 +12694,8 @@ ship is, facing the same way, and flies on with `move_forward` too.
 
 #### Try this
 
-* In `70-touching.cby`, make big rocks break into two small ones.
-* Rewrite `68-games.cby` with a group, as above, and take out its list.
+* In `070-touching.cby`, make big rocks break into two small ones.
+* Rewrite `068-games.cby` with a group, as above, and take out its list.
 
 [← Chapter 69](#chapter-69-a-walking-character) · [Contents](#contents) · [Chapter 71 →](#chapter-71-a-bigger-world)
 
@@ -12703,7 +12703,7 @@ ship is, facing the same way, and flies on with `move_forward` too.
 
 ### Chapter 71: A bigger world
 
-*Program: `71-exploring.cby`. Library: `use game`.*
+*Program: `071-exploring.cby`. Library: `use game`.*
 
 Chapter 69's town fits on the stage. A world to explore is bigger than
 the screen, and scrolls as the hero walks. Two lines do it:
@@ -12727,7 +12727,7 @@ use world positions. Nothing in the game needs to know about scrolling.
 
 What the stage's `on_draw` draws isn't moved by the camera: a score, a
 message box or a "where am I" stays in its place on the stage while the
-world goes by. `71-exploring.cby` writes the hero's tile in the corner
+world goes by. `071-exploring.cby` writes the hero's tile in the corner
 that way. To draw at a sprite's place instead, take the camera away:
 `Hero.x - camera_x`.
 
@@ -12760,7 +12760,7 @@ Message = Signs[C.text + "," + R.text].copy
 
 #### Try this
 
-* In `71-exploring.cby`, add a fourth sign somewhere hard to reach.
+* In `071-exploring.cby`, add a fourth sign somewhere hard to reach.
 * Draw a small map in a corner: a dot for each tree, and one for the hero.
 
 #### More examples
@@ -12804,7 +12804,7 @@ int main {
 
 ### Chapter 72: Sound
 
-*Program: `72-sound.cby`, a keyboard to play. Library: `use sound`.*
+*Program: `072-sound.cby`, a keyboard to play. Library: `use sound`.*
 
 The sound library plays sound files, music, notes and MIDI files. Each
 starts playing and the program goes straight on, so everything plays at
@@ -12841,7 +12841,7 @@ sound.play_music "theme.mp3"               // round and round, until sound.stop_
 
 WAV, MP3 and FLAC files all work. `sound.play` can play the same sound
 again before it has finished, over itself, as a game's effects do:
-`70-touching.cby` now plays a laser, a bang and a crash. For a sound to
+`070-touching.cby` now plays a laser, a bang and a crash. For a sound to
 pause, loop, make quieter or skip through, load it:
 
 ```cabby
@@ -12866,7 +12866,7 @@ flat, and the octave. `"C4"` is middle C, and `"A4"` the A above it, at
 | `sound.play_notes "E4 D4 C4 - E4 D4 C4", 400` | one after another (`-` is a rest) |
 | `sound.start_note "C4"` ... `sound.stop_note "C4"` | a note for as long as the program likes |
 
-`72-sound.cby` is an octave of a keyboard on the computer's keys. Each
+`072-sound.cby` is an octave of a keyboard on the computer's keys. Each
 note starts when its key goes down (`key_press` in a game) and stops when
 the key comes up (`key_release`), as on a real keyboard.
 
@@ -12910,10 +12910,10 @@ everything, `sound.busy` says whether anything is playing, and
 
 #### Try this
 
-* In `72-sound.cby`, add a second octave below, on the keys Z X C V ...
+* In `072-sound.cby`, add a second octave below, on the keys Z X C V ...
 * Play the first line of a tune you know with `play_notes`, then its
   harmony with `play_chord`.
-* Add sounds to `68-games.cby`: `sounds/catch.wav` and `sounds/miss.wav`
+* Add sounds to `068-games.cby`: `sounds/catch.wav` and `sounds/miss.wav`
   are there for it.
 
 #### More examples
@@ -12963,7 +12963,7 @@ int main {
 
 ### Chapter 73: A world in files
 
-*Program: `73-world-in-files.cby`, with `maps/woods.txt` and
+*Program: `073-world-in-files.cby`, with `maps/woods.txt` and
 `maps/town.txt`. Libraries: `use game`, `use files`.*
 
 Chapter 71's world was written into the program, as a list of strings.
@@ -13094,7 +13094,7 @@ files; and a MIDI keyboard heard through the computer as it's played.
 
 ### Chapter 74: Songs
 
-*Program: `74-songs.cby`, a twelve bar blues. Library: `use sound`.*
+*Program: `074-songs.cby`, a twelve bar blues. Library: `use sound`.*
 
 A **part** is one instrument's notes. Each note goes after the last, and
 how long it lasts is in **beats**, not milliseconds; the **song** the
@@ -13193,7 +13193,7 @@ game plays the new one.
 
 ### Chapter 75: Recording
 
-*Program: `75-recording.cby`, a recorder. Libraries: `use sound`, `use gui`.*
+*Program: `075-recording.cby`, a recorder. Libraries: `use sound`, `use gui`.*
 
 `sound.record` starts recording, from the computer's usual input, and
 gives a `sound.recording`. It records until `stop`, into memory; then
@@ -13315,7 +13315,7 @@ int main {
 
 ### Chapter 76: Keyboards
 
-*Program: `76-keyboard.cby`, a piano that writes down what's played.
+*Program: `076-keyboard.cby`, a piano that writes down what's played.
 Libraries: `use sound`, `use events`.*
 
 A MIDI keyboard sends a message for each key pressed and let go, and
@@ -13532,7 +13532,7 @@ tools that made the pictures, sounds and music are in `tools/`.
 
 ### Chapter 77: The map
 
-*Program: `77-quest-map.cby`. Libraries: `use game`, `use files`.*
+*Program: `077-quest-map.cby`. Libraries: `use game`, `use files`.*
 
 The woods, read from `quest/woods.txt`, and the hero standing in them.
 
@@ -13583,7 +13583,7 @@ Nothing moves yet. That's next.
 
 ### Chapter 78: Walking, and signs
 
-*Program: `78-quest-walking.cby`.*
+*Program: `078-quest-walking.cby`.*
 
 The hero walks, tile by tile; walks into trees; and reads the sign.
 
@@ -13657,7 +13657,7 @@ step`, `stage.on_draw draw_over`), 77.4 (`new_walker` for the hero), 77.5
 
 ### Chapter 79: Areas, fades, and going inside
 
-*Program: `79-quest-areas.cby`. Maps: `quest/woods.txt`, `town.txt`,
+*Program: `079-quest-areas.cby`. Maps: `quest/woods.txt`, `town.txt`,
 `meadow.txt`, `bakery.txt`. Library: `game`'s `set_world_area`.*
 
 There are two ways from one area to the next. The areas outside are
@@ -13776,7 +13776,7 @@ the edge), 78.28 (the name, and the dark, drawn over).
 
 ### Chapter 80: Music and sounds
 
-*Program: `80-quest-sound.cby`. Library: `use sound` as well.*
+*Program: `080-quest-sound.cby`. Library: `use sound` as well.*
 
 * **80.2 The area's music.** A line after the map, `music town`, found by
   `setting "music"` (79.36). `sound.change_music "music/town.mid", 1000`
@@ -13826,7 +13826,7 @@ music fades), 78.21 and 78.22 (steps and bumps make sounds), 78.26,
 
 ### Chapter 81: People who walk about
 
-*Program: `81-quest-people.cby`.*
+*Program: `081-quest-people.cby`.*
 
 A line after the map, `person 11,3 elder down wanders`, puts someone in the
 area: on tile 11,3, facing down, with `pictures/elder-down-1.png` and the
@@ -13881,7 +13881,7 @@ sign).
 
 ### Chapter 82: Conversations, and a quest
 
-*Program: `82-quest-talking.cby`.*
+*Program: `082-quest-talking.cby`.*
 
 The elder asks the hero's name, and remembers it. The baker asks for help.
 
@@ -13927,7 +13927,7 @@ anywhere, any size).
 
 ### Chapter 83: Things to carry, and saving
 
-*Program: `83-quest-saving.cby`. Libraries: `use directories` and `use
+*Program: `083-quest-saving.cby`. Libraries: `use directories` and `use
 json` as well.*
 
 * **83.1 to 83.3 Things to pick up.** A line after the map, `item 9,4
@@ -13979,7 +13979,7 @@ what's been taken), 77.3 (`begin`), 77.4 (things as well as people),
 
 ### Chapter 84: Menus
 
-*Program: `84-quest-menus.cby`. The whole game.*
+*Program: `084-quest-menus.cby`. The whole game.*
 
 A title screen, a menu in the game, and options. **A menu is a question
 nobody in the game asks** (82.3), so the answers, the arrow and Space all
@@ -14033,7 +14033,7 @@ and 82.13 (the answers' box can be anywhere).
 
 ### Chapter 85: Being noticed
 
-*Program: `85-quest-noticed.cby`. Maps: `quest/town.txt` and
+*Program: `085-quest-noticed.cby`. Maps: `quest/town.txt` and
 `meadow.txt`, with new lines.*
 
 The people notice the hero, as in Pokémon. Walking into town, the elder
@@ -14114,7 +14114,7 @@ the rest were: `tools/make-town-pictures.py`, `make-sounds.py` and
 
 ### Chapter 86: The hills
 
-*Program: `86-quest-hills.cby`. Maps: `quest/hills.txt`, new, south of
+*Program: `086-quest-hills.cby`. Maps: `quest/hills.txt`, new, south of
 town (`join south hills 0` in `town.txt`).*
 
 The path south out of town leads into the hills, which have the ground
@@ -14213,7 +14213,7 @@ start.
 
 ### Chapter 87: A battle
 
-*Program: `87-quest-battle.cby`, Cabby Quest part 11. Maps: `quest/hills.txt`,
+*Program: `087-quest-battle.cby`, Cabby Quest part 11. Maps: `quest/hills.txt`,
 with tall grass (`w`) below the ledges.*
 
 The hero isn't alone any more: Ember, a fox, goes with them. In the
@@ -14316,7 +14316,7 @@ grass), 84.7 and 84.8 (the battle's menus), 78.28, 84.5 and 82.12
 
 ### Chapter 88: The rival's battle
 
-*Program: `88-quest-rival.cby`, Cabby Quest part 12.*
+*Program: `088-quest-rival.cby`, Cabby Quest part 12.*
 
 Rufus has a creature of his own now: Bruno, a pup. When he sees the hero
 in the meadow (as in part 9), he challenges them, and the battle that
@@ -14389,7 +14389,7 @@ of sprites, metres instead of pixels, and a camera that can be anywhere.
 
 ### Chapter 89: Coins in a field
 
-*Program: `89-coins.cby`, a walk round a field picking up coins. Library: `use world`.*
+*Program: `089-coins.cby`, a walk round a field picking up coins. Library: `use world`.*
 
 A world is built as a game is: an object made from `world.window`, whose
 `build` adds what's in it, and an `on_frame` handler that runs 60 times a
@@ -14600,7 +14600,7 @@ int main {
 
 ### Chapter 90: A robot from Blender
 
-*Program: `90-robot.cby`, a robot that hops and waves. Library: `use world`.*
+*Program: `090-robot.cby`, a robot that hops and waves. Library: `use world`.*
 
 Boxes and balls only go so far. Anything more is made in a 3D program,
 Blender most of all, and brought in whole:
@@ -14713,7 +14713,7 @@ anyone on the network can visit.
 
 ### Chapter 91: Servers and connections
 
-*Program: `91-chat-server.cby`. Library: `use networks`.*
+*Program: `091-chat-server.cby`. Library: `use networks`.*
 
 #### A server, and a connection to it
 
@@ -14876,7 +14876,7 @@ join, talk, and leave, on a timer a step at a time.
 
 ### Chapter 92: A web server
 
-*Program: `92-web-server.cby`. Library: `use networks`.*
+*Program: `092-web-server.cby`. Library: `use networks`.*
 
 #### Answering browsers
 
@@ -15054,7 +15054,7 @@ int main {
 
 ### Chapter 93: WebSockets
 
-*Program: `93-websockets.cby`. Library: `use networks`.*
+*Program: `093-websockets.cby`. Library: `use networks`.*
 
 #### Kept open, both ways
 
@@ -15208,7 +15208,7 @@ int main {
 
 ### Chapter 94: Encrypted
 
-*Program: `94-encrypted.cby`. Library: `use networks`.*
+*Program: `094-encrypted.cby`. Library: `use networks`.*
 
 #### Nothing read on the way
 
@@ -15290,7 +15290,7 @@ trusted, then can.
 
 ### Chapter 95: Emails
 
-*Program: `95-emails.cby`. Library: `use emails`.*
+*Program: `095-emails.cby`. Library: `use emails`.*
 
 #### Making one
 
@@ -15479,7 +15479,7 @@ computer's; yours will say something else.
 
 ### Chapter 96: The computer
 
-*Program: `96-the-computer.cby`. Libraries: `use system`, `use os`.*
+*Program: `096-the-computer.cby`. Libraries: `use system`, `use os`.*
 
 #### What it is
 
@@ -15689,7 +15689,7 @@ The signals a program can be sent are `"interrupt"`, `"terminate"`,
 
 ### Chapter 97: Power, brightness and volume
 
-*Program: `97-power-and-volume.cby`. Libraries: `use power`, `use brightness`, `use volume`.*
+*Program: `097-power-and-volume.cby`. Libraries: `use power`, `use brightness`, `use volume`.*
 
 #### The battery
 
@@ -15770,7 +15770,7 @@ The chapter's program prints all three as a status bar would.
 
 ### Chapter 98: Users
 
-*Program: `98-users.cby`. Library: `use users`.*
+*Program: `098-users.cby`. Library: `use users`.*
 
 #### Who's here
 
@@ -15843,7 +15843,7 @@ the system's own tools (`useradd` on Linux, `sysadminctl` on a Mac).
 
 ### Chapter 99: Linux
 
-*Program: `99-linux.cby`. Library: `use linux`.*
+*Program: `099-linux.cby`. Library: `use linux`.*
 
 #### Inside the computer
 
@@ -17014,7 +17014,7 @@ Run `cabby` with no file to type Cabby a piece at a time:
 
 ```text
 $ cabby
-Cabby 1.6.0 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
+Cabby 1.6.1 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
 Cabby comes with ABSOLUTELY NO WARRANTY, under the MIT License; "cabby.license" for details.
 >>> int add int a, int b {
 ... 	return a + b
@@ -17335,7 +17335,7 @@ new line), `check <label>`, `choose <n> <option>`, `select <n> <item>`,
 `close` ends one window; the rest goes to the next. For example:
 
 ```sh
-CABBY_GUI_SCRIPT="type 1 Ada; click Say hello; shot greeter.png; close" cabby 51-first-window.cby
+CABBY_GUI_SCRIPT="type 1 Ada; click Say hello; shot greeter.png; close" cabby 051-first-window.cby
 ```
 
 [Contents](#contents)

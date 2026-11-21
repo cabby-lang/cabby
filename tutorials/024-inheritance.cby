@@ -1,0 +1,83 @@
+// Tutorial 24: Inheritance and virtual methods
+//
+// Run it:      cabby 024-inheritance.cby
+// Topics:      object child : parent, overriding, dispatch through borrows
+//
+// `object dog : animal` makes dog a kind of animal: it has every field and
+// method an animal has, and can add its own or replace (override) some.
+//
+// Calls are VIRTUAL: when you call a method through a borrow of the parent
+// type, the child's version runs. That's what lets one function work with
+// every kind of animal.
+
+object animal {
+	str Name
+	int Legs
+
+	void speak const {
+		println Name, "makes a sound"
+	}
+
+	void describe const {
+		print Name, "has", Legs, "legs and says: "
+		speak                     // virtual: the child's speak if it has one
+	}
+}
+
+object dog : animal {
+	str Breed                     // a field of its own
+
+	void speak const {            // override: same name and signature
+		println "Woof!"
+	}
+
+	void fetch const {            // a method of its own
+		println Name, "the", Breed, "fetches"
+	}
+}
+
+object bird : animal {
+	void speak const {
+		println "Tweet!"
+	}
+}
+
+object snake : animal {
+	// no speak: uses animal's
+}
+
+// Takes any animal: a dog, a bird, a snake... borrowed, so not moved.
+void introduce const animal &a {
+	a.describe
+}
+
+int main {
+	// A child's fields: the parent's come first, then its own.
+	dog Rex = {.Name = "Rex", .Legs = 4, .Breed = "collie"}
+	bird Tweety = {.Name = "Tweety", .Legs = 2}
+	snake Sid = {.Name = "Sid"}
+
+	introduce Rex
+	introduce Tweety
+	introduce Sid
+
+	Rex.fetch
+	// A dog IS an animal, so it can be borrowed as one...
+	const animal &a = Rex
+	a.speak                       // still Woof!: the object is really a dog
+	// ...but through `a` you can only use what every animal has:
+	// a.fetch                   // error: animal has no method fetch
+}
+
+// Try this:
+//  - Give snake its own speak ("Hiss!").
+//  - Uncomment `a.fetch` and read the error.
+//  - Change dog's speak to `int speak const`. Cabby rejects an override
+//    whose signature is different from the parent's.
+
+// ---------------------------------------------------------------- output
+//> Rex has 4 legs and says: Woof!
+//> Tweety has 2 legs and says: Tweet!
+//> Sid has 0 legs and says: Sid makes a sound
+//> Rex the collie fetches
+//> Woof!

@@ -1,0 +1,78 @@
+// Tutorial 95: Emails — a lesson reminder
+//
+// Run it:      cabby 095-emails.cby
+// Or compile:  cabby -c 095-emails.cby && ./095-emails
+// Library:     use emails
+// Topics:      emails.message, set_from, add_to, add_cc, add_bcc,
+//              set_reply_to, set_subject, set_text, set_html, attach, save;
+//              emails.read_message, emails.received: from, from_name,
+//              sent_to, subject, text, html, attachments; and (in the
+//              chapter) emails.account_at, send, emails.mailbox_at
+//
+// An email is made as a mail program makes one: who it's from and to, a
+// subject, what it says (as text, and as HTML too if you like), and files
+// attached. Then an account's server sends it.
+//
+// Sending needs an account and its password, so this program saves the
+// message as a file instead (.eml, which any mail program opens), and reads
+// it back as a received message, as a mailbox would give it. The chapter
+// sends one, and reads a real mailbox.
+
+use emails
+use files
+
+int main {
+	files.write "cabby-scales.txt", "C major: C D E F G A B C\n"
+
+	emails.message Reminder
+	Reminder.set_from "Thomas Whalan <tom@example.com>"
+	Reminder.add_to "Ana Rossi <ana@example.com>"
+	Reminder.add_cc "parents@example.com"
+	Reminder.add_bcc "tom@example.com"          // a copy for me; the others don't see it
+	Reminder.set_reply_to "lessons@example.com"
+	Reminder.set_subject "Lesson on Friday ♪"
+	Reminder.set_text "Hi Ana,\n\nThe lesson is at four this week. The scales are attached.\n\nThomas"
+	Reminder.set_html "<p>Hi Ana,</p><p>The lesson is at <b>four</b> this week.</p>"
+	Reminder.attach "cabby-scales.txt"
+	Reminder.save "cabby-reminder.eml"
+
+	// read back, as a mailbox gives a message
+	emails.received Got = emails.read_message "cabby-reminder.eml"
+	println "From:", Got.from_name, "<" + Got.from_address + ">"
+	println "To:", Got.sent_to
+	println "Copied to:", Got.cc
+	println "Answers go to:", Got.header("Reply-To")
+	println "Subject:", Got.subject
+	println "Its text:"
+	println Got.text
+	println "Its HTML has bold in it:", Got.html.contains("<b>four</b>")
+	println "Attached:", Got.attachments, "file,", Got.attachment_name(0), Got.attachment_type(0), Got.attachment_size(0), "bytes"
+	println "The Bcc is left out of it, as it should be:", !Got.whole.contains("Bcc:")
+
+	files.delete "cabby-reminder.eml"
+	files.delete "cabby-scales.txt"
+}
+
+// Try this:
+//  - Open cabby-reminder.eml in a mail program (take out the delete):
+//    it shows the message, with its attachment.
+//  - Send it for real, with your own account: see the chapter for the
+//    server (Gmail's is smtp.gmail.com, with an app password).
+//  - Print `Reminder.text`: the whole message as it's sent, headers and
+//    all, with the attachment written out as base64.
+
+// ---------------------------------------------------------------- output
+//> From: Thomas Whalan <tom@example.com>
+//> To: Ana Rossi <ana@example.com>
+//> Copied to: parents@example.com
+//> Answers go to: lessons@example.com
+//> Subject: Lesson on Friday ♪
+//> Its text:
+//> Hi Ana,
+//>
+//> The lesson is at four this week. The scales are attached.
+//>
+//> Thomas
+//> Its HTML has bold in it: true
+//> Attached: 1 file, cabby-scales.txt text/plain 25 bytes
+//> The Bcc is left out of it, as it should be: true

@@ -1,0 +1,90 @@
+// Tutorial 27: Using C functions
+//
+// Run it:      cabby 027-c-functions.cby
+// Keywords:    extern
+// Topics:      use, the standard headers
+//
+// Cabby can call any function in the C library. `extern` declares one,
+// using C's types:
+//
+//     extern double hypot double x, double y
+//
+// Three headers declare the common ones Cabby has no way of its own to do,
+// so usually you just `use` them: `use standard` (printf, abs, labs, rand,
+// srand, exit, system), `use math` (sqrt, pow, sin, floor...) and
+// `use strings` (strlen, strcmp, strncmp). C's puts, putchar, getchar,
+// atoi and atof aren't there: Cabby has println, print, read_line and
+// .to_int and .to_double instead. The headers are the .hby
+// files in Cabby's library directory (/usr/local/lib/cabby after `sudo make
+// install`): open them to see exactly what they declare.
+
+use standard
+use math
+use strings
+
+// A C function no header declares yet: declare it yourself.
+extern double hypot double x, double y
+// `double &` is passed as a pointer, so C can write an answer into it:
+// modf gives back a number's fraction, and puts its whole part there.
+extern double modf double x, double &whole
+
+int main {
+	// printf: C's formatted printing. `...` in its declaration means it
+	// takes any number of extra arguments. Cabby checks each argument's
+	// type, but NOT that they match the format: that's up to you, as in C.
+	printf "%d apples at $%.2f each\n", 3, 0.45
+	printf "[%5s] [%-5s] [%05d]\n", "ab", "cd", 42
+
+	println "sqrt(2) =", sqrt(2.0)
+	println "2^10 =", pow(2.0, 10.0)
+	println "floor/ceil of 2.5:", floor(2.5), ceil(2.5)
+	println "hypotenuse of 3, 4:", hypot(3.0, 4.0)
+
+	println "abs(-7) =", abs(-7)
+	println "strlen(\"Cabby\") =", strlen("Cabby")
+
+	// A str is handed to C as an ordinary NUL-terminated string, and stays
+	// yours afterwards.
+	str Word = "borrowed"
+	printf "C sees: %s\n", Word
+	println "still mine:", Word
+
+	double Whole
+	double Fraction = modf 4096.25, Whole
+	println "4096.25 is", Whole, "and", Fraction
+
+	// Random numbers: seed, then draw. (rand's numbers differ between C
+	// libraries, so this only prints whether they were in range.)
+	srand 42
+	bool Ok = true
+	for i in 100 {
+		int Roll = rand % 6 + 1
+		if Roll < 1 || Roll > 6 {
+			Ok = false
+		}
+	}
+	println "100 dice rolls all between 1 and 6:", Ok
+}
+
+// Calling C is as safe as C: Cabby can't check what a C function does with
+// its arguments. Keep to functions you understand.
+//
+// Try this:
+//  - Declare `extern double cbrt double x` yourself (it's also in
+//    math.hby) and print cbrt(27.0).
+//  - Use `printf("%d\n", 2.5)` and see what C does with a mismatched
+//    format. This is why Cabby's own println is the safer choice.
+
+// ---------------------------------------------------------------- output
+//> 3 apples at $0.45 each
+//> [   ab] [cd   ] [00042]
+//> sqrt(2) = 1.4142135623730951
+//> 2^10 = 1024.0
+//> floor/ceil of 2.5: 2.0 3.0
+//> hypotenuse of 3, 4: 5.0
+//> abs(-7) = 7
+//> strlen("Cabby") = 5
+//> C sees: borrowed
+//> still mine: borrowed
+//> 4096.25 is 4096.0 and 0.25
+//> 100 dice rolls all between 1 and 6: true

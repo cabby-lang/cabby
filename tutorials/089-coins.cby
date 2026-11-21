@@ -1,0 +1,120 @@
+// Tutorial 89: Coins in a field — a world in 3D
+//
+// Run it:      cabby 089-coins.cby
+// Or compile:  cabby -c 089-coins.cby && ./089-coins
+// Library:     use world
+// Topics:      world.window, add_box, add_ball, add_plane, add_cylinder,
+//              add_cone; positions in metres, angles in degrees;
+//              move_forward, turn, follow; touches; add_text; lamps
+//
+// Walk round a field and pick up the coins: the up arrow walks forward,
+// left and right turn, down walks back. The camera follows behind, as in
+// most 3D games. A world is built as a game is: build adds what's in it,
+// and on_frame moves things, 60 times a second.
+//
+// Everything is a few shapes: the walker is a cylinder with a ball for a
+// head (moved together), a tree is a cylinder and a cone, a coin is a
+// short cylinder stood on its edge. Distances are in metres, with y up:
+// the ground is at y 0, and a shape's position is its middle, so a box a
+// metre high stands on the ground at y 0.5.
+
+use world
+
+object field : world.window {
+	world.shape Body
+	world.shape Head
+	world.text Score
+	int Found
+	int Coins
+
+	void build {
+		set_title "Coins in a field"
+		set_size 640, 480
+		add_plane 60, 60, "forestgreen", 0, 0, 0
+		// trees round the edge, and a stone wall
+		for I in 8 {
+			double X = -14 + I * 4
+			add_cylinder 0.25, 2, "saddlebrown", X, 1, -12
+			add_cone 1.2, 3, "darkgreen", X, 3.5, -12
+		}
+		add_box 8, 1, 0.6, "gray", 6, 0.5, -4
+		// the coins: gold, stood on their edges
+		coin 0, -3
+		coin 0, -6
+		coin -5, -7
+		coin 4, 2
+		// the walker: a body, and a head on it
+		Body = add_cylinder 0.35, 1.4, "royalblue", 0, 0.7, 2
+		Head = add_ball 0.25, "peachpuff", 0, 1.65, 2
+		// a lamp by the wall, as evening comes
+		add_lamp 6, 2.5, -2, "orange", 6
+		set_sun_color "#e0d0b0"
+		follow Body, 5, 2.5
+		Score = add_text "Coins: 0", 14, 10
+		Score.set_size 24
+		on_frame step
+	}
+
+	void coin double X, double Z {
+		world.shape C = add_cylinder 0.4, 0.08, "gold", X, 0.6, Z
+		C.set_tilt 90
+		C.set_group "coins"
+		Coins++
+	}
+
+	void step {
+		if key_hold "left" {
+			Body.turn 3
+		}
+		if key_hold "right" {
+			Body.turn -3
+		}
+		if key_hold "up" {
+			Body.move_forward 0.1
+		}
+		if key_hold "down" {
+			Body.move_forward -0.05
+		}
+		Head.move_to Body.x, 1.65, Body.z
+		// the coins spin, and those the walker touches are picked up
+		for C in shapes_in "coins" {
+			C.turn 2
+			if C.touches Body {
+				C.remove
+				Found++
+				println "Found a coin:", Found, "of", Coins
+				Score.set_text "Coins: " + Found.text
+				if Found == Coins {
+					world.text Done = add_text "All found!", 230, 210
+					Done.set_size 40
+					Done.set_color "gold"
+				}
+			}
+		}
+	}
+}
+
+int main {
+	field F
+	F.run
+	println "Coins found:", F.Found
+}
+
+// Try this:
+//  - Make the walker jump: when "space" is pressed, give it an upward
+//    speed, and each frame move it up by that speed and take a little off
+//    (gravity) until it's back on the ground at y 0.7.
+//  - Put a picture on the ground: grass.png with set_picture, repeated
+//    every 2 metres with set_picture_size 2.
+//  - Make it night: set_background "midnightblue", set_sun_color "black",
+//    and a lamp carried by the walker (move it with the body each frame).
+//  - Look round with the mouse instead: lock_mouse true, and each frame
+//    Body.turn -mouse_moved_x * 0.2.
+
+// script: frames 10; hold up; frames 90; release up; hold left; frames 30; release left; hold up; frames 70; release up; close
+
+// ---------------------------------------------------------------- output
+//> Found a coin: 1 of 4
+//> Found a coin: 2 of 4
+//> Found a coin: 3 of 4
+//> Coins found: 3

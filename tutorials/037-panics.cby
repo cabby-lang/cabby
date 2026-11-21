@@ -1,0 +1,65 @@
+// Tutorial 37: Panics — run-time errors
+//
+// Run it:      cabby 037-panics.cby
+//
+// Most mistakes are caught before a Cabby program runs: type errors, using
+// a moved value, conflicting borrows. A few can only be noticed while it
+// runs. Then the program PANICS: it stops at once, prints where and why,
+// and exits with status 101. It never carries on with corrupted memory.
+//
+// What panics:
+//   - an array index out of bounds
+//   - dividing (or taking %) by zero, and INT_MIN / -1
+//   - shifting by a negative amount or by the type's width or more
+//   - recursing too deeply (stack overflow)
+//
+// What does NOT panic (it's defined behavior, as listed in tutorials 3-4):
+//   - integer overflow wraps around
+//   - float division by zero gives inf or NaN
+//   - a float-to-integer cast saturates
+//
+// No destructors run after a panic: the program just stops.
+//
+// This program runs until it reads past the end of an array. Uncomment
+// the other lines one at a time to see each kind of panic.
+
+// (For Cabby's test suite, which checks every tutorial: this one is
+// expected to end with the panic below.)
+// panic: index 4 is outside an array of length 4 (positions 0 to 3)
+
+int depth int n {
+	return depth(n + 1) + 1        // never stops: a stack overflow
+}
+
+int main {
+	int Top = 2147483647
+	Top++
+	println "overflow wraps:", Top
+	println "float division by zero:", 1.0 / 0.0
+
+	int Zero = 0
+	// println 10 / Zero
+	// println 1 << (Zero + 40)
+	// println depth(0)
+
+	int Squares[4] = {0, 1, 4, 9}
+	for i in 0 to 4 {      // `to` includes 4: one too far
+		println i, "squared is", Squares[i]
+	}
+	println "never printed"
+}
+
+// In the interactive session (run `cabby` on its own), a panic only stops
+// the line you typed; the session carries on.
+//
+// Try this:
+//  - Fix the loop so it stops at the right place.
+//  - Uncomment each panic in turn and read the message.
+
+// ---------------------------------------------------------------- output
+//> overflow wraps: -2147483648
+//> float division by zero: inf
+//> 0 squared is 0
+//> 1 squared is 1
+//> 2 squared is 4
+//> 3 squared is 9

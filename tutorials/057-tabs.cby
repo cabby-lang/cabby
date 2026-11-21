@@ -1,0 +1,116 @@
+// Tutorial 57: Tabs and scrolling — a recipe card
+//
+// Run it:      cabby 057-tabs.cby
+// Or compile:  cabby -c 057-tabs.cby && ./057-tabs
+// Library:     use gui (or use tui: change gui to tui)
+// Topics:      add_tabs, add_tab, on_change, selected, set_selected,
+//              add_scrolling_column
+//
+// When a window has more than fits, tabs share its space: pages shown one
+// at a time, each chosen by its tab along the top. Each page is a column,
+// filled like a window. And a column made with add_scrolling_column
+// scrolls, with a scroll bar, when what's in it is too long.
+//
+// This recipe card has three pages: the ingredients (a long list of check
+// boxes to tick while shopping, in a scrolling column), the method, and a
+// page to scale the recipe for more people.
+
+use gui
+
+object recipe : gui.window {
+	gui.tabs Pages
+	gui.label Shopping
+	gui.slider People
+	gui.label Amounts
+	list gui.check Ticks
+	list str Things
+	list int Grams
+
+	void build {
+		set_title "Pancakes"
+		set_size 360, 320
+		Things = "flour milk eggs butter sugar salt lemons syrup blueberries cream".split " "
+		Grams = {200, 300, 100, 30, 25, 2, 120, 60, 150, 100}
+
+		Pages = add_tabs
+		Pages.on_change page_changed
+
+		// ---- page 1: what to buy, ticked off as it goes in the basket
+		gui.column Buy = Pages.add_tab "Ingredients"
+		Shopping = Buy.add_label "Tick what's in the basket."
+		gui.column List = Buy.add_scrolling_column
+		for Thing in Things {
+			gui.check Tick = List.add_check Thing
+			Tick.on_toggle ticked
+			Ticks.add Tick
+		}
+
+		// ---- page 2: how to make them
+		gui.column Method = Pages.add_tab "Method"
+		gui.text_area Steps = Method.add_text_area
+		Steps.set_text "1. Whisk the flour, milk and eggs.\n2. Rest for 10 minutes.\n3. Fry in butter."
+		Steps.set_editable false
+
+		// ---- page 3: more people, more pancakes
+		gui.column Scale = Pages.add_tab "For more"
+		Scale.add_label "How many people?"
+		People = Scale.add_slider 1, 12
+		People.set_value 4
+		People.on_change rescale
+		Amounts = Scale.add_label ""
+		rescale
+
+		gui.button Next = add_button "Next page"
+		Next.on_click next_page
+	}
+
+	void page_changed {
+		println "page:", Pages.text
+	}
+
+	void next_page {
+		Pages.set_selected (Pages.selected + 1) % Pages.count   // back to the first after the last
+	}
+
+	void ticked {
+		int Done = 0
+		for Tick in Ticks {
+			if Tick.checked {
+				Done++
+			}
+		}
+		Shopping.set_text Done.text + " of " + Things.length.text + " in the basket"
+		println Shopping.text
+	}
+
+	void rescale {
+		// the recipe is for 4: the amounts for People people
+		str Text = ""
+		for i in 3 {
+			int Needed = Grams[i] * People.value / 4
+			Text += Things[i] + ": " + Needed.text + " g\n"
+		}
+		Amounts.set_text Text
+	}
+}
+
+int main {
+	recipe r
+	r.run
+}
+
+// (Cabby's tests run it in a virtual display:)
+// script: check flour; check cream; click Next page; click Next page; slide 1 8; tab 1 Ingredients; close
+//
+// Try this:
+//  - Show every ingredient's amount on the "For more" page, in a scrolling
+//    column of its own.
+//  - Add a "Clear ticks" button to the Ingredients page.
+//  - Change gui to tui: Tab moves to the tabs, and Left and Right change page.
+
+// ---------------------------------------------------------------- output
+//> 1 of 10 in the basket
+//> 2 of 10 in the basket
+//> page: Method
+//> page: For more
+//> page: Ingredients
