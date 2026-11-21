@@ -1,6 +1,6 @@
 # The Cabby Manual
 
-*For Cabby 1.5.0 (2026-11-22).*
+*For Cabby 1.6.0 (2026-11-22).*
 
 A book for learning Cabby one idea at a time, and a reference to come back
 to afterwards.
@@ -210,6 +210,10 @@ int main {
 105. [Bluetooth](#chapter-105-bluetooth): `use bluetooth`: devices, searching, pairing, connecting
 106. [D-Bus](#chapter-106-d-bus): `use dbus`: calling the desktop's programs, reading properties, being told
 107. [Screens, the mouse and the keyboard](#chapter-107-screens-the-mouse-and-the-keyboard): `use screens`, `use mouse`, `use keyboard`: monitors' resolution and rotation, the cursor, layouts
+
+**[Part XIX: Cabby Quest in 3D](#part-xix-cabby-quest-in-3d)**
+
+108. [The town in 3D](#chapter-108-the-town-in-3d): the quest's map read into a world of shapes; trees, signs, houses and the hero joined together; walking tile by tile; a camera from above
 
 **[Appendices](#appendices)**
 
@@ -14419,7 +14423,7 @@ if key_hold "up" {
 
 Three degrees and ten centimetres a frame is 180 degrees and 6 metres a
 second: a brisk walk. The head is a ball moved to the body's place each
-frame, since shapes don't join (yet).
+frame (chapter 108 joins shapes instead, so they move together).
 
 The camera follows behind the walker, as in most 3D games:
 
@@ -16853,7 +16857,106 @@ int main {
 }
 ```
 
-[← Chapter 106](#chapter-106-d-bus) · [Contents](#contents) · [Appendices →](#appendices)
+[← Chapter 106](#chapter-106-d-bus) · [Contents](#contents) · [Chapter 108 →](#chapter-108-the-town-in-3d)
+
+---
+
+## Part XIX: Cabby Quest in 3D
+
+Cabby Quest again (Part XIV), in three dimensions: the same map files,
+read the same way, but each tile is a metre of ground in a `world`, and
+what stands on it is made of shapes joined together.
+
+### Chapter 108: The town in 3D
+
+*Program: `108-quest-3d.cby`, Cabby Town to walk round. Libraries: `use world`, `use files`, `use math`.*
+
+#### A map, read into a world
+
+The map is part 1's (chapter 77): `quest/town.txt`, a character for each
+tile, and after `---`, a line for each thing there. It's read the same
+way (108.10). What changes is what a tile becomes: here a tile is a
+metre, and the one at column C, row R has its middle at x C, z R. Rows go
+down the map, towards the camera: z grows that way.
+
+The ground is one plane of grass under the whole area, and each tile
+lays its own on it, a little above, so the two don't fight over which is
+seen:
+
+```cabby
+add_plane Wide, Deep, "#6fbf4a", (Wide - 1) / 2, 0, (Deep - 1) / 2
+add_plane 1, 1, "#d9c38c", X, 0.005, Z      // the path, on it
+```
+
+#### Shapes joined together
+
+A tree is a trunk with its leaves on top. Joined, the leaves go wherever
+the trunk goes:
+
+```cabby
+world.shape Trunk = add_cylinder 0.1, 0.5, "#7a4a24", X, 0.25, Z
+world.shape Leaves = add_cone 0.45, 1.1, "#2f7d32", X, 1.0, Z
+Leaves.join Trunk
+```
+
+`join` keeps the leaves where they are, and from then on their place and
+angles are counted from the trunk's. A house is its walls with a door
+and a roof joined on (108.15); the roof is two boards, each tilted 35
+degrees (`set_tilt`: a shape's front up), one sloping down to the front
+and one to the back.
+
+The hero is the same idea, made bigger (108.16): a body, with legs, a
+head and a hat joined to it. Turning the body turns all of them:
+
+```cabby
+Body.set_angle angle_of(Way)
+```
+
+Angle 0 faces up the map (-z), and a shape turns to its left, so left is
+90, down 180 and right 270 (108.3).
+
+#### Walking, tile by tile
+
+The walking is part 2's (chapter 78): an arrow key starts a step to the
+next tile, 16 frames long, and the hero arrives on it. In metres, a step
+is 1 / 16 = 0.0625 a frame. While a step goes on, the legs swing, each
+tilted the other way, by a sine that goes up and back once a step:
+
+```cabby
+double Swing = 30 * sin(StepsLeft * 3.14159265 / 8)
+Left.set_tilt Swing
+Right.set_tilt -Swing
+```
+
+What's in the way is the map's, as before: a tree, a sign, a house or
+water is a step on the spot.
+
+#### The camera from above
+
+FireRed looks down at the hero from above and behind, and never turns.
+So the camera isn't `follow`'s, which turns behind a shape as it turns,
+but put above and behind the hero every frame, looking down at them
+(108.17):
+
+```cabby
+move_camera_to Hero.Body.x, 7, Hero.Body.z + 5
+point_camera_at Hero.Body.x, 0.5, Hero.Body.z
+```
+
+#### Signs
+
+A sign is read as in part 2: Space, facing one, finds its line after the
+map, and its words are written over the world (`add_text`), with the
+same words in black a little below them, a shadow that keeps them
+readable on the grass or the sky.
+
+#### Try this
+
+* Make the hero walk faster while Shift is held (`key_hold "shift"`).
+* Give the houses a chimney: a box joined to the walls, on the roof.
+* Make the water move a little: lower and raise its planes each frame.
+
+[← Chapter 107](#chapter-107-screens-the-mouse-and-the-keyboard) · [Contents](#contents) · [Appendices →](#appendices)
 
 ---
 ## Appendices
@@ -16911,7 +17014,7 @@ Run `cabby` with no file to type Cabby a piece at a time:
 
 ```text
 $ cabby
-Cabby 1.5.0 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
+Cabby 1.6.0 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
 Cabby comes with ABSOLUTELY NO WARRANTY, under the MIT License; "cabby.license" for details.
 >>> int add int a, int b {
 ... 	return a + b
