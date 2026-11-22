@@ -117,6 +117,7 @@ changing for.
 | 1.13.0 | 22 November | Cabby Quest in 3D, part 8: a title over the world, the game's menu, and options |
 | 1.14.0 | 22 November | Cabby Quest in 3D, part 9: the lake; the world moving; swimming |
 | 1.15.0 | 22 November | `add_wedge` in `use world`; the 3D quest's ledges as wedges, feet on the stairs, the "!" upright, and one world across areas |
+| 1.16.0 | 22 November | Cabby Quest in 3D, part 10: the day passing, the moon, lit windows, and rain |
 
 ---
 
@@ -2010,6 +2011,15 @@ middle that only a swimmer can reach, and a shell on it.
   it there (`to_its_place`, 116.11), so nothing moves. Its ripples are
   cleared with the area, too (they were kept after their shapes had
   gone).
+
+*Version 1.16.0, Cabby Quest in 3D, part 10:* tutorial 117, and
+chapter 117 of the manual, from your idea. The day passes, two minutes
+from midnight to midnight: the sun rises in the east, crosses the sky
+and sets in the west, golden low down, the shadows long; then the light
+is dim and blue, the moon shines (with shadows of its own), and the
+houses' windows are lit, each with a lamp. Now and then it rains: the
+light dims, the sky greys, drops fall round the hero, and ripple the
+water. The time and the weather are saved with the game.
 
 ## Along the way (dates not recorded)
 
