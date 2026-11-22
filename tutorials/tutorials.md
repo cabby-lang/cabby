@@ -1,6 +1,6 @@
 # The Cabby Manual
 
-*For Cabby 1.24.0 (2026-11-23).*
+*For Cabby 1.25.0 (2026-11-23).*
 
 A book for learning Cabby one idea at a time, and a reference to come back
 to afterwards.
@@ -228,6 +228,7 @@ int main {
 120. [The coast](#chapter-120-the-coast): the sea, going on past the world's edge; sand and foam; a pier, boats rocking at anchor, palms, gulls; a lighthouse, its beam glowing; Rufus, again
 121. [Ember follows](#chapter-121-ember-follows): a follower a step behind, the leader's moves kept in a list and made again in turn; over ledges, up stairs, swimming; into the next area, and through a door
 122. [Arriving](#chapter-122-arriving): a story at the start, a step at a time; a train, slowing into a station, steam rising; lines in a map for the 3D quest only; a home, and Ember given
+123. [Trains, and the elder](#chapter-123-trains-and-the-elder): a timetable, worked out from the time alone; pulling in, waiting, pulling out; no ticket; worn out, and back to the elder
 
 **[Appendices](#appendices)**
 
@@ -18053,7 +18054,70 @@ A new sound, `whistle` (three notes at once, a chord), is made by
 * Have the train leave again, once the hero's off (122.9).
 * A window in the home, lit at night (as the town's are, 117.4).
 
-[← Chapter 121](#chapter-121-ember-follows) · [Contents](#contents) · [Appendices →](#appendices)
+[← Chapter 121](#chapter-121-ember-follows) · [Contents](#contents) · [Chapter 123 →](#chapter-123-trains-and-the-elder)
+
+### Chapter 123: Trains, and the elder
+
+*Program: `123-quest-3d-trains.cby`, trains coming and going, and losing a battle. Libraries: `use world`, `use files`, `use math`, `use json`, `use directories`, `use sound`.*
+
+#### The train pulls out
+
+In part 15 the train brought the hero, and stayed. Now, once the elder
+has the hero's name, it whistles and pulls out (122.9, a new step of
+the start): `TRAIN_RUN` times the square of how far it has gone, so
+slowly at first, then quicker, the other way to its pulling in. Then
+it's hidden, and the elder takes the hero home.
+
+#### A timetable
+
+After that, a train comes every `TRAIN_EVERY` frames (123.1): three
+minutes. It pulls in, waits `TRAIN_WAITS` (twenty seconds), whistling
+as it comes and as it goes, and pulls out.
+
+How does the game know where the train is, when the hero walks into
+the station halfway through? It doesn't keep track. `timetable` (123.2)
+is how far through the three minutes it is now: the frame count, and
+what's left over after dividing by `TRAIN_EVERY` (`%`). Everything
+follows from that one number: before `TRAIN_FRAMES`, it's pulling in,
+and how far it has still to go; then, until it's waited, it's at the
+platform; then pulling out; then there's none (hidden). `run_trains`
+works it out afresh every frame, and puts the train there. There's
+nothing to save, and nothing to go wrong if the hero comes and goes:
+the train is always where the time says.
+
+The train is built with the station (`add_scene`, 122.7), every time,
+not only at the start.
+
+#### No ticket
+
+Space, facing the rails (123.3), with the train waiting there: "You
+don't have a ticket." Without it, they say a train stops every few
+minutes. (One day there'll be tickets, to go further, quicker.)
+
+#### Worn out
+
+When Ember was worn out, she used to curl up and be well again at once.
+Now the hero hurries her back to the elder (123.4), in the last town
+they were in: when the battle's over, `back_to_the_elder` fades out, to
+that town, and the hero wakes beside him, and he sees to her. So it's
+worth keeping her well.
+
+Which town, and where? A town's map says where to wake with a `rest`
+line (in Cabby Town's, `3d rest 11,4`: the 2D quest doesn't read it).
+Arriving in an area with one, `go_to` notes it as the hero's town:
+`Story.Town`, saved with the rest (a game saved before has none:
+Cabby Town). `line_in` reads the line from the town's map, without
+going there. Built, the elder is moved to just above the hero
+(`beside_the_elder`), facing them; and waking is a step of the start's
+kind (122.8): `Resting` keeps `scene_step` going until he has spoken.
+
+#### Try this
+
+* A train every minute, waiting half a minute (123.1).
+* Put the timetable on the sign at the station: when's the next one?
+* Lose a little experience, as well as waking at the elder's (123.4).
+
+[← Chapter 122](#chapter-122-arriving) · [Contents](#contents) · [Appendices →](#appendices)
 
 ---
 ## Appendices
@@ -18111,7 +18175,7 @@ Run `cabby` with no file to type Cabby a piece at a time:
 
 ```text
 $ cabby
-Cabby 1.24.0 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
+Cabby 1.25.0 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
 Cabby comes with ABSOLUTELY NO WARRANTY, under the MIT License; "cabby.license" for details.
 >>> int add int a, int b {
 ... 	return a + b
