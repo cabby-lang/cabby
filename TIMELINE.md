@@ -118,6 +118,7 @@ changing for.
 | 1.14.0 | 22 November | Cabby Quest in 3D, part 9: the lake; the world moving; swimming |
 | 1.15.0 | 22 November | `add_wedge` in `use world`; the 3D quest's ledges as wedges, feet on the stairs, the "!" upright, and one world across areas |
 | 1.16.0 | 22 November | Cabby Quest in 3D, part 10: the day passing, the moon, lit windows, and rain |
+| 1.17.0 | 22 November | `use world`: removed shapes' room used again (walking between areas no longer slows down), and models that can't be read say why; the 3D quest's day 24 minutes, the sun and moon fading through the horizon, and swimming smooth |
 
 ---
 
@@ -2020,6 +2021,34 @@ is dim and blue, the moon shines (with shadows of its own), and the
 houses' windows are lit, each with a lamp. Now and then it rains: the
 light dims, the sky greys, drops fall round the hero, and ripple the
 water. The time and the weather are saved with the game.
+
+*Version 1.17.0:* from your testing.
+
+* **Walking between areas got slower and slower** (back and forth, it
+  slowed right down). In `use world`, a removed shape kept its room, so
+  every area built added three thousand more to what each frame went
+  through; and removing one looked through every shape there had ever
+  been for what was joined to it. Now a removed shape's room is used
+  again, each shape knows what's joined to it, and the room grows by
+  doubling. Crossing between the hills and the lake took 12 ms the first
+  time and 96 ms the thirteenth; now it's 6 to 8 every time. A shape's
+  id carries how many times its room has been used, so one kept after
+  the shape was removed still says it's removed, and reaches nothing
+  (the world tests check that, and that removing a shape removes what's
+  joined to it, but not what's been unjoined). And tutorial 117 reads
+  the areas' maps once, as the game starts.
+* **Models that can't be read say why.** One made with Draco or meshopt
+  compression, or with KTX2 or WebP pictures, stops with what it is and
+  how to export it again; a picture that can't be read is said once,
+  and the model shows its colors.
+* **Day and night** (tutorial 117): the sun fades out as it reaches the
+  horizon, and the moon comes up on the other side from nothing, so the
+  shadows fade rather than switching. A day is 24 minutes, 12 of day and
+  12 of night; the options can make it two.
+* **Swimming** (tutorials 116 and 117): the hero bounced up to the
+  surface and back each stroke (the edge between two tiles of water was
+  taken for the shore's); now only the shore is. In 117 they bob, a
+  little, slowly.
 
 ## Along the way (dates not recorded)
 

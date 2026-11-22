@@ -216,8 +216,17 @@ static int model_picture(const char *path, cgltf_data *d, cgltf_texture *t)
 			}
 		}
 	}
-	if (!rgba)
-		return -1;   /* (a picture stb_image can't read: the color alone) */
+	if (!rgba) {
+		/* (a picture stb_image can't read: the color alone, and said once) */
+		static char warned[1200];
+		if (strcmp(warned, path) != 0) {
+			snprintf(warned, sizeof warned, "%s", path);
+			fprintf(stderr, "world: the model '%s' has a picture Cabby can't read%s%s%s: its colors are shown instead "
+				"(export its pictures as PNG or JPEG)\n", path, im->mime_type ? " (" : "",
+				im->mime_type ? im->mime_type : "", im->mime_type ? ")" : "");
+		}
+		return -1;
+	}
 	int pic = picture_from_rgba(key, w, h, rgba);
 	if (t->sampler && t->sampler->mag_filter == 9728)   /* (GL_NEAREST) */
 		set_sharp(pic);
@@ -283,6 +292,25 @@ static int model_load(const char *path)
 		fail("can't read the model '%s': it isn't there", path);
 	if (r != cgltf_result_success)
 		fail("can't read the model '%s': it isn't a glTF model (a .glb or .gltf file, as Blender exports)", path);
+	/* made in a way that can't be read (squeezed small, or with pictures
+	 * stb_image doesn't know): say so, and how to make it again */
+	for (cgltf_size i = 0; i < d->extensions_required_count; i++) {
+		const char *e = d->extensions_required[i];
+		const char *what = strcmp(e, "KHR_draco_mesh_compression") == 0 ? "Draco compression"
+				   : strncmp(e, "EXT_meshopt", 11) == 0 || strncmp(e, "KHR_meshopt", 11) == 0 ? "meshopt compression"
+				   : strcmp(e, "KHR_texture_basisu") == 0 ? "KTX2 (Basis) pictures"
+				   : strcmp(e, "EXT_texture_webp") == 0 ? "WebP pictures"
+				   : NULL;
+		if (what) {
+			char why[1600];
+			snprintf(why, sizeof why,
+				 "can't read the model '%s': it's made with %s, which Cabby doesn't read. Export it again without "
+				 "(in Blender: File > Export > glTF 2.0, compression off, and pictures as PNG or JPEG)",
+				 path, what);
+			cgltf_free(d);
+			fail("%s", why);
+		}
+	}
 	if (cgltf_load_buffers(&opt, d, path) != cgltf_result_success) {
 		cgltf_free(d);
 		fail("can't read the model '%s': its .bin file (beside it) is missing", path);

@@ -200,6 +200,17 @@ Not yet: shape keys (morph targets), cameras and lights made in Blender,
 and Blender's own materials beyond their color and picture (shininess,
 bumps).
 
+**Squeezed small, or with other pictures.** A model made with Draco or
+meshopt compression, or whose pictures are KTX2 or WebP, can't be read:
+`add_model` stops and says which, and how to make it again (in Blender,
+export with compression off and pictures as PNG or JPEG). A picture that
+isn't needed to read the model, but can't be read itself, is said once,
+and the model shows its colors instead. Models from AI model makers are
+often like this, and often very detailed (a few thousand triangles is
+plenty for a character), centred on their middle rather than standing on
+their feet, and sized at random: Blender puts all of that right, and
+Apply > All Transforms keeps it.
+
 ## Light
 
 Every shape is lit by three kinds of light, added together:

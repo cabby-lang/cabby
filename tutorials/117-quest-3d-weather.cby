@@ -7,14 +7,16 @@
 //              going golden, then dim and blue, the moon; windows lit at
 //              night, with lamps; rain falling, and the light dimming
 //
-// Part 9 (tutorial 116) made the world move. Now the day passes, two
-// minutes from one morning to the next. The sun rises in the east,
-// crosses the sky, and sets in the west, its light golden as it goes
-// down, the shadows long; then the light is dim and blue, the moon
-// shines, and the houses' windows are lit. Now and then it rains: the
+// Part 9 (tutorial 116) made the world move. Now the day passes, 24
+// minutes from one morning to the next (or two, in the options). The sun
+// rises in the east, crosses the sky, and sets in the west, its light
+// golden as it goes down, the shadows long, and fading as it sets; then
+// the moon comes up, the light is dim and blue, and the houses' windows
+// are lit. Now and then it rains: the
 // light dims, the sky goes grey, and drops fall, rippling the water.
 //
-// The time, and whether it's raining, are in the saved game.
+// The time, and whether it's raining, are in the saved game. The areas'
+// maps are read once, as the game starts; and swimming, the hero bobs.
 //
 // New sections are numbered 117; those this part changes say (changed in
 // 117). Chapter 117 of the manual goes through what's new.
@@ -52,7 +54,8 @@ const double DEEP = -0.4            // a swimmer's feet, under the water
 
 // ==== 117.1  The day, and the rain =======================================
 
-const int DAY_FRAMES = 7200         // a day: two minutes, from midnight to midnight
+const int DAY_FRAMES = 86400        // a day: 24 minutes, 12 of day and 12 of night
+const int QUICK_DAY = 7200          // or, in the options, two minutes
 const int RAIN_CHECK = 1500         // every 25 seconds, the weather may change
 const int DROPS = 160               // raindrops falling, round the hero
 
@@ -715,10 +718,11 @@ object quest : world.window {
 	world.text TitleShade
 	double Round                    // how far round the town the camera is, in degrees
 
-	// ==== 115.2  Options =================================================
+	// ==== 115.2  Options  (changed in 117) ===============================
 
 	bool NoShadows                  // (fields start false: shadows on, to begin with)
 	bool Far                        // the camera, further from the hero
+	bool QuickDays                  // (117) a day of two minutes, not 24
 
 	// ==== 116.2  In the water ============================================
 
@@ -734,6 +738,8 @@ object quest : world.window {
 	list world.shape Drops          // the raindrops
 	list world.shape Windows        // the houses' windows
 	list world.lamp WindowLamps     // and the light from each
+	lookup str list str Maps        // each area's file, read once: "town": its lines
+	double Bobbed                   // how far the hero has bobbed up, in the water
 	list world.shape Ripples        // rings spreading on the water (two shapes each)
 	list int RippleAges             // and how many frames each has spread
 
@@ -759,6 +765,7 @@ object quest : world.window {
 		Title = add_text "", 210, 120
 		Title.set_size 64
 		OursLine = add_text "", 20, 490
+		read_maps                       // (117)
 		show_title                      // (115)
 		on_frame step
 	}
@@ -871,7 +878,7 @@ object quest : world.window {
 		println "in the", Area, "at", C, R
 	}
 
-	// ==== 109.5  Going to an area  (changed in 110, 111, 113, 114, 116) ===
+	// ==== 109.5  Going to an area  (changed in 110, 111, 113, 114, 116, 117) ===
 
 	// everything there is taken away, and the area and those next door built
 	void go_to const str &Place, int C, int R {
@@ -885,6 +892,7 @@ object quest : world.window {
 		add_ground
 		Hero = new_walker "hero", C, R, Facing
 		stand_on_tile                   // (111)
+		Bobbed = 0                      // (117)
 		add_people
 		add_rival                       // (113)
 		add_sights
@@ -1094,13 +1102,13 @@ object quest : world.window {
 		return ""
 	}
 
-	// ==== 108.10  Reading an area's map ==================================
+	// ==== 108.10  Reading an area's map  (changed in 117) ================
 
 	// quest/town.txt: notes (//) first, then the map, a line a row; then,
 	// after ---, a line for each thing in the area (as in tutorial 78)
 	void read_area const str &Area {
 		bool InMap = true
-		for Line in files.lines "quest/" + Area + ".txt" {
+		for Line in Maps[Area] {
 			if Line == "---" {
 				InMap = false
 			} else if !Line.starts_with("//") && Line.trim != "" {
@@ -1113,11 +1121,11 @@ object quest : world.window {
 		}
 	}
 
-	// ==== 109.8  Just a map ==============================================
+	// ==== 109.8  Just a map  (changed in 117) ============================
 
 	// an area's map, the rows before its ---, into Rows
 	void read_map const str &Place, list str &Rows const {
-		for Line in files.lines "quest/" + Place + ".txt" {
+		for Line in Maps[Place] {
 			if Line == "---" {
 				break
 			} else if !Line.starts_with("//") && Line.trim != "" {
@@ -1128,7 +1136,7 @@ object quest : world.window {
 
 	// an area's join lines, into Lines
 	void read_joins const str &Place, list str &Lines const {
-		for Line in files.lines "quest/" + Place + ".txt" {
+		for Line in Maps[Place] {
 			if Line.starts_with "join " {
 				Lines.add Line.copy
 			}
@@ -1265,6 +1273,32 @@ object quest : world.window {
 		Back.join Walls
 		add_window X - 1, Z + 0.52                      // (117)
 		add_window X + 1, Z + 0.52
+	}
+
+	// ==== 117.12  The maps, read once ===================================
+
+	// every area's file in quest/, its lines kept by the area's name, so
+	// walking into an area (and its next door, and theirs) reads none
+	void read_maps {
+		for Name in directories.list "quest" {
+			if Name.ends_with ".txt" {
+				Maps[Name[0 to Name.length - 5]] = files.lines "quest/" + Name
+			}
+		}
+	}
+
+	// ==== 117.13  Bobbing ===============================================
+
+	// in the water, the hero goes up and down a little, slowly; out of it,
+	// not (Feet, and the ground under them, don't change: it's only how
+	// they're shown)
+	void bob {
+		double Up = 0
+		if Swimming {
+			Up = 0.025 * sin(frame / 25.0)
+		}
+		Hero.Body.move 0, Up - Bobbed, 0
+		Bobbed = Up
 	}
 
 	// ==== 117.4  A window ================================================
@@ -1589,8 +1623,9 @@ object quest : world.window {
 		double Day = daylight
 		place_sun Up
 		tint Sun = blend rgb_of(235, 140, 80), rgb_of(217, 217, 204), Up * 3  // golden low down
+		Sun = blend rgb_of(0, 0, 0), Sun, Up / 0.12          // going down, fading out
 		if Up < 0 {
-			Sun = rgb_of 58, 80, 160                        // the moon
+			Sun = blend rgb_of(0, 0, 0), rgb_of(58, 80, 160), -Up / 0.12   // the moon, coming up
 		}
 		Sun = blend Sun, rgb_of(0, 0, 0), 0.65 * Wet
 		tint All = blend rgb_of(22, 34, 86), rgb_of(89, 89, 102), Day
@@ -1703,6 +1738,7 @@ object quest : world.window {
 			weather
 		}
 		shine
+		bob
 		if frame - NameFrom == NAME_FRAMES {
 			Name.set_text ""
 			NameShade.set_text ""
@@ -1933,7 +1969,7 @@ object quest : world.window {
 		return 0
 	}
 
-	// ==== 111.12  The edge between two tiles =============================
+	// ==== 111.12  The edge between two tiles  (changed in 116) ===========
 
 	// how high the hero's feet are as they step from their tile onto the
 	// next: the stairs climb north, so their top edge is the high ground's
@@ -1945,7 +1981,7 @@ object quest : world.window {
 			return HIGH
 		} else if (Here == 'z' && Way == "down") || (There == 'z' && Way == "up") {
 			return 0
-		} else if Swimming && (Here == '~' || There == '~') {
+		} else if Swimming && (Here == '~') != (There == '~') {
 			return 0                    // (116) the shore: climbing out, or in
 		}
 		return (Hero.From + Hero.To) / 2
@@ -2833,12 +2869,12 @@ object quest : world.window {
 		}
 	}
 
-	// ==== 115.10  The options ============================================
+	// ==== 115.10  The options  (changed in 117) ==========================
 
 	// each says what it is now; choosing it changes it, and the arrow stays
 	// on it (At)
 	void show_options int At {
-		list str Choices = {"Shadows: " + on_or_off(!NoShadows), "Camera: " + near_or_far, "Back"}
+		list str Choices = {"Shadows: " + on_or_off(!NoShadows), "Camera: " + near_or_far, "Day: " + day_length, "Back"}
 		ask "options", "Options", Choices
 		Choice = At
 		show_choices
@@ -2851,6 +2887,13 @@ object quest : world.window {
 		return "off"
 	}
 
+	str day_length const {
+		if QuickDays {
+			return "2 minutes"
+		}
+		return "24 minutes"
+	}
+
 	str near_or_far const {
 		if Far {
 			return "far"
@@ -2858,7 +2901,7 @@ object quest : world.window {
 		return "near"
 	}
 
-	// ==== 115.11  An option chosen =======================================
+	// ==== 115.11  An option chosen  (changed in 117) =====================
 
 	// shadows on or off, the camera near or far; or back where they came
 	// from: the title, or the game's menu
@@ -2870,6 +2913,9 @@ object quest : world.window {
 		} else if Answer.starts_with "Camera" {
 			Far = !Far
 			show_options 1
+		} else if Answer.starts_with "Day" {
+			QuickDays = !QuickDays          // (117)
+			show_options 2
 		} else if OnTitle {
 			title_menu
 		} else {
@@ -2921,7 +2967,7 @@ object quest : world.window {
 	// a frame's worth of the day; and when night falls, or the day comes,
 	// it says so
 	void pass_time {
-		Story.Time += 1.0 / DAY_FRAMES
+		Story.Time += 1.0 / day_frames
 		if Story.Time >= 1 {
 			Story.Time -= 1
 		}
@@ -2934,6 +2980,14 @@ object quest : world.window {
 				println "the sun rises"
 			}
 		}
+	}
+
+	// how long a day is, in frames: as the options say
+	int day_frames const {
+		if QuickDays {
+			return QUICK_DAY
+		}
+		return DAY_FRAMES
 	}
 
 	// ==== 117.10  The weather ============================================
@@ -3279,12 +3333,13 @@ int main {
 }
 
 
-// (Cabby's tests start a new game, walk out of the town to the hills, and
-// wait there for the day to pass, and the weather to change:)
-// script: frames 60; tap space; frames 40; tap down; frames 20; tap down; frames 20; tap down; frames 20; tap right; frames 3; tap right; frames 20; tap right; frames 20; tap down; frames 3; tap down; frames 20; tap down; frames 20; tap down; frames 20; tap left; frames 3; tap left; frames 20; tap left; frames 20; tap down; frames 3; tap down; frames 20; tap down; frames 20; tap down; frames 20; tap down; frames 20; tap down; frames 20; tap down; frames 20; tap down; frames 20; tap down; frames 20; tap down; frames 20; tap down; frames 20; tap down; frames 20; tap down; frames 20; frames 900; frames 1200; frames 500; frames 700; frames 30; close
+// (Cabby's tests start a new game, make the day two minutes long in the
+// options, walk out of the town to the hills, and wait there for the day
+// to pass, and the weather to change:)
+// script: frames 60; tap space; frames 40; tap escape; frames 10; tap right; frames 5; tap space; frames 10; tap right; frames 5; tap right; frames 5; tap space; frames 10; tap right; frames 5; tap space; frames 10; tap right; frames 5; tap right; frames 5; tap right; frames 5; tap space; frames 10; tap down; frames 20; tap down; frames 20; tap down; frames 20; tap right; frames 3; tap right; frames 20; tap right; frames 20; tap down; frames 3; tap down; frames 20; tap down; frames 20; tap down; frames 20; tap left; frames 3; tap left; frames 20; tap left; frames 20; tap down; frames 3; tap down; frames 20; tap down; frames 20; tap down; frames 20; tap down; frames 20; tap down; frames 20; tap down; frames 20; tap down; frames 20; tap down; frames 20; tap down; frames 20; tap down; frames 20; tap down; frames 20; tap down; frames 20; frames 900; frames 1200; frames 500; frames 700; frames 30; close
 //
 // Try this:
-//  - A longer day: ten minutes (117.1).
+//  - A shorter day: ten minutes (117.1).
 //  - Make the moonlight a little brighter, and a little greener (117.5).
 //  - Light the lamp in the bakery at night: a window on its back wall.
 
@@ -3292,6 +3347,14 @@ int main {
 //> asked: Left and right to choose; Space to go.
 //> chose: New game
 //> in the town at 8 4
+//> asked: Carrying: nothing.
+//> chose: Options
+//> asked: Options
+//> chose: Day: 24 minutes
+//> asked: Options
+//> chose: Back
+//> asked: Carrying: nothing.
+//> chose: Back
 //> at 8 5
 //> at 8 6
 //> at 8 7

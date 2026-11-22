@@ -1779,7 +1779,7 @@ object quest : world.window {
 		return 0
 	}
 
-	// ==== 111.12  The edge between two tiles =============================
+	// ==== 111.12  The edge between two tiles  (changed in 116) ===========
 
 	// how high the hero's feet are as they step from their tile onto the
 	// next: the stairs climb north, so their top edge is the high ground's
@@ -1791,7 +1791,7 @@ object quest : world.window {
 			return HIGH
 		} else if (Here == 'z' && Way == "down") || (There == 'z' && Way == "up") {
 			return 0
-		} else if Swimming && (Here == '~' || There == '~') {
+		} else if Swimming && (Here == '~') != (There == '~') {
 			return 0                    // (116) the shore: climbing out, or in
 		}
 		return (Hero.From + Hero.To) / 2
