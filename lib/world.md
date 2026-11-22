@@ -5,7 +5,7 @@ use world
 ```
 
 A world is a window looking into a place in three dimensions: **shapes**
-(boxes, balls, planes, cylinders and cones), colored or with pictures on
+(boxes, balls, planes, cylinders, cones and wedges), colored or with pictures on
 them, lit by the **sun**, the light all round, and **lamps**, and seen by
 a **camera**. It runs as a [game](game.md) does: `build` adds what's in
 it, and the handler given to `on_frame` runs 60 times a second, moving
@@ -104,6 +104,7 @@ seen from above), as a person turns.
 | `world.shape add_plane double Width, double Depth, const str &Color, double X, double Y, double Z` | Flat, facing up: the ground, a floor. Seen from below too. |
 | `world.shape add_cylinder double Radius, double Height, const str &Color, double X, double Y, double Z` | A cylinder, standing up. |
 | `world.shape add_cone double Radius, double Height, const str &Color, double X, double Y, double Z` | A cone, its point up. |
+| `world.shape add_wedge double Width, double Height, double Depth, const str &Color, double X, double Y, double Z` | A box cut corner to corner: its bottom whole, a sheer face at its front (-z, the way shapes face), and a slope up to it from the back's bottom edge. A ramp, a roof's side, a ledge. Turn it (`set_angle`) to face another way. |
 | `world.shape add_model const str &Path, double X, double Y, double Z` | A model made in Blender: see [Models from Blender](#models-from-blender). |
 | `list world.shape shapes_in const str &Group` | The shapes in a group, in the order they were added (`""`: all). |
 | `list world.shape touching const world.shape &Shape, const str &Group` | Those in a group (`""`: any) that the shape touches. |

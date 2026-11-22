@@ -116,6 +116,7 @@ changing for.
 | 1.12.0 | 22 November | Cabby Quest in 3D, part 7: the baker's spoon; questions, a thing to pick up, a quest, and saving |
 | 1.13.0 | 22 November | Cabby Quest in 3D, part 8: a title over the world, the game's menu, and options |
 | 1.14.0 | 22 November | Cabby Quest in 3D, part 9: the lake; the world moving; swimming |
+| 1.15.0 | 22 November | `add_wedge` in `use world`; the 3D quest's ledges as wedges, feet on the stairs, the "!" upright, and one world across areas |
 
 ---
 
@@ -1984,6 +1985,31 @@ the hero goes in up to their chest, ripples spreading behind them, and
 climbs out onto land. A new area, the lake, east of the hills (a gap in
 the hills' east edge, and `quest/lake.txt`), has an island in the
 middle that only a swimmer can reach, and a shell on it.
+
+*Version 1.15.0:* from your testing of the 3D quest.
+
+* `use world` has a new shape, `add_wedge`: a box cut corner to corner,
+  its bottom whole, a sheer face at its front (-z, the way shapes face),
+  and a slope up to it from the back. The world tests draw one, and
+  check two of its pixels (where a box would show its top, a wedge shows
+  what's behind it).
+* The ledges (tutorials 109 to 116) are wedges: a slope up from one
+  side, and a drop on the other, not a block with a drop both ways.
+* The hero's legs went through the top steps of the stairs (tutorials
+  111 to 116): a step went straight from one height to the next, but the
+  stairs are all the way up at their top edge, not half way. A step now
+  goes to the height where the two tiles meet, half way through it, and
+  on from there (`ground_at`, and `edge_height`, 111.12).
+* The "!" over someone who notices the hero stands up straight
+  (tutorials 113 to 116).
+* Walking over an edge into the area next door, the next area was built
+  counted from its own top left, so everything moved by the area's
+  width at once: the camera too, so it didn't seem to, but the sun's
+  shadows (drawn on a grid of their own) and the trees' swaying jumped a
+  little. Tutorial 116 keeps where each area is in the world, and builds
+  it there (`to_its_place`, 116.11), so nothing moves. Its ripples are
+  cleared with the area, too (they were kept after their shapes had
+  gone).
 
 ## Along the way (dates not recorded)
 

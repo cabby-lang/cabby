@@ -223,7 +223,7 @@ typedef struct Mesh {
 	int shared_ix;        /* (its triangles are another mesh's) */
 } Mesh;
 
-enum { MESH_BOX, MESH_BALL, MESH_PLANE, MESH_CYLINDER, MESH_CONE, NMESH_BUILT_IN };
+enum { MESH_BOX, MESH_BALL, MESH_PLANE, MESH_CYLINDER, MESH_CONE, MESH_WEDGE, NMESH_BUILT_IN };
 
 static Mesh *meshes;
 static int nmeshes;
@@ -277,6 +277,28 @@ static void make_box(Mesh *m)
 	box_side(m, v3(-h, 0, 0), v3(-1, 0, 0), v3(0, 0, h), v3(0, h, 0));   /* left */
 	box_side(m, v3(0, h, 0), v3(0, 1, 0), v3(h, 0, 0), v3(0, 0, -h));    /* top */
 	box_side(m, v3(0, -h, 0), v3(0, -1, 0), v3(h, 0, 0), v3(0, 0, h));   /* bottom */
+}
+
+/* a wedge: a box cut corner to corner, its bottom whole, a sheer face at
+ * its front (-z, the way a shape faces), and a slope from the back's
+ * bottom edge up to the front's top: a ramp, or a ledge to hop down */
+static void make_wedge(Mesh *m)
+{
+	float h = 0.5f, k = 0.70710678f;
+	box_side(m, v3(0, 0, -h), v3(0, 0, -1), v3(-h, 0, 0), v3(0, h, 0));  /* the sheer face (-z) */
+	box_side(m, v3(0, -h, 0), v3(0, -1, 0), v3(h, 0, 0), v3(0, 0, h));   /* bottom */
+	box_side(m, v3(0, 0, 0), v3(0, k, k), v3(h, 0, 0), v3(0, h, -h));    /* the slope */
+	for (int side = -1; side <= 1; side += 2) {
+		uint32_t b = (uint32_t)m->nv;
+		float x = side * h;
+		mesh_vertex(m, x, -h, h, (float)side, 0, 0, 0, 1);
+		mesh_vertex(m, x, -h, -h, (float)side, 0, 0, 1, 1);
+		mesh_vertex(m, x, h, -h, (float)side, 0, 0, 1, 0);
+		if (side > 0)
+			mesh_triangle(m, b, b + 1, b + 2);   /* (counterclockwise seen from outside) */
+		else
+			mesh_triangle(m, b, b + 2, b + 1);
+	}
 }
 
 static void make_plane(Mesh *m)
@@ -359,6 +381,7 @@ static void make_meshes(void)
 	make_plane(&meshes[MESH_PLANE]);
 	make_round(&meshes[MESH_CYLINDER], 0);
 	make_round(&meshes[MESH_CONE], 1);
+	make_wedge(&meshes[MESH_WEDGE]);
 	for (int i = 0; i < nmeshes; i++)
 		mesh_bounds(&meshes[i]);
 }
@@ -640,6 +663,11 @@ int64_t cby_world_add_cylinder(int64_t id, double r, double h, const char *c, do
 int64_t cby_world_add_cone(int64_t id, double r, double h, const char *c, double x, double y, double z)
 {
 	return new_shape(id, MESH_CONE, 2 * r, h, 2 * r, c, x, y, z);
+}
+
+int64_t cby_world_add_wedge(int64_t id, double w, double h, double d, const char *c, double x, double y, double z)
+{
+	return new_shape(id, MESH_WEDGE, w, h, d, c, x, y, z);
 }
 
 int64_t cby_world_shape_world(int64_t id) { return shape(id)->world; }

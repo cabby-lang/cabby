@@ -1,4 +1,4 @@
-// A world for run_world_tests.sh to look at: every shape, a picture on
+// A world for run_world_tests.sh to look at: every shape (a wedge too), a picture on
 // the ground (a checkerboard, made here), the sun, a lamp, and text.
 use world
 use images
@@ -25,6 +25,8 @@ object scene : world.window {
 		add_ball 0.6, "royalblue", 0.3, 0.6, 0.5
 		add_cylinder 0.4, 1.6, "slategray", 2, 0.8, -1
 		add_cone 0.6, 1.2, "firebrick", -0.5, 0.6, -2.5
+		world.shape Ramp = add_wedge 1, 0.6, 1, "gold", 1.4, 0.3, 1.6
+		Ramp.set_angle 150                  // (its sheer face toward the camera)
 		add_lamp 0.3, 1.8, 1.5, "yellow", 4
 		world.text Label = add_text "Hello\nworld", 8, 6   // (two lines)
 		Label.set_color "black"

@@ -94,6 +94,7 @@ extern long cby_world_add_ball long win, double r, str color, double x, double y
 extern long cby_world_add_plane long win, double w, double d, str color, double x, double y, double z
 extern long cby_world_add_cylinder long win, double r, double h, str color, double x, double y, double z
 extern long cby_world_add_cone long win, double r, double h, str color, double x, double y, double z
+extern long cby_world_add_wedge long win, double w, double h, double d, str color, double x, double y, double z
 extern long cby_world_add_model long win, str path, double x, double y, double z
 extern void cby_world_shape_play long shape, str name, int loop
 extern void cby_world_shape_stop_animation long shape
@@ -657,6 +658,14 @@ object world.window {
 	world.shape add_cone double Radius, double Height, const str &Color, double X, double Y, double Z {
 		open
 		return world.shape{.Id = cby_world_add_cone(Win, Radius, Height, Color, X, Y, Z)}
+	}
+
+	// a box cut corner to corner: its bottom whole, a sheer face at its
+	// front (-z, the way shapes face), Height high, and a slope from the
+	// back's bottom edge up to it: a ramp, a roof's side, a ledge
+	world.shape add_wedge double Width, double Height, double Depth, const str &Color, double X, double Y, double Z {
+		open
+		return world.shape{.Id = cby_world_add_wedge(Win, Width, Height, Depth, Color, X, Y, Z)}
 	}
 
 	// a model made in Blender, exported as glTF (a .glb file, or .gltf with

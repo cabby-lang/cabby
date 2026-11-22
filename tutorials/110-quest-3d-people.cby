@@ -559,7 +559,8 @@ object quest : world.window {
 			}
 			add_box 1, 0.12, 1, "#8b5a2b", X, HIGH - 0.06, Z
 		} else if Tile == 'v' {
-			add_box 1, 0.3, 0.5, "#5fa83f", X, 0.15, Z - 0.25
+			world.shape Ledge = add_wedge 1, 0.3, 1, "#5fa83f", X, 0.15, Z
+			Ledge.set_angle 180             // (a slope up to it; its drop down the map)
 		} else if Tile == 'w' {
 			add_cone 0.12, 0.45, "#3d8b2f", X - 0.2, 0.22, Z - 0.1
 			add_cone 0.12, 0.5, "#3d8b2f", X + 0.15, 0.25, Z + 0.15

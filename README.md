@@ -17,7 +17,7 @@ cabby --check     prog.cby              type- and ownership-check only
 cabby --style     prog.cby              list names and calls that don't follow STYLE.md
 cabby --dump-ast  prog.cby              print the syntax tree
 cabby --dump-tokens prog.cby            print the token stream
-cabby --version                         which Cabby this is: "Cabby 1.14.0 (2026-11-22)"
+cabby --version                         which Cabby this is: "Cabby 1.15.0 (2026-11-22)"
 cabby --license                         Cabby's license (MIT)
 ```
 
@@ -1230,7 +1230,7 @@ Run `cabby` with no file to type Cabby a piece at a time:
 
 ```
 $ cabby
-Cabby 1.14.0 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
+Cabby 1.15.0 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
 Cabby comes with ABSOLUTELY NO WARRANTY, under the MIT License; "cabby.license" for details.
 >>> int add int a, int b {
 ... 	return a + b
@@ -1523,7 +1523,7 @@ The reference is `lib/tgame.md`.
 
 **3D: `use world`.** A `world.window` looks into a world of shapes, built
 as a game is (`build`, then `on_frame` 60 times a second): boxes, balls,
-planes, cylinders and cones, in metres with y up, colored or with
+planes, cylinders, cones and wedges, in metres with y up, colored or with
 pictures on them, lit by the sun, the light all round and lamps, and seen
 by a camera that can follow a shape, as in most 3D games, or be the
 player's eyes, turned with the mouse. `turn` and `move_forward` walk a

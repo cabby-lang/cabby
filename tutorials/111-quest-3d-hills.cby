@@ -131,6 +131,7 @@ object walker {
 	int Level                       // 0 on the ground, 1 up high
 	double From                     // a step's start height, and its end
 	double To
+	double Edge                     // and its height at the edge of the tiles
 	int Tiles                       // how far a step goes: 1, or 2 in a hop
 	int Frames                      // and how long it takes: 16, or 32
 
@@ -171,6 +172,7 @@ object walker {
 		StepsLeft = Frames
 		From = Feet
 		To = Feet
+		Edge = Feet
 	}
 
 	// ==== 111.4  A hop ===================================================
@@ -190,7 +192,7 @@ object walker {
 	bool keep_stepping {
 		StepsLeft--
 		double Done = (Frames - StepsLeft) / (double)Frames
-		Ground = From + (To - From) * Done
+		Ground = ground_at Done
 		double Now = Ground + jump(Done)
 		Body.move Dx * SPEED, Now - Feet, Dy * SPEED
 		Feet = Now
@@ -204,6 +206,16 @@ object walker {
 			Right.set_tilt 0
 		}
 		return StepsLeft == 0
+	}
+
+	// how high the ground is, Done of the way: from its start to the edge
+	// of the tiles in the first half of the step, from there to its end in
+	// the second (on stairs, the edge isn't half way up)
+	double ground_at double Done const {
+		if Done < 0.5 {
+			return From + (Edge - From) * Done * 2
+		}
+		return Edge + (To - Edge) * (Done - 0.5) * 2
 	}
 
 	// ==== 111.5  Up, and down again ======================================
@@ -620,7 +632,8 @@ object quest : world.window {
 			}
 			add_box 1, 0.12, 1, "#8b5a2b", X, HIGH - 0.06, Z
 		} else if Tile == 'v' {
-			add_box 1, 0.3, 0.5, "#5fa83f", X, 0.15, Z - 0.25
+			world.shape Ledge = add_wedge 1, 0.3, 1, "#5fa83f", X, 0.15, Z
+			Ledge.set_angle 180             // (a slope up to it; its drop down the map)
 		} else if Tile == 'w' {
 			add_cone 0.12, 0.45, "#3d8b2f", X - 0.2, 0.22, Z - 0.1
 			add_cone 0.12, 0.5, "#3d8b2f", X + 0.15, 0.25, Z + 0.15
@@ -995,6 +1008,7 @@ object quest : world.window {
 		Hero.step Way, Free
 		if Free {
 			Hero.To = height_at C, R, Hero.Level
+			Hero.Edge = edge_height Way, C, R
 		} else {
 			println "bump", Way
 		}
@@ -1053,6 +1067,22 @@ object quest : world.window {
 			return HIGH * Level
 		}
 		return 0
+	}
+
+	// ==== 111.12  The edge between two tiles =============================
+
+	// how high the hero's feet are as they step from their tile onto the
+	// next: the stairs climb north, so their top edge is the high ground's
+	// height, and their bottom edge the ground's; anywhere else, half way
+	double edge_height const str &Way, int C, int R const {
+		char Here = tile_at Hero.Col, Hero.Row
+		char There = tile_at C, R
+		if (Here == 'z' && Way == "up") || (There == 'z' && Way == "down") {
+			return HIGH
+		} else if (Here == 'z' && Way == "down") || (There == 'z' && Way == "up") {
+			return 0
+		}
+		return (Hero.From + Hero.To) / 2
 	}
 
 	// ==== 111.9  Up high, or not =========================================
