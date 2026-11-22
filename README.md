@@ -17,7 +17,7 @@ cabby --check     prog.cby              type- and ownership-check only
 cabby --style     prog.cby              list names and calls that don't follow STYLE.md
 cabby --dump-ast  prog.cby              print the syntax tree
 cabby --dump-tokens prog.cby            print the token stream
-cabby --version                         which Cabby this is: "Cabby 1.26.0 (2026-11-23)"
+cabby --version                         which Cabby this is: "Cabby 1.27.0 (2026-11-23)"
 cabby --license                         Cabby's license (MIT)
 ```
 
@@ -39,7 +39,7 @@ Copyright (c) 2026 Thomas Paul Whalan.
 
 **New to Cabby?** Start with [the Cabby Manual](tutorials/tutorials.md), a
 book that teaches the language a chapter at a time, with a reference section
-at the back. Each chapter goes with one of the 123 runnable programs
+at the back. Each chapter goes with one of the 124 runnable programs
 in [`tutorials/`](tutorials/README.md), one keyword or feature each, from a
 first program to windows, games and 3D. [STYLE.md](STYLE.md) is the style guide: how to
 name things and lay out code, checked by `cabby --style`.
@@ -1230,7 +1230,7 @@ Run `cabby` with no file to type Cabby a piece at a time:
 
 ```
 $ cabby
-Cabby 1.26.0 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
+Cabby 1.27.0 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
 Cabby comes with ABSOLUTELY NO WARRANTY, under the MIT License; "cabby.license" for details.
 >>> int add int a, int b {
 ... 	return a + b

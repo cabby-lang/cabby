@@ -460,6 +460,13 @@ static int model_load(const char *path)
 					for (int k = 0; k < 4; k++)
 						p.color[k] *= mat->pbr_metallic_roughness.base_color_factor[k];
 					p.picture = model_picture(path, d, mat->pbr_metallic_roughness.base_color_texture.texture);
+				} else if (mat->has_pbr_specular_glossiness) {
+					/* the older way of saying it (KHR_materials_pbrSpecularGlossiness,
+					 * from Sketchfab, and older exporters): its diffuse color and
+					 * picture are what Base Color is now */
+					for (int k = 0; k < 4; k++)
+						p.color[k] *= mat->pbr_specular_glossiness.diffuse_factor[k];
+					p.picture = model_picture(path, d, mat->pbr_specular_glossiness.diffuse_texture.texture);
 				}
 				p.two_sided = mat->double_sided;
 			}

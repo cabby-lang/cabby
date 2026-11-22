@@ -1,6 +1,6 @@
 # Cabby tutorials
 
-*For Cabby 1.26.0 (2026-11-23).*
+*For Cabby 1.27.0 (2026-11-23).*
 
 A hundred and six short programs, each about one keyword, feature or library, in
 an order where each uses only what came before it. Each one
@@ -281,6 +281,7 @@ between `{` and `}` to run them as one input and see them as a program would. (`
 | 121 | `121-quest-3d-follow.cby` | Cabby Quest in 3D, part 14: Ember follows; a follower a step behind, the leader's moves kept and made again; over ledges, up stairs, swimming; into the next area, and through a door |
 | 122 | `122-quest-3d-arrival.cby` | Cabby Quest in 3D, part 15: arriving; a story at the start, a step at a time; a train, slowing into a station, steam rising; lines in a map for the 3D quest only; a home, and Ember given |
 | 123 | `123-quest-3d-trains.cby` | Cabby Quest in 3D, part 16: trains, and the elder; a timetable, worked out from the time alone; pulling in, waiting, pulling out; no ticket; worn out, and back to the elder |
+| 124 | `124-quest-3d-models.cby` | Cabby Quest in 3D, part 17: models; Ember a fox, Bruno a black dog, the elder an old man, made by others (credits in `models/CREDITS.md`); their animations |
 
 Every keyword in the language appears in at least one tutorial. The manual's
 appendices and the main README (installed as

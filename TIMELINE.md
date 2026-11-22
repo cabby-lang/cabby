@@ -127,7 +127,8 @@ changing for.
 | 1.23.0 | 23 November | Cabby Quest in 3D, part 15: arriving by train at Cabby Town Station, the elder, a home, and Ember given; lines in a map for the 3D quest only |
 | 1.24.0 | 23 November | The 3D quest, from your testing: Ember's back legs and swaying tail, running out from behind the hero into a battle, room beside a ledge; one lighthouse, not four |
 | 1.25.0 | 23 November | Cabby Quest in 3D, part 16: the train leaving, and coming every three minutes (no ticket); worn out in a battle, and waking beside the elder |
-| 1.26.0 | 23 November | `use world`: a model's colors as Blender shows them (glTF's linear colors turned into sRGB) |
+| 1.26.0 | 23 November | `use world`: a model's colors as Blender shows them (glTF's linear colors turned into sRGB), and materials of the older kind (specular-glossiness) read |
+| 1.27.0 | 23 November | Cabby Quest in 3D, part 17: Ember a fox, Bruno a black dog, the elder an old man: models made by others (CC BY 4.0, credited), with their animations |
 
 ---
 
@@ -2171,7 +2172,20 @@ adds up, and Cabby drew them as if they were already as a screen shows
 them. Now each is turned into sRGB, as `"#e8762c"` is (a picture's own
 pixels already were). Found looking at a fox model you found for Ember:
 orange, not red. The model test's gold is drawn paler, as Blender shows
-it.
+it. And a material given the older way (KHR_materials_pbrSpecularGlossiness,
+as some of Sketchfab's models are: a bear, a fish and a sand mouse you
+found) drew white, without its picture: its "diffuse" color and picture
+are now read as Base Color.
+
+*Version 1.27.0, Cabby Quest in 3D, part 17 (your models):* tutorial
+124, and chapter 124 of the manual. Ember is a low-poly fox, Bruno a
+black dog, and the elder an old man: models you found on Sketchfab,
+shared under CC BY 4.0, credited in `tutorials/models/CREDITS.md`. Each
+was turned, put on the ground and sized in its file; the fox's one long
+animation was cut into idle, walk and run, each going round and round
+where it repeats. Ember walks as she follows and stands about when
+still; in a battle she and Bruno run, or walk, out and back, and idle.
+The elder is a walker whose body is the model.
 
 ## Along the way (dates not recorded)
 

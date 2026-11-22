@@ -1,6 +1,6 @@
 # The Cabby Manual
 
-*For Cabby 1.26.0 (2026-11-23).*
+*For Cabby 1.27.0 (2026-11-23).*
 
 A book for learning Cabby one idea at a time, and a reference to come back
 to afterwards.
@@ -229,6 +229,7 @@ int main {
 121. [Ember follows](#chapter-121-ember-follows): a follower a step behind, the leader's moves kept in a list and made again in turn; over ledges, up stairs, swimming; into the next area, and through a door
 122. [Arriving](#chapter-122-arriving): a story at the start, a step at a time; a train, slowing into a station, steam rising; lines in a map for the 3D quest only; a home, and Ember given
 123. [Trains, and the elder](#chapter-123-trains-and-the-elder): a timetable, worked out from the time alone; pulling in, waiting, pulling out; no ticket; worn out, and back to the elder
+124. [Models](#chapter-124-models): models made by others, in place of shapes: a fox, a dog, an old man; their animations, played; a walker whose body is a model; credit where it's due
 
 **[Appendices](#appendices)**
 
@@ -18117,7 +18118,59 @@ kind (122.8): `Resting` keeps `scene_step` going until he has spoken.
 * Put the timetable on the sign at the station: when's the next one?
 * Lose a little experience, as well as waking at the elder's (123.4).
 
-[← Chapter 122](#chapter-122-arriving) · [Contents](#contents) · [Appendices →](#appendices)
+[← Chapter 122](#chapter-122-arriving) · [Contents](#contents) · [Chapter 124 →](#chapter-124-models)
+
+### Chapter 124: Models
+
+*Program: `124-quest-3d-models.cby`, Ember, Bruno and the elder as models. Libraries: `use world`, `use files`, `use math`, `use json`, `use directories`, `use sound`.*
+
+Ember, Bruno and the elder have been built from boxes and balls since
+they first appeared. Now each is a model (a `.glb` file, glTF 2.0, as
+Blender writes it), made by someone else: a low-poly fox, a black dog,
+an old man. `add_model` brings one in, and it's a `world.shape` like
+any other.
+
+#### Whose they are
+
+They're shared on Sketchfab under the Creative Commons Attribution
+licence, CC BY 4.0: anyone may use them, in a game they sell too, so
+long as they say whose they are, link to each and to the licence, and
+say what they changed. `models/CREDITS.md` does that. What was changed:
+each was turned (if it needed to be) to face up the map, its feet put at
+0 and its size made right, in the file itself, so the game needn't; and
+the fox's one long animation was cut into three that go round and round:
+standing about (`idle`), walking (`walk`) and running (`run`).
+
+#### Animations
+
+A model's animations are played by name (124.1 names the files):
+`Model.play "walk"` goes round and round, and playing the one already
+playing goes on with it, so it can be asked every frame. Following, Ember
+walks while she's stepping (twice as fast as made, to keep up) and
+stands about when she isn't (121.5); her legs, her head and her tail are
+the model's own now.
+
+In a battle (112.24, 124.2), a critter that's a model has a `Moving`
+animation (Ember `"run"`, Bruno `"walk"`): played as it runs out, runs
+back, or lunges, and `"idle"` otherwise (112.6). Its `Lift` is 0: a
+model's feet are at 0, where a body of boxes had its middle up off the
+ground.
+
+#### A walker who's a model
+
+The elder is a walker (108.4), and a walker swings two legs.
+`modelled_walker` (124.3) makes one whose body is the model, and whose
+legs are two tiny boxes joined to it, out of sight: the walker swings
+them, harmlessly, and the model's own legs do what it plays. (The old
+man has no walk: he stands about as he moves.)
+
+#### Try this
+
+* Let Ember run, not walk, after the hero (121.5: play `"run"`).
+* Make the elder bigger: `set_scale 1.2` on his body (124.3).
+* Find a model for the field mouse, and give it the mouse's place.
+
+[← Chapter 123](#chapter-123-trains-and-the-elder) · [Contents](#contents) · [Appendices →](#appendices)
 
 ---
 ## Appendices
@@ -18175,7 +18228,7 @@ Run `cabby` with no file to type Cabby a piece at a time:
 
 ```text
 $ cabby
-Cabby 1.26.0 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
+Cabby 1.27.0 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
 Cabby comes with ABSOLUTELY NO WARRANTY, under the MIT License; "cabby.license" for details.
 >>> int add int a, int b {
 ... 	return a + b
