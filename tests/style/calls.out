@@ -2,5 +2,5 @@ calls.cby:16:14: warning: style: write 'area 2, 3' without parentheses: a call t
 calls.cby:18:14: warning: style: write 'roll' without '()': a call with nothing to give it is written by its name
 calls.cby:19:10: warning: style: write 'area 4, 5' without parentheses: a call that is the whole value of an assignment needs none
 calls.cby:20:6: warning: style: write 'show A' without parentheses: a call that is a line of its own needs none
-calls.cby:27:13: warning: style: write 'area 1, 2' without parentheses: a call that is the whole value of a return needs none
+calls.cby:29:13: warning: style: write 'area 1, 2' without parentheses: a call that is the whole value of a return needs none
 5 calls to change

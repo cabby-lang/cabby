@@ -24,5 +24,7 @@ int main {
 	}
 	println "area:", area(2, 2), B, C
 	show(-A)
+	int D = area((int)2.5, 3)       // (a cast first: they stay)
+	show((A + B) * 2)
 	return area(1, 2)
 }

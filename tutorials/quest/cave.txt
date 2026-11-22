@@ -1,0 +1,30 @@
+// The cave, in the rocks at the lake's far corner (the 3D quest's part
+// 11). Dark: no sun, no moon, no sky; the hero's lantern lights it, and
+// its crystals glow.
+//   R  rock          .  the floor        A  a stalagmite
+//   X  a crystal, glowing                ~  water
+//   o  the way out
+// After the ---, as other areas have, and:
+//   dark                                     it's a cave
+//   bats <count>                             bats flying round
+RRRRRRRRRRRRRRRRRRRR
+RRR....RRRRRR..A.RRR
+RR..A.....RR......RR
+R......RR.....~~~..R
+R.X....RR....~~~~..R
+RR..........RR.....R
+RRR..A......RR...X.R
+R......RRR.........R
+R..~~..RRR....A..RRR
+R..~~.........X....R
+RR.....A.....RRR...R
+RRR.X...........RRRR
+RRRRRRRRRoRRRRRRRRRR
+RRRRRRRRRRRRRRRRRRRR
+---
+name The Cave
+music cave
+dark
+bats 3
+way 9,12 lake 17,13
+item 14,1 crystal
