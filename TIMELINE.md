@@ -109,6 +109,7 @@ changing for.
 | 1.6.1 | 22 November | The tutorials' files numbered with three digits (`001-hello.cby` to `108-quest-3d.cby`), so they're listed in order |
 | 1.7.0 | 22 November | Cabby Quest in 3D, part 2: the areas joined edge to edge, trees all round, the bakery's door and inside, the hills drawn |
 | 1.7.1 | 22 November | The 3D hills' steps: six to a staircase, not three |
+| 1.8.0 | 22 November | Cabby Quest in 3D, part 3: the townspeople, made of shapes, walking about and talking |
 
 ---
 
@@ -1918,6 +1919,14 @@ steps, a bridge high enough to walk under, ledges and tall grass.
 *Version 1.7.1:* in tutorial 109, a staircase up the hills is six steps,
 not three (`STAIRS`): big steps for the hero's little legs, as you
 said.
+
+*Version 1.8.0, Cabby Quest in 3D, part 3:* tutorial 110, and chapter
+110 of the manual. The town's people, from the `person` lines after its
+map: walkers as the hero is, made of the same shapes and dressed as who
+they are (the elder in a brown robe, with white hair and a beard; the
+baker all in white, with a tall hat), those who wander taking a step a
+random way now and then. Nobody walks through anybody; facing someone,
+Space talks to them, and they turn to the hero.
 
 ## Along the way (dates not recorded)
 

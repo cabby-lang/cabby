@@ -1,6 +1,6 @@
 # The Cabby Manual
 
-*For Cabby 1.7.1 (2026-11-22).*
+*For Cabby 1.8.0 (2026-11-22).*
 
 A book for learning Cabby one idea at a time, and a reference to come back
 to afterwards.
@@ -215,6 +215,7 @@ int main {
 
 108. [The town in 3D](#chapter-108-the-town-in-3d): the quest's map read into a world of shapes; trees, signs, houses and the hero joined together; walking tile by tile; a camera from above
 109. [The areas, and going inside](#chapter-109-the-areas-and-going-inside): areas joined edge to edge, seen and walked into; trees all round; a door into the bakery; a fade with the light; the hills, drawn
+110. [The townspeople](#chapter-110-the-townspeople): people made of shapes, dressed as who they are; walking about on their own; who's in the way; talking
 
 **[Appendices](#appendices)**
 
@@ -17032,7 +17033,71 @@ ledges are in the way, and the path goes through.
 * Make inside a little darker: light it with 0.7 of the day (109.15).
 * Show the name for longer as you come into a house than over an edge.
 
-[← Chapter 108](#chapter-108-the-town-in-3d) · [Contents](#contents) · [Appendices →](#appendices)
+[← Chapter 108](#chapter-108-the-town-in-3d) · [Contents](#contents) · [Chapter 110 →](#chapter-110-the-townspeople)
+
+### Chapter 110: The townspeople
+
+*Program: `110-quest-3d-people.cby`, Cabby Town with its elder and its baker. Libraries: `use world`, `use files`, `use math`.*
+
+#### People, from the map
+
+The lines after the town's map have had its people all along, for the
+2D quest's part 5 (chapter 81):
+
+```text
+person 11,3 elder down wanders
+person 6,9 baker right
+```
+
+Each becomes a `walker`, as the hero is, kept in a list, `People`
+(110.3). A walker knows who they are now (`Who`), and whether they wander
+(110.1).
+
+#### Dressed as who they are
+
+Everyone is made the same way: a body, two legs and a head, joined
+(108.16). What differs is their clothes (110.4): `clothes_of` and
+`legs_of` give the colors, and `dress` joins on what's on their head.
+The elder has white hair, a ball squashed with `set_size`, and a beard,
+a cone turned point down with `set_tilt 180`:
+
+```cabby
+world.shape Beard = add_cone 0.12, 0.25, "#eeeeee", C, 0.82, R - 0.12
+Beard.set_tilt 180
+Beard.join Body
+```
+
+It's put at `R - 0.12`, towards -z, because that's the front of someone
+facing up the map; once it's joined, turning the body turns the beard to
+wherever they face. The baker has a tall white hat, a cylinder.
+
+#### Walking about
+
+Every frame, everyone part way through a step goes on with it, and every
+75 frames, one in three of those who wander starts a step a random way
+(110.5), if the tile's free and isn't a way out: the elder lives here,
+and doesn't wander into the bakery or off the map. Under a test script,
+`random` gives the same numbers every time, so he wanders the same way
+each time the tests run.
+
+Nobody walks through anybody (110.6): a tile is free only if nobody's on
+it, or stepping onto it. `at` says whether a walker is on a tile, or on
+their way there.
+
+#### Talking
+
+Space, facing someone standing on the next tile, talks to them (110.7):
+they turn to face the hero, the opposite way to the hero's, and say
+something. The words are written over the world, as a sign's are.
+
+#### Try this
+
+* Dress someone new: a guard in `"steelblue"`, with a helmet (a ball
+  joined on, half sunk into their head).
+* Make the elder wander more often: every 40 frames, not 75 (110.5).
+* Give the baker something to say about the spoon she's lost.
+
+[← Chapter 109](#chapter-109-the-areas-and-going-inside) · [Contents](#contents) · [Appendices →](#appendices)
 
 ---
 ## Appendices
@@ -17090,7 +17155,7 @@ Run `cabby` with no file to type Cabby a piece at a time:
 
 ```text
 $ cabby
-Cabby 1.7.1 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
+Cabby 1.8.0 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
 Cabby comes with ABSOLUTELY NO WARRANTY, under the MIT License; "cabby.license" for details.
 >>> int add int a, int b {
 ... 	return a + b
