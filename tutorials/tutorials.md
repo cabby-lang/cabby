@@ -1,6 +1,6 @@
 # The Cabby Manual
 
-*For Cabby 1.21.0 (2026-11-23).*
+*For Cabby 1.22.0 (2026-11-23).*
 
 A book for learning Cabby one idea at a time, and a reference to come back
 to afterwards.
@@ -226,6 +226,7 @@ int main {
 118. [The cave](#chapter-118-the-cave): a dark place, lit by a lantern the hero carries; rock, stalagmites and glowing crystals; bats; dripping water
 119. [Sound](#chapter-119-sound): each area's music; sound effects; sounds quieter further off; the rain, heard; thunder and lightning
 120. [The coast](#chapter-120-the-coast): the sea, going on past the world's edge; sand and foam; a pier, boats rocking at anchor, palms, gulls; a lighthouse, its beam glowing; Rufus, again
+121. [Ember follows](#chapter-121-ember-follows): a follower a step behind, the leader's moves kept in a list and made again in turn; over ledges, up stairs, swimming; into the next area, and through a door
 
 **[Appendices](#appendices)**
 
@@ -17866,7 +17867,82 @@ he stays, and talked to, says he's off on the next boat.
 * Make the lighthouse's beam go round faster, and brighter (120.8).
 * Have the gulls cry more often (118.9).
 
-[← Chapter 119](#chapter-119-sound) · [Contents](#contents) · [Appendices →](#appendices)
+[← Chapter 119](#chapter-119-sound) · [Contents](#contents) · [Chapter 121 →](#chapter-121-ember-follows)
+
+### Chapter 121: Ember follows
+
+*Program: `121-quest-3d-follow.cby`, Ember walking behind the hero. Libraries: `use world`, `use files`, `use math`, `use json`, `use directories`, `use sound`.*
+
+Ember has always been with the hero, but was only seen in a battle. Now
+she walks a step behind.
+
+#### Footsteps
+
+A follower could work out a way to the hero, but it would have to know
+about ledges, stairs and water, and might go round a different way. It's
+simpler, and looks right, for her to go exactly where the hero went. So
+each move the hero makes is kept: a `footstep` (121.1), a struct of the
+way, how many tiles (2 for a hop over a ledge), and how high the move
+was at its start, at the edge of the tiles, and at its end (111.2).
+
+The moment the hero begins a move, `keep_footstep` (121.4) adds it to
+`Steps`, a list. (It's the frame when the hero's step has all its frames
+left, and goes somewhere: a step on the spot, into a wall, doesn't
+count.)
+
+#### Following
+
+Each frame, `follow_hero` (121.5) looks at the list. If she's standing
+still and there are at least two footsteps in it, the hero has started
+another move since the one she's to make: she makes the first, and it's
+taken off the list. So she's always a move behind, on the tile the hero
+has just left.
+
+Ember is a `walker` (108.4), like the hero and the people: her body and
+legs are the fox's shapes (112.26), and `step` and `hop` move her as
+they move anyone. Only the heights are the hero's, set after the step
+begins: so she goes up the same stairs and over the same ledges. In the
+water the hero is up to their chest; `afloat` makes her less deep, so
+she swims with her head up.
+
+The method is `follow_hero`, not `follow`: a `world.window` already has
+a `follow` (the camera following a shape), and a method of the same
+name with different parameters isn't allowed.
+
+#### Into the next area, and through a door
+
+When the hero walks into the area next door, everything is built again
+(109.6), Ember too. `keep_follower` (121.3) notes where she'll be,
+counted on the next area's map: the tile she was on, or stepping to.
+`add_follower` builds her there, and the footsteps carry on, so she
+walks on behind as if nothing had changed.
+
+Through a door, the hero arrives somewhere new, with nothing behind
+them. So she starts on the hero's own tile, out of sight (`Waiting`),
+with no footsteps. When the hero steps off it, she's shown, and follows
+from there.
+
+#### Everyone else
+
+The people who wander don't walk into her (110.5, `follower_at`).
+Looking at her, with Space, she looks up, her tail swishing. And in a
+battle she's the one battling, so she's hidden, and shown again after.
+
+#### A shape's Id
+
+`make_fox` gives a list of shapes, and the walker needs its body and two
+legs. A shape can't be moved out of a list (it's owned there), and has
+no `.copy`. But a `world.shape` is only its `Id`, the number `use world`
+knows it by: `Follower.Body.Id = FollowerParts[0].Id` makes the
+walker's body the same shape.
+
+#### Try this
+
+* Let her follow two steps behind (121.5: `Steps.length > 2`).
+* Have her say something else when looked at, by the time of day.
+* Make her wait outside the houses: not shown while `Inside` (121.3).
+
+[← Chapter 120](#chapter-120-the-coast) · [Contents](#contents) · [Appendices →](#appendices)
 
 ---
 ## Appendices
@@ -17924,7 +18000,7 @@ Run `cabby` with no file to type Cabby a piece at a time:
 
 ```text
 $ cabby
-Cabby 1.21.0 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
+Cabby 1.22.0 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
 Cabby comes with ABSOLUTELY NO WARRANTY, under the MIT License; "cabby.license" for details.
 >>> int add int a, int b {
 ... 	return a + b
