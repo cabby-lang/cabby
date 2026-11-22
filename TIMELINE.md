@@ -124,6 +124,7 @@ changing for.
 | 1.20.0 | 22 November | Cabby Quest in 3D, part 13: the coast, the sea, a pier, boats, palms, gulls, a lighthouse, and Rufus again; glowing shapes in `use world`; the cave's rock solid |
 | 1.21.0 | 23 November | The 3D quest, from your testing: rain once every two or three days, smaller raindrop ripples, and the Elder no longer walks off after Rufus |
 | 1.22.0 | 23 November | Cabby Quest in 3D, part 14: Ember follows the hero, a step behind, over ledges, up stairs, swimming, and into the next area |
+| 1.23.0 | 23 November | Cabby Quest in 3D, part 15: arriving by train at Cabby Town Station, the elder, a home, and Ember given; lines in a map for the 3D quest only |
 
 ---
 
@@ -2122,6 +2123,17 @@ her head up. Walking into the next area, she walks on behind; through a
 door, she waits on the hero's tile, out of sight, until the hero steps
 off it. The people don't walk into her; looked at, she swishes her tail;
 in a battle she's hidden, being the one battling.
+
+*Version 1.23.0, Cabby Quest in 3D, part 15 (your idea):* tutorial 122,
+and chapter 122 of the manual. A new game begins on a train, pulling
+in to Cabby Town Station (`quest/station.txt`, west of the town),
+slowing, steam rising, its whistle blowing (a new sound). The hero steps
+off; the elder, come to meet them, asks their name, and takes them home
+(`quest/home.txt`, behind the town's locked door), where he gives them
+Ember. The start is told a step at a time, the hero not yet free to
+walk. The town's map joins the station on, and opens the door, with
+"3d" lines, which only the 3D quest reads: the 2D quest's town is as it
+was (but for its path, now running on to the west edge).
 
 ## Along the way (dates not recorded)
 

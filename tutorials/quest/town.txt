@@ -1,5 +1,6 @@
 // Cabby Town: the woods are joined on to the north, the meadow to the
-// east, and the hills to the south.
+// east, and the hills to the south; and, in the 3D quest, the station to
+// the west, and the hero's home behind the door to the east.
 //
 // The map comes first, a character for each tile:
 //   T  a tree        ~  water       S  a sign        =  the path
@@ -27,6 +28,10 @@
 //   sees <who> <tiles>                       <who> sees the hero that many
 //                                            tiles in front of them (once)
 //   rival <col>,<row> <facing>               Rufus, there until he's met the hero
+//   3d <line>                                a line for the 3D quest only
+//                                            (tutorial 122 on): the 2D quest
+//                                            skips it; a "3d way" replaces a
+//                                            sign on the same tile
 // An area joined on to the north or south should be as wide as this one,
 // and one to the east or west as tall: an area at a corner, next door to
 // two areas next door, is placed beside each, and they should agree (the
@@ -39,7 +44,7 @@ T.......=..............T
 T..HHH..=......HHH.....T
 T..HDH..=......HDH.....T
 T...=...=........=.....T
-T...====================
+========================
 T.......=.......S.......
 T..f....=.........~~~..T
 T.......=....f....~~~..T
@@ -54,9 +59,11 @@ music town
 join north woods 0
 join east meadow 0
 join south hills 0
+3d join west station 0
 watch 8,1 elder
 sign 16,8 Cabby Town. The bakery is the house to the west.
 sign 16,5 The door is locked.
+3d way 16,5 home 6,7
 way 4,5 bakery 6,7
 person 11,3 elder down wanders
 person 6,9 baker right
