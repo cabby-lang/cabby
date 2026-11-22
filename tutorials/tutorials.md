@@ -1,6 +1,6 @@
 # The Cabby Manual
 
-*For Cabby 1.14.0 (2026-11-22).*
+*For Cabby 1.15.0 (2026-11-22).*
 
 A book for learning Cabby one idea at a time, and a reference to come back
 to afterwards.
@@ -17033,6 +17033,11 @@ the path) at the high ground's height, which the hero walks under, ledges
 (`v`) and tall grass (`w`). For now the high ground, cliffs, steps and
 ledges are in the way, and the path goes through.
 
+A ledge is a wedge (`add_wedge`): a box cut corner to corner, with a
+slope up from one side and a sheer drop on the other, as a ledge is in
+FireRed. A wedge's sheer face is at its front, the way a shape faces, so
+`set_angle 180` turns it to drop down the map.
+
 #### Try this
 
 * Plant a ring of trees two deep, or five: `RING` (109.1).
@@ -17127,18 +17132,27 @@ bridge, its top if they're up high, or the ground under it if not.
 #### A step up, or down
 
 A step now has a start height and an end height, `From` and `To`
-(111.2). `step` makes them the same; `walk` sets `To` to the next tile's
-height (108.21). Each frame of the step, the walker goes that much of the
-way from one to the other (108.6):
+(111.2), and a height at the edge between the two tiles, `Edge`. `step`
+makes them all the same; `walk` sets `To` to the next tile's height
+(108.21), and `Edge` to the height where the tiles meet (111.12). Each
+frame of the step, the walker goes that much of the way along (108.6):
 
 ```cabby
 StepsLeft--
 double Done = (Frames - StepsLeft) / (double)Frames
-Ground = From + (To - From) * Done
+Ground = ground_at Done
 double Now = Ground + jump(Done)
 Body.move Dx * SPEED, Now - Feet, Dy * SPEED
 Feet = Now
 ```
+
+`ground_at` goes from `From` to `Edge` in the first half of the step,
+and from `Edge` to `To` in the second. Mostly the edge is half way, and
+the step goes straight from one height to the other. But the stairs
+climb north, a step at a time, to the high ground's height at their top
+edge: half way up at the middle of their tile, all the way up at its
+edge. Stepping off the top of them, the feet have to be up there by the
+edge, or they'd go through the top steps.
 
 `Done` goes from a sixteenth to 1, so a step up the stairs rises a
 little each frame, as the body moves along. `move` takes how far to go,
@@ -17295,9 +17309,8 @@ the way, or the hero's there. Each notices once: their name goes in
 `Noticed`.
 
 A red "!" pops up over their head (113.19): a box, with a ball under it,
-joined. It isn't joined to them, since they stand still while it shows,
-so it can lean back to face the camera above, and jump up a little as
-it appears. Then they come over (113.20), a step at a time, the way
+joined, standing up straight over them. It isn't joined to them: they
+stand still while it shows, and it jumps up a little as it appears. Then they come over (113.20), a step at a time, the way
 that's further first (113.21), until they're next to the hero; they
 turn to face each other, and talk (113.22). The elder sees to Ember's
 wounds.
@@ -17529,6 +17542,24 @@ Each frame, both grow, and the pale one's color comes nearer the
 water's; after 45 frames, they're taken away. The ripples are kept in a
 list, oldest first, two shapes for each.
 
+#### One world
+
+Each area's map counts its tiles from 0, at its top left, and the world
+is built from it that way. Walking over an edge into the area next door,
+that area is built, counted from its own top left. Everything in the
+world would move by the width of the area, all at once: the camera with
+it, so nothing seems to move. But the sun's shadows are drawn on a grid
+of their own, which doesn't move with it, and the trees sway by where
+they are: so both jump a little, just as the hero walks over the edge.
+
+So the world remembers where each area is in it, `OriginX` and
+`OriginZ` (116.2), and `to_its_place` (116.11) moves everything just
+built there, so nothing moves at all. Crossing an edge adds where the
+area next door is to them (109.17); going through a door, in the dark,
+they start again at 0 (109.4). What's made later, a ripple, a battle's
+critters, is made where the hero is in the world, `Hero.Body.x`, not at
+their tile, `Hero.Col`.
+
 #### Try this
 
 * A stronger wind: twice the trees' tilt and roll (116.5).
@@ -17594,7 +17625,7 @@ Run `cabby` with no file to type Cabby a piece at a time:
 
 ```text
 $ cabby
-Cabby 1.14.0 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
+Cabby 1.15.0 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
 Cabby comes with ABSOLUTELY NO WARRANTY, under the MIT License; "cabby.license" for details.
 >>> int add int a, int b {
 ... 	return a + b

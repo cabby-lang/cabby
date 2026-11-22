@@ -17,6 +17,10 @@
 // Stepping onto land, they climb out. On the island is something to
 // find.
 //
+// And the world keeps where each area is in it (116.11): walking over an
+// edge, the area next door is built where it already was, so nothing
+// moves, not the shadows, nor the trees.
+//
 // New sections are numbered 116; those this part changes say (changed in
 // 116). Chapter 116 of the manual goes through what's new.
 
@@ -145,6 +149,7 @@ object walker {
 	int Level                       // 0 on the ground, 1 up high
 	double From                     // a step's start height, and its end
 	double To
+	double Edge                     // and its height at the edge of the tiles
 	int Tiles                       // how far a step goes: 1, or 2 in a hop
 	int Frames                      // and how long it takes: 16, or 32
 
@@ -185,6 +190,7 @@ object walker {
 		StepsLeft = Frames
 		From = Feet
 		To = Feet
+		Edge = Feet
 	}
 
 	// ==== 111.4  A hop ===================================================
@@ -204,7 +210,7 @@ object walker {
 	bool keep_stepping {
 		StepsLeft--
 		double Done = (Frames - StepsLeft) / (double)Frames
-		Ground = From + (To - From) * Done
+		Ground = ground_at Done
 		double Now = Ground + jump(Done)
 		Body.move Dx * SPEED, Now - Feet, Dy * SPEED
 		Feet = Now
@@ -218,6 +224,16 @@ object walker {
 			Right.set_tilt 0
 		}
 		return StepsLeft == 0
+	}
+
+	// how high the ground is, Done of the way: from its start to the edge
+	// of the tiles in the first half of the step, from there to its end in
+	// the second (on stairs, the edge isn't half way up)
+	double ground_at double Done const {
+		if Done < 0.5 {
+			return From + (Edge - From) * Done * 2
+		}
+		return Edge + (To - Edge) * (Done - 0.5) * 2
 	}
 
 	// ==== 111.5  Up, and down again ======================================
@@ -678,6 +694,8 @@ object quest : world.window {
 	// ==== 116.2  In the water ============================================
 
 	bool Swimming                   // the hero is in the water (or stepping in)
+	int OriginX                     // where this area's top left tile is in the
+	int OriginZ                     // world (116.11): 0, 0 until an edge is crossed
 	list world.shape Ripples        // rings spreading on the water (two shapes each)
 	list int RippleAges             // and how many frames each has spread
 
@@ -707,11 +725,13 @@ object quest : world.window {
 		on_frame step
 	}
 
-	// ==== 115.3  Showing the title =======================================
+	// ==== 115.3  Showing the title  (changed in 116) =====================
 
 	// the town, with nobody walking about in it, the camera circling it,
 	// and "Cabby Quest" over it
 	void show_title {
+		OriginX = 0                     // (116) the town where the camera circles it
+		OriginZ = 0
 		go_to "town", 8, 4
 		Hero.Body.set_visible false
 		light 1
@@ -792,10 +812,12 @@ object quest : world.window {
 		start_at Story.Area.copy, Story.Col, Story.Row
 	}
 
-	// ==== 109.4  Arriving ================================================
+	// ==== 109.4  Arriving  (changed in 116) ==============================
 
 	// there, out of the dark
 	void start_at const str &Place, int C, int R {
+		OriginX = 0                     // (116) in the dark: anywhere will do
+		OriginZ = 0
 		enter Place, C, R
 		Mode = FADING_IN
 		FadeFrame = 0
@@ -809,7 +831,7 @@ object quest : world.window {
 		println "in the", Area, "at", C, R
 	}
 
-	// ==== 109.5  Going to an area  (changed in 110, 111, 113, 114) =======
+	// ==== 109.5  Going to an area  (changed in 110, 111, 113, 114, 116) ===
 
 	// everything there is taken away, and the area and those next door built
 	void go_to const str &Place, int C, int R {
@@ -827,10 +849,25 @@ object quest : world.window {
 		add_rival                       // (113)
 		add_sights
 		add_items                       // (114)
+		to_its_place                    // (116)
 		look_at_hero
 	}
 
-	// ==== 109.6  Clearing the world  (changed in 110) ===================
+	// ==== 116.11  One world ===============================================
+
+	// everything just built (made at its tile on the area's own map) moved
+	// to where the area is in the world: so walking over an edge, nothing
+	// in the world moves, the shadows, the trees' swaying, the camera
+	// (what's joined moves with what it's joined to)
+	void to_its_place {
+		for Shape in shapes_in "" {
+			if !Shape.joined {
+				Shape.move OriginX, 0, OriginZ
+			}
+		}
+	}
+
+	// ==== 109.6  Clearing the world  (changed in 110, 116) ===============
 
 	// every shape removed, and the last area's map (and people) forgotten
 	void clear_area {
@@ -841,6 +878,8 @@ object quest : world.window {
 		Things.clear
 		Joins.clear
 		People.clear
+		Ripples.clear                   // (116) (gone with the rest)
+		RippleAges.clear
 	}
 
 	// ==== 110.3  The people in an area ===================================
@@ -1221,7 +1260,8 @@ object quest : world.window {
 			}
 			add_box 1, 0.12, 1, "#8b5a2b", X, HIGH - 0.06, Z
 		} else if Tile == 'v' {
-			add_box 1, 0.3, 0.5, "#5fa83f", X, 0.15, Z - 0.25
+			world.shape Ledge = add_wedge 1, 0.3, 1, "#5fa83f", X, 0.15, Z
+			Ledge.set_angle 180             // (a slope up to it; its drop down the map)
 		} else if Tile == 'w' {
 			blade X - 0.2, Z - 0.1, 0.45          // (112)
 			blade X + 0.15, Z + 0.15, 0.5
@@ -1599,6 +1639,8 @@ object quest : world.window {
 		str Place = Joins[J].Area.copy
 		int C = Hero.Col - Joins[J].Col
 		int R = Hero.Row - Joins[J].Row
+		OriginX += Joins[J].Col         // (116) the area next door's place in the world
+		OriginZ += Joins[J].Row
 		enter Place, C, R
 	}
 
@@ -1668,6 +1710,7 @@ object quest : world.window {
 		Hero.step Way, Free
 		if Free {
 			Hero.To = height_at C, R, Hero.Level
+			Hero.Edge = edge_height Way, C, R
 			if Swimming {
 				ripple Hero.Body.x, Hero.Body.z     // (116)
 			}
@@ -1734,6 +1777,24 @@ object quest : world.window {
 			return HIGH * Level
 		}
 		return 0
+	}
+
+	// ==== 111.12  The edge between two tiles =============================
+
+	// how high the hero's feet are as they step from their tile onto the
+	// next: the stairs climb north, so their top edge is the high ground's
+	// height, and their bottom edge the ground's; anywhere else, half way
+	double edge_height const str &Way, int C, int R const {
+		char Here = tile_at Hero.Col, Hero.Row
+		char There = tile_at C, R
+		if (Here == 'z' && Way == "up") || (There == 'z' && Way == "down") {
+			return HIGH
+		} else if (Here == 'z' && Way == "down") || (There == 'z' && Way == "up") {
+			return 0
+		} else if Swimming && (Here == '~' || There == '~') {
+			return 0                    // (116) the shore: climbing out, or in
+		}
+		return (Hero.From + Hero.To) / 2
 	}
 
 	// ==== 111.9  Up high, or not =========================================
@@ -1810,7 +1871,7 @@ object quest : world.window {
 		begin_battle wild_one(Crow), "", 2.1
 	}
 
-	// ==== 113.11  A battle with someone, or something ====================
+	// ==== 113.11  A battle with someone, or something  (changed in 116) ===
 
 	// Other is Whose ("": nobody's), Ahead of the hero (Ember, at her
 	// level, beside them)
@@ -1825,12 +1886,12 @@ object quest : world.window {
 		double Rz = -sin(A)
 		double G = Hero.Ground
 		double Across = 0.75 - 0.3 * (Ahead + 1)   // (seen from the camera, as far left)
-		double X = Hero.Col + Ahead * Fx + Across * Rx
-		double Z = Hero.Row + Ahead * Fz + Across * Rz
+		double X = Hero.Body.x + Ahead * Fx + Across * Rx
+		double Z = Hero.Body.z + Ahead * Fz + Across * Rz
 		str Kind = Foe.Name.copy
 		Foe.put_out made_of(Kind, X, G, Z), X, Z, G, angle_of(opposite(Hero.Facing))
-		X = Hero.Col + 0.6 * Fx + 0.9 * Rx
-		Z = Hero.Row + 0.6 * Fz + 0.9 * Rz
+		X = Hero.Body.x + 0.6 * Fx + 0.9 * Rx
+		Z = Hero.Body.z + 0.6 * Fz + 0.9 * Rz
 		Ours.put_out made_of("Ember", X, G, Z), X, Z, G, angle_of(Hero.Facing)
 		Foe.BarBack = bar_back
 		Foe.Bar = bar
@@ -2091,8 +2152,8 @@ object quest : world.window {
 		double Fz = -cos(A)
 		double Rx = cos A
 		double Rz = -sin(A)
-		double X = Hero.Col
-		double Z = Hero.Row
+		double X = Hero.Body.x
+		double Z = Hero.Body.z
 		double G = Hero.Ground
 		move_camera_to mix(X, X - 1.0 * Fx + 0.75 * Rx, T), mix(camera_up + G, 1.2 + G, T), mix(Z + camera_back, Z - 1.0 * Fz + 0.75 * Rz, T)
 		point_camera_at mix(X, X + 1.5 * Fx + 0.3 * Rx, T), mix(0.5 + G, 0.3 + G, T), mix(Z, Z + 1.5 * Fz + 0.3 * Rz, T)
@@ -2471,7 +2532,6 @@ object quest : world.window {
 		Bang = add_box 0.12, 0.4, 0.12, "#e53935", X, Y + 1.25, Z
 		world.shape Dot = add_ball 0.08, "#e53935", X, Y + 0.95, Z
 		Dot.join Bang
-		Bang.set_tilt -50               // (leaning back, square on to the camera)
 		println "noticed by the", People[Who].Who
 	}
 
@@ -2720,7 +2780,7 @@ object quest : world.window {
 		Swimming = true
 		Hero.step Hero.Facing.copy, true
 		Hero.To = DEEP
-		ripple Hero.Col + Hero.Dx, Hero.Row + Hero.Dy      // (where they go in)
+		ripple Hero.Body.x + Hero.Dx, Hero.Body.z + Hero.Dy   // (where they go in)
 		println "swimming"
 	}
 
