@@ -108,6 +108,7 @@ changing for.
 | 1.6.0 | 22 November | Cabby Quest in 3D, part 1: the town, its trees, houses and hero made of joined shapes, walked round tile by tile |
 | 1.6.1 | 22 November | The tutorials' files numbered with three digits (`001-hello.cby` to `108-quest-3d.cby`), so they're listed in order |
 | 1.7.0 | 22 November | Cabby Quest in 3D, part 2: the areas joined edge to edge, trees all round, the bakery's door and inside, the hills drawn |
+| 1.7.1 | 22 November | The 3D hills' steps: six to a staircase, not three |
 
 ---
 
@@ -1913,6 +1914,10 @@ sky) going down, the bakery built in the dark, and the light coming up
 on the hero inside, its walls, floor, oven, table and doormat; out by
 the mat. The hills drawn as they'll be climbed: high ground, cliffs,
 steps, a bridge high enough to walk under, ledges and tall grass.
+
+*Version 1.7.1:* in tutorial 109, a staircase up the hills is six steps,
+not three (`STAIRS`): big steps for the hero's little legs, as you
+said.
 
 ## Along the way (dates not recorded)
 
