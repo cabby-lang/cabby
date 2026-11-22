@@ -1,6 +1,6 @@
 # Cabby tutorials
 
-*For Cabby 1.9.0 (2026-11-22).*
+*For Cabby 1.10.0 (2026-11-22).*
 
 A hundred and six short programs, each about one keyword, feature or library, in
 an order where each uses only what came before it. Each one
@@ -269,6 +269,7 @@ between `{` and `}` to run them as one input and see them as a program would. (`
 | 109 | `109-quest-3d-areas.cby` | Cabby Quest in 3D, part 2: areas joined edge to edge, seen and walked into; trees all round; the bakery's door, the light going down and coming up; inside; the hills, drawn |
 | 110 | `110-quest-3d-people.cby` | Cabby Quest in 3D, part 3: the townspeople, made of shapes and dressed as who they are; walking about on their own; who's in the way; talking |
 | 111 | `111-quest-3d-hills.cby` | Cabby Quest in 3D, part 4: climbing the hills; how high someone's feet are; stairs up to high ground; a bridge to walk over, or under; hopping down a ledge |
+| 112 | `112-quest-3d-battle.cby` | Cabby Quest in 3D, part 5: a battle in the grass; critters made of shapes; the camera coming down into the world; a battle there, a turn at a time, with health bars over each |
 
 Every keyword in the language appears in at least one tutorial. The manual's
 appendices and the main README (installed as
