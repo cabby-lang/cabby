@@ -37,7 +37,7 @@ const double SPEED = 0.0625         // metres a frame: a tile (a metre) is 16 fr
 const int TURN_TIME = 100           // ms: a tap of an arrow shorter than this only turns
 // tiles that can't be walked onto (a door can, if a way starts there);
 // (111) high ground and stairs can now, and a ledge can be hopped over
-const str BLOCKING = "TSH~D#ObCv"
+const str BLOCKING = "TSH~D#ObCvRAX"   // (118) the cave's rock, stalagmites and crystals
 const double HIGH = 1.3             // the hills' high ground: high enough to walk under its bridge
 const int STAIRS = 6                // steps up it, in a tile: small ones, for small legs
 
