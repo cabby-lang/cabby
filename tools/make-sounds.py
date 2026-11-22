@@ -209,3 +209,27 @@ def gull():
 
 save("surf", surf())
 save("gull", fade_ends(gull()))
+
+
+# ---- for Cabby Quest in 3D (tutorial 122): the train
+
+
+def whistle():
+    """a steam whistle: three notes together, a chord, swelling in, held,
+    and dying away, with a breath of steam through it"""
+    out, last = [], 0.0
+    n = int(RATE * 1.3)
+    phases = [0.0, 0.0, 0.0]
+    for i in range(n):
+        t = i / n
+        swell = min(1, t * 12) * (1 - max(0, t - 0.75) / 0.25)
+        last = last * 0.5 + random.uniform(-1, 1) * 0.5
+        v = 0.0
+        for k, f in enumerate((587, 740, 880)):    # (D, F sharp, A)
+            phases[k] += 2 * math.pi * f * (1 + 0.004 * math.sin(2 * math.pi * 5 * i / RATE)) / RATE
+            v += math.sin(phases[k])
+        out.append((v * 0.11 + last * 0.06) * swell)
+    return out
+
+
+save("whistle", fade_ends(whistle()))

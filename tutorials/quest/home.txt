@@ -1,0 +1,18 @@
+// The hero's home, in Cabby Town: the house to the east (its door is at
+// 16,5 on the town's map). The 3D quest's (part 15), as the town's "3d
+// way" line goes in: the 2D quest's door stays locked. The characters
+// are the bakery's (see bakery.txt), and:
+//   Q  a bed (two tiles: its pillow at the top one)
+#############
+#############
+#Q,,,,,,,,,b#
+#Q,,,,,,,,,,#
+#,,,,,,,,,,,#
+#,,,,,,,,,,,#
+#,,,,,,,,,,,#
+#,,,,,,,,,,,#
+######M######
+---
+name Home
+music house
+way 6,8 town 16,6

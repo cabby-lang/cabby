@@ -1,0 +1,29 @@
+// Cabby Town Station, west of the town: where the hero arrives, by train,
+// at the start of the 3D quest (its part 15). The characters are the
+// town's (see town.txt), and:
+//   r  the railway: rails on sleepers, running on past the edges
+//   p  the platform, a little up off the ground
+// Only the 3D quest comes here: the town's "3d join" line, which the 2D
+// quest doesn't read, joins it on.
+TTrTTTTTTTTTTT
+T.r..f.......T
+T.rpp..HHH...T
+T.rpp..HDH...T
+T.rpp...=....T
+T.rpp...=..f.T
+T.rpp...=....T
+T.rpp=========
+T.rpp...S....T
+T.rpp........T
+T.rpp...f....T
+T.rpp........T
+T.r..........T
+T.r...f......T
+T.r..........T
+TTrTTTTTTTTTTT
+---
+name Cabby Town Station
+music town
+join east town 0
+sign 8,8 Cabby Town Station. The town is along the path, to the east.
+sign 8,3 The ticket office. "Closed. Back soon."

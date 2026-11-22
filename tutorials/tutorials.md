@@ -1,6 +1,6 @@
 # The Cabby Manual
 
-*For Cabby 1.22.0 (2026-11-23).*
+*For Cabby 1.23.0 (2026-11-23).*
 
 A book for learning Cabby one idea at a time, and a reference to come back
 to afterwards.
@@ -227,6 +227,7 @@ int main {
 119. [Sound](#chapter-119-sound): each area's music; sound effects; sounds quieter further off; the rain, heard; thunder and lightning
 120. [The coast](#chapter-120-the-coast): the sea, going on past the world's edge; sand and foam; a pier, boats rocking at anchor, palms, gulls; a lighthouse, its beam glowing; Rufus, again
 121. [Ember follows](#chapter-121-ember-follows): a follower a step behind, the leader's moves kept in a list and made again in turn; over ledges, up stairs, swimming; into the next area, and through a door
+122. [Arriving](#chapter-122-arriving): a story at the start, a step at a time; a train, slowing into a station, steam rising; lines in a map for the 3D quest only; a home, and Ember given
 
 **[Appendices](#appendices)**
 
@@ -17942,7 +17943,97 @@ walker's body the same shape.
 * Have her say something else when looked at, by the time of day.
 * Make her wait outside the houses: not shown while `Inside` (121.3).
 
-[← Chapter 120](#chapter-120-the-coast) · [Contents](#contents) · [Appendices →](#appendices)
+[← Chapter 120](#chapter-120-the-coast) · [Contents](#contents) · [Chapter 122 →](#chapter-122-arriving)
+
+### Chapter 122: Arriving
+
+*Program: `122-quest-3d-arrival.cby`, the 3D quest's beginning. Libraries: `use world`, `use files`, `use math`, `use json`, `use directories`, `use sound`.*
+
+A new game used to begin with the hero standing in the town, Ember
+already theirs. Now it tells how they got there. A train pulls in to
+Cabby Town Station, slowing, steam puffing from its chimney, its whistle
+blowing; it stops, and the hero steps off. The elder has come to meet
+them, and asks their name. He takes them home, to the house in the town
+whose door was always locked, and there he gives them Ember. Then the
+quest goes on as it did: the baker is worried.
+
+#### The station, and lines for the 3D quest only
+
+The station is a new area, `quest/station.txt`, west of the town: the
+railway (`r`) down its west side, running on past its edges (`add_ring`
+puts rails beyond the map where the edge is railway, as it puts the sea,
+120.3), a platform (`p`) beside it, a little up, a ticket office, and a
+path east to the town. The town's map has always been read by the 2D
+quest too (tutorials 77 to 88), which knows nothing of stations. So the
+town joins the station on with a line only the 3D quest reads:
+
+```
+3d join west station 0
+3d way 16,5 home 6,7
+```
+
+The 2D quest skips any line it doesn't know. The 3D quest, reading the
+area (108.10), takes the `3d ` off (`for_the_3d_quest`, 122.3), and
+reads the joins next door the same way (109.8). A `3d way` on a tile
+where there's a sign takes its place: the 2D quest's hero finds the
+door at 16,5 locked, as always; the 3D quest's walks in, to
+`quest/home.txt`, which has a bed (`Q`, 122.4). (The town's path now
+goes on to its west edge, for the 3D quest's hero to walk to the
+station: in the 2D quest, it ends at the trees.)
+
+#### A story, a step at a time
+
+The start is a story: things happen in order, each when the last is
+done, the hero not free to walk. `Story.Answers["start"]` says how far
+it's got (122.7): `"train"`, `"home"`, then `"done"` (a game saved
+before this part has none: done). While it isn't done, each frame calls
+`scene_step` (122.8) instead of `walk_or_look`; the rest of the frame
+goes on as ever, someone speaking (READING), a question (CHOOSING), the
+hero stepping, a fade. So each step of the story only begins once the
+last has finished: `Scene` counts the steps, `SceneFrame` the frames
+into each, and `next_scene` moves on.
+
+At the station (122.9): the train pulls in, over `TRAIN_FRAMES`; the
+hero, on it, isn't seen (their body hidden, and with it everything
+joined to it); then they're shown, and walk off it, onto the platform.
+The elder, added to the area only for this (`add_scene`, 122.7), turns
+and asks their name, as he used to in the town: now his answer is
+different (114.15). Then a fade (109.16), to home.
+
+At home (122.10): the elder, by the bed, speaks; Ember is given; and the
+start is done.
+
+#### The train
+
+`make_train` (122.5) builds an engine and two carriages from boxes and
+cylinders: a boiler on its side (a cylinder tilted 90 degrees), a
+chimney, a cab, wheels (cylinders rolled 90 degrees). Everything is
+joined to the engine's base, so moving that moves the train. It starts
+`TRAIN_RUN` metres up the line, and each frame it's `TRAIN_RUN` times
+the square of the part of the way it has still to go from where it
+stops: quick at first, slowing to a stop. Every few frames a puff of
+steam (122.6), a small white ball, rises from the chimney, growing,
+gone after three-quarters of a second.
+
+#### Ember, given
+
+Ember has followed the hero since part 14; now she isn't there until
+she's given. Part 14 kept her out of sight on the hero's tile after a
+door, until the hero stepped off: now that only happens once the start
+is done (121.4). When the elder gives her, `ember_given` (122.11) puts
+her on the tile beside the hero, and gives her a footstep of her own,
+onto the hero's tile: so when the hero moves, she follows from there.
+
+A new sound, `whistle` (three notes at once, a chord), is made by
+`tools/make-sounds.py` with the rest (the others are as they were).
+
+#### Try this
+
+* A third carriage, and the train pulling in faster (122.1, 122.5).
+* Have the train leave again, once the hero's off (122.9).
+* A window in the home, lit at night (as the town's are, 117.4).
+
+[← Chapter 121](#chapter-121-ember-follows) · [Contents](#contents) · [Appendices →](#appendices)
 
 ---
 ## Appendices
@@ -18000,7 +18091,7 @@ Run `cabby` with no file to type Cabby a piece at a time:
 
 ```text
 $ cabby
-Cabby 1.22.0 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
+Cabby 1.23.0 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
 Cabby comes with ABSOLUTELY NO WARRANTY, under the MIT License; "cabby.license" for details.
 >>> int add int a, int b {
 ... 	return a + b

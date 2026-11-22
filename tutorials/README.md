@@ -1,6 +1,6 @@
 # Cabby tutorials
 
-*For Cabby 1.22.0 (2026-11-23).*
+*For Cabby 1.23.0 (2026-11-23).*
 
 A hundred and six short programs, each about one keyword, feature or library, in
 an order where each uses only what came before it. Each one
@@ -279,6 +279,7 @@ between `{` and `}` to run them as one input and see them as a program would. (`
 | 119 | `119-quest-3d-sound.cby` | Cabby Quest in 3D, part 12: sound; each area's music; sound effects; sounds quieter further off; the rain, heard; thunder and lightning |
 | 120 | `120-quest-3d-coast.cby` | Cabby Quest in 3D, part 13: the coast; the sea, going on past the world's edge; sand and foam; a pier, boats rocking at anchor, palms, gulls; a lighthouse, its beam glowing; Rufus, again |
 | 121 | `121-quest-3d-follow.cby` | Cabby Quest in 3D, part 14: Ember follows; a follower a step behind, the leader's moves kept and made again; over ledges, up stairs, swimming; into the next area, and through a door |
+| 122 | `122-quest-3d-arrival.cby` | Cabby Quest in 3D, part 15: arriving; a story at the start, a step at a time; a train, slowing into a station, steam rising; lines in a map for the 3D quest only; a home, and Ember given |
 
 Every keyword in the language appears in at least one tutorial. The manual's
 appendices and the main README (installed as
