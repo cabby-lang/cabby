@@ -1,6 +1,6 @@
 # The Cabby Manual
 
-*For Cabby 1.11.0 (2026-11-22).*
+*For Cabby 1.12.0 (2026-11-22).*
 
 A book for learning Cabby one idea at a time, and a reference to come back
 to afterwards.
@@ -219,6 +219,7 @@ int main {
 111. [Climbing the hills](#chapter-111-climbing-the-hills): how high someone's feet are; stairs up to high ground; a bridge to walk over, or under; hopping down a ledge
 112. [A battle in the grass](#chapter-112-a-battle-in-the-grass): critters made of shapes; the camera coming down into the world; a battle there, a turn at a time, with health bars over each
 113. [Noticed, and the rival](#chapter-113-noticed-and-the-rival): a "!" over someone's head, and coming over; a battle that can't be run from; experience and levels; healing; words wrapped
+114. [The baker's spoon](#chapter-114-the-bakers-spoon): questions to answer; what the hero has done, in a struct; a thing to pick up; a quest; saving, and carrying on
 
 **[Appendices](#appendices)**
 
@@ -17343,7 +17344,78 @@ where one line would be.
 * Have Rufus walk off west instead, back the way he came (113.24).
 * Make Bruno grow with Ember: a level above hers, whatever it is (113.3).
 
-[← Chapter 112](#chapter-112-a-battle-in-the-grass) · [Contents](#contents) · [Appendices →](#appendices)
+[← Chapter 112](#chapter-112-a-battle-in-the-grass) · [Contents](#contents) · [Chapter 114 →](#chapter-114-the-bakers-spoon)
+
+### Chapter 114: The baker's spoon
+
+*Program: `114-quest-3d-spoon.cby`, Cabby Town, the bakery, and a lost spoon. Libraries: `use world`, `use files`, `use math`, `use json`, `use directories`.*
+
+#### What the hero has done
+
+Everything the hero has done goes in one struct, `progress` (114.1), as
+in the 2D quest's part 7 (chapter 83): what they've answered, how far
+the quest has got, what they carry, what they've picked up, and where
+they are. Part 6 kept who has noticed the hero, and Ember's wounds and
+level, in the `quest` itself; now they're in `Story` too (114.2), so
+that it's all in one place, to be saved.
+
+#### Questions
+
+The battle's menu (112.35) asks a question, with its answers under it.
+Now people ask too: outside a battle, `ask` makes the mode `CHOOSING`
+(new in 108.7), and the hero stands still while they choose, left and right,
+then Space. The answer goes to `answered` (114.15), which keeps it in
+`Story.Answers`, by its question, and says something back.
+
+The elder asks the hero's name, once (114.12): from then on,
+`hero_name` gives it, and everyone uses it, Rufus too. The baker asks
+for help finding her spoon (114.13). What she says depends on
+`Story.Quest`: `""`, `"asked"` or `"done"`.
+
+#### A spoon to pick up
+
+The bakery's map has said where her spoon is all along:
+
+```text
+item 9,4 spoon
+```
+
+`add_items` (114.7) makes one, a handle and a bowl joined to it (114.8),
+in a group of its own, `"item 9,4"`. Every frame, `turn_items` (114.9)
+turns each thing to pick up a little, and bobs it up and down. It's in
+the way, as a sign is. Face it and press Space (114.11): it goes in
+`Story.Items`, its place goes in `Story.Taken`, so it isn't there next
+time, and `shapes_in "item 9,4"` finds it to take it away.
+
+Bring it to the baker, and she takes it, and gives the hero a loaf of
+bread (114.14). Found before she asked, she's surprised.
+
+#### Saving
+
+Press S (108.19). `save_game` (114.5) puts where the hero is into
+`Story`, then writes all of it as JSON, in one line:
+
+```cabby
+files.write save_path, json.from(Story).pretty
+```
+
+`save_path` (114.4) is in the computer's place for saved games, from
+`use directories`. When the game starts, `begin` (114.3) carries on from
+there if it can: `json.read(...).fill Story` fills the struct back in,
+and the hero starts where they were. People who've noticed the hero
+don't again; Rufus, once met, isn't in the meadow; the spoon, once
+picked up, isn't on the floor.
+
+#### Try this
+
+* Let the hero call themselves something else: add a name to the
+  elder's question (114.12).
+* Put a second thing to pick up in the woods, an acorn (`item 5,6
+  acorn` in `quest/woods.txt`), made of a ball and a little cone.
+* Print where the saved game goes (114.4), and look at it: it's the
+  struct (114.1), as JSON.
+
+[← Chapter 113](#chapter-113-noticed-and-the-rival) · [Contents](#contents) · [Appendices →](#appendices)
 
 ---
 ## Appendices
@@ -17401,7 +17473,7 @@ Run `cabby` with no file to type Cabby a piece at a time:
 
 ```text
 $ cabby
-Cabby 1.11.0 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
+Cabby 1.12.0 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
 Cabby comes with ABSOLUTELY NO WARRANTY, under the MIT License; "cabby.license" for details.
 >>> int add int a, int b {
 ... 	return a + b
