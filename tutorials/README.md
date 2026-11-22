@@ -1,6 +1,6 @@
 # Cabby tutorials
 
-*For Cabby 1.19.0 (2026-11-22).*
+*For Cabby 1.20.0 (2026-11-22).*
 
 A hundred and six short programs, each about one keyword, feature or library, in
 an order where each uses only what came before it. Each one
@@ -277,6 +277,7 @@ between `{` and `}` to run them as one input and see them as a program would. (`
 | 117 | `117-quest-3d-weather.cby` | Cabby Quest in 3D, part 10: the day, and the rain; the sun crossing the sky, golden light, then a blue night and the moon; windows lit with lamps; rain falling |
 | 118 | `118-quest-3d-cave.cby` | Cabby Quest in 3D, part 11: the cave; a dark place, lit by a lantern the hero carries; rock, stalagmites and glowing crystals; bats; dripping water |
 | 119 | `119-quest-3d-sound.cby` | Cabby Quest in 3D, part 12: sound; each area's music; sound effects; sounds quieter further off; the rain, heard; thunder and lightning |
+| 120 | `120-quest-3d-coast.cby` | Cabby Quest in 3D, part 13: the coast; the sea, going on past the world's edge; sand and foam; a pier, boats rocking at anchor, palms, gulls; a lighthouse, its beam glowing; Rufus, again |
 
 Every keyword in the language appears in at least one tutorial. The manual's
 appendices and the main README (installed as

@@ -1,0 +1,35 @@
+// The coast, east of the lake, along its shore (the 3D quest's part 13):
+// sand, the sea beyond it, a pier, boats at anchor, palms, a lighthouse.
+//   s  sand          K  the pier (boards over the water)
+//   u  a boat, at anchor               Y  a palm
+//   L  the lighthouse (four tiles: two by two)
+// The rest are the other areas' (see hills.txt). After the ---, as other
+// areas have, and:
+//   sea                                      beyond the map's edge, where
+//                                            it's water, the sea goes on
+//   gulls <count>                            gulls flying round
+//   rematch <col>,<row> <facing>             Rufus, once he's been met
+TTTTTTTTTTTTTTTTTTTT
+T..Y.....sss~~~~~~~~
+T..HHH...sss~~~~~~~~
+T..HDH..Ysss~~~~u~~~
+T...=....sssK~~~~~~~
+T...=....sssK~~~~~~~
+=========sssK~~~~~~~
+T.....Y..sss~~~~~~~~
+T........ssss~~~~u~~
+T..Y.....ssss~~~~~~~
+T.......sssssLL~~~~~
+T.......sssssLL~~~~~
+T..Y...sssss~~~~~~~~
+T......sssss~~~~~~~~
+T.....ssssss~~~~~~~~
+TTTTTTTTTTTT~~~~~~~~
+---
+name The Coast
+music lake
+sea
+gulls 3
+join west lake 0
+rematch 10,6 left
+sign 7,5 The coast. The road back west goes round the lake.

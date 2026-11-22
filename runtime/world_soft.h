@@ -39,6 +39,7 @@ typedef struct SoftShape {
 	float us, vs;
 	int two_sided;
 	const Lit *lit;
+	int glow;             /* (its own color: no light on it) */
 } SoftShape;
 
 static void soft_pixel(Frame *f, int x, int y, float z, const SoftShape *s, V3 p, V3 n, float u, float v)
@@ -59,8 +60,9 @@ static void soft_pixel(Frame *f, int x, int y, float z, const SoftShape *s, V3 p
 		for (int k = 0; k < 3; k++)
 			col[k] *= t[k] / 255.0f;
 	}
-	float light[3];
-	light_at(s->lit, p, v_norm(n), light);
+	float light[3] = { 1, 1, 1 };
+	if (!s->glow)
+		light_at(s->lit, p, v_norm(n), light);
 	unsigned char *o = f->rgba + ((size_t)y * f->w + x) * 4;
 	for (int k = 0; k < 3; k++) {
 		float c = col[k] * light[k];
@@ -226,8 +228,8 @@ static void soft_shadows(int64_t id, Lit *lit)
 	int cap = 0;
 	for (int i = 0; i < nshapes; i++) {
 		Shape *sh = &shapes[i];
-		if (sh->world != id || !shown(sh))
-			continue;
+		if (sh->world != id || !shown(sh) || sh->glow)
+			continue;   /* (a glowing shape casts no shadow) */
 		int np = shape_parts(sh, wo->frames);
 		for (int pi = 0; pi < np; pi++) {
 			Part *pt = &parts[pi];
@@ -319,7 +321,8 @@ static void soft_draw(int64_t id, Frame *f, int w, int h)
 				d->v = src[7];
 			}
 			SoftShape ss = { { pt->color[0], pt->color[1], pt->color[2], pt->color[3] },
-					 pt->picture >= 0 ? &pictures[pt->picture] : NULL, pt->us, pt->vs, pt->two_sided, &lit };
+					 pt->picture >= 0 ? &pictures[pt->picture] : NULL, pt->us, pt->vs, pt->two_sided, &lit,
+					 sh->glow };
 			for (int k = 0; k + 2 < me->ni; k += 3)
 				soft_clip(f, &ss, &vs[me->ix[k]], &vs[me->ix[k + 1]], &vs[me->ix[k + 2]]);
 		}

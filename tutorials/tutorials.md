@@ -1,6 +1,6 @@
 # The Cabby Manual
 
-*For Cabby 1.19.0 (2026-11-22).*
+*For Cabby 1.20.0 (2026-11-22).*
 
 A book for learning Cabby one idea at a time, and a reference to come back
 to afterwards.
@@ -225,6 +225,7 @@ int main {
 117. [The day, and the rain](#chapter-117-the-day-and-the-rain): the sun crossing the sky, golden light, then a blue night and the moon; windows lit with lamps; rain
 118. [The cave](#chapter-118-the-cave): a dark place, lit by a lantern the hero carries; rock, stalagmites and glowing crystals; bats; dripping water
 119. [Sound](#chapter-119-sound): each area's music; sound effects; sounds quieter further off; the rain, heard; thunder and lightning
+120. [The coast](#chapter-120-the-coast): the sea, going on past the world's edge; sand and foam; a pier, boats rocking at anchor, palms, gulls; a lighthouse, its beam glowing; Rufus, again
 
 **[Appendices](#appendices)**
 
@@ -17775,7 +17776,93 @@ on again starts what should be playing (119.3).
 * Make the drips heard further off: `HEARD 20` (119.1).
 * Thunder more often in a storm (119.8), and a longer flash.
 
-[← Chapter 118](#chapter-118-the-cave) · [Contents](#contents) · [Appendices →](#appendices)
+[← Chapter 118](#chapter-118-the-cave) · [Contents](#contents) · [Chapter 120 →](#chapter-120-the-coast)
+
+### Chapter 120: The coast
+
+*Program: `120-quest-3d-coast.cby`, the 3D quest by the sea. Libraries: `use world`, `use files`, `use math`, `use json`, `use directories`, `use sound`.*
+
+Rufus has always said he'd see the hero at the coast. Now there is one:
+`quest/coast.txt`, east of the lake, reached along its north shore (the
+lake's map has a `join east coast 0` line).
+
+#### New tiles
+
+The coast's map has five new characters, and `add_coast` (120.4) builds
+each:
+
+* `s`, sand: a pale plane. Where the sea is just east of it, a thin
+  strip of foam lies along its edge, in the group `"foam"`.
+* `K`, the pier: water, with boards over it on two posts. The hero
+  walks on it, a little up, `PIER` (120.1), as the stairs set how high
+  feet are (111.6); and it doesn't count as water, so there's no asking
+  to swim.
+* `u`, a boat at anchor (120.5): a hull, its bow a wedge, a mast and a
+  sail (another wedge, thin and tall), all joined to the hull.
+* `Y`, a palm (120.6): a leaning trunk, and fronds joined to its top.
+* `L`, the lighthouse (120.7), four tiles: built once, at its top left
+  tile, in the middle of the four.
+
+Boats, palms and the lighthouse are in `BLOCKING`: they can't be walked
+into.
+
+#### The sea goes on
+
+Past a map's edges, trees go on (109.14). At the coast, the sea should
+too. `add_ring` now looks at the nearest tile on the map's edge,
+`edge_of` (120.3) bringing a column or a row back onto the map: if it's
+water, it adds water there, not a tree. So the sea goes on as far as can
+be seen, and the woods do along the rest.
+
+#### Waves on the shore, and boats rocking
+
+`move_world` (116.5) moves the foam a little in and out from the sand's
+edge, each strip out of step with the next, and rocks each boat: up and
+down a little, and rolled from side to side with `set_roll`, joined
+mast and sail going with it.
+
+#### Gulls
+
+Part 11's bats (118.7) are now any flier: a `gulls 3` line in a map's
+settings (after `---`) puts three gulls over it, white, wider round and
+slower than bats, crying now and then, as bats squeak. `add_fliers`
+builds either from the same code.
+
+#### The lighthouse, and a glowing beam
+
+The lighthouse is a white tower with red bands, a room at its top for
+the lamp, and a red roof. At night (120.8) its lamp is lit, and a beam,
+a long pale box, sweeps round from the tower.
+
+A box in the world is shaded by the light on it, so at night a pale box
+is dim blue, like the rest; and it casts a shadow. Light doesn't. So
+`use world` has something new: `set_glow true` on a shape draws it in
+its own color whatever the light, with no shading and no shadow. The
+beam glows always (it's hidden by day); the lamp's room glows only once
+it's dark. A glowing shape doesn't light what's round it: a lamp,
+`Beacons`, does that.
+
+#### The sea, heard
+
+An area with a `sea` line in its settings is by the sea: `hear_surf`
+(120.9) plays `sounds/surf.wav`, waves breaking, round and round, while
+the hero's there (and the sounds are on).
+
+#### Rufus, again
+
+At the coast, until he's had his rematch, Rufus waits on the sand
+(the map's `rematch` line). Bruno has been training: `rival_pup`
+(113.3) now takes a level, and at the coast `pup_level` (120.10) is 8,
+not 6, his numbers growing with it. After their battle, won or lost,
+he stays, and talked to, says he's off on the next boat.
+
+#### Try this
+
+* Another boat, and a second pier (`quest/coast.txt`).
+* Make the lighthouse's beam go round faster, and brighter (120.8).
+* Have the gulls cry more often (118.9).
+
+[← Chapter 119](#chapter-119-sound) · [Contents](#contents) · [Appendices →](#appendices)
 
 ---
 ## Appendices
@@ -17833,7 +17920,7 @@ Run `cabby` with no file to type Cabby a piece at a time:
 
 ```text
 $ cabby
-Cabby 1.19.0 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
+Cabby 1.20.0 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
 Cabby comes with ABSOLUTELY NO WARRANTY, under the MIT License; "cabby.license" for details.
 >>> int add int a, int b {
 ... 	return a + b

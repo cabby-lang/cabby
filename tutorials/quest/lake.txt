@@ -1,6 +1,7 @@
 // The lake, east of the hills: a shore all round, an island in the
 // middle that only a swimmer can reach (the 3D quest's part 9), and in
-// the rocks at its far corner, a cave's mouth (part 11). The
+// the rocks at its far corner, a cave's mouth (part 11); east, along
+// its north shore, the coast (part 13). The
 // characters are the hills' (see hills.txt); the 2D quest sees the lake,
 // but can't swim.
 TTTTTTTTTTTTTTTTTTTT
@@ -9,7 +10,7 @@ T..~~~~~~~~~~~~~...T
 T.~~~~~~~~~~~~~~~..T
 T.~~~~~~~~~~~~~~~~.T
 T.~~~~~~....~~~~~~.T
-..~~~~~~.f..~~~~~~.T
+..~~~~~~.f..~~~~~~..
 T.~~~~~~..S.~~~~~~.T
 T.~~~~~~....~~~~~~.T
 T.~~~~~~~~~~~~~~~~.T
@@ -23,6 +24,7 @@ TTTTTTTTTTTTTTTTTTTT
 name The Lake
 music lake
 join west hills 0
+join east coast 0
 sign 10,7 The island. Few have swum this far.
 item 9,6 shell
 way 17,12 cave 9,11

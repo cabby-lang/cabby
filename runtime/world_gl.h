@@ -170,6 +170,7 @@ static const char *gl_fragment_shader =
 	"uniform float uShadowSize;\n"
 	"uniform float uShadowTexel;\n"
 	"uniform float uShadowBias;\n"
+	"uniform int uGlow;\n"
 	"out vec4 outColor;\n"
 	/* (as world.c's sun_reaches: nudged off the surface, nine texels round it) */
 	"float sunReaches(vec3 n) {\n"
@@ -191,6 +192,7 @@ static const char *gl_fragment_shader =
 	"		if (t.a < 0.5) discard;\n"
 	"		base *= t.rgb;\n"
 	"	}\n"
+	"	if (uGlow != 0) { outColor = vec4(clamp(base, 0.0, 1.0), 1.0); return; }\n"
 	"	vec3 n = normalize(vNormal);\n"
 	"	if (!gl_FrontFacing) n = -n;\n"
 	"	float sd = max(dot(n, uSun), 0.0);\n"
@@ -252,6 +254,7 @@ static GLuint gl_overlay_program, gl_overlay_texture, gl_empty_vao;
 static GLint u_overlay;
 
 static GLuint gl_program;
+static GLint u_glow;
 static GLint u_mvp, u_model, u_normals, u_color, u_picture, u_has_picture, u_tile, u_sun, u_sun_color, u_ambient, u_lamps,
 	u_lamp_pos, u_lamp_color, u_lamp_reach, u_shadows, u_shadow_vp, u_shadow_map, u_shadow_size, u_shadow_texel, u_shadow_bias;
 static GLuint *gl_textures;   /* by picture (0: not made yet) */
@@ -332,6 +335,7 @@ static int gl_start(void)
 	u_model = glGetUniformLocation(gl_program, "uModel");
 	u_normals = glGetUniformLocation(gl_program, "uNormals");
 	u_color = glGetUniformLocation(gl_program, "uColor");
+	u_glow = glGetUniformLocation(gl_program, "uGlow");
 	u_picture = glGetUniformLocation(gl_program, "uPicture");
 	u_has_picture = glGetUniformLocation(gl_program, "uHasPicture");
 	u_tile = glGetUniformLocation(gl_program, "uTile");
@@ -505,8 +509,8 @@ static void gl_shadows(int64_t id, Lit *lit)
 	glActiveTexture(GL_TEXTURE0);
 	for (int i = 0; i < nshapes; i++) {
 		Shape *sh = &shapes[i];
-		if (sh->world != id || !shown(sh))
-			continue;
+		if (sh->world != id || !shown(sh) || sh->glow)
+			continue;   /* (a glowing shape casts no shadow) */
 		int np = shape_parts(sh, wo->frames);
 		for (int pi = 0; pi < np; pi++) {
 			Part *pt = &parts[pi];
@@ -591,6 +595,7 @@ static void gl_draw(int64_t id, int w, int h, float k)
 			glUniformMatrix4fv(u_model, 1, GL_FALSE, model.m);
 			glUniformMatrix3fv(u_normals, 1, GL_FALSE, nm);
 			glUniform4fv(u_color, 1, pt->color);
+			glUniform1i(u_glow, sh->glow);
 			if (pt->picture >= 0) {
 				glBindTexture(GL_TEXTURE_2D, gl_texture(pt->picture));
 				glUniform1i(u_has_picture, 1);
