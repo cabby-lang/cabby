@@ -469,7 +469,9 @@ static void empty_parens(Calls *K, const Expr *e)
 
 /* A call that is a whole value (`where` says which): with arguments in
  * parentheses it needs none. Not when the first argument would read
- * differently without them: `f(-x)` (f - x), `f({1, 2})`. */
+ * differently without them: `f(-x)` (f - x), `f({1, 2})`, and one that
+ * starts with a parenthesis of its own, `f((int)x, y)` or `f((a + b) * 2)`
+ * (`f (int)x` would be f's arguments in parentheses). */
 static void whole_value(Calls *K, const Expr *e, const char *where)
 {
 	if (!e || e->kind != EXPR_CALL || e->as.call.bare || e->as.call.args.len == 0 || e->parenthesized)
@@ -483,7 +485,7 @@ static void whole_value(Calls *K, const Expr *e, const char *where)
 		return;
 	char inside[200];
 	int col;
-	if (!call_parens(K, e, &col, inside, sizeof inside))
+	if (!call_parens(K, e, &col, inside, sizeof inside) || inside[0] == '(')
 		return;
 	K->count++;
 	diag_report_in(DIAG_WARNING, l.file, l.line, col, "style: write '%s %s' without parentheses: a call that is %s "

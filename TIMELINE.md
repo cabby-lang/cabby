@@ -119,6 +119,7 @@ changing for.
 | 1.15.0 | 22 November | `add_wedge` in `use world`; the 3D quest's ledges as wedges, feet on the stairs, the "!" upright, and one world across areas |
 | 1.16.0 | 22 November | Cabby Quest in 3D, part 10: the day passing, the moon, lit windows, and rain |
 | 1.17.0 | 22 November | `use world`: removed shapes' room used again (walking between areas no longer slows down), and models that can't be read say why; the 3D quest's day 24 minutes, the sun and moon fading through the horizon, and swimming smooth |
+| 1.18.0 | 22 November | Cabby Quest in 3D, part 11: the cave, a lantern, crystals, bats and drips; `--style` no longer asks to drop a call's parentheses when its first argument starts with one |
 
 ---
 
@@ -2049,6 +2050,17 @@ water. The time and the weather are saved with the game.
   surface and back each stroke (the edge between two tiles of water was
   taken for the shore's); now only the shore is. In 117 they bob, a
   little, slowly.
+
+*Version 1.18.0, Cabby Quest in 3D, part 11:* tutorial 118, and chapter
+118 of the manual. A cave, in rocks at the lake's far corner (a cliff
+with a way in, `quest/cave.txt`): dark, with no sun or moon, lit by a
+lantern the hero holds up, flickering; uneven rock, stalagmites, pools,
+and crystals glowing blue, each with a lamp; three bats flying round;
+water dripping from the dark. A crystal to find at the back.
+
+And `cabby --style` asked for `f((int)x, y)` to be written `f (int)x, y`,
+which reads as `f(int)`: it doesn't, now, when a call's first argument
+starts with a parenthesis of its own (the style tests check it).
 
 ## Along the way (dates not recorded)
 

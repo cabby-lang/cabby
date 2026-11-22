@@ -1,6 +1,6 @@
 # The Cabby Manual
 
-*For Cabby 1.17.0 (2026-11-22).*
+*For Cabby 1.18.0 (2026-11-22).*
 
 A book for learning Cabby one idea at a time, and a reference to come back
 to afterwards.
@@ -223,6 +223,7 @@ int main {
 115. [The title, and a menu](#chapter-115-the-title-and-a-menu): a title over the world, the camera circling the town; the game's menu; options for how the world is drawn
 116. [The lake](#chapter-116-the-lake): a world that moves, water, flowers and trees; swimming, after asking the water; ripples; a place reached only by water
 117. [The day, and the rain](#chapter-117-the-day-and-the-rain): the sun crossing the sky, golden light, then a blue night and the moon; windows lit with lamps; rain
+118. [The cave](#chapter-118-the-cave): a dark place, lit by a lantern the hero carries; rock, stalagmites and glowing crystals; bats; dripping water
 
 **[Appendices](#appendices)**
 
@@ -17654,7 +17655,69 @@ ripple (116.10). Inside a house, there are none.
 * Make the moonlight a little brighter, and a little greener (117.5).
 * Light the lamp in the bakery at night: a window on its back wall.
 
-[← Chapter 116](#chapter-116-the-lake) · [Contents](#contents) · [Appendices →](#appendices)
+[← Chapter 116](#chapter-116-the-lake) · [Contents](#contents) · [Chapter 118 →](#chapter-118-the-cave)
+
+### Chapter 118: The cave
+
+*Program: `118-quest-3d-cave.cby`, a cave in the rocks by the lake. Libraries: `use world`, `use files`, `use math`, `use json`, `use directories`.*
+
+#### The way in
+
+At the lake's far corner there are rocks now: high ground (`h`) with a
+cliff (`C`) in front, and a way into the cave from the middle of the
+cliff:
+
+```text
+way 17,12 cave 9,11
+```
+
+A tile with a way starting on it can be walked onto (108.21): a house's
+door, as before, and now a cave's mouth. `add_mouths` (118.5) draws a
+dark opening in the cliff wherever a way starts on one. (The 2D quest
+sees the rocks, but a cliff is in its way, so it can't go in.)
+
+#### Dark
+
+The cave's map, `quest/cave.txt`, has a line saying only `dark`
+(`Things.contains "dark"`, 109.5). A dark area is inside, as a house is
+(no sky, no trees all round, no rain), and lit only by lamps (117.5): no
+sun, no moon, and a little light all round, so the dark isn't black.
+
+Its tiles (118.3) are rock (`R`), each a box of its own height, so the
+walls are uneven; the floor (`.`); stalagmites (`A`), cones; water
+(`~`); and crystals (`X`): two cones point to point (118.4), pale blue,
+each with a little blue lamp of its own. The way out is `o`.
+
+#### The lantern
+
+Coming into the dark (118.6), the hero lights a lantern: a warm lamp,
+`LANTERN` metres across (118.1). Every frame (118.8) it goes with the
+hero, held up high so the tops of the rocks round them catch its light,
+and it flickers: its reach goes up and down a little, by two `sin`s at
+different speeds, so it never quite repeats.
+
+A world lights its eight nearest lamps: the lantern and the crystals
+are fewer than that here.
+
+#### Bats and drips
+
+`bats 3` puts three bats in the cave (118.7): a small dark body, with
+two wings joined on, each over a floor tile picked at random. They fly
+round their tiles (118.9), a little up and down, facing the way they
+fly, their wings flapping. Facing the way it flies: going round at
+angle `A`, a bat moves along `cos`, `sin`, so it faces `180 - A`, in
+degrees.
+
+Now and then a drop of water falls from the dark near the hero
+(118.10), faster and faster; on water, it leaves a ripple.
+
+#### Try this
+
+* A brighter lantern: `LANTERN 8` (118.1). Or a dimmer one.
+* Make the crystals green, and their light too (118.3, 118.4).
+* Have the bats fly in a wider circle when the hero's near.
+
+[← Chapter 117](#chapter-117-the-day-and-the-rain) · [Contents](#contents) · [Appendices →](#appendices)
 
 ---
 ## Appendices
@@ -17712,7 +17775,7 @@ Run `cabby` with no file to type Cabby a piece at a time:
 
 ```text
 $ cabby
-Cabby 1.17.0 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
+Cabby 1.18.0 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
 Cabby comes with ABSOLUTELY NO WARRANTY, under the MIT License; "cabby.license" for details.
 >>> int add int a, int b {
 ... 	return a + b
