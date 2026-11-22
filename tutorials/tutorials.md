@@ -1,6 +1,6 @@
 # The Cabby Manual
 
-*For Cabby 1.10.0 (2026-11-22).*
+*For Cabby 1.11.0 (2026-11-22).*
 
 A book for learning Cabby one idea at a time, and a reference to come back
 to afterwards.
@@ -218,6 +218,7 @@ int main {
 110. [The townspeople](#chapter-110-the-townspeople): people made of shapes, dressed as who they are; walking about on their own; who's in the way; talking
 111. [Climbing the hills](#chapter-111-climbing-the-hills): how high someone's feet are; stairs up to high ground; a bridge to walk over, or under; hopping down a ledge
 112. [A battle in the grass](#chapter-112-a-battle-in-the-grass): critters made of shapes; the camera coming down into the world; a battle there, a turn at a time, with health bars over each
+113. [Noticed, and the rival](#chapter-113-noticed-and-the-rival): a "!" over someone's head, and coming over; a battle that can't be run from; experience and levels; healing; words wrapped
 
 **[Appendices](#appendices)**
 
@@ -17266,7 +17267,83 @@ if it's still there, and the camera goes back up (112.34).
 * Make a new critter, a hedgehog, brown, with cones for spikes, and
   meet it one time in four (112.20).
 
-[← Chapter 111](#chapter-111-climbing-the-hills) · [Contents](#contents) · [Appendices →](#appendices)
+[← Chapter 111](#chapter-111-climbing-the-hills) · [Contents](#contents) · [Chapter 113 →](#chapter-113-noticed-and-the-rival)
+
+### Chapter 113: Noticed, and the rival
+
+*Program: `113-quest-3d-rival.cby`, Cabby Town and the meadow, where Rufus waits. Libraries: `use world`, `use files`, `use math`.*
+
+#### Being noticed
+
+The areas' maps have said who notices the hero all along, for the 2D
+quest's part 9 (chapter 85):
+
+```text
+watch 8,1 elder
+sees baker 3
+```
+
+The first makes the elder notice the hero when they step onto tile 8,1;
+the second, the baker whenever the hero is up to three tiles in front of
+her, with nothing in between. After each step, `look_out` (113.17)
+checks both: `watcher` for the tile, then `seen_by` (113.18), which goes
+along the tiles in front of each person who sees, until something's in
+the way, or the hero's there. Each notices once: their name goes in
+`Noticed`.
+
+A red "!" pops up over their head (113.19): a box, with a ball under it,
+joined. It isn't joined to them, since they stand still while it shows,
+so it can lean back to face the camera above, and jump up a little as
+it appears. Then they come over (113.20), a step at a time, the way
+that's further first (113.21), until they're next to the hero; they
+turn to face each other, and talk (113.22). The elder sees to Ember's
+wounds.
+
+While someone's coming over, nobody wanders (110.5): only while the
+hero's walking about.
+
+#### Rufus
+
+In the meadow, east of town, the line `rival 13,7 left` puts Rufus there
+(113.8), until he's met the hero; `sees rival 5` and two `watch` lines
+mean he sees them as they come in from town. He's dressed in a green
+jacket, with spiky hair (113.10): cones, leaning out.
+
+When his words have gone, he steps back a tile, to make room
+(113.23), turns to the hero, and sends out his pup, Bruno (113.3), made
+of shapes as the other critters are (113.12). `begin_battle` (113.11)
+takes the critter, whose it is, and how far ahead of the hero it goes:
+Bruno nearer than a wild one, in front of Rufus, and to the right just
+enough to be seen past the hero.
+
+What's said names the owner (113.13): "Rufus sent out Bruno!", "Rufus's
+Bruno used Bite!". And there's no running from him (113.14). Win or
+lose, he says so (113.15); then he walks off east, a step at a time
+(113.24), until he can't go any further, and he's gone.
+
+#### Experience
+
+Each critter beaten gives Ember ten times its level in experience
+(113.16). Ten times her own level, and she grows a level. Her numbers
+come from her level (112.13): her health is 11 and twice her level, how
+hard she hits 6 and her level, and so on, so each level makes her
+stronger.
+
+#### Words, wrapped
+
+Rufus has a lot to say, more than fits across the window. A `world.text`
+starts a new line at each `"\n"` in it, so `show_words` (113.25)
+splits what's said a word at a time into lines of up to `WIDE` letters,
+joins them with `"\n"`, and moves the words up, so the last line is
+where one line would be.
+
+#### Try this
+
+* Make the baker see further: `sees baker 5` in `quest/town.txt`.
+* Have Rufus walk off west instead, back the way he came (113.24).
+* Make Bruno grow with Ember: a level above hers, whatever it is (113.3).
+
+[← Chapter 112](#chapter-112-a-battle-in-the-grass) · [Contents](#contents) · [Appendices →](#appendices)
 
 ---
 ## Appendices
@@ -17324,7 +17401,7 @@ Run `cabby` with no file to type Cabby a piece at a time:
 
 ```text
 $ cabby
-Cabby 1.10.0 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
+Cabby 1.11.0 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
 Cabby comes with ABSOLUTELY NO WARRANTY, under the MIT License; "cabby.license" for details.
 >>> int add int a, int b {
 ... 	return a + b

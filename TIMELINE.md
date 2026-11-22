@@ -112,6 +112,7 @@ changing for.
 | 1.8.0 | 22 November | Cabby Quest in 3D, part 3: the townspeople, made of shapes, walking about and talking |
 | 1.9.0 | 22 November | Cabby Quest in 3D, part 4: the hills climbed, their stairs, high ground, bridge and ledges |
 | 1.10.0 | 22 November | Cabby Quest in 3D, part 5: a battle in the tall grass, in the world itself |
+| 1.11.0 | 22 November | Cabby Quest in 3D, part 6: noticed, and Rufus's battle; experience and levels; world text over several lines |
 
 ---
 
@@ -1946,6 +1947,16 @@ hill crow, made of shapes, pops up out of it; Ember, the hero's fox,
 jumps out to meet it. The battle is the 2D quest's, a turn at a time,
 with each lunging at the other, shaking when hit, and a health bar
 floating over each; then the camera goes back up.
+
+*Version 1.11.0, Cabby Quest in 3D, part 6:* tutorial 113, and chapter
+113 of the manual. The people notice the hero (the baker sees them in
+front of her, the elder when they're on the path north): a red "!" pops
+up over their head, and they come over and talk; the elder sees to
+Ember. In the meadow, Rufus, the rival, sees the hero, comes over, and
+sends out his pup, Bruno, made of shapes: a battle that can't be run
+from. Ember gains experience, and grows a level. And in `use world`, a
+`world.text` starts a new line at each `"\n"` in it, so long words can
+be wrapped (the world tests check a second line).
 
 ## Along the way (dates not recorded)
 
