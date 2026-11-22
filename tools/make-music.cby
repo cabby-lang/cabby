@@ -1,7 +1,8 @@
 // make-music.cby: writes the music for Cabby Quest (tutorials 77 to 86,
 // and 82) as MIDI files, into tutorials/music/: a tune for the woods, one
 // for the town, one for the meadow, one for inside a house, one for the
-// rival, and one for a battle. Each is a melody and a bass line, made to
+// rival, and one for a battle; and for the 3D quest (tutorial 119), one
+// for the lake and one for the cave. Each is a melody and a bass line, made to
 // loop.
 //
 //     cabby tools/make-music.cby          (from Cabby's own folder)
@@ -86,5 +87,18 @@ int main {
 	Tune = "E5 G5 C6 G5  F5 A5 C6:2  E5 G5 B5 G5  C6:3 -"
 	Bass = "C4:4  F3:4  G3:4  C4:4"
 	save "house", 72, part_of("music box", 0.41, Tune), part_of("piano", 0.3, Bass)
+
+	// the lake (Cabby Quest in 3D, part 12): gentle, in three, a
+	// vibraphone (General MIDI's 12) over a harp, in F major
+	Tune = "F5 A5 C6  Bb5 A5 G5  A5:2 F5  C5:3  D5 F5 A5  G5 F5 E5  F5:3  -:3"
+	Bass = "F3:3  Bb2:3  F3:3  C3:3  D3:3  C3:3  F3:3  F2:3"
+	save "lake", 92, part_of("12", 0.45, Tune), part_of("harp", 0.4, Bass)
+
+	// the cave: slow and low, a celesta (9) dripping notes over a warm pad
+	// (90), in D minor, with rests for the echoes
+	Tune = "D5:2 - A4  F5:3 -  E5 - D5 -  A4:4"
+	Tune += "  Bb4:2 - D5  C5:3 -  A4 - E5 -  D5:4"
+	Bass = "D3:4  Bb2:4  C3:4  A2:4  G2:4  F2:4  A2:4  D3:4"
+	save "cave", 60, part_of("9", 0.42, Tune), part_of("90", 0.32, Bass)
 	return 0
 }

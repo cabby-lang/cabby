@@ -81,3 +81,90 @@ save("pick-up", blip([523, 659, 784, 1047], 0.07, 0.35))
 save("door", sweep(220, 330, 0.18, volume=0.4) + noise_burst(0.08, 0.3, 0.8))
 save("notice", blip([988, 1319], 0.06, 0.4))      # someone has seen the hero: "!"
 save("hop", sweep(260, 620, 0.09, volume=0.35) + sweep(620, 300, 0.09, volume=0.3))   # over a ledge
+
+# ---- for Cabby Quest in 3D (tutorial 119): water, rain, thunder, the cave
+
+
+def fade_ends(samples, seconds=0.01):
+    """no click at the start or the end"""
+    n = int(RATE * seconds)
+    for i in range(min(n, len(samples))):
+        samples[i] *= i / n
+        samples[-1 - i] *= i / n
+    return samples
+
+
+def splash():
+    """a burst of bright noise, falling, with a bubble under it"""
+    out, last = [], 0.0
+    n = int(RATE * 0.4)
+    for i in range(n):
+        t = i / n
+        last = last * 0.35 + random.uniform(-1, 1) * 0.65
+        bubble = math.sin(2 * math.pi * (320 - 180 * t) * i / RATE) * 0.25 * (1 - t) ** 3
+        out.append((last * 0.45 * (1 - t) ** 2.5 + bubble) * min(1, t * 40))
+    return out
+
+
+def stroke():
+    """a soft swish: noise, swelling and falling"""
+    out, last = [], 0.0
+    n = int(RATE * 0.22)
+    for i in range(n):
+        t = i / n
+        last = last * 0.7 + random.uniform(-1, 1) * 0.3
+        out.append(last * 0.5 * math.sin(math.pi * t))
+    return out
+
+
+def drip():
+    """a drop: a quick falling pitch, and its echo"""
+    one = sweep(1900, 700, 0.05, volume=0.45)
+    echo = [v * 0.35 for v in one]
+    return one + [0.0] * int(RATE * 0.09) + echo
+
+
+def rain():
+    """three seconds of soft noise, its end blended into its start, to go
+    round and round with no seam"""
+    seconds, blend = 3.0, 0.25
+    n, b = int(RATE * seconds), int(RATE * blend)
+    raw, last, hiss = [], 0.0, 0.0
+    for i in range(n + b):
+        last = last * 0.55 + random.uniform(-1, 1) * 0.45
+        hiss = hiss * 0.92 + last * 0.08
+        drop = random.uniform(-1, 1) * 0.6 if random.random() < 0.002 else 0.0
+        raw.append((last * 0.22 + hiss * 0.5 + drop))
+    out = raw[:n]
+    for i in range(b):
+        t = i / b
+        out[i] = raw[n + i] * (1 - t) + raw[i] * t
+    return out
+
+
+def thunder():
+    """a crack, then a long low rumble, rolling away"""
+    out, low, lower = [], 0.0, 0.0
+    n = int(RATE * 3.0)
+    for i in range(n):
+        t = i / n
+        low = low * 0.97 + random.uniform(-1, 1) * 0.03
+        lower = lower * 0.995 + low * 0.005
+        crack = random.uniform(-1, 1) * 0.5 * max(0, 1 - t * 20)
+        roll = 1 + 0.4 * math.sin(2 * math.pi * 1.3 * t * 3)
+        out.append(crack + (low * 9 + lower * 40) * (1 - t) ** 1.5 * roll)
+    return out
+
+
+def squeak():
+    """a bat: two tiny high chirps"""
+    one = sweep(3200, 4300, 0.025, volume=0.18)
+    return one + [0.0] * int(RATE * 0.03) + one
+
+
+save("splash", fade_ends(splash()))
+save("stroke", fade_ends(stroke()))
+save("drip", fade_ends(drip()))
+save("rain", rain())
+save("thunder", fade_ends(thunder()))
+save("squeak", fade_ends(squeak()))

@@ -856,13 +856,15 @@ int64_t cby_sound_load(const char *path)
 	return i + 1;
 }
 
+/* a loaded sound, by its id; the caller holds the lock (and it's let go
+ * before saying there's no such sound) */
 static Track *track(int64_t id)
 {
-	pthread_mutex_lock(&lock);
 	Track *t = id >= 1 && id <= ntracks ? tracks[id - 1] : NULL;
-	pthread_mutex_unlock(&lock);
-	if (!t)
+	if (!t) {
+		pthread_mutex_unlock(&lock);
 		fail("%s", "this sound hasn't been loaded (sound.load gives one)");
+	}
 	return t;
 }
 
@@ -912,7 +914,13 @@ int cby_sound_track_playing(int64_t id)
 	return p;
 }
 
-double cby_sound_track_seconds(int64_t id) { return (double)track(id)->length / RATE; }
+double cby_sound_track_seconds(int64_t id)
+{
+	pthread_mutex_lock(&lock);
+	double s = (double)track(id)->length / RATE;
+	pthread_mutex_unlock(&lock);
+	return s;
+}
 
 double cby_sound_track_position(int64_t id)
 {

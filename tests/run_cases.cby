@@ -5433,6 +5433,33 @@ int main {
 	return 0
 }
 
+### sound_tracks
+// (a sound loaded, and every one of its methods: each takes the sound
+// library's lock, and its sound by its id; they once took the lock twice,
+// and hung)
+//> long: true, playing: false
+//> looping, at half: playing true
+//> paused: false; stopped, at 0
+//> moved to a second: 1.0
+use sound
+use shell
+
+int main {
+	sound.track T = sound.load(shell.get("CABBY_SOUND_IN"))
+	println "long: " + (T.seconds > 1).text + ", playing: " + T.playing.text
+	T.set_looping true
+	T.set_volume 0.5
+	T.play
+	println "looping, at half: playing", T.playing
+	T.pause
+	print "paused: " + T.playing.text + "; "
+	T.stop
+	println "stopped, at", (int)T.position
+	T.move_to 1
+	println "moved to a second:", T.position
+	return 0
+}
+
 ### sound_midi_synthesizer_monitoring
 // (a synthesizer, written down by CABBY_MIDI_OUT, read back; a keyboard
 // (CABBY_MIDI_IN's file) sent on to it, an octave up by its handler, and
