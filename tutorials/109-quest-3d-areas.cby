@@ -41,6 +41,7 @@ const int TURN_TIME = 100           // ms: a tap of an arrow shorter than this o
 // tiles that can't be walked onto (a door can, if a way starts there)
 const str BLOCKING = "TSH~D#ObhCzv"
 const double HIGH = 1.3             // the hills' high ground: high enough to walk under its bridge
+const int STAIRS = 6                // steps up it, in a tile: small ones, for small legs
 
 // ==== 109.1  The fade, the name and the trees ============================
 
@@ -504,9 +505,10 @@ object quest : world.window {
 		} else if Tile == 'C' {
 			add_box 1, HIGH, 1, "#8d7b68", X, HIGH / 2, Z
 		} else if Tile == 'z' {
-			for I in 3 {
-				double Up = HIGH * (I + 1) / 3
-				add_box 1, Up, 0.34, "#a89a86", X, Up / 2, Z + 0.33 - I * 0.33
+			for I in STAIRS {
+				double Up = HIGH * (I + 1) / STAIRS
+				double Deep = 1.0 / STAIRS
+				add_box 1, Up, Deep, "#a89a86", X, Up / 2, Z + 0.5 - (I + 0.5) * Deep
 			}
 		} else if Tile == 'B' || Tile == 'P' {
 			if Tile == 'P' {

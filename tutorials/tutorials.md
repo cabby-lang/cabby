@@ -1,6 +1,6 @@
 # The Cabby Manual
 
-*For Cabby 1.7.0 (2026-11-22).*
+*For Cabby 1.7.1 (2026-11-22).*
 
 A book for learning Cabby one idea at a time, and a reference to come back
 to afterwards.
@@ -17020,7 +17020,8 @@ black, and no grass under it, its floor is its own (109.10). An oven is
 a box with its fire joined on, a table its top with a leg.
 
 The hills are drawn as they'll be climbed (109.11): high ground (`h`)
-1.3 metres up, its cliff (`C`) and steps (`z`), a bridge (`B`, `P` over
+1.3 metres up, its cliff (`C`) and steps (`z`, six to a tile: `STAIRS`,
+small ones for the hero's legs), a bridge (`B`, `P` over
 the path) at the high ground's height, which the hero walks under, ledges
 (`v`) and tall grass (`w`). For now the high ground, cliffs, steps and
 ledges are in the way, and the path goes through.
@@ -17089,7 +17090,7 @@ Run `cabby` with no file to type Cabby a piece at a time:
 
 ```text
 $ cabby
-Cabby 1.7.0 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
+Cabby 1.7.1 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
 Cabby comes with ABSOLUTELY NO WARRANTY, under the MIT License; "cabby.license" for details.
 >>> int add int a, int b {
 ... 	return a + b
