@@ -114,6 +114,7 @@ changing for.
 | 1.10.0 | 22 November | Cabby Quest in 3D, part 5: a battle in the tall grass, in the world itself |
 | 1.11.0 | 22 November | Cabby Quest in 3D, part 6: noticed, and Rufus's battle; experience and levels; world text over several lines |
 | 1.12.0 | 22 November | Cabby Quest in 3D, part 7: the baker's spoon; questions, a thing to pick up, a quest, and saving |
+| 1.13.0 | 22 November | Cabby Quest in 3D, part 8: a title over the world, the game's menu, and options |
 
 ---
 
@@ -1965,6 +1966,13 @@ the baker asks for her wooden spoon, lost in the bakery, where it turns
 slowly in the air until the hero picks it up; she gives them bread for
 it. Everything the hero has done is in one struct, saved as JSON with S,
 and the game carries on from it next time.
+
+*Version 1.13.0, Cabby Quest in 3D, part 8:* tutorial 115, and chapter
+115 of the manual. The game begins at a title, "Cabby Quest" over the
+town, the camera slowly circling it: a new game, Continue, or the
+options. Escape opens the game's menu: what the hero carries, saving,
+the options, and back to the title. The options change how the world is
+drawn: shadows on or off, the camera near or far.
 
 ## Along the way (dates not recorded)
 
