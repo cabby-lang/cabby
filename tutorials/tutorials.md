@@ -1,6 +1,6 @@
 # The Cabby Manual
 
-*For Cabby 1.8.0 (2026-11-22).*
+*For Cabby 1.9.0 (2026-11-22).*
 
 A book for learning Cabby one idea at a time, and a reference to come back
 to afterwards.
@@ -216,6 +216,7 @@ int main {
 108. [The town in 3D](#chapter-108-the-town-in-3d): the quest's map read into a world of shapes; trees, signs, houses and the hero joined together; walking tile by tile; a camera from above
 109. [The areas, and going inside](#chapter-109-the-areas-and-going-inside): areas joined edge to edge, seen and walked into; trees all round; a door into the bakery; a fade with the light; the hills, drawn
 110. [The townspeople](#chapter-110-the-townspeople): people made of shapes, dressed as who they are; walking about on their own; who's in the way; talking
+111. [Climbing the hills](#chapter-111-climbing-the-hills): how high someone's feet are; stairs up to high ground; a bridge to walk over, or under; hopping down a ledge
 
 **[Appendices](#appendices)**
 
@@ -17097,7 +17098,89 @@ something. The words are written over the world, as a sign's are.
 * Make the elder wander more often: every 40 frames, not 75 (110.5).
 * Give the baker something to say about the spoon she's lost.
 
-[← Chapter 109](#chapter-109-the-areas-and-going-inside) · [Contents](#contents) · [Appendices →](#appendices)
+[← Chapter 109](#chapter-109-the-areas-and-going-inside) · [Contents](#contents) · [Chapter 111 →](#chapter-111-climbing-the-hills)
+
+### Chapter 111: Climbing the hills
+
+*Program: `111-quest-3d-hills.cby`, the hills south of Cabby Town, climbed. Libraries: `use world`, `use files`, `use math`.*
+
+#### Heights
+
+Chapter 109 built the hills: high ground (`h`) with a cliff (`C`) where
+it drops, stairs up (`z`), a bridge between two hills (`B`, and `P` where
+it crosses the path) and ledges (`v`). They were all in the way. Now
+high ground and stairs can be walked on (`BLOCKING` has lost `h` and
+`z`), and each walker knows how high their feet are (111.2): `Feet`, 0
+on the ground and `HIGH` up high, and `Level`, 0 or 1, which they're on.
+
+Each tile has a level (111.8): 1 for high ground, 0 for the ground, and
+-1 for the stairs and the bridge, which keep the hero at the level they
+came with. `height_at` says how high someone's feet are on a tile, at
+their level: on the high ground, `HIGH`; on the stairs, half way; on the
+bridge, its top if they're up high, or the ground under it if not.
+
+#### A step up, or down
+
+A step now has a start height and an end height, `From` and `To`
+(111.2). `step` makes them the same; `walk` sets `To` to the next tile's
+height (108.21). Each frame of the step, the walker goes that much of the
+way from one to the other (108.6):
+
+```cabby
+StepsLeft--
+double Done = (Frames - StepsLeft) / (double)Frames
+Ground = From + (To - From) * Done
+double Now = Ground + jump(Done)
+Body.move Dx * SPEED, Now - Feet, Dy * SPEED
+Feet = Now
+```
+
+`Done` goes from a sixteenth to 1, so a step up the stairs rises a
+little each frame, as the body moves along. `move` takes how far to go,
+not where to, so it's given how much higher (or lower) `Now` is than
+`Feet`; the legs and head, joined on, go with it.
+
+#### Where the hero can go
+
+`can_go` (111.6) lets the hero onto a tile only at their own level, so
+up high they can't walk off the edge, and on the ground they can't walk
+up the cliff. Stairs and the bridge are at any level, and from the
+stairs the hero can step either way: up onto the high ground, or down to
+the ground. After each step, `settle_level` (111.9) takes the level of
+the tile they're on, unless it's the stairs or the bridge.
+
+So from up high, the hero walks over the bridge, at `HIGH`; from the
+path below, they walk under it, at 0, hidden for a moment as in the 2D
+quest. Only the level they came with decides which.
+
+#### A hop
+
+Walking down into a ledge on the ground, with a free tile beyond it, is
+a hop (111.11): two tiles in one step, 32 frames long (111.4). `jump`
+(111.5) lifts the hero over it, highest half way:
+
+```cabby
+return 4 * HOP * Done * (1 - Done)
+```
+
+That's 0 at the start and the end, and `HOP` when `Done` is a half. From
+below, the ledge is still in the way.
+
+#### The camera
+
+The camera rises with the ground under the hero (108.17), `Ground`, not
+with their feet, so it climbs the stairs with them but doesn't bob up
+and down in a hop.
+
+#### Try this
+
+* Make the hop higher: `HOP 1` (111.1).
+* Give the bridge railings: a thin box along each side of `B` and `P`,
+  up high (109.11), so it looks safer to walk over.
+* Add a third hill to the hills' map (`quest/hills.txt`), with stairs of
+  its own, and a bridge to it.
+
+[← Chapter 110](#chapter-110-the-townspeople) · [Contents](#contents) · [Appendices →](#appendices)
 
 ---
 ## Appendices
@@ -17155,7 +17238,7 @@ Run `cabby` with no file to type Cabby a piece at a time:
 
 ```text
 $ cabby
-Cabby 1.8.0 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
+Cabby 1.9.0 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
 Cabby comes with ABSOLUTELY NO WARRANTY, under the MIT License; "cabby.license" for details.
 >>> int add int a, int b {
 ... 	return a + b
