@@ -1,6 +1,6 @@
 # The Cabby Manual
 
-*For Cabby 1.27.0 (2026-11-23).*
+*For Cabby 1.28.0 (2026-11-23).*
 
 A book for learning Cabby one idea at a time, and a reference to come back
 to afterwards.
@@ -230,6 +230,7 @@ int main {
 122. [Arriving](#chapter-122-arriving): a story at the start, a step at a time; a train, slowing into a station, steam rising; lines in a map for the 3D quest only; a home, and Ember given
 123. [Trains, and the elder](#chapter-123-trains-and-the-elder): a timetable, worked out from the time alone; pulling in, waiting, pulling out; no ticket; worn out, and back to the elder
 124. [Models](#chapter-124-models): models made by others, in place of shapes: a fox, a dog, an old man; their animations, played; a walker whose body is a model; credit where it's due
+125. [The wild ones, as models](#chapter-125-the-wild-ones-as-models): a field mouse and a hill crow as models; a model made smaller, keeping only what's used
 
 **[Appendices](#appendices)**
 
@@ -18170,7 +18171,39 @@ man has no walk: he stands about as he moves.)
 * Make the elder bigger: `set_scale 1.2` on his body (124.3).
 * Find a model for the field mouse, and give it the mouse's place.
 
-[← Chapter 123](#chapter-123-trains-and-the-elder) · [Contents](#contents) · [Appendices →](#appendices)
+[← Chapter 123](#chapter-123-trains-and-the-elder) · [Contents](#contents) · [Chapter 125 →](#chapter-125-the-wild-ones-as-models)
+
+### Chapter 125: The wild ones, as models
+
+*Program: `125-quest-3d-wild.cby`, the field mouse and the hill crow as models. Libraries: `use world`, `use files`, `use math`, `use json`, `use directories`, `use sound`.*
+
+What part 17 did for Ember and Bruno, this part does for the wild ones
+in the tall grass. The field mouse is a sand mouse, and the hill crow a
+crow, both from Sketchfab under CC BY 4.0, credited in
+`models/CREDITS.md` (125.1 names their files). `made_of` (112.24) makes
+each with `model_of` (124.2), as it does Ember; each has `Lift` 0 and a
+`Moving` animation (112.14, 112.15): the mouse runs out at Ember, and
+the crow hops.
+
+#### Only what's used
+
+The sand mouse came with fourteen animations: walking, running, four
+ways of standing about, digging in and out, three ways of dying, two of
+attacking. Each moves all 79 of its bones many times a second, and
+together they made a file of 10 MB. A battle needs three: its file
+keeps idle (the shortest of its four), walk and run, and nothing else,
+which brings it to 2.6 MB. (A file can be made smaller this way
+whenever a model brings more than it needs; CC BY lets you, so long as
+you say so, as `models/CREDITS.md` does.)
+
+#### Try this
+
+* Let the crow flap, not hop, as it goes for Ember: its file has
+  `"flap"`, and `"glide"` too (`Crow.Moving`, 112.15).
+* Find the sand mouse's attack, and put it back (`models/CREDITS.md`
+  says where it came from).
+
+[← Chapter 124](#chapter-124-models) · [Contents](#contents) · [Appendices →](#appendices)
 
 ---
 ## Appendices
@@ -18228,7 +18261,7 @@ Run `cabby` with no file to type Cabby a piece at a time:
 
 ```text
 $ cabby
-Cabby 1.27.0 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
+Cabby 1.28.0 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
 Cabby comes with ABSOLUTELY NO WARRANTY, under the MIT License; "cabby.license" for details.
 >>> int add int a, int b {
 ... 	return a + b
