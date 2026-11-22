@@ -168,3 +168,44 @@ save("drip", fade_ends(drip()))
 save("rain", rain())
 save("thunder", fade_ends(thunder()))
 save("squeak", fade_ends(squeak()))
+
+# ---- for the coast (tutorial 120): the surf, and gulls
+
+
+def surf():
+    """six seconds of the sea: noise, swelling as each wave comes in and
+    falling as it goes out, its end blended into its start"""
+    seconds, blend = 6.0, 0.5
+    n, b = int(RATE * seconds), int(RATE * blend)
+    raw, last, deep = [], 0.0, 0.0
+    for i in range(n + b):
+        t = i / RATE
+        last = last * 0.6 + random.uniform(-1, 1) * 0.4
+        deep = deep * 0.985 + last * 0.015
+        swell = 0.35 + 0.65 * max(0, math.sin(2 * math.pi * t / 3.0)) ** 2   # (a wave every three seconds)
+        raw.append((last * 0.18 + deep * 2.2) * swell)
+    out = raw[:n]
+    for i in range(b):
+        k = i / b
+        out[i] = raw[n + i] * (1 - k) + raw[i] * k
+    return out
+
+
+def gull():
+    """a gull's cry: a high note falling, wavering, twice"""
+    out = []
+    for cry in range(2):
+        n = int(RATE * 0.28)
+        phase = 0.0
+        for i in range(n):
+            t = i / n
+            f = 1500 - 650 * t + 60 * math.sin(2 * math.pi * 28 * i / RATE)
+            phase += 2 * math.pi * f / RATE
+            v = math.sin(phase) + 0.3 * math.sin(2 * phase)
+            out.append(v * 0.16 * math.sin(math.pi * t))
+        out += [0.0] * int(RATE * 0.08)
+    return out
+
+
+save("surf", surf())
+save("gull", fade_ends(gull()))

@@ -434,6 +434,7 @@ typedef struct Shape {
 	 * removed doesn't reach the next shape in its slot */
 	uint32_t gen;
 	int first_child, next_child;   /* (what's joined to it: slot + 1; 0, none) */
+	int glow;             /* drawn its own color, as bright in the dark as in the sun; casts no shadow */
 } Shape;
 
 static Shape *shapes;
@@ -790,6 +791,8 @@ void cby_world_shape_set_roll(int64_t id, double degrees) { shape(id)->roll = wr
 void cby_world_shape_roll_by(int64_t id, double degrees) { Shape *s = shape(id); s->roll = wrap_degrees(s->roll + degrees); }
 void cby_world_shape_set_scale(int64_t id, double k) { shape(id)->scale = k > 0 ? k : 0; }
 void cby_world_shape_set_visible(int64_t id, int on) { shape(id)->visible = on != 0; }
+void cby_world_shape_set_glow(int64_t id, int on) { shape(id)->glow = on != 0; }
+int cby_world_shape_glow(int64_t id) { return shape(id)->glow; }
 static void unlink_child(Shape *s);
 
 void cby_world_shape_remove(int64_t id)

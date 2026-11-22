@@ -1,7 +1,8 @@
 // Shadows, for run_world_tests.sh to look at, from above: the sun slanting
 // to +x, so a box a metre up shades the ground a metre to its right; a
 // plane a metre up with a picture that's see-through on one half, which
-// shades the ground under its other half only; then shadows turned off.
+// shades the ground under its other half only; a glowing box, drawn in its
+// own color and casting no shadow; then shadows turned off.
 use world
 use images
 
@@ -19,6 +20,8 @@ object sunlit : world.window {
 		add_box 1, 0.2, 1, "white", -2, 1, 0
 		world.shape Leaf = add_plane 1, 1, "white", 2, 1, 0
 		Leaf.set_picture "half.png"
+		world.shape Glowing = add_box 1, 0.2, 1, "#ff8000", -2, 1, 3
+		Glowing.set_glow true
 		set_sun 1, -1, 0
 		move_camera_to 0, 8, 0.001
 		point_camera_at 0, 0, 0

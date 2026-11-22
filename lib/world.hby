@@ -126,6 +126,8 @@ extern void cby_world_shape_roll_by long shape, double degrees
 extern void cby_world_shape_set_scale long shape, double scale
 extern void cby_world_shape_set_size long shape, double w, double h, double d
 extern void cby_world_shape_set_visible long shape, int on
+extern void cby_world_shape_set_glow long shape, int on
+extern int cby_world_shape_glow long shape
 extern void cby_world_shape_remove long shape
 extern void cby_world_shape_set_color long shape, str color
 extern void cby_world_shape_set_picture long shape, str path
@@ -304,6 +306,17 @@ object world.shape {
 
 	void set_visible bool On const {
 		cby_world_shape_set_visible Id, On
+	}
+
+	// a glowing shape is drawn in its own color, as bright at night as by
+	// day, with no shading and no shadow: a lamp's bulb, a lit window, a
+	// beam of light
+	bool glow const {
+		return cby_world_shape_glow(Id) != 0
+	}
+
+	void set_glow bool On const {
+		cby_world_shape_set_glow Id, On
 	}
 
 	// takes it out of the world

@@ -133,6 +133,7 @@ sections below.
 | `void set_picture const str &Picture` | A picture on it (PNG, JPEG, BMP or GIF): on each side of a box, round a ball or cylinder, over a plane. Its color tints the picture: `"white"` for none. Where the picture is see-through, so is the shape. |
 | `void set_picture_size double Metres` | The picture repeated, each copy that many metres across: grass on a field, tiles on a floor. 0: once, stretched. |
 | `bool visible`, `void set_visible bool On` | Hidden shapes aren't drawn (and can't be clicked). |
+| `bool glow`, `void set_glow bool On` | A glowing shape is drawn in its own color whatever the light, with no shading and no shadow: a bulb, a lit window, a beam. It doesn't light what's around it; add a lamp for that. |
 | `void remove`, `bool removed` | Takes it out of the world. |
 | `void set_group const str &Group`, `str group` | A name for shapes of a kind: `"coins"`, `"walls"`. |
 | `bool touches const world.shape &Other` | See [Touching](#touching). |

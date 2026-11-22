@@ -121,6 +121,7 @@ changing for.
 | 1.17.0 | 22 November | `use world`: removed shapes' room used again (walking between areas no longer slows down), and models that can't be read say why; the 3D quest's day 24 minutes, the sun and moon fading through the horizon, and swimming smooth |
 | 1.18.0 | 22 November | Cabby Quest in 3D, part 11: the cave, a lantern, crystals, bats and drips; `--style` no longer asks to drop a call's parentheses when its first argument starts with one |
 | 1.19.0 | 22 November | Cabby Quest in 3D, part 12: music and sounds, the rain heard, thunder and lightning; `sound.track`'s methods no longer hang |
+| 1.20.0 | 22 November | Cabby Quest in 3D, part 13: the coast, the sea, a pier, boats, palms, gulls, a lighthouse, and Rufus again; glowing shapes in `use world`; the cave's rock solid |
 
 ---
 
@@ -2077,6 +2078,24 @@ And in `use sound`, every one of a `sound.track`'s methods (`play`,
 `set_looping` ...) hung: each took the library's lock, then looked its
 sound up with a function that took it again. Now that function expects
 the lock held. A test in `tests/run_cases.cby` goes through them all.
+
+*Version 1.20.0, Cabby Quest in 3D, part 13:* tutorial 120, and chapter
+120 of the manual. The coast (`quest/coast.txt`), east of the lake along
+its north shore: sand, foam lapping its edge, and the sea going on past
+the map's edges, where elsewhere the woods do; a pier to walk out on,
+boats rocking at anchor, palms, gulls overhead (any area can have them
+now, as the cave has bats), and a lighthouse whose beam sweeps round at
+night. The waves are heard there (a new sound, `surf`, with the gulls'
+cry, `gull`). Rufus waits at the coast for a rematch, Bruno at level 8.
+
+And `use world` has glowing shapes: `set_glow true` draws a shape in its
+own color whatever the light, with no shading and no shadow (a bulb, a
+lit window, a beam of light), by Cabby and by OpenGL alike. The shadows
+test checks a glowing box's color and that it leaves none.
+
+And in the cave (tutorials 118 to 120), its rock, stalagmites and
+crystals could be walked through: they weren't in `BLOCKING`. Now they
+are.
 
 ## Along the way (dates not recorded)
 
