@@ -111,6 +111,7 @@ changing for.
 | 1.7.1 | 22 November | The 3D hills' steps: six to a staircase, not three |
 | 1.8.0 | 22 November | Cabby Quest in 3D, part 3: the townspeople, made of shapes, walking about and talking |
 | 1.9.0 | 22 November | Cabby Quest in 3D, part 4: the hills climbed, their stairs, high ground, bridge and ledges |
+| 1.10.0 | 22 November | Cabby Quest in 3D, part 5: a battle in the tall grass, in the world itself |
 
 ---
 
@@ -1936,6 +1937,15 @@ frame, so the stairs are climbed and a hop over a ledge goes up and down
 again. Up high the hero can't walk off the edge, and on the ground they
 can't walk up the cliff; from up high they walk over the bridge, and
 from the path, under it. The camera rises with the ground under them.
+
+*Version 1.10.0, Cabby Quest in 3D, part 5:* tutorial 112, and chapter
+112 of the manual. A battle in the hills' tall grass, in the world
+itself, as you suggested: the camera comes down over the hero's
+shoulder, the grass round about is flattened, and a field mouse or a
+hill crow, made of shapes, pops up out of it; Ember, the hero's fox,
+jumps out to meet it. The battle is the 2D quest's, a turn at a time,
+with each lunging at the other, shaking when hit, and a health bar
+floating over each; then the camera goes back up.
 
 ## Along the way (dates not recorded)
 

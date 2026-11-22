@@ -1,6 +1,6 @@
 # The Cabby Manual
 
-*For Cabby 1.9.0 (2026-11-22).*
+*For Cabby 1.10.0 (2026-11-22).*
 
 A book for learning Cabby one idea at a time, and a reference to come back
 to afterwards.
@@ -217,6 +217,7 @@ int main {
 109. [The areas, and going inside](#chapter-109-the-areas-and-going-inside): areas joined edge to edge, seen and walked into; trees all round; a door into the bakery; a fade with the light; the hills, drawn
 110. [The townspeople](#chapter-110-the-townspeople): people made of shapes, dressed as who they are; walking about on their own; who's in the way; talking
 111. [Climbing the hills](#chapter-111-climbing-the-hills): how high someone's feet are; stairs up to high ground; a bridge to walk over, or under; hopping down a ledge
+112. [A battle in the grass](#chapter-112-a-battle-in-the-grass): critters made of shapes; the camera coming down into the world; a battle there, a turn at a time, with health bars over each
 
 **[Appendices](#appendices)**
 
@@ -17180,7 +17181,92 @@ and down in a hop.
 * Add a third hill to the hills' map (`quest/hills.txt`), with stairs of
   its own, and a bridge to it.
 
-[← Chapter 110](#chapter-110-the-townspeople) · [Contents](#contents) · [Appendices →](#appendices)
+[← Chapter 110](#chapter-110-the-townspeople) · [Contents](#contents) · [Chapter 112 →](#chapter-112-a-battle-in-the-grass)
+
+### Chapter 112: A battle in the grass
+
+*Program: `112-quest-3d-battle.cby`, the hills' tall grass, and what lives in it. Libraries: `use world`, `use files`, `use math`.*
+
+#### Something in the grass
+
+Each step into tall grass (`w`), one time in five (`MEETING`, 112.1),
+meets something (112.20): a field mouse, or one time in three a hill
+crow. Their numbers are the 2D quest's (chapter 87): health, strength,
+toughness and speed, and two moves each, with how hard each hits
+(112.13 to 112.15). Ember, the hero's fox, is quicker than the mouse
+and slower than the crow.
+
+#### Critters made of shapes
+
+A `critter` keeps its numbers and, now, its shapes too (112.3, 112.4):
+`Parts`, its body first, the rest joined to it, as a walker's are. Each
+is made facing up the map (112.26 to 112.28), then turned to face the
+way it should. Ember has pointed ears, a white chest and a bushy tail;
+the mouse round pink ears and a thin tail; the crow a yellow beak, and
+wings at its sides.
+
+They're made in a list, and the critter takes the list (112.10):
+
+```cabby
+Foe.put_out made_of(Kind, X, G, Z), X, Z, G, angle_of(opposite(Hero.Facing))
+```
+
+`made_of` adds shapes to the world, so it changes the `quest`; `put_out`
+changes `Foe`, which is part of the `quest`. Made first, then handed
+over, the two changes don't overlap. A method that took `Foe` to fill in
+(`put_out Foe, ...`) would be lending the `quest` out twice at once, and
+Cabby says so.
+
+#### Down into the world
+
+The battle happens where the hero is, not on a screen of its own. The
+hero turns to where there's room (112.23), three tiles of open ground;
+the other is put out two tiles ahead, Ember beside the hero, both under
+the ground for now. The tall grass between them is flattened (112.22):
+each blade is in the group `"grass"` (112.19), so `shapes_in "grass"`
+finds them all, and those near the line from Ember to the other are
+hidden until the battle's over.
+
+Then, over 60 frames, the camera comes down (112.30), from above and
+behind the hero to low over their right shoulder. Each frame it's
+`mix`ed part of the way from one to the other, eased so it starts and
+stops gently:
+
+```cabby
+double T = Done * Done * (3 - 2 * Done)
+```
+
+#### What a critter does
+
+Each critter is doing something, or nothing (112.2): rising up out of
+the grass, lunging at the other, shaking when it's hit, fainting, or
+sinking back down. Every frame, `animate` takes it a frame further
+(112.7), and `place` puts its body where that leaves it (112.8): so far
+ahead of where it stands, to its right, and up. Its parts, joined on, go
+with it. While either critter is doing something, the battle waits.
+
+Its health bar (112.9) floats over it, turned across the way the camera
+looks, and shrinks from its right end as its health falls, a quarter of
+a point a frame: green, then gold, then red.
+
+#### A turn
+
+The rest is chapter 87's battle, in the world. What's said goes in a
+list, in turn (112.31), each with what happens once it's read (112.32):
+the one hit shakes, and its bar falls; Ember jumps out; or someone
+faints. Whoever hits lunges as their words show. The menu (112.35) is
+words under the question, `>` at the one chosen; left and right move it,
+Space chooses. When the battle is over, Ember goes back, then the other
+if it's still there, and the camera goes back up (112.34).
+
+#### Try this
+
+* Make the grass busier: `MEETING 2` (112.1).
+* Give Ember a third move, `"Tail Whip"`, with a power of 30 (112.13).
+* Make a new critter, a hedgehog, brown, with cones for spikes, and
+  meet it one time in four (112.20).
+
+[← Chapter 111](#chapter-111-climbing-the-hills) · [Contents](#contents) · [Appendices →](#appendices)
 
 ---
 ## Appendices
@@ -17238,7 +17324,7 @@ Run `cabby` with no file to type Cabby a piece at a time:
 
 ```text
 $ cabby
-Cabby 1.9.0 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
+Cabby 1.10.0 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
 Cabby comes with ABSOLUTELY NO WARRANTY, under the MIT License; "cabby.license" for details.
 >>> int add int a, int b {
 ... 	return a + b
