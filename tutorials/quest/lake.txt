@@ -21,7 +21,7 @@ T....f.....f.......T
 TTTTTTTTTTTTTTTTTTTT
 ---
 name The Lake
-music meadow
+music lake
 join west hills 0
 sign 10,7 The island. Few have swum this far.
 item 9,6 shell

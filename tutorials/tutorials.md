@@ -1,6 +1,6 @@
 # The Cabby Manual
 
-*For Cabby 1.18.0 (2026-11-22).*
+*For Cabby 1.19.0 (2026-11-22).*
 
 A book for learning Cabby one idea at a time, and a reference to come back
 to afterwards.
@@ -224,6 +224,7 @@ int main {
 116. [The lake](#chapter-116-the-lake): a world that moves, water, flowers and trees; swimming, after asking the water; ripples; a place reached only by water
 117. [The day, and the rain](#chapter-117-the-day-and-the-rain): the sun crossing the sky, golden light, then a blue night and the moon; windows lit with lamps; rain
 118. [The cave](#chapter-118-the-cave): a dark place, lit by a lantern the hero carries; rock, stalagmites and glowing crystals; bats; dripping water
+119. [Sound](#chapter-119-sound): each area's music; sound effects; sounds quieter further off; the rain, heard; thunder and lightning
 
 **[Appendices](#appendices)**
 
@@ -17717,7 +17718,64 @@ Now and then a drop of water falls from the dark near the hero
 * Make the crystals green, and their light too (118.3, 118.4).
 * Have the bats fly in a wider circle when the hero's near.
 
-[← Chapter 117](#chapter-117-the-day-and-the-rain) · [Contents](#contents) · [Appendices →](#appendices)
+[← Chapter 117](#chapter-117-the-day-and-the-rain) · [Contents](#contents) · [Chapter 119 →](#chapter-119-sound)
+
+### Chapter 119: Sound
+
+*Program: `119-quest-3d-sound.cby`, the 3D quest, heard. Libraries: `use world`, `use files`, `use math`, `use json`, `use directories`, `use sound`.*
+
+#### Music
+
+Each area's map has always had a `music` line, for the 2D quest
+(chapter 80). Now the 3D quest plays it too (119.6): `music` changes to
+`music/town.mid`, fading the last out as it fades in, and goes on as it
+is if it's the same. Entering an area plays its own (109.4); the title
+plays the woods' (115.3); Rufus's tune starts the moment he sees the
+hero (113.19); a battle has its own, and the area's comes back after it
+(112.30). The lake and the cave have new tunes, made by
+`tools/make-music.cby` with the rest: a vibraphone over a harp, in
+three, for the lake; a celesta over a warm pad, slow, for the cave.
+
+#### Sounds
+
+`effect` (119.4) plays a sound once, and the game goes on: a step, a
+bump, a hop, a door, picking something up, being noticed, the menus,
+and a hit in a battle are the 2D quest's sounds. Swimming has its own:
+a splash going in and out (116.8, 116.9), and a stroke each step in
+the water. They're made by `tools/make-sounds.py`, as the others are.
+
+#### Quieter further off
+
+A drop of water landing in the cave, or a bat squeaking, is somewhere
+in the world: `effect_at` (119.5) plays it as loud as it's near the
+hero, all of it close by, none `HEARD` metres off (119.1). Each sound
+is loaded once with `sound.load`, a `sound.track` kept in a lookup by
+its name, and played again from the start with its volume set.
+
+#### The rain, heard
+
+`sounds/rain.wav` is three seconds of soft noise, its end blended into
+its start, so it goes round and round with no seam. `hear_rain` (119.7)
+loads it once, sets it looping, and every frame sets its volume from
+how wet it is (none inside), starting it when it's heard and stopping
+it when it isn't.
+
+Raining hard, now and then (119.8), there's a flash of lightning,
+`Flash`, which brightens the light all round and the sky for a moment
+(117.5), and the thunder.
+
+#### Options
+
+The options (115.10) turn the music on and off, and the sounds. Music
+on again starts what should be playing (119.3).
+
+#### Try this
+
+* Play a sound when the hero turns to face someone who's noticed them.
+* Make the drips heard further off: `HEARD 20` (119.1).
+* Thunder more often in a storm (119.8), and a longer flash.
+
+[← Chapter 118](#chapter-118-the-cave) · [Contents](#contents) · [Appendices →](#appendices)
 
 ---
 ## Appendices
@@ -17775,7 +17833,7 @@ Run `cabby` with no file to type Cabby a piece at a time:
 
 ```text
 $ cabby
-Cabby 1.18.0 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
+Cabby 1.19.0 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
 Cabby comes with ABSOLUTELY NO WARRANTY, under the MIT License; "cabby.license" for details.
 >>> int add int a, int b {
 ... 	return a + b

@@ -2113,7 +2113,7 @@ object quest : world.window {
 		}
 	}
 
-	// ==== 112.30  Down into the world, and back up  (changed in 113, 115)
+	// ==== 112.30  Down into the world, and back up  (changed in 113, 115, 116)
 
 	// a frame further down; once there, the critter pops up, and says so
 	void zoom_in {

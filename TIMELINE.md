@@ -120,6 +120,7 @@ changing for.
 | 1.16.0 | 22 November | Cabby Quest in 3D, part 10: the day passing, the moon, lit windows, and rain |
 | 1.17.0 | 22 November | `use world`: removed shapes' room used again (walking between areas no longer slows down), and models that can't be read say why; the 3D quest's day 24 minutes, the sun and moon fading through the horizon, and swimming smooth |
 | 1.18.0 | 22 November | Cabby Quest in 3D, part 11: the cave, a lantern, crystals, bats and drips; `--style` no longer asks to drop a call's parentheses when its first argument starts with one |
+| 1.19.0 | 22 November | Cabby Quest in 3D, part 12: music and sounds, the rain heard, thunder and lightning; `sound.track`'s methods no longer hang |
 
 ---
 
@@ -2061,6 +2062,21 @@ water dripping from the dark. A crystal to find at the back.
 And `cabby --style` asked for `f((int)x, y)` to be written `f (int)x, y`,
 which reads as `f(int)`: it doesn't, now, when a call's first argument
 starts with a parenthesis of its own (the style tests check it).
+
+*Version 1.19.0, Cabby Quest in 3D, part 12:* tutorial 119, and chapter
+119 of the manual. Sound: each area's music, fading from one to the
+next, Rufus's tune and a battle's; the 2D quest's sound effects; a
+splash and strokes in the water; drips and bats in the cave, quieter
+further off; the rain, louder as it's wetter; in a storm, thunder, and
+a flash of lightning. New tunes for the lake and the cave
+(`tools/make-music.cby`), and new sounds (`tools/make-sounds.py`: the
+sounds before are as they were, to the byte). The options turn the
+music, and the sounds, on and off.
+
+And in `use sound`, every one of a `sound.track`'s methods (`play`,
+`set_looping` ...) hung: each took the library's lock, then looked its
+sound up with a function that took it again. Now that function expects
+the lock held. A test in `tests/run_cases.cby` goes through them all.
 
 ## Along the way (dates not recorded)
 
