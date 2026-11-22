@@ -427,7 +427,7 @@ moves: a score, a message, what's being aimed at. A `world.text` has:
 
 | Member | What it does |
 |---|---|
-| `void set_text const str &Text`, `str text` | What it says. |
+| `void set_text const str &Text`, `str text` | What it says. A `"\n"` in it starts a new line. |
 | `void move_to double X, double Y` | Where it is, in pixels. |
 | `void set_color const str &Color` | `"white"` to begin with. |
 | `void set_size double Size` | Its height, in pixels: 20 to begin with. |

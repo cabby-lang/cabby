@@ -100,13 +100,15 @@ static void overlay_put(int x, int y, unsigned cover, Color c)
 	overlay_any = 1;
 }
 
-/* one text, at the overlay's scale (its pixels for each of the window's) */
+/* one text, at the overlay's scale (its pixels for each of the window's);
+ * a newline starts the next line, a quarter of its size below this one's
+ * bottom, at the text's left again */
 static void overlay_text(const Text *t, float k)
 {
 	int font = font_for("Sans", 1, 0);
 	Font *f = &fonts[font];
 	float px = (float)(t->size * k);
-	float pen = (float)(t->x * k), top = (float)(t->y * k);
+	float left = (float)(t->x * k), pen = left, top = (float)(t->y * k);
 	const unsigned char *p = (const unsigned char *)t->text;
 	if (!f->data) {
 		/* Cabby's own: 8 by 16, made bigger in whole pixels */
@@ -115,6 +117,11 @@ static void overlay_text(const Text *t, float k)
 			scale = 1;
 		while (*p) {
 			uint32_t code = next_char(&p);
+			if (code == '\n') {
+				pen = left;
+				top += 20 * scale;
+				continue;
+			}
 			if (code >= 32 && code < 127)
 				for (int r = 0; r < 16; r++)
 					for (int b = 0; b < 8; b++)
@@ -133,6 +140,12 @@ static void overlay_text(const Text *t, float k)
 	uint32_t prev = 0;
 	while (*p) {
 		uint32_t code = next_char(&p);
+		if (code == '\n') {
+			pen = left;
+			base += px * 1.25f;
+			prev = 0;
+			continue;
+		}
 		if (prev)
 			pen += stbtt_GetCodepointKernAdvance(&f->info, (int)prev, (int)code) * scale;
 		int adv, lsb, w, h, xo, yo;

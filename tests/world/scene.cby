@@ -26,7 +26,7 @@ object scene : world.window {
 		add_cylinder 0.4, 1.6, "slategray", 2, 0.8, -1
 		add_cone 0.6, 1.2, "firebrick", -0.5, 0.6, -2.5
 		add_lamp 0.3, 1.8, 1.5, "yellow", 4
-		world.text Label = add_text "Hello", 8, 6
+		world.text Label = add_text "Hello\nworld", 8, 6   // (two lines)
 		Label.set_color "black"
 		point_camera_at 0, 0.5, 0
 		on_frame step
