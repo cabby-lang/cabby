@@ -1,6 +1,6 @@
 # The Cabby Manual
 
-*For Cabby 1.12.0 (2026-11-22).*
+*For Cabby 1.13.0 (2026-11-22).*
 
 A book for learning Cabby one idea at a time, and a reference to come back
 to afterwards.
@@ -220,6 +220,7 @@ int main {
 112. [A battle in the grass](#chapter-112-a-battle-in-the-grass): critters made of shapes; the camera coming down into the world; a battle there, a turn at a time, with health bars over each
 113. [Noticed, and the rival](#chapter-113-noticed-and-the-rival): a "!" over someone's head, and coming over; a battle that can't be run from; experience and levels; healing; words wrapped
 114. [The baker's spoon](#chapter-114-the-bakers-spoon): questions to answer; what the hero has done, in a struct; a thing to pick up; a quest; saving, and carrying on
+115. [The title, and a menu](#chapter-115-the-title-and-a-menu): a title over the world, the camera circling the town; the game's menu; options for how the world is drawn
 
 **[Appendices](#appendices)**
 
@@ -17415,7 +17416,61 @@ picked up, isn't on the floor.
 * Print where the saved game goes (114.4), and look at it: it's the
   struct (114.1), as JSON.
 
-[← Chapter 113](#chapter-113-noticed-and-the-rival) · [Contents](#contents) · [Appendices →](#appendices)
+[← Chapter 113](#chapter-113-noticed-and-the-rival) · [Contents](#contents) · [Chapter 115 →](#chapter-115-the-title-and-a-menu)
+
+### Chapter 115: The title, and a menu
+
+*Program: `115-quest-3d-menus.cby`, Cabby Quest in 3D, with a title and a menu. Libraries: `use world`, `use files`, `use math`, `use json`, `use directories`.*
+
+#### The title
+
+The game begins at a title now (115.3), as the 2D quest's part 8 does
+(chapter 84). It's drawn over the world itself: the town is built, as
+it is to walk about in, but with the hero hidden (hiding their body
+hides what's joined to it), and "Cabby Quest" written over it, big,
+with a shadow. While the title shows, the camera circles the town
+(115.4), a little further round each frame, high up, looking at its
+middle:
+
+```cabby
+Round += 0.15
+double A = Round * PI / 180
+move_camera_to 12 + 16 * sin(A), 10, 8 + 16 * cos(A)
+point_camera_at 12, 0, 8
+```
+
+Under it, a question that nobody in the game asks (115.3): New game,
+Continue (only when there's a saved game) and Options. It's asked with
+the same `ask` as the people's questions, and answered in the same
+`answered` (114.15), which hands a menu's answers to `menu_chosen`
+(115.9) instead of keeping them in `Story`.
+
+A new game (115.6) forgets everything in `Story`, by setting it to a
+fresh `progress`; Continue is part 7's `load_game`.
+
+#### The game's menu
+
+While walking, Escape opens the game's menu (115.8): what the hero
+carries, then Save, Options, Title and Back.
+
+#### Options
+
+The options change how the world is drawn (115.10, 115.11): shadows on
+or off, with `use world`'s `set_shadows`, and the camera near or far,
+which `camera_up` and `camera_back` (115.7) give to the camera as the
+hero walks (108.17) and as a battle starts (112.30). Each option says
+what it is now ("Shadows: on"); choosing it changes it, and the menu is
+asked again, the arrow still on it. Back goes back to where the options
+were opened from, the title or the game's menu.
+
+#### Try this
+
+* Circle the town the other way, and faster (115.4).
+* Add an option for the sky: "Sky: day" or "Sky: dusk", lit with 0.6 of
+  the day (109.15) at dusk.
+* Show the hero's name, once they have one, under the title.
+
+[← Chapter 114](#chapter-114-the-bakers-spoon) · [Contents](#contents) · [Appendices →](#appendices)
 
 ---
 ## Appendices
@@ -17473,7 +17528,7 @@ Run `cabby` with no file to type Cabby a piece at a time:
 
 ```text
 $ cabby
-Cabby 1.12.0 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
+Cabby 1.13.0 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
 Cabby comes with ABSOLUTELY NO WARRANTY, under the MIT License; "cabby.license" for details.
 >>> int add int a, int b {
 ... 	return a + b

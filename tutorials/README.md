@@ -1,6 +1,6 @@
 # Cabby tutorials
 
-*For Cabby 1.12.0 (2026-11-22).*
+*For Cabby 1.13.0 (2026-11-22).*
 
 A hundred and six short programs, each about one keyword, feature or library, in
 an order where each uses only what came before it. Each one
@@ -272,6 +272,7 @@ between `{` and `}` to run them as one input and see them as a program would. (`
 | 112 | `112-quest-3d-battle.cby` | Cabby Quest in 3D, part 5: a battle in the grass; critters made of shapes; the camera coming down into the world; a battle there, a turn at a time, with health bars over each |
 | 113 | `113-quest-3d-rival.cby` | Cabby Quest in 3D, part 6: noticed, and the rival; a "!" over someone's head, and coming over; a battle that can't be run from; experience and levels; healing; words wrapped |
 | 114 | `114-quest-3d-spoon.cby` | Cabby Quest in 3D, part 7: the baker's spoon; questions to answer; what the hero has done, in a struct; a thing to pick up, turning in the air; a quest; saving, and carrying on |
+| 115 | `115-quest-3d-menus.cby` | Cabby Quest in 3D, part 8: the title, over the world, the camera circling the town; the game's menu (Escape); options for how the world is drawn |
 
 Every keyword in the language appears in at least one tutorial. The manual's
 appendices and the main README (installed as
