@@ -670,8 +670,11 @@ object quest : world.window {
 	// beyond this area's edge
 	void add_join const str &Line {
 		neighbour Next = beside Line, Map
-		add_tiles_of Next.Map, Next.Col, Next.Row
-		Joins.add Next
+		list str Rows = Next.Map.copy
+		int Left = Next.Col
+		int Top = Next.Row
+		Joins.add Next                  // (first: its tiles can see each other)
+		add_tiles_of Rows, Left, Top
 	}
 
 	// ==== 109.13  Corners ================================================
@@ -694,8 +697,11 @@ object quest : world.window {
 		Corner.move_by Joins[I].Col, Joins[I].Row
 		if join_named(Corner.Area) < 0 && Corner.Area != Area {
 			Corner.Corner = true
-			add_tiles_of Corner.Map, Corner.Col, Corner.Row
+			list str Rows = Corner.Map.copy
+			int Left = Corner.Col
+			int Top = Corner.Row
 			Joins.add Corner
+			add_tiles_of Rows, Left, Top
 		}
 	}
 

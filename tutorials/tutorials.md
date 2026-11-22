@@ -1,6 +1,6 @@
 # The Cabby Manual
 
-*For Cabby 1.23.0 (2026-11-23).*
+*For Cabby 1.24.0 (2026-11-23).*
 
 A book for learning Cabby one idea at a time, and a reference to come back
 to afterwards.
@@ -17926,8 +17926,28 @@ from there.
 #### Everyone else
 
 The people who wander don't walk into her (110.5, `follower_at`).
-Looking at her, with Space, she looks up, her tail swishing. And in a
-battle she's the one battling, so she's hidden, and shown again after.
+Looking at her, with Space, she looks up, her tail swishing.
+
+#### Into a battle, and back
+
+In a battle she's the one battling. When she's sent out, she runs from
+where she's following to her place beside the hero (`RUNNING`, a new
+`act`, 112.2): `ember_from` notes where she was, and `run_to` moves her,
+bounding, part of the way there each frame. The follower is hidden as
+she sets off. When the battle's over she runs back (`RETURNING`), turned
+round, and the follower is shown again.
+
+Her place beside the hero is to their right, as it always was; but if
+there's no room there (a ledge, a wall, higher ground), `room_beside`
+(113.11) tries their left, and then just in front of them.
+
+#### Four legs, and a tail
+
+A walker swings two legs (108.6). Ember has four: `follow_hero` swings
+her back legs too, each with the front leg across from it, as an animal
+walks. And `sway_tail` turns her tail a little from side to side, all
+the time, following or battling. Its white tip is joined to the tail,
+not her body, so it sways with it.
 
 #### A shape's Id
 
@@ -18091,7 +18111,7 @@ Run `cabby` with no file to type Cabby a piece at a time:
 
 ```text
 $ cabby
-Cabby 1.23.0 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
+Cabby 1.24.0 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
 Cabby comes with ABSOLUTELY NO WARRANTY, under the MIT License; "cabby.license" for details.
 >>> int add int a, int b {
 ... 	return a + b

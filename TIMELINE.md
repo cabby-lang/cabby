@@ -125,6 +125,7 @@ changing for.
 | 1.21.0 | 23 November | The 3D quest, from your testing: rain once every two or three days, smaller raindrop ripples, and the Elder no longer walks off after Rufus |
 | 1.22.0 | 23 November | Cabby Quest in 3D, part 14: Ember follows the hero, a step behind, over ledges, up stairs, swimming, and into the next area |
 | 1.23.0 | 23 November | Cabby Quest in 3D, part 15: arriving by train at Cabby Town Station, the elder, a home, and Ember given; lines in a map for the 3D quest only |
+| 1.24.0 | 23 November | The 3D quest, from your testing: Ember's back legs and swaying tail, running out from behind the hero into a battle, room beside a ledge; one lighthouse, not four |
 
 ---
 
@@ -2134,6 +2135,22 @@ Ember. The start is told a step at a time, the hero not yet free to
 walk. The town's map joins the station on, and opens the door, with
 "3d" lines, which only the 3D quest reads: the 2D quest's town is as it
 was (but for its path, now running on to the west edge).
+
+*Version 1.24.0, from your testing (23 November):* in the 3D quest:
+
+* **Ember** (tutorials 121, 122) swings her back legs as she walks, and
+  her tail sways all the time (its tip now joined to it). Into a battle,
+  she runs out from where she's following, and back after it, instead
+  of sinking out of sight and rising out of the ground.
+* **Beside a ledge** (tutorials 112 to 122), Ember was put half inside
+  it in a battle: now, if there's no room to the hero's right, she's on
+  their left, or in front of them.
+* **The lighthouse, doubled** (tutorials 120 to 122): built as part of
+  an area next door (the coast, seen from the lake or the hills), each
+  of its four tiles built a whole lighthouse. An area next door's tiles
+  were built before it was one of the areas next door, so a tile
+  couldn't see the tiles beside it. Now it's added first (tutorials 109
+  to 122), and the coast's foam shows from next door too.
 
 ## Along the way (dates not recorded)
 

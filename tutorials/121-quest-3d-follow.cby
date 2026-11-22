@@ -317,6 +317,8 @@ enum act {
 	SHAKING                         // hit
 	FAINTING                        // falling over, and gone
 	SINKING                         // back down into the grass
+	RUNNING                         // (121) Ember, out from behind the hero
+	RETURNING                       // and back again
 }
 
 // ==== 112.3  A critter ===================================================
@@ -348,6 +350,8 @@ object critter {
 	int Frame                       // how far through what it's doing
 	double Shown                    // its health as the bar shows it
 	int Goal                        // and what the bar is falling to
+	double FromX                    // (121) where it runs out from, and back to
+	double FromZ
 
 	// ==== 112.5  Its numbers =============================================
 
@@ -366,9 +370,11 @@ object critter {
 	void start act What {
 		Doing = What
 		Frame = 0
-		if What == RISING {
+		if What == RISING || What == RUNNING {
 			Out = true
 			show true
+		} else if What == RETURNING {
+			Parts[0].set_angle Angle + 180  // (121) turned round, to run back
 		}
 	}
 
@@ -422,7 +428,13 @@ object critter {
 		} else if Doing == SINKING {
 			Up = -0.6 * T
 		}
-		place Ahead, Side, Up
+		if Doing == RUNNING {
+			run_to T                    // (121)
+		} else if Doing == RETURNING {
+			run_to 1 - T
+		} else {
+			place Ahead, Side, Up
+		}
 		if Frame == frames_for(Doing) {
 			finish
 		}
@@ -430,7 +442,7 @@ object critter {
 
 	// done: still again, or (fallen over, sunk) out of sight
 	void finish {
-		if Doing == FAINTING || Doing == SINKING {
+		if Doing == FAINTING || Doing == SINKING || Doing == RETURNING {
 			Out = false
 			show false
 		} else {
@@ -445,6 +457,13 @@ object critter {
 	void place double Ahead, double Side, double Up {
 		double A = Angle * PI / 180
 		Parts[0].move_to X - sin(A) * Ahead + cos(A) * Side, Ground + Lift + Up, Z - cos(A) * Ahead - sin(A) * Side
+	}
+
+	// (121) Done of the way from where it ran out from to where it
+	// stands, bounding
+	void run_to double Done {
+		double Bound = sin Frame * PI / 6
+		Parts[0].move_to FromX + (X - FromX) * Done, Ground + Lift + 0.08 * Bound * Bound, FromZ + (Z - FromZ) * Done
 	}
 
 	// ==== 112.9  Its health bar ==========================================
@@ -1535,8 +1554,11 @@ object quest : world.window {
 	// beyond this area's edge
 	void add_join const str &Line {
 		neighbour Next = beside Line, Map
-		add_tiles_of Next.Map, Next.Col, Next.Row
-		Joins.add Next
+		list str Rows = Next.Map.copy
+		int Left = Next.Col
+		int Top = Next.Row
+		Joins.add Next                  // (first: its tiles can see each other)
+		add_tiles_of Rows, Left, Top
 	}
 
 	// ==== 109.13  Corners ================================================
@@ -1559,8 +1581,11 @@ object quest : world.window {
 		Corner.move_by Joins[I].Col, Joins[I].Row
 		if join_named(Corner.Area) < 0 && Corner.Area != Area {
 			Corner.Corner = true
-			add_tiles_of Corner.Map, Corner.Col, Corner.Row
+			list str Rows = Corner.Map.copy
+			int Left = Corner.Col
+			int Top = Corner.Row
 			Joins.add Corner
+			add_tiles_of Rows, Left, Top
 		}
 	}
 
@@ -2237,7 +2262,6 @@ object quest : world.window {
 		Foe = Other
 		Owner = Whose.copy
 		music "battle"                  // (119)
-		show_follower false             // (121) she's the one battling
 		Ours = fox ember_level, Story.Wounds
 		double A = angle_of(Hero.Facing) * PI / 180
 		double Fx = -sin(A)                    // (ahead, the way the hero faces)
@@ -2250,8 +2274,17 @@ object quest : world.window {
 		double Z = Hero.Body.z + Ahead * Fz + Across * Rz
 		str Kind = Foe.Name.copy
 		Foe.put_out made_of(Kind, X, G, Z), X, Z, G, angle_of(opposite(Hero.Facing))
-		X = Hero.Body.x + 0.6 * Fx + 0.9 * Rx
-		Z = Hero.Body.z + 0.6 * Fz + 0.9 * Rz
+		double Front = 0.6                  // (to the hero's right; or, with no
+		double Right = 0.9                  // room there, their left; or in front)
+		if !room_beside(1) {
+			Right = -0.9
+			if !room_beside(-1) {
+				Front = 0.5
+				Right = 0.2
+			}
+		}
+		X = Hero.Body.x + Front * Fx + Right * Rx
+		Z = Hero.Body.z + Front * Fz + Right * Rz
 		Ours.put_out made_of("Ember", X, G, Z), X, Z, G, angle_of(Hero.Facing)
 		Foe.BarBack = bar_back
 		Foe.Bar = bar
@@ -2268,6 +2301,22 @@ object quest : world.window {
 		} else {
 			println "a battle with", Owner
 		}
+	}
+
+	// is there room for Ember beside the hero, on that Side (1 their
+	// right, -1 their left), and a tile ahead of that? Nothing in the way,
+	// and the ground as high as the hero's (not a ledge, or a cliff)
+	bool room_beside int Side const {
+		int Ahead = across_of Hero.Facing
+		int Down = down_of Hero.Facing
+		int C = Hero.Col - Down * Side
+		int R = Hero.Row + Ahead * Side
+		return room_at(C, R) && room_at(C + Ahead, R + Down)
+	}
+
+	bool room_at int C, int R const {
+		double Rise = height_at(C, R, Hero.Level) - Hero.Ground
+		return !BLOCKING.contains(tile_at(C, R)) && Rise < 0.05 && Rise > -0.05
 	}
 
 	// ==== 112.22  Grass flattened ========================================
@@ -2365,11 +2414,12 @@ object quest : world.window {
 			join_on All, add_box(0.06, 0.15, 0.06, "#4a2a14", X + Out, G + 0.075, Z - 0.15)
 			join_on All, add_box(0.06, 0.15, 0.06, "#4a2a14", X + Out, G + 0.075, Z + 0.15)
 		}
-		world.shape Tail = add_ball 0.1, "#e8762c", X, G + 0.36, Z + 0.32
-		Tail.set_size 0.14, 0.14, 0.34
-		Tail.set_tilt -35               // (up behind her)
+		world.shape Tail = add_cylinder 0.07, 0.34, "#e8762c", X, G + 0.36, Z + 0.32
+		Tail.set_tilt 55                // (up behind her)
+		world.shape Tip = add_ball 0.05, "white", X, G + 0.47, Z + 0.47
+		Tip.join Tail                   // ((121) swaying with it)
 		join_on All, Tail
-		join_on All, add_ball(0.05, "white", X, G + 0.47, Z + 0.47)
+		All.add Tip
 		return All
 	}
 
@@ -2598,7 +2648,9 @@ object quest : world.window {
 			Ours.start SHAKING
 			effect "boom"
 		} else if Hit == 3 {
-			Ours.start RISING
+			ember_from                  // (121) out from behind the hero
+			show_follower false
+			Ours.start RUNNING
 		} else if Hit == 4 {
 			Foe.start FAINTING
 		} else if Hit == 5 {
@@ -2630,7 +2682,8 @@ object quest : world.window {
 		if !Over {
 			ask "battle", "What will " + Ours.Name + " do?", {"Fight", "Run"}
 		} else if Ours.Out {
-			Ours.start SINKING
+			ember_from                  // (121) back behind the hero
+			Ours.start RETURNING
 		} else if Foe.Out {
 			Foe.start SINKING
 		} else {
@@ -3848,6 +3901,32 @@ object quest : world.window {
 		}
 		if Follower.stepping {
 			Follower.keep_stepping
+		}
+		double Swing = 0                // her back legs, each with the front one across from it
+		if Follower.stepping {
+			Swing = 30 * sin(Follower.StepsLeft * 3.14159265 / 8)
+		}
+		FollowerParts[7].set_tilt -Swing
+		FollowerParts[11].set_tilt Swing
+		sway_tail FollowerParts
+		if Ours.Parts.length > 12 {
+			sway_tail Ours.Parts        // (and in a battle)
+		}
+	}
+
+	// her tail, side to side, slowly, all the time
+	void sway_tail const list world.shape &Parts const {
+		Parts[12].set_angle 18 * sin(frame * 0.07)
+	}
+
+	// where Ember runs out from, into a battle, and back to: where she's
+	// following (or, out of sight on the hero's tile, just behind them)
+	void ember_from {
+		Ours.FromX = Follower.Body.x
+		Ours.FromZ = Follower.Body.z
+		if Waiting {
+			Ours.FromX = Hero.Body.x - 0.8 * across_of(Hero.Facing)
+			Ours.FromZ = Hero.Body.z - 0.8 * down_of(Hero.Facing)
 		}
 	}
 
