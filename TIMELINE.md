@@ -110,6 +110,7 @@ changing for.
 | 1.7.0 | 22 November | Cabby Quest in 3D, part 2: the areas joined edge to edge, trees all round, the bakery's door and inside, the hills drawn |
 | 1.7.1 | 22 November | The 3D hills' steps: six to a staircase, not three |
 | 1.8.0 | 22 November | Cabby Quest in 3D, part 3: the townspeople, made of shapes, walking about and talking |
+| 1.9.0 | 22 November | Cabby Quest in 3D, part 4: the hills climbed, their stairs, high ground, bridge and ledges |
 
 ---
 
@@ -1927,6 +1928,14 @@ they are (the elder in a brown robe, with white hair and a beard; the
 baker all in white, with a tall hat), those who wander taking a step a
 random way now and then. Nobody walks through anybody; facing someone,
 Space talks to them, and they turn to the hero.
+
+*Version 1.9.0, Cabby Quest in 3D, part 4:* tutorial 111, and chapter
+111 of the manual. The hills, climbed: each walker knows how high their
+feet are, and a step goes from one height to the next a little each
+frame, so the stairs are climbed and a hop over a ledge goes up and down
+again. Up high the hero can't walk off the edge, and on the ground they
+can't walk up the cliff; from up high they walk over the bridge, and
+from the path, under it. The camera rises with the ground under them.
 
 ## Along the way (dates not recorded)
 
