@@ -8,6 +8,8 @@
 //> top and bottom: 1.0 0.0
 //> distance: 5.0
 //> coins: 3, touching the walker: 1
+//> removed, and the slots again: true true false 5.0
+//> unjoined, and left: false
 //> camera: 0.0 1.6 6.0, angle 0.0, tilt 0.0
 //> looking at 6, 1.6, 0: angle 315.0
 //> clicked: the box
@@ -58,6 +60,7 @@ object tester : world.window {
 			C.set_group "coins"
 		}
 		println "coins: " + shapes_in("coins").length.text + ", touching the walker: " + touching(Walker, "coins").length.text
+		removed_and_again
 		println "camera: " + camera_x.text + " " + camera_y.text + " " + camera_z.text + ", angle " + camera_angle.text + ", tilt " + camera_tilt.text
 		point_camera_at 6, 1.6, 0
 		println "looking at 6, 1.6, 0: angle", round(camera_angle)
@@ -83,6 +86,27 @@ object tester : world.window {
 		} else {
 			println "clicked: nothing"
 		}
+	}
+
+	// a shape removed (and what's joined to it): its slots are used again,
+	// but the old names for them reach nothing; and one unjoined first stays
+	void removed_and_again {
+		world.shape Old = add_box 1, 1, 1, "white", 9, 0, 9
+		world.shape Leg = add_box 0.1, 0.1, 0.1, "white", 9, 0, 9
+		Leg.join Old
+		Old.remove
+		world.shape New = add_box 1, 1, 1, "white", 5, 0, 5
+		world.shape Other = add_box 1, 1, 1, "white", 6, 0, 6
+		Old.move_to 0, 0, 0
+		Leg.move_to 0, 0, 0
+		println "removed, and the slots again:", Old.removed, Leg.removed, New.removed, New.x
+		world.shape Wheel = add_ball 0.2, "black", 5, 0, 5
+		Wheel.join New
+		Wheel.unjoin
+		New.remove
+		println "unjoined, and left:", Wheel.removed
+		Other.remove
+		Wheel.remove
 	}
 
 	void tick {

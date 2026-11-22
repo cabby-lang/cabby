@@ -429,10 +429,24 @@ typedef struct Shape {
 	double vx, vy, vz;    /* metres a second */
 	double bounce, friction;
 	int64_t standing_on;  /* (what it landed on this frame: it's carried by it) */
+	/* its slot's use: a slot is used again once its shape is removed, and
+	 * a shape's id is its slot and this, so an id kept after its shape was
+	 * removed doesn't reach the next shape in its slot */
+	uint32_t gen;
+	int first_child, next_child;   /* (what's joined to it: slot + 1; 0, none) */
 } Shape;
 
 static Shape *shapes;
-static int nshapes;
+static int nshapes, cap_shapes;
+static int *free_slots, nfree_slots, cap_free_slots;
+
+/* a shape's id from its slot, and its slot from its id */
+static int64_t id_of(int slot) { return (int64_t)(slot + 1) | ((int64_t)shapes[slot].gen << 32); }
+static int slot_of(int64_t id) { return (int)(id & 0xffffffffLL) - 1; }
+
+/* the shape an id names, if it's still there: removed, and its slot used
+ * again, a stand-in that's removed too (what's done to it does nothing) */
+static Shape gone;
 
 typedef struct Lamp {
 	int world, alive;
@@ -488,9 +502,22 @@ static World *world(int64_t id)
 
 static Shape *shape(int64_t id)
 {
-	if (id < 1 || id > nshapes)
+	int slot = slot_of(id);
+	if (slot < 0 || slot >= nshapes)
 		fail("%s", "this shape hasn't been added to a world yet");
-	return &shapes[id - 1];
+	if (shapes[slot].gen != (uint32_t)(id >> 32)) {
+		free(gone.group);
+		gone = (Shape){ .scale = 1, .picture = -1, .model = -1, .group = strdup("") };
+		return &gone;
+	}
+	return &shapes[slot];
+}
+
+/* a live shape's slot from an id kept somewhere (-1: gone) */
+static int live_slot(int64_t id)
+{
+	int slot = slot_of(id);
+	return id && slot >= 0 && slot < nshapes && shapes[slot].gen == (uint32_t)(id >> 32) && shapes[slot].alive ? slot : -1;
 }
 
 static Lamp *lamp(int64_t id)
@@ -630,11 +657,24 @@ static int64_t new_shape(int64_t id, int mesh, double w, double h, double d, con
 	if (w <= 0 || h <= 0 || d <= 0)
 		fail("%s", "a shape's size must be more than 0");
 	make_meshes();
-	shapes = realloc(shapes, sizeof *shapes * (size_t)(nshapes + 1));
-	shapes[nshapes] = (Shape){ .world = (int)id, .alive = 1, .visible = 1, .mesh = mesh, .x = x, .y = y, .z = z,
-				   .w = w, .h = h, .d = d, .scale = 1, .color = color(c), .picture = -1, .group = strdup(""),
-				   .model = -1, .solid = 1, .bounce = 0.3, .friction = 0.5 };
-	return ++nshapes;
+	/* a slot a removed shape left, or a new one (the room doubling) */
+	int slot;
+	uint32_t gen = 0;
+	if (nfree_slots) {
+		slot = free_slots[--nfree_slots];
+		gen = shapes[slot].gen + 1;
+		free(shapes[slot].group);
+	} else {
+		if (nshapes == cap_shapes) {
+			cap_shapes = cap_shapes ? cap_shapes * 2 : 256;
+			shapes = realloc(shapes, sizeof *shapes * (size_t)cap_shapes);
+		}
+		slot = nshapes++;
+	}
+	shapes[slot] = (Shape){ .world = (int)id, .alive = 1, .visible = 1, .mesh = mesh, .x = x, .y = y, .z = z,
+				.w = w, .h = h, .d = d, .scale = 1, .color = color(c), .picture = -1, .group = strdup(""),
+				.model = -1, .solid = 1, .bounce = 0.3, .friction = 0.5, .gen = gen };
+	return id_of(slot);
 }
 
 int64_t cby_world_add_box(int64_t id, double w, double h, double d, const char *c, double x, double y, double z)
@@ -651,7 +691,7 @@ int64_t cby_world_add_plane(int64_t id, double w, double d, const char *c, doubl
 {
 	/* (flat: its height is only for its box, to touch things on it) */
 	int64_t s = new_shape(id, MESH_PLANE, w, 1, d, c, x, y, z);
-	shapes[s - 1].h = 0.001;
+	shapes[slot_of(s)].h = 0.001;
 	return s;
 }
 
@@ -750,13 +790,30 @@ void cby_world_shape_set_roll(int64_t id, double degrees) { shape(id)->roll = wr
 void cby_world_shape_roll_by(int64_t id, double degrees) { Shape *s = shape(id); s->roll = wrap_degrees(s->roll + degrees); }
 void cby_world_shape_set_scale(int64_t id, double k) { shape(id)->scale = k > 0 ? k : 0; }
 void cby_world_shape_set_visible(int64_t id, int on) { shape(id)->visible = on != 0; }
+static void unlink_child(Shape *s);
+
 void cby_world_shape_remove(int64_t id)
 {
-	shape(id)->alive = 0;
+	Shape *s = shape(id);
+	if (!s->alive)
+		return;
+	s->alive = 0;
 	/* (and what's joined to it, as a car's wheels go with it) */
-	for (int i = 0; i < nshapes; i++)
-		if (shapes[i].joined == id && shapes[i].alive)
-			cby_world_shape_remove(i + 1);
+	while (s->first_child) {
+		int c = s->first_child - 1;
+		s->first_child = shapes[c].next_child;
+		shapes[c].next_child = 0;
+		shapes[c].joined = 0;
+		cby_world_shape_remove(id_of(c));
+	}
+	unlink_child(s);
+	s->joined = 0;
+	/* its slot, for the next shape (a model's keeps its pose: not again) */
+	if (s->model < 0) {
+		if (nfree_slots == cap_free_slots)
+			free_slots = realloc(free_slots, sizeof *free_slots * (size_t)(cap_free_slots = cap_free_slots * 2 + 64));
+		free_slots[nfree_slots++] = slot_of(id);
+	}
 }
 void cby_world_shape_set_color(int64_t id, const char *c) { shape(id)->color = color(c); }
 
@@ -795,7 +852,7 @@ int64_t cby_world_add_model(int64_t id, const char *path, double x, double y, do
 {
 	int m = model_load(path);
 	int64_t sid = new_shape(id, MESH_BOX, 1, 1, 1, "white", x, y, z);
-	Shape *s = &shapes[sid - 1];
+	Shape *s = &shapes[slot_of(sid)];
 	s->model = m;
 	s->pose = pose_new(&models[m]);
 	return sid;
@@ -889,8 +946,8 @@ static M4 shape_rigid(const Shape *s)
 	m = m_mul(m, m_rotate_y(radians(s->yaw)));
 	m = m_mul(m, m_rotate_x(radians(s->pitch)));
 	m = m_mul(m, m_rotate_z(radians(s->roll)));
-	if (s->joined >= 1 && s->joined <= nshapes)
-		m = m_mul(shape_rigid(&shapes[s->joined - 1]), m);
+	if (s->joined)
+		m = m_mul(shape_rigid(&shapes[slot_of(s->joined)]), m);
 	return m;
 }
 
@@ -907,7 +964,7 @@ static int shown(const Shape *s)
 	for (int depth = 0; s && depth < 64; depth++) {
 		if (!s->alive || !s->visible || s->scale <= 0)
 			return 0;
-		s = s->joined >= 1 && s->joined <= nshapes ? &shapes[s->joined - 1] : NULL;
+		s = s->joined ? &shapes[slot_of(s->joined)] : NULL;
 	}
 	return 1;
 }
@@ -920,11 +977,25 @@ static void world_angles(const Shape *s, double *yaw, double *pitch, double *rol
 	*yaw = *pitch = *roll = 0;
 	for (int depth = 0; s && depth < 64; depth++) {
 		*yaw += s->yaw, *pitch += s->pitch, *roll += s->roll;
-		s = s->joined >= 1 && s->joined <= nshapes ? &shapes[s->joined - 1] : NULL;
+		s = s->joined ? &shapes[slot_of(s->joined)] : NULL;
 	}
 }
 
 static double wrap_degrees(double a);
+
+/* off the list of what's joined to what it's joined to */
+static void unlink_child(Shape *s)
+{
+	if (!s->joined || s == &gone)
+		return;
+	int me = (int)(s - shapes) + 1;
+	int *at = &shapes[slot_of(s->joined)].first_child;
+	while (*at && *at != me)
+		at = &shapes[*at - 1].next_child;
+	if (*at)
+		*at = s->next_child;
+	s->next_child = 0;
+}
 
 /* back in the world, where it is: its place and angles the world's */
 void cby_world_shape_unjoin(int64_t id)
@@ -935,6 +1006,7 @@ void cby_world_shape_unjoin(int64_t id)
 	V3 p = shape_place(s);
 	double yaw, pitch, roll;
 	world_angles(s, &yaw, &pitch, &roll);
+	unlink_child(s);
 	s->joined = 0;
 	s->x = p.x, s->y = p.y, s->z = p.z;
 	s->yaw = wrap_degrees(yaw), s->pitch = wrap_degrees(pitch), s->roll = wrap_degrees(roll);
@@ -947,7 +1019,9 @@ void cby_world_shape_join(int64_t id, int64_t to)
 	Shape *s = shape(id), *t = shape(to);
 	if (s->world != t->world)
 		fail("%s", "a shape can be joined only to one in the same world");
-	for (int64_t up = to; up; up = shapes[up - 1].joined)
+	if (!s->alive || !t->alive)
+		return;   /* (removed: nothing to join) */
+	for (int64_t up = to; up; up = shapes[slot_of(up)].joined)
 		if (up == id)
 			fail("%s", "a shape can't be joined to itself, or to one joined to it");
 	cby_world_shape_unjoin(id);
@@ -962,6 +1036,9 @@ void cby_world_shape_join(int64_t id, int64_t to)
 	s->x = local.x, s->y = local.y, s->z = local.z;
 	s->yaw = wrap_degrees(s->yaw - yaw), s->pitch = wrap_degrees(s->pitch - pitch), s->roll = wrap_degrees(s->roll - roll);
 	s->joined = to;
+	Shape *parent = &shapes[slot_of(to)];
+	s->next_child = parent->first_child;
+	parent->first_child = (int)(s - shapes) + 1;
 	s->falls = 0;   /* (it's carried: what it's joined to falls, if anything does) */
 	s->vx = s->vy = s->vz = 0;
 }
@@ -1091,7 +1168,7 @@ static int shape_parts(Shape *s, long frame)
 /* ---- finding shapes: those in a group (all, or those touching one) */
 
 static int64_t *found;
-static int nfound;
+static int nfound, cap_found;
 
 int cby_world_find(int64_t id, int64_t touching_id, const char *group)
 {
@@ -1103,8 +1180,9 @@ int cby_world_find(int64_t id, int64_t touching_id, const char *group)
 			continue;
 		if (t && !touching(t, s))
 			continue;
-		found = realloc(found, sizeof *found * (size_t)(nfound + 1));
-		found[nfound++] = i + 1;
+		if (nfound == cap_found)
+			found = realloc(found, sizeof *found * (size_t)(cap_found = cap_found * 2 + 64));
+		found[nfound++] = id_of(i);
 	}
 	return nfound;
 }
@@ -1213,9 +1291,10 @@ double cby_world_camera_tilt(int64_t id) { return world(id)->cpitch; }
 /* following: behind the shape (the way it faces), above it, looking at it */
 static void camera_follows(World *w)
 {
-	if (!w->follow || w->follow > nshapes || !shapes[w->follow - 1].alive)
+	int slot = live_slot(w->follow);
+	if (slot < 0)
 		return;
-	Shape *s = &shapes[w->follow - 1];
+	Shape *s = &shapes[slot];
 	double fx, fz;
 	facing(s->yaw, &fx, &fz);
 	w->cx = s->x - fx * w->follow_distance;
@@ -1290,7 +1369,7 @@ static int64_t pick(int64_t id, double px, double py, int width, int height)
 		}
 		if (!miss && t0 < best_t) {
 			best_t = t0;
-			best = i + 1;
+			best = id_of(i);
 		}
 	}
 	return best;
@@ -1812,7 +1891,7 @@ static int contact(const Body *a, const Body *b, int b_plane, D3 *n, double *dep
 static int64_t root_of(int64_t id)
 {
 	for (int depth = 0; depth < 64 && shapes[id - 1].joined; depth++)
-		id = shapes[id - 1].joined;
+		id = slot_of(shapes[id - 1].joined) + 1;
 	return id;
 }
 

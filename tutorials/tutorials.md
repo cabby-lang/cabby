@@ -1,6 +1,6 @@
 # The Cabby Manual
 
-*For Cabby 1.16.0 (2026-11-22).*
+*For Cabby 1.17.0 (2026-11-22).*
 
 A book for learning Cabby one idea at a time, and a reference to come back
 to afterwards.
@@ -17578,10 +17578,12 @@ their tile, `Hero.Col`.
 
 `Story.Time` is the time of day (114.1): 0 at midnight, 0.25 at
 sunrise, 0.5 at noon, 0.75 at sunset. Each frame, `pass_time` (117.9)
-moves it on by one frame's worth of a day, `DAY_FRAMES` (117.1): two
-minutes, here, from one midnight to the next. A new game starts a little
-after sunrise; the title shows late morning, and stays there. The time
-is saved with the rest.
+moves it on by one frame's worth of a day, `DAY_FRAMES` (117.1): 24
+minutes from one midnight to the next, 12 of day and 12 of night. The
+options (115.10) can make it `QUICK_DAY`, two minutes, to watch it go
+round (`day_frames`). A new game starts a little after sunrise; the
+title shows late morning, and stays there. The time is saved with the
+rest.
 
 #### The light, worked out
 
@@ -17597,14 +17599,32 @@ works out all the light from it, the time and the rain:
   and setting in the west. Low down, its shadows are long; it's never
   quite flat, or they'd go on for ever. At night it's the moon, across
   the sky from where the sun is.
-* The sun's color is golden low down, white high up; the moon's, a dim
-  blue. The light all round goes from the day's grey to a night blue,
+* The sun's color is golden low down, white high up; and the last
+  stretch before it sets, it fades out, to nothing at the horizon. Then
+  the moon comes up on the other side, a dim blue, from nothing. So the
+  day's shadows fade as the sun goes down, and the moon's come in as it
+  rises, with no moment when one light is swapped for the other. The light all round goes from the day's grey to a night blue,
   and the sky from blue, through a sunset's orange, to a dark blue.
 
 Each color is a `tint` (117.2), a struct of red, green and blue, and
 `blend` mixes two: all of one, all of the other, or part way, as `mix`
 does for numbers (112.30). `css` (117.8) writes one as `use world`
 takes it: `"rgb(255, 214, 130)"`.
+
+#### The maps, read once
+
+Walking over an edge reads the area's file, and its next doors', and
+theirs. Now `read_maps` (117.12) reads every file in `quest/` once, as
+the game starts, `directories.list` giving their names, and keeps each
+one's lines in a lookup, `Maps`, by the area's name: `Maps["town"]`.
+`read_area` and `read_map` (108.10, 109.8) take their lines from it.
+
+#### Bobbing
+
+In the water, the hero bobs up and down a little, slowly (117.13).
+`bob` moves their body by how far it should be up now, less how far it
+was, `Bobbed`: their feet, and the ground under them, stay as they are,
+so a step in the water starts and ends where it should.
 
 #### Windows at night
 
@@ -17630,7 +17650,7 @@ ripple (116.10). Inside a house, there are none.
 
 #### Try this
 
-* A longer day: ten minutes (117.1).
+* A shorter day: ten minutes (117.1).
 * Make the moonlight a little brighter, and a little greener (117.5).
 * Light the lamp in the bakery at night: a window on its back wall.
 
@@ -17692,7 +17712,7 @@ Run `cabby` with no file to type Cabby a piece at a time:
 
 ```text
 $ cabby
-Cabby 1.16.0 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
+Cabby 1.17.0 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
 Cabby comes with ABSOLUTELY NO WARRANTY, under the MIT License; "cabby.license" for details.
 >>> int add int a, int b {
 ... 	return a + b
