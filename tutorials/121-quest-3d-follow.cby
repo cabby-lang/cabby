@@ -1,0 +1,4212 @@
+// Tutorial 121: Cabby Quest in 3D, part 14 — Ember follows
+//
+// Run it:      cabby 121-quest-3d-follow.cby
+// Or compile:  cabby -c 121-quest-3d-follow.cby && ./121-quest-3d-follow
+// Library:     use world, use files, use math, use json, use directories,
+//              use sound
+// Topics:      a follower, a step behind: the leader's moves kept in a
+//              list and done again in turn; over ledges, up stairs,
+//              swimming; into the next area, and through a door
+//
+// Part 13 (tutorial 120) took the quest to the coast. Ember has always
+// been with the hero, but only seen in a battle. Now she walks a step
+// behind: where the hero has just been, she goes, the same way, as
+// high, as long. Each move the hero makes is kept in a list (a
+// "footstep"), and when the hero starts the next, Ember does the one
+// before. So she hops the ledges the hero hops, climbs the same stairs,
+// and swims, her head above the water. Into the next area, she comes
+// too, still a step behind; through a door, she waits on the hero's
+// tile, out of sight, until the hero steps off it. In a battle, she's
+// the one battling, so she isn't following.
+//
+// New sections are numbered 121; those this part changes say (changed in
+// 121). Chapter 121 of the manual goes through what's new.
+
+use world
+use files
+use math
+use json                            // (114)
+use directories
+use sound                           // (119)
+
+// ==== 108.1  Sizes and speeds  (changed in 109, 111) =====================
+
+const double SPEED = 0.0625         // metres a frame: a tile (a metre) is 16 frames
+const int TURN_TIME = 100           // ms: a tap of an arrow shorter than this only turns
+// tiles that can't be walked onto (a door can, if a way starts there);
+// (111) high ground and stairs can now, and a ledge can be hopped over
+const str BLOCKING = "TSH~D#ObCvRAXYLu"   // (118) rock, stalagmites, crystals; (120) palms, the lighthouse, boats
+const double HIGH = 1.3             // the hills' high ground: high enough to walk under its bridge
+const int STAIRS = 6                // steps up it, in a tile: small ones, for small legs
+
+// ==== 111.1  A hop =======================================================
+
+const double HOP = 0.5              // how high a hop over a ledge goes, at its highest
+
+// ==== 112.1  A battle ====================================================
+
+const int MEETING = 5               // one step in five, in tall grass, meets something
+const int ZOOM_FRAMES = 60          // the camera coming down into the world, and back up
+const double PI = 3.14159265
+const double BAR = 0.6              // a health bar's width, full, in metres
+
+// ==== 116.1  Swimming ====================================================
+
+const double DEEP = -0.4            // a swimmer's feet, under the water
+
+// ==== 117.1  The day, and the rain =======================================
+
+const int DAY_FRAMES = 86400        // a day: 24 minutes, 12 of day and 12 of night
+const int QUICK_DAY = 7200          // or, in the options, two minutes
+const int RAIN_CHECK = 1500         // every 25 seconds, the weather may change
+const double RAIN_DAYS = 2.5         // it starts to rain about once in this many days
+const int DROPS = 160               // raindrops falling, round the hero
+
+// ==== 118.1  The cave ====================================================
+
+const double LANTERN = 7            // how far the hero's lantern lights, in metres
+const str ROCK = "#625a53"          // the cave's walls
+
+// ==== 119.1  Sound =======================================================
+
+const double HEARD = 12             // how far off a sound in the world can be heard, in metres
+
+// ==== 120.1  The coast ===================================================
+
+const str SAND = "#e6d49a"
+const double PIER = 0.12            // the pier's boards: how high a walker's feet are on them
+
+// ==== 117.2  A color =====================================================
+
+// how much red, green and blue, each from 0 to 255
+struct tint {
+	double Red
+	double Green
+	double Blue
+}
+
+// A, or B, or (Done, from 0 to 1) part way from one to the other
+tint blend const tint &A, const tint &B, double Done {
+	double T = Done
+	if T < 0 {
+		T = 0
+	} else if T > 1 {
+		T = 1
+	}
+	tint Mixed = {.Red = A.Red + (B.Red - A.Red) * T, .Green = A.Green + (B.Green - A.Green) * T, .Blue = A.Blue + (B.Blue - A.Blue) * T}
+	return Mixed
+}
+
+tint rgb_of double Red, double Green, double Blue {
+	tint Made = {.Red = Red, .Green = Green, .Blue = Blue}
+	return Made
+}
+
+// ==== 113.1  Being noticed ===============================================
+
+const int NOTICE_FRAMES = 40        // the "!" shows this long, then they come over
+
+// ==== 113.2  A line of words =============================================
+
+const int WIDE = 64                 // letters to a line of words, at most
+
+// ==== 109.1  The fade, the name and the trees ============================
+
+const int FADE_FRAMES = 20          // the light going down, and coming up: a third of a second each
+const int NAME_FRAMES = 150         // an area's name shows for two and a half seconds
+const int RING = 3                  // trees this many deep round each area
+
+// ==== 108.2  Which way is across, and down ===============================
+
+// a step that way goes this far across (x): -1, 1 or 0
+int across_of const str &Way {
+	if Way == "left" {
+		return -1
+	} else if Way == "right" {
+		return 1
+	}
+	return 0
+}
+
+// and this far down the map (z, towards the camera): -1, 1 or 0
+int down_of const str &Way {
+	if Way == "up" {
+		return -1
+	} else if Way == "down" {
+		return 1
+	}
+	return 0
+}
+
+// ==== 108.3  Which way they face =========================================
+
+// a shape's angle: 0 faces up the map (-z), and it turns to its left
+double angle_of const str &Way {
+	if Way == "left" {
+		return 90
+	} else if Way == "down" {
+		return 180
+	} else if Way == "right" {
+		return 270
+	}
+	return 0
+}
+
+// ==== 110.2  The other way ===============================================
+
+// the way back: "up" for "down", "left" for "right" ...
+str opposite const str &Way {
+	if Way == "up" {
+		return "down"
+	} else if Way == "down" {
+		return "up"
+	} else if Way == "left" {
+		return "right"
+	}
+	return "left"
+}
+
+// ==== 108.4  Someone who walks  (changed in 110, 111) ====================
+
+object walker {
+	world.shape Body                // the rest is joined to it
+	world.shape Left                // their legs, swung as they walk
+	world.shape Right
+	int Col                         // the tile they're on
+	int Row
+	str Facing                      // "down", "up", "left" or "right"
+	int Dx                          // the way they're stepping: -1, 0 or 1
+	int Dy
+	int StepsLeft                   // frames left of this step (0: on a tile)
+
+	// ==== 110.1  Who they are, and where =================================
+
+	str Who                         // "hero", "elder", "baker"
+	bool Wanders                    // they walk about on their own
+
+	// on that tile, or stepping onto it (111: in a hop, two tiles on)
+	bool at int C, int R const {
+		return (Col == C && Row == R) || (stepping && Col + Dx * Tiles == C && Row + Dy * Tiles == R)
+	}
+
+	// ==== 111.2  How high they are =======================================
+
+	double Feet                     // how high their feet are: 0 on the ground
+	double Ground                   // and the ground under them (in a hop, lower)
+	int Level                       // 0 on the ground, 1 up high
+	double From                     // a step's start height, and its end
+	double To
+	double Edge                     // and its height at the edge of the tiles
+	int Tiles                       // how far a step goes: 1, or 2 in a hop
+	int Frames                      // and how long it takes: 16, or 32
+
+	// ==== 111.3  Standing at a height ====================================
+
+	// moved straight up (or down) to it, standing still
+	void stand_at double Height {
+		Body.move 0, Height - Feet, 0
+		Feet = Height
+		Ground = Height
+		From = Height
+		To = Height
+	}
+
+	bool stepping const {
+		return StepsLeft > 0
+	}
+
+	void face const str &Way {
+		Facing = Way.copy
+		Body.set_angle angle_of(Way)
+	}
+
+	// ==== 108.5  A step  (changed in 111) ================================
+
+	// to the next tile that way, or (Moves false) a step on the spot; (111)
+	// ending at the height it started, unless it's told otherwise
+	void step const str &Way, bool Moves {
+		face Way
+		Dx = 0
+		Dy = 0
+		if Moves {
+			Dx = across_of Way
+			Dy = down_of Way
+		}
+		Tiles = 1
+		Frames = 16
+		StepsLeft = Frames
+		From = Feet
+		To = Feet
+		Edge = Feet
+	}
+
+	// ==== 111.4  A hop ===================================================
+
+	// over a ledge: two tiles in one step, twice as long
+	void hop const str &Way {
+		step Way, true
+		Tiles = 2
+		Frames = 32
+		StepsLeft = Frames
+	}
+
+	// ==== 108.6  Each frame of a step  (changed in 111) ==================
+
+	// a little further, the legs swinging: true in the frame it ends;
+	// (111) and up or down, part of the way from its start height to its end
+	bool keep_stepping {
+		StepsLeft--
+		double Done = (Frames - StepsLeft) / (double)Frames
+		Ground = ground_at Done
+		double Now = Ground + jump(Done)
+		Body.move Dx * SPEED, Now - Feet, Dy * SPEED
+		Feet = Now
+		double Swing = 30 * sin(StepsLeft * 3.14159265 / 8)   // (a swing and back, each step)
+		Left.set_tilt Swing
+		Right.set_tilt -Swing
+		if StepsLeft == 0 {
+			Col += Dx * Tiles
+			Row += Dy * Tiles
+			Left.set_tilt 0
+			Right.set_tilt 0
+		}
+		return StepsLeft == 0
+	}
+
+	// how high the ground is, Done of the way: from its start to the edge
+	// of the tiles in the first half of the step, from there to its end in
+	// the second (on stairs, the edge isn't half way up)
+	double ground_at double Done const {
+		if Done < 0.5 {
+			return From + (Edge - From) * Done * 2
+		}
+		return Edge + (To - Edge) * (Done - 0.5) * 2
+	}
+
+	// ==== 111.5  Up, and down again ======================================
+
+	// how far above the ground a hop is, Done of the way through it (0 to
+	// 1): up, and down again, highest half way
+	double jump double Done const {
+		if Tiles == 1 {
+			return 0
+		}
+		return 4 * HOP * Done * (1 - Done)
+	}
+}
+
+// ==== 121.1  A footstep ==================================================
+
+// one of the hero's moves, kept for Ember to make after them: the way,
+// how far (2: a hop), and how high, at its start, at the edge of the
+// tiles, and at its end
+struct footstep {
+	str Way
+	int Tiles
+	double From
+	double Edge
+	double To
+}
+
+// ==== 112.2  What a critter is doing =====================================
+
+enum act {
+	STILL                           // standing there
+	RISING                          // popping up out of the grass
+	LUNGING                         // jumping at the other, and back
+	SHAKING                         // hit
+	FAINTING                        // falling over, and gone
+	SINKING                         // back down into the grass
+}
+
+// ==== 112.3  A critter ===================================================
+
+object critter {
+	str Name                        // "Ember"
+	int Level
+	int Health                      // how much more it can take
+	int Most                        // and how much when it's well
+	int Strength                    // how hard it hits
+	int Toughness                   // how hard it is to hurt
+	int Speed                       // the quicker goes first
+	list str Moves                  // "Pounce"
+	list int Powers                 // and how hard each is: 40
+
+	// ==== 112.4  In the world ============================================
+
+	list world.shape Parts          // its shapes: its body first, the rest joined to it
+	world.shape Bar                 // its health, floating over it
+	world.shape BarBack             // (and the dark behind the bar)
+	double X                        // where it stands
+	double Z
+	double Ground                   // how high the ground is there
+	double Lift                     // how high its body is, above the ground
+	double Top                      // and its bar
+	double Angle                    // which way it faces
+	bool Out                        // in sight
+	act Doing
+	int Frame                       // how far through what it's doing
+	double Shown                    // its health as the bar shows it
+	int Goal                        // and what the bar is falling to
+
+	// ==== 112.5  Its numbers =============================================
+
+	void set_up const str &Called, int Lv, int Well, int Hits, int Tough, int Quick {
+		Name = Called.copy
+		Level = Lv
+		Most = Well
+		Health = Well
+		Strength = Hits
+		Toughness = Tough
+		Speed = Quick
+	}
+
+	// ==== 112.6  Doing something =========================================
+
+	void start act What {
+		Doing = What
+		Frame = 0
+		if What == RISING {
+			Out = true
+			show true
+		}
+	}
+
+	bool busy const {
+		return Doing != STILL
+	}
+
+	// how many frames each takes
+	int frames_for act What const {
+		if What == LUNGING {
+			return 24
+		} else if What == SHAKING {
+			return 28
+		} else if What == FAINTING {
+			return 45
+		}
+		return 30
+	}
+
+	void show bool On {
+		for Part in Parts {
+			Part.set_visible On
+		}
+	}
+
+	// ==== 112.7  Each frame ==============================================
+
+	// a frame further through what it's doing: rising up, and a little
+	// over; a jump forward, and back; shaking side to side, blinking;
+	// falling over; or sinking out of sight
+	void animate {
+		if Doing == STILL {
+			return
+		}
+		Frame++
+		double T = Frame / (double)frames_for(Doing)
+		double Ahead = 0
+		double Side = 0
+		double Up = 0
+		if Doing == RISING {
+			Up = -0.6 * (1 - T) + 0.3 * sin(T * PI)
+		} else if Doing == LUNGING {
+			Ahead = 0.7 * sin(T * PI)
+			Up = 0.2 * sin(T * PI)
+		} else if Doing == SHAKING {
+			Side = 0.06 * sin(T * 6 * PI)
+			show Frame / 4 % 2 == 0
+		} else if Doing == FAINTING {
+			Parts[0].set_roll 90 * T
+			Up = -0.2 * T
+		} else if Doing == SINKING {
+			Up = -0.6 * T
+		}
+		place Ahead, Side, Up
+		if Frame == frames_for(Doing) {
+			finish
+		}
+	}
+
+	// done: still again, or (fallen over, sunk) out of sight
+	void finish {
+		if Doing == FAINTING || Doing == SINKING {
+			Out = false
+			show false
+		} else {
+			show true
+		}
+		Doing = STILL
+	}
+
+	// ==== 112.8  Where it is now =========================================
+
+	// that far ahead of where it stands, to its right, and up
+	void place double Ahead, double Side, double Up {
+		double A = Angle * PI / 180
+		Parts[0].move_to X - sin(A) * Ahead + cos(A) * Side, Ground + Lift + Up, Z - cos(A) * Ahead - sin(A) * Side
+	}
+
+	// ==== 112.9  Its health bar ==========================================
+
+	// a little lower each frame, until it shows its health; across the way
+	// the camera looks (View), from the left; green, then gold, then red
+	void show_bar double View {
+		if Shown > Goal + 0.25 {
+			Shown -= 0.25
+		} else {
+			Shown = Goal
+		}
+		double Wide = BAR * Shown / Most
+		double A = View * PI / 180
+		double Y = Ground + Top
+		BarBack.set_angle View
+		BarBack.move_to X, Y, Z
+		BarBack.set_visible Out
+		Bar.set_angle View
+		Bar.set_size Wide + 0.001, 0.06, 0.04
+		Bar.move_to X - cos(A) * (BAR - Wide) / 2, Y, Z + sin(A) * (BAR - Wide) / 2
+		Bar.set_color bar_color
+		Bar.set_visible Out && Shown > 0
+	}
+
+	str bar_color const {
+		if Shown * 2 > Most {
+			return "#3cc453"
+		} else if Shown * 5 > Most {
+			return "#e8b730"
+		}
+		return "#e0412f"
+	}
+
+	bool caught_up const {
+		return Shown == Goal
+	}
+
+	// ==== 112.10  Put out ================================================
+
+	// its shapes (made in 112.24) at X, Z on ground G, facing Angle; out of
+	// sight, under the grass, until it rises
+	void put_out list world.shape Shapes, double At, double Across, double G, double Facing {
+		Parts = Shapes
+		X = At
+		Z = Across
+		Ground = G
+		Angle = Facing
+		Parts[0].set_angle Facing
+		Shown = Health
+		Goal = Health
+		place 0, 0, -0.6
+		show false
+	}
+
+	// ==== 112.11  Taken away =============================================
+
+	void remove {
+		for Part in Parts {
+			Part.remove
+		}
+		Bar.remove
+		BarBack.remove
+		Parts.clear
+		Out = false
+	}
+}
+
+// ==== 112.12  A part of one ==============================================
+
+// joined to the body (the first of them), and kept with the rest
+void join_on list world.shape &All, world.shape Part {
+	Part.join All[0]
+	All.add Part
+}
+
+// ==== 112.13  The hero's fox  (changed in 113) ===========================
+
+// Ember, at her level, as hurt as the last battle left her; (113) her
+// numbers grow with her level
+critter fox int Level, int Wounds {
+	critter Ember
+	Ember.set_up "Ember", Level, 11 + 2 * Level, 6 + Level, 4 + Level, 7 + Level
+	Ember.Lift = 0.25                   // (her body's middle, above the ground)
+	Ember.Top = 0.75                    // (and her bar)
+	Ember.Health = Ember.Most - Wounds
+	if Ember.Health < 1 {
+		Ember.Health = 1
+	}
+	Ember.Moves = {"Pounce", "Spark"}
+	Ember.Powers = {40, 55}
+	return Ember
+}
+
+// ==== 112.14  A field mouse ==============================================
+
+// slower than Ember, so she goes first
+critter field_mouse {
+	critter Mouse
+	Mouse.set_up "field mouse", 3, 14, 8, 8, 10
+	Mouse.Lift = 0.13
+	Mouse.Top = 0.45
+	Mouse.Moves = {"Nibble", "Scratch"}
+	Mouse.Powers = {35, 30}
+	return Mouse
+}
+
+// ==== 112.15  A hill crow ================================================
+
+// quicker than Ember, and it hits harder, but it's easier to hurt
+critter hill_crow {
+	critter Crow
+	Crow.set_up "hill crow", 4, 15, 10, 7, 14
+	Crow.Lift = 0.32
+	Crow.Top = 0.75
+	Crow.Moves = {"Peck", "Gust"}
+	Crow.Powers = {35, 40}
+	return Crow
+}
+
+// ==== 113.3  Rufus's pup  (changed in 120) ===============================
+
+// a level above Ember, to begin with, and tougher, but a little slower;
+// (120) at a level, his numbers growing with it
+critter rival_pup int Level {
+	critter Pup
+	Pup.set_up "Bruno", Level, 23 + 3 * (Level - 6), 11 + Level - 6, 9 + Level - 6, 11 + Level - 6
+	Pup.Lift = 0.27
+	Pup.Top = 0.8
+	Pup.Moves = {"Bite", "Tackle"}
+	Pup.Powers = {45, 35}
+	return Pup
+}
+
+// ==== 113.4  Which wild one ==============================================
+
+// a hill crow, or a field mouse
+critter wild_one bool Crow {
+	if Crow {
+		return hill_crow
+	}
+	return field_mouse
+}
+
+// ==== 109.2  An area next door ===========================================
+
+// another area's map, built beyond an edge of this one; Col and Row are
+// where its top left tile is, counted on this area's map (tutorial 79's)
+object neighbour {
+	str Area                        // "woods"
+	str Side                        // the edge it's beyond: "north"
+	list str Map
+	int Col
+	int Row
+	bool Corner                     // next door to next door: seen, not walked into
+
+	// beyond its edge of Here (this area's map), Along tiles along it
+	void place_beside const list str &Here, int Along {
+		if Side == "north" || Side == "south" {
+			Col = Along
+			Row = beyond Side == "south", (int)Here.length, (int)Map.length
+		} else {
+			Row = Along
+			Col = beyond Side == "east", (int)Here[0].length, (int)Map[0].length
+		}
+	}
+
+	// (an area at a corner: placed beside the area next door, then moved
+	// with it)
+	void move_by int Columns, int Rows {
+		Col += Columns
+		Row += Rows
+	}
+
+	// the first row (or column) past the edge: just after Here's last, or
+	// far enough before 0 to fit its own (Mine)
+	int beyond bool After, int Here, int Mine const {
+		if After {
+			return Here
+		}
+		return -Mine
+	}
+
+	// whether the tile C, R (counted on this area's map) is in it, and what
+	// it is
+	bool has int C, int R const {
+		return R >= Row && R < Row + (int)Map.length && C >= Col && C < Col + (int)Map[R - Row].length
+	}
+
+	char tile int C, int R const {
+		return Map[R - Row][C - Col]
+	}
+}
+
+// ==== 114.1  What the hero has done  (changed in 117) =====================
+
+struct progress {
+	lookup str str Answers          // what they answered: "elder name": "Livia"
+	str Quest                       // the baker's spoon: "", "asked" or "done"
+	list str Items                  // what the hero carries: "spoon"
+	list str Taken                  // what's been picked up: "bakery 9,4"
+	list str Noticed                // who has noticed them: "baker"
+	int Wounds                      // how hurt Ember is (0: well)
+	int EmberLevel                  // her level (before any battle: 0, which is 5)
+	int EmberExperience             // and her experience toward the next
+	double Time                     // (117) the time of day: 0 midnight, 0.5 noon
+	bool Raining
+	str Area                        // and where the hero is (when saved)
+	int Col
+	int Row
+	str Facing
+}
+
+// ==== 108.7  What's happening  (changed in 109, 112, 113, 114) ===========
+
+enum mode {
+	PLAYING                         // walking about
+	READING                         // words showing: Space goes on
+	FADING_OUT                      // the light going down, to go through a way
+	FADING_IN                       // and coming up again, there
+	BATTLE                          // (112) in a battle
+	NOTICED                         // (113) someone has seen the hero, and comes over
+	CHOOSING                        // (114) a question's answers showing
+}
+
+// ==== 108.8  The world  (changed in 109, 110, 111, 112, 113) =============
+
+object quest : world.window {
+	list str Map                    // the area's tiles, a character each
+	list str Things                 // the lines after the map: signs ...
+	walker Hero
+	list walker People              // (110) everyone else in the area
+	mode Mode
+	world.text Words                // what's being read, over the world
+	world.text Shade                // (the same, a little lower: a shadow for it)
+	str Turned                      // the arrow key that turned the hero
+
+	// ==== 109.3  Going somewhere else ====================================
+
+	str Area                        // the area the hero is in: "town"
+	str NextArea                    // and where they're going, when it's dark
+	int NextCol
+	int NextRow
+	int FadeFrame                   // how far through the fade
+	list neighbour Joins            // the areas next door
+	world.text Name                 // the area's name, at the top left for a moment
+	world.text NameShade
+	long NameFrom                   // the frame it appeared in
+	bool Inside                     // in a house: no sky
+
+	// ==== 112.16  A battle's state =======================================
+
+	critter Ours                    // Ember
+	critter Foe                     // and what she's facing
+	int ZoomFrame                   // how far down into the world the camera is
+	bool Leaving                    // and it's going back up
+	bool Over                       // won, lost or run from: it ends after the words
+	bool Lost
+	bool Reading                    // words showing, until Space
+	world.text OursLine             // how each is doing, in words
+	world.text FoeLine
+
+	// ==== 112.17  What comes next ========================================
+
+	list str Beats                  // what's said next, in turn
+	list int Hits                   // after each, what happens (112.31)
+	list int HealthAfter            // and the health it leaves
+	int Hit                         // what happens after the words showing
+	int HitTo                       // and the health it leaves
+
+	// ==== 112.18  The menu showing =======================================
+
+	str Menu                        // the menu showing: "battle", "moves" ("": none)
+	list str Choices                // its choices
+	int Choice                      // the one the arrow points at
+	world.text Options              // (shown under the words)
+	world.text OptionsShade
+
+	// ==== 113.5  Who has noticed the hero ================================
+
+	lookup str int Sight            // how far each sees: {"baker": 3}
+	int Comer                       // who has noticed the hero, and is coming over
+	int NoticeFrame                 // frames since (the "!" shows for the first few)
+	world.shape Bang                // the "!" over their head
+
+	// ==== 113.6  Rufus's battle ==========================================
+
+	str Owner                       // whose critter Ember is facing ("": a wild one)
+	bool Challenge                  // Rufus has asked for a battle
+	bool BackedOff                  // and stepped back, to make room for it
+	bool WalkingOff                 // he's walking away, after it
+	int Leaver                      // (which of the people he is)
+
+	// ==== 114.2  The story so far ========================================
+
+	progress Story                  // (Ember's wounds, and her level, are in it)
+
+	// ==== 115.1  What the title shows ====================================
+
+	bool OnTitle                    // the title is showing
+	world.text Title                // "Cabby Quest", big
+	world.text TitleShade
+	double Round                    // how far round the town the camera is, in degrees
+
+	// ==== 115.2  Options  (changed in 117) ===============================
+
+	bool NoShadows                  // (fields start false: shadows on, to begin with)
+	bool Far                        // the camera, further from the hero
+	bool QuickDays                  // (117) a day of two minutes, not 24
+
+	// ==== 116.2  In the water ============================================
+
+	bool Swimming                   // the hero is in the water (or stepping in)
+	int OriginX                     // where this area's top left tile is in the
+	int OriginZ                     // world (116.11): 0, 0 until an edge is crossed
+
+	// ==== 117.3  The light, and the rain =================================
+
+	double Fade                     // the light, faded (109.15): 1, all of it
+	double Wet                      // how hard it's raining: 0 dry, 1 pouring
+	bool Night                      // (to say when it falls)
+	list world.shape Drops          // the raindrops
+	list world.shape Windows        // the houses' windows
+	list world.lamp WindowLamps     // and the light from each
+	lookup str list str Maps        // each area's file, read once: "town": its lines
+	double Bobbed                   // how far the hero has bobbed up, in the water
+
+	// ==== 118.2  In the dark =============================================
+
+	bool Dark                       // this area is a cave: no sun, no sky
+	list world.lamp CaveLamps       // its crystals' light, and the lantern (the last)
+	list world.shape Bats           // bats, flying round
+	list world.shape Wings          // (two for each)
+	list double BatX                // and where each flies round
+	list double BatZ
+	list world.shape Drips          // a drop of water, falling from the dark (one)
+
+	// ==== 119.2  What's playing ==========================================
+
+	str Playing                     // the music playing: "town" ("": none)
+	bool NoMusic                    // (the options: fields start false, so on)
+	bool NoSounds
+	lookup str sound.track Near     // sounds heard from somewhere in the world, loaded once
+	sound.track Rain                // the rain, round and round
+	bool RainLoaded
+	double Flash                    // lightning: 1 at its brightest, fading to 0
+
+	// ==== 121.2  Ember, following ========================================
+
+	walker Follower                 // Ember, a step behind the hero
+	list world.shape FollowerParts  // (her shapes, to hide and show)
+	list footstep Steps             // the hero's moves she's still to make
+	bool Waiting                    // on the hero's tile, out of sight
+	bool Crossing                   // the hero is walking into the next area
+	int FollowCol                   // and where she'll be in it
+	int FollowRow
+	double FollowFeet
+
+	// ==== 120.2  By the sea ==============================================
+
+	list double BatY                // (fliers, bats or gulls: how high each flies,
+	list double BatWide             // how wide it goes round, and what it cries)
+	list str BatCry
+	list world.shape Beams          // the lighthouse's beam
+	list world.shape LampRooms      // and the room at its top, its lamp in it
+	list world.lamp Beacons         // and its light
+	sound.track Surf                // the waves, round and round
+	bool SurfLoaded
+	list world.shape Ripples        // rings spreading on the water (two shapes each)
+	list int RippleAges             // and how many frames each has spread
+	list double RippleSizes         // and how big each grows (1: a swimmer's)
+
+	// ==== 108.9  Building it  (changed in 109, 112, 114, 115) ============
+
+	void build {
+		set_title "Cabby Quest"
+		set_size 800, 600
+		set_sun -0.3, -1, -0.5
+		NameShade = add_text "", 22, 18
+		NameShade.set_color "black"
+		Name = add_text "", 20, 16
+		Shade = add_text "", 22, 532
+		Shade.set_color "black"
+		Words = add_text "", 20, 530
+		OptionsShade = add_text "", 22, 564          // (112)
+		OptionsShade.set_color "black"
+		Options = add_text "", 20, 562
+		FoeLine = add_text "", 500, 16
+		TitleShade = add_text "", 214, 124           // (115)
+		TitleShade.set_size 64
+		TitleShade.set_color "#2b2b38"
+		Title = add_text "", 210, 120
+		Title.set_size 64
+		OursLine = add_text "", 20, 490
+		read_maps                       // (117)
+		show_title                      // (115)
+		on_frame step
+	}
+
+	// ==== 115.3  Showing the title  (changed in 116, 119) ================
+
+	// the town, with nobody walking about in it, the camera circling it,
+	// and "Cabby Quest" over it
+	void show_title {
+		OriginX = 0                     // (116) the town where the camera circles it
+		OriginZ = 0
+		go_to "town", 8, 4
+		Hero.Body.set_visible false
+		Story.Time = 0.45               // (117) late morning, while the title shows
+		light 1
+		Name.set_text ""
+		NameShade.set_text ""
+		OnTitle = true
+		Title.set_text "Cabby Quest"
+		TitleShade.set_text "Cabby Quest"
+		music "woods"                   // (119)
+		title_menu
+	}
+
+	// what to do: Continue only when there's a saved game
+	void title_menu {
+		list str Choices = {"New game"}
+		if files.exists save_path {
+			Choices.add "Continue"
+		}
+		Choices.add "Options"
+		ask "title", "Left and right to choose; Space to go.", Choices
+	}
+
+	// ==== 115.4  Circling the town =======================================
+
+	// a little further round each frame, high up, looking at its middle
+	void circle_town {
+		Round += 0.15
+		double A = Round * PI / 180
+		move_camera_to 12 + 16 * sin(A), 10, 8 + 16 * cos(A)
+		point_camera_at 12, 0, 8
+	}
+
+	// ==== 115.5  Off the title ===========================================
+
+	void leave_title {
+		OnTitle = false
+		Title.set_text ""
+		TitleShade.set_text ""
+	}
+
+	// ==== 115.6  A new game  (changed in 117) ============================
+
+	// all that's been done forgotten, and the start, in town
+	void new_game {
+		leave_title
+		progress Fresh
+		Story = Fresh
+		Story.Time = 0.3                // (117) a little after sunrise
+		Hero.Facing = "down"
+		start_at "town", 8, 4
+	}
+
+	// ==== 114.4  Where saved games go ====================================
+
+	// the computer's place for them: ~/.local/share/Cabby Quest 3D on
+	// Linux, ~/Library/Application Support/Cabby Quest 3D on a Mac
+	str save_path const {
+		return directories.save_folder("Cabby Quest 3D") + "/saved.json"
+	}
+
+	// ==== 114.5  Saving ==================================================
+
+	// where the hero is, into Story; then all of Story, as JSON
+	void save_game {
+		Story.Area = Area.copy
+		Story.Col = Hero.Col
+		Story.Row = Hero.Row
+		Story.Facing = Hero.Facing.copy
+		files.write save_path, json.from(Story).pretty
+		say "Saved."
+	}
+
+	// ==== 114.6  Carrying on  (changed in 115) ===========================
+
+	// Story back from the file, and the hero where they were
+	void load_game {
+		json.read(files.read(save_path)).fill Story
+		Hero.Facing = Story.Facing.copy
+		leave_title                     // (115)
+		start_at Story.Area.copy, Story.Col, Story.Row
+	}
+
+	// ==== 109.4  Arriving  (changed in 116, 119) =========================
+
+	// there, out of the dark
+	void start_at const str &Place, int C, int R {
+		OriginX = 0                     // (116) in the dark: anywhere will do
+		OriginZ = 0
+		enter Place, C, R
+		Mode = FADING_IN
+		FadeFrame = 0
+		light 0
+	}
+
+	// the area built, the hero in it, and its name showing
+	void enter const str &Place, int C, int R {
+		go_to Place, C, R
+		area_music                      // (119)
+		show_name
+		println "in the", Area, "at", C, R
+	}
+
+	// ==== 109.5  Going to an area  (changed in 110, 111, 113, 114, 116, 117, 118, 121)
+
+	// everything there is taken away, and the area and those next door built
+	void go_to const str &Place, int C, int R {
+		str Facing = facing_now
+		clear_area
+		Area = Place.copy
+		read_area Place
+		Dark = Things.contains "dark"   // (118) (a line on its own)
+		Inside = has_walls || Dark
+		add_tiles_of Map.copy, 0, 0     // (a copy: building changes the world, Map with it)
+		add_joins
+		add_ground
+		Hero = new_walker "hero", C, R, Facing
+		stand_on_tile                   // (111)
+		Bobbed = 0                      // (117)
+		add_people
+		add_rival                       // (113)
+		add_follower                    // (121)
+		add_sights
+		add_items                       // (114)
+		add_mouths                      // (118)
+		to_its_place                    // (116)
+		if Dark {
+			into_the_dark
+		}
+		add_fliers "bats"               // (120) bats, or gulls, in any area
+		add_fliers "gulls"
+		look_at_hero
+	}
+
+	// ==== 116.11  One world  (changed in 117, 118) =======================
+
+	// everything just built (made at its tile on the area's own map) moved
+	// to where the area is in the world: so walking over an edge, nothing
+	// in the world moves, the shadows, the trees' swaying, the camera
+	// (what's joined moves with what it's joined to)
+	void to_its_place {
+		for Shape in shapes_in "" {
+			if !Shape.joined {
+				Shape.move OriginX, 0, OriginZ
+			}
+		}
+		for Lamp in WindowLamps {
+			Lamp.move_to Lamp.x + OriginX, Lamp.y, Lamp.z + OriginZ   // (117)
+		}
+		for Lamp in CaveLamps {
+			Lamp.move_to Lamp.x + OriginX, Lamp.y, Lamp.z + OriginZ   // (118)
+		}
+		for Lamp in Beacons {
+			Lamp.move_to Lamp.x + OriginX, Lamp.y, Lamp.z + OriginZ   // (120)
+		}
+	}
+
+	// ==== 109.6  Clearing the world  (changed in 110, 116, 117, 118) =====
+
+	// every shape removed, and the last area's map (and people) forgotten
+	void clear_area {
+		for Old in shapes_in "" {
+			Old.remove
+		}
+		Map.clear
+		Things.clear
+		Joins.clear
+		People.clear
+		WalkingOff = false              // (whoever was walking off went with them)
+		Ripples.clear                   // (116) (gone with the rest)
+		RippleAges.clear
+		RippleSizes.clear
+		Drops.clear                     // (117) and the lamps, which aren't shapes
+		Windows.clear
+		for Lamp in WindowLamps {
+			Lamp.remove
+		}
+		WindowLamps.clear
+		for Lamp in CaveLamps {
+			Lamp.remove                 // (118)
+		}
+		CaveLamps.clear
+		for Lamp in Beacons {
+			Lamp.remove                 // (120)
+		}
+		Beacons.clear
+		Beams.clear
+		LampRooms.clear
+		BatY.clear
+		BatWide.clear
+		BatCry.clear
+		Bats.clear
+		Wings.clear
+		BatX.clear
+		BatZ.clear
+		Drips.clear
+	}
+
+	// ==== 110.3  The people in an area ===================================
+
+	// (by number: add_person changes the world, which a loop through one
+	// of its lists can't let happen)
+	void add_people {
+		for I in Things.length {
+			if Things[I].starts_with "person " {
+				add_person Things[I].copy
+			}
+		}
+	}
+
+	// "person 11,3 elder down wanders": where, who, which way, and whether
+	// they walk about
+	void add_person const str &Line {
+		list str Words = Line.split " "
+		list str At = Words[1].split ","
+		walker Someone = new_walker Words[2], At[0].to_int, At[1].to_int, Words[3]
+		Someone.Wanders = Words.length > 4
+		People.add Someone
+	}
+
+	// ==== 113.8  The rival ===============================================
+
+	// "rival 13,7 left": Rufus, who's there until he's met the hero
+	void add_rival {
+		str Line = setting "rival"
+		bool There = !Story.Noticed.contains("rival")
+		if setting("rematch") != "" {
+			Line = setting "rematch"            // (120) at the coast, until he's had his rematch
+			There = !Story.Answers.contains("rematch")
+		}
+		if Line != "" && There {
+			list str Words = Line.split " "
+			list str At = Words[0].split ","
+			walker Rufus = new_walker "rival", At[0].to_int, At[1].to_int, Words[1]
+			People.add Rufus
+		}
+	}
+
+	// ==== 114.7  Things to pick up =======================================
+
+	// "item 9,4 spoon": the spoon, on tile 9,4 (unless it's been picked
+	// up), in a group of its own, to take it away by
+	void add_items {
+		for I in Things.length {
+			if Things[I].starts_with "item " {
+				add_item Things[I].copy
+			}
+		}
+	}
+
+	void add_item const str &Line {
+		list str Words = Line.split " "
+		list str At = Words[1].split ","
+		int C = At[0].to_int
+		int R = At[1].to_int
+		if item_at(C, R) != "" {
+			world.shape Thing = make_item Words[2], C, R
+			Thing.set_group "item " + Words[1]
+		}
+	}
+
+	// ==== 114.8  A spoon  (changed in 116, 118) ==========================
+
+	// a wooden handle, lying down, and its bowl, joined to it
+	world.shape make_item const str &Name, int C, int R {
+		if Name == "shell" {
+			return make_shell C, R        // (116)
+		} else if Name == "crystal" {
+			return make_crystal C, R, 0.35   // (118)
+		}
+		world.shape Handle = add_cylinder 0.04, 0.6, "#f3dba8", C, 0.35, R
+		Handle.set_tilt 90                  // (lying along z)
+		world.shape Bowl = add_ball 0.12, "#e9c88a", C, 0.35, R - 0.36
+		Bowl.set_size 0.22, 0.08, 0.28
+		Bowl.join Handle
+		return Handle
+	}
+
+	// ==== 116.3  A shell =================================================
+
+	// pale pink, fanned: half a squashed ball, and ridges joined on
+	world.shape make_shell int C, int R {
+		world.shape Shell = add_ball 0.2, "#f6c1c9", C, 0.35, R
+		Shell.set_size 0.4, 0.12, 0.32
+		for I in 5 {
+			world.shape Ridge = add_box 0.03, 0.03, 0.3, "#fbe3e7", C + (I - 2) * 0.07, 0.4, R
+			Ridge.set_angle (I - 2) * 12
+			Ridge.join Shell
+		}
+		return Shell
+	}
+
+	// ==== 114.9  Turning in the air ======================================
+
+	// each frame, every thing to pick up turns a little, and bobs
+	void turn_items {
+		for Line in Things {
+			if Line.starts_with "item " {
+				for Thing in shapes_in "item " + Line.split(" ")[1] {
+					Thing.turn 2
+					Thing.move_to Thing.x, 0.35 + 0.06 * sin(frame / 20.0), Thing.z
+				}
+			}
+		}
+	}
+
+	// ==== 114.10  A thing to pick up, here ===============================
+
+	// the item on that tile ("spoon"), if it hasn't been picked up yet
+	str item_at int C, int R const {
+		if Story.Taken.contains Area + " " + C.text + "," + R.text {
+			return ""
+		}
+		return thing_at "item", C, R
+	}
+
+	// ==== 113.9  How far they see ========================================
+
+	// "sees baker 3": the baker sees the hero up to three tiles in front of
+	// her
+	void add_sights {
+		Sight.clear
+		for Line in Things {
+			list str Words = Line.split " "
+			if Words[0] == "sees" {
+				Sight[Words[1]] = Words[2].to_int
+			}
+		}
+	}
+
+	// a new area, the hero facing as they were ("down" the first time)
+	str facing_now const {
+		if Hero.Facing == "" {
+			return "down"
+		}
+		return Hero.Facing.copy
+	}
+
+	// a house, inside: its map has walls (#)
+	bool has_walls const {
+		for Line in Map {
+			if Line.contains '#' {
+				return true
+			}
+		}
+		return false
+	}
+
+	// ==== 109.7  Its name ================================================
+
+	// "name Cabby Town" after the map: at the top left, for a moment
+	void show_name {
+		str Called = setting "name"
+		Name.set_text Called
+		NameShade.set_text Called
+		NameFrom = frame
+	}
+
+	// what a line after the map, "name Cabby Town", says ("": no such line)
+	str setting const str &Key const {
+		for Line in Things {
+			if Line.starts_with Key + " " {
+				return Line[Key.length + 1 to Line.length - 1]
+			}
+		}
+		return ""
+	}
+
+	// ==== 108.10  Reading an area's map  (changed in 117) ================
+
+	// quest/town.txt: notes (//) first, then the map, a line a row; then,
+	// after ---, a line for each thing in the area (as in tutorial 78)
+	void read_area const str &Area {
+		bool InMap = true
+		for Line in Maps[Area] {
+			if Line == "---" {
+				InMap = false
+			} else if !Line.starts_with("//") && Line.trim != "" {
+				if InMap {
+					Map.add Line.copy
+				} else {
+					Things.add Line.copy
+				}
+			}
+		}
+	}
+
+	// ==== 109.8  Just a map  (changed in 117) ============================
+
+	// an area's map, the rows before its ---, into Rows
+	void read_map const str &Place, list str &Rows const {
+		for Line in Maps[Place] {
+			if Line == "---" {
+				break
+			} else if !Line.starts_with("//") && Line.trim != "" {
+				Rows.add Line.copy
+			}
+		}
+	}
+
+	// an area's join lines, into Lines
+	void read_joins const str &Place, list str &Lines const {
+		for Line in Maps[Place] {
+			if Line.starts_with "join " {
+				Lines.add Line.copy
+			}
+		}
+	}
+
+	// ==== 108.11  The ground, and what's on each tile  (changed in 109, 116, 118)
+
+	// a map's tiles, its top left one at Left, Top: this area's at 0, 0,
+	// and the areas' next door beside it
+	void add_tiles_of const list str &Rows, int Left, int Top {
+		for R in Rows.length {
+			for C in Rows[R].length {
+				add_tile Rows[R][C], Left + C, Top + R
+			}
+		}
+	}
+
+	void add_tile char Tile, double X, double Z {
+		if Dark {
+			add_cave Tile, X, Z         // (118)
+		} else if Tile == '=' {
+			add_plane 1, 1, "#d9c38c", X, 0.005, Z            // the path
+		} else if Tile == '~' {
+			add_water X, Z                                    // (116)
+		} else if Tile == 'f' {
+			add_flowers X, Z
+		} else if Tile == 's' || Tile == 'K' || Tile == 'u' || Tile == 'Y' || Tile == 'L' {
+			add_coast Tile, X, Z        // (120)
+		} else if Tile == 'T' {
+			add_tree X, Z
+		} else if Tile == 'S' {
+			add_sign X, Z
+		} else if Tile == 'D' {
+			add_house X, Z
+		} else {
+			add_inside Tile, X, Z
+			add_hills Tile, X, Z
+		}
+	}
+
+	// ==== 109.9  The ground under it all =================================
+
+	// outside, grass as far as the trees go round the areas; inside, the
+	// floor is the map's own, and dark beyond
+	void add_ground {
+		if Inside {
+			return
+		}
+		int Left = 0
+		int Top = 0
+		int Right = (int)Map[0].length
+		int Bottom = (int)Map.length
+		for Next in Joins {
+			Left = min_of Left, Next.Col
+			Top = min_of Top, Next.Row
+			Right = max_of Right, Next.Col + (int)Next.Map[0].length
+			Bottom = max_of Bottom, Next.Row + (int)Next.Map.length
+		}
+		double Wide = Right - Left + 2 * RING
+		double Deep = Bottom - Top + 2 * RING
+		add_plane Wide, Deep, "#6fbf4a", Left - RING + (Wide - 1) / 2, 0, Top - RING + (Deep - 1) / 2
+	}
+
+	int min_of int A, int B const {
+		if A < B {
+			return A
+		}
+		return B
+	}
+
+	int max_of int A, int B const {
+		if A > B {
+			return A
+		}
+		return B
+	}
+
+	// ==== 108.12  Flowers  (changed in 116) ==============================
+
+	// (116) each in the group "flowers", to sway
+	void add_flowers double X, double Z {
+		flower "yellow", X - 0.2, Z - 0.15
+		flower "white", X + 0.15, Z + 0.1
+		flower "#e8457a", X - 0.05, Z + 0.25
+	}
+
+	void flower const str &Color, double X, double Z {
+		world.shape Petals = add_ball 0.06, Color, X, 0.06, Z
+		Petals.set_group "flowers"
+	}
+
+	// ==== 116.4  Water ===================================================
+
+	// a tile of it, in the group "water", to shimmer; and on one tile in
+	// three, a wave, a thin pale line, in the group "waves", to drift
+	void add_water double X, double Z {
+		world.shape Water = add_plane 1, 1, "#3a7bd5", X, 0.005, Z
+		Water.set_group "water"
+		int Mix = (int)(7 * X + 3 * Z + 1000)      // (a number that differs from tile to tile)
+		if Mix % 3 == 0 {
+			world.shape Wave = add_box 0.35, 0.008, 0.04, "#cfe6ff", X, 0.01, Z - 0.3 + 0.25 * (Mix % 4)
+			Wave.set_group "waves"
+		}
+	}
+
+	// ==== 108.13  A tree: a trunk, its leaves joined on  (changed in 116)
+
+	void add_tree double X, double Z {
+		world.shape Trunk = add_cylinder 0.1, 0.5, "#7a4a24", X, 0.25, Z
+		world.shape Leaves = add_cone 0.45, 1.1, "#2f7d32", X, 1.0, Z
+		Leaves.join Trunk
+		Trunk.set_group "trees"         // (116) to sway
+	}
+
+	// ==== 108.14  A sign: a post, its board joined on ====================
+
+	void add_sign double X, double Z {
+		world.shape Post = add_box 0.08, 0.7, 0.08, "#7a4a24", X, 0.35, Z
+		world.shape Board = add_box 0.6, 0.35, 0.06, "#c8a165", X, 0.62, Z + 0.05
+		Board.join Post
+	}
+
+	// ==== 108.15  A house: walls, a door and a roof, joined  (changed in 117)
+
+	// at its door (D, with a wall either side and above it on the map):
+	// the walls cover three tiles across and two up
+	void add_house double X, double Z {
+		world.shape Walls = add_box 3, 1.4, 2, "#f2e6d0", X, 0.7, Z - 0.5
+		world.shape Door = add_box 0.55, 0.95, 0.06, "#8b5a2b", X, 0.475, Z + 0.52
+		Door.join Walls
+		// the roof: two boards, sloping down to the front and to the back
+		world.shape Front = add_box 3.3, 0.08, 1.35, "#b5452c", X, 1.78, Z + 0.05
+		Front.set_tilt 35               // (its back edge up: the ridge)
+		Front.join Walls
+		world.shape Back = add_box 3.3, 0.08, 1.35, "#b5452c", X, 1.78, Z - 1.05
+		Back.set_tilt -35
+		Back.join Walls
+		add_window X - 1, Z + 0.52                      // (117)
+		add_window X + 1, Z + 0.52
+	}
+
+	// ==== 117.12  The maps, read once ===================================
+
+	// every area's file in quest/, its lines kept by the area's name, so
+	// walking into an area (and its next door, and theirs) reads none
+	void read_maps {
+		for Name in directories.list "quest" {
+			if Name.ends_with ".txt" {
+				Maps[Name[0 to Name.length - 5]] = files.lines "quest/" + Name
+			}
+		}
+	}
+
+	// ==== 117.13  Bobbing ===============================================
+
+	// in the water, the hero goes up and down a little, slowly; out of it,
+	// not (Feet, and the ground under them, don't change: it's only how
+	// they're shown)
+	void bob {
+		double Up = 0
+		if Swimming {
+			Up = 0.025 * sin(frame / 25.0)
+		}
+		Hero.Body.move 0, Up - Bobbed, 0
+		Bobbed = Up
+	}
+
+	// ==== 117.4  A window ================================================
+
+	// a pane on the front wall, and a lamp just in front of it: dark, and
+	// no light, by day
+	void add_window double X, double Z {
+		world.shape Pane = add_box 0.5, 0.4, 0.04, "#4a5866", X, 0.9, Z
+		Windows.add Pane
+		world.lamp Glow = add_lamp X, 0.9, Z + 0.5, "black", 3
+		WindowLamps.add Glow
+	}
+
+	// Lit (0 to 1) as dark as it is: warm yellow, at night
+	void light_windows double Lit {
+		str Pane = css blend(rgb_of(74, 88, 102), rgb_of(255, 214, 130), Lit), 1
+		str Glow = rgb 255, 196, 120, 0.8 * Lit
+		for Window in Windows {
+			Window.set_color Pane
+		}
+		for Lamp in WindowLamps {
+			Lamp.set_color Glow
+		}
+	}
+
+	// ==== 109.10  Inside a house =========================================
+
+	// its walls (#), floor (,), oven (O), a table (b) and the doormat (M)
+	void add_inside char Tile, double X, double Z {
+		if Tile == '#' {
+			add_box 1, 1, 1, "#d7c4a3", X, 0.5, Z
+		} else if Tile == ',' {
+			add_plane 1, 1, "#a0703c", X, 0.005, Z
+		} else if Tile == 'O' {
+			add_plane 1, 1, "#a0703c", X, 0.005, Z
+			world.shape Oven = add_box 0.9, 0.9, 0.8, "#55555e", X, 0.45, Z
+			world.shape Fire = add_box 0.5, 0.3, 0.05, "#ff7a1a", X, 0.35, Z + 0.41
+			Fire.join Oven
+		} else if Tile == 'b' {
+			add_plane 1, 1, "#a0703c", X, 0.005, Z
+			world.shape Top = add_box 0.9, 0.08, 0.9, "#8b5a2b", X, 0.7, Z
+			world.shape Leg = add_box 0.1, 0.66, 0.1, "#8b5a2b", X, 0.33, Z
+			Leg.join Top
+		} else if Tile == 'M' {
+			add_plane 1, 1, "#b03a2e", X, 0.006, Z
+		}
+	}
+
+	// ==== 109.11  The hills  (changed in 112) ============================
+
+	// high ground (h), its cliff (C) and steps up (z), a bridge (B, or P
+	// over the path), ledges to hop down (v), and tall grass (w)
+	void add_hills char Tile, double X, double Z {
+		if Tile == 'h' {
+			add_box 1, HIGH, 1, "#5fa83f", X, HIGH / 2, Z
+		} else if Tile == 'C' {
+			add_box 1, HIGH, 1, "#8d7b68", X, HIGH / 2, Z
+		} else if Tile == 'z' {
+			for I in STAIRS {
+				double Up = HIGH * (I + 1) / STAIRS
+				double Deep = 1.0 / STAIRS
+				add_box 1, Up, Deep, "#a89a86", X, Up / 2, Z + 0.5 - (I + 0.5) * Deep
+			}
+		} else if Tile == 'B' || Tile == 'P' {
+			if Tile == 'P' {
+				add_plane 1, 1, "#d9c38c", X, 0.005, Z
+			}
+			add_box 1, 0.12, 1, "#8b5a2b", X, HIGH - 0.06, Z
+		} else if Tile == 'v' {
+			world.shape Ledge = add_wedge 1, 0.3, 1, "#5fa83f", X, 0.15, Z
+			Ledge.set_angle 180             // (a slope up to it; its drop down the map)
+		} else if Tile == 'w' {
+			blade X - 0.2, Z - 0.1, 0.45          // (112)
+			blade X + 0.15, Z + 0.15, 0.5
+			blade X, Z + 0.3, 0.4
+		}
+	}
+
+	// ==== 112.19  A blade of tall grass ==================================
+
+	// in the group "grass", to be found again (112.22)
+	void blade double X, double Z, double Tall {
+		world.shape Blade = add_cone 0.12, Tall, "#3d8b2f", X, Tall / 2, Z
+		Blade.set_group "grass"
+	}
+
+	// ==== 109.12  The areas next door ====================================
+
+	// a line for each, after the map; their own next door, at the corners;
+	// then a ring of trees round all of them
+	void add_joins {
+		for I in Things.length {
+			if Things[I].starts_with "join " {
+				add_join Things[I].copy
+			}
+		}
+		add_corners
+		add_rings
+	}
+
+	// "join north woods 0": the woods' map, beyond the north edge of Here
+	// (this area's map, or an area next door's), its column 0 beside Here's
+	neighbour beside const str &Line, const list str &Here const {
+		list str Words = Line.split " "
+		neighbour Next
+		Next.Side = Words[1].copy
+		Next.Area = Words[2].copy
+		read_map Words[2], Next.Map
+		Next.place_beside Here, Words[3].to_int
+		return Next
+	}
+
+	// beyond this area's edge
+	void add_join const str &Line {
+		neighbour Next = beside Line, Map
+		add_tiles_of Next.Map, Next.Col, Next.Row
+		Joins.add Next
+	}
+
+	// ==== 109.13  Corners ================================================
+
+	// the areas next door's own areas next door: one at a corner is seen
+	// from here, before it's walked to (tutorial 79's)
+	void add_corners {
+		int Count = (int)Joins.length
+		for I in Count {
+			list str Lines
+			read_joins Joins[I].Area, Lines
+			for Line in Lines {
+				add_corner Line, (int)I
+			}
+		}
+	}
+
+	void add_corner const str &Line, int I {
+		neighbour Corner = beside Line, Joins[I].Map
+		Corner.move_by Joins[I].Col, Joins[I].Row
+		if join_named(Corner.Area) < 0 && Corner.Area != Area {
+			Corner.Corner = true
+			add_tiles_of Corner.Map, Corner.Col, Corner.Row
+			Joins.add Corner
+		}
+	}
+
+	// which of Joins that area is (-1: none)
+	int join_named const str &Place const {
+		for I in Joins.length {
+			if Joins[I].Area == Place {
+				return (int)I
+			}
+		}
+		return -1
+	}
+
+	// which of Joins has the tile C, R (-1: none)
+	int join_at int C, int R const {
+		for I in Joins.length {
+			if Joins[I].has C, R {
+				return (int)I
+			}
+		}
+		return -1
+	}
+
+	// ==== 120.3  The nearest edge =========================================
+
+	// a column (or row) beyond a map's edges, moved back to its edge: Start,
+	// and Count of them
+	int edge_of int At, int Start, int Count const {
+		if At < Start {
+			return Start
+		} else if At >= Start + Count {
+			return Start + Count - 1
+		}
+		return At
+	}
+
+	// ==== 109.14  Trees all round ========================================
+
+	// round this area and each next door, RING deep, wherever no area is:
+	// the woods go on (and outside, only there: there's no more to see)
+	void add_rings {
+		if Inside {
+			return
+		}
+		lookup str bool Planted
+		add_ring 0, 0, (int)Map[0].length, (int)Map.length, Planted
+		for I in Joins.length {
+			add_ring Joins[I].Col, Joins[I].Row, (int)Joins[I].Map[0].length, (int)Joins[I].Map.length, Planted
+		}
+	}
+
+	void add_ring int Left, int Top, int Wide, int Deep, lookup str bool &Planted {
+		for R in Top - RING to Top + Deep + RING - 1 {
+			for C in Left - RING to Left + Wide + RING - 1 {
+				str Place = C.text + "," + R.text
+				if !on_map(C, R) && join_at(C, R) < 0 && !Planted.contains(Place) {
+					Planted[Place] = true
+					if tile_at(edge_of(C, Left, Wide), edge_of(R, Top, Deep)) == '~' {
+						add_water C, R      // (120) the sea goes on
+					} else {
+						add_cone 0.45, 1.3, "#2f7d32", C, 0.65, R   // (a tree, all leaves: there are many)
+					}
+				}
+			}
+		}
+	}
+
+	bool on_map int C, int R const {
+		return R >= 0 && R < Map.length && C >= 0 && C < Map[R].length
+	}
+
+	// ==== 108.16  A new walker: shapes joined to their body  (changed in 110)
+
+	// on their tile, their feet on the ground, dressed as who they are
+	walker new_walker const str &Who, int C, int R, const str &Facing {
+		walker Someone
+		Someone.Who = Who.copy
+		Someone.Col = C
+		Someone.Row = R
+		Someone.Body = add_box 0.4, 0.45, 0.25, clothes_of(Who), C, 0.575, R
+		Someone.Left = add_box 0.15, 0.35, 0.15, legs_of(Who), C - 0.1, 0.175, R
+		Someone.Right = add_box 0.15, 0.35, 0.15, legs_of(Who), C + 0.1, 0.175, R
+		Someone.Left.join Someone.Body
+		Someone.Right.join Someone.Body
+		world.shape Head = add_ball 0.17, "#f1c27d", C, 0.97, R
+		Head.join Someone.Body
+		dress Someone.Body, Who, C, R
+		Someone.face Facing
+		return Someone
+	}
+
+	// ==== 110.4  Dressed as who they are  (changed in 113) ===============
+
+	str clothes_of const str &Who const {
+		if Who == "elder" {
+			return "#7b5e57"            // a brown robe
+		} else if Who == "baker" {
+			return "white"
+		} else if Who == "rival" {
+			return "#2e7d32"            // (113) a green jacket
+		}
+		return "royalblue"
+	}
+
+	str legs_of const str &Who const {
+		if Who == "elder" {
+			return "#7b5e57"            // (the robe, down to his feet)
+		} else if Who == "baker" {
+			return "#dddddd"
+		} else if Who == "rival" {
+			return "#5d4037"
+		}
+		return "#333344"
+	}
+
+	// what's on their head (and the elder's chin), joined to their body;
+	// the front of a walker, facing up the map, is towards -z
+	void dress const world.shape &Body, const str &Who, int C, int R {
+		if Who == "elder" {
+			world.shape Hair = add_ball 0.18, "#eeeeee", C, 1.0, R + 0.02
+			Hair.set_size 0.36, 0.25, 0.36
+			Hair.join Body
+			world.shape Beard = add_cone 0.12, 0.25, "#eeeeee", C, 0.82, R - 0.12
+			Beard.set_tilt 180              // (its point down)
+			Beard.join Body
+		} else if Who == "baker" {
+			world.shape Hat = add_cylinder 0.15, 0.3, "white", C, 1.25, R
+			Hat.join Body
+		} else if Who == "rival" {
+			spiky_hair Body, C, R           // (113)
+		} else {
+			world.shape Cap = add_cylinder 0.19, 0.1, "#c62828", C, 1.15, R
+			Cap.join Body
+		}
+	}
+
+	// ==== 113.10  Spiky hair =============================================
+
+	// Rufus's: three cones, leaning out, and one at the back
+	void spiky_hair const world.shape &Body, int C, int R {
+		for I in 3 {
+			world.shape Spike = add_cone 0.08, 0.2, "#6d4c41", C + (I - 1) * 0.09, 1.15, R + 0.03
+			Spike.set_roll (1 - I) * 25
+			Spike.join Body
+		}
+		world.shape Back = add_cone 0.09, 0.2, "#6d4c41", C, 1.1, R + 0.1
+		Back.set_tilt -35
+		Back.join Body
+	}
+
+	// ==== 108.17  The camera  (changed in 111, 115) =======================
+
+	// above and behind the hero, looking down at them, as in FireRed; (111)
+	// as high again as the ground they're on (not bobbing up in a hop)
+	void look_at_hero {
+		move_camera_to Hero.Body.x, camera_up + Hero.Ground, Hero.Body.z + camera_back
+		point_camera_at Hero.Body.x, 0.5 + Hero.Ground, Hero.Body.z
+	}
+
+	// ==== 115.7  Near, or far ============================================
+
+	// how high above the hero the camera is, and how far behind (115.2)
+	double camera_up const {
+		if Far {
+			return 10
+		}
+		return 7
+	}
+
+	double camera_back const {
+		if Far {
+			return 7.5
+		}
+		return 5
+	}
+
+	// ==== 109.15  The light  (changed in 117) ===========================
+
+	// all of it at Amount (1: as bright as the time of day; 0: dark)
+	void light double Amount {
+		Fade = Amount
+		shine
+	}
+
+	// ==== 117.5  The sun, the sky and the light all round  (changed in 118, 119)
+
+	// from the time of day, and the rain: the sun (or at night the moon)
+	// where it is, its color, the light all round, and the sky; inside, a
+	// lamp's light, day and night, and no sky
+	void shine {
+		if Dark {
+			set_sun_color "black"       // (118) only the lamps
+			set_ambient rgb(36, 34, 48, Fade)
+			set_background "black"
+			return
+		} else if Inside {
+			set_sun_color rgb(217, 217, 204, Fade)
+			set_ambient rgb(89, 89, 102, Fade)
+			set_background "black"
+			return
+		}
+		double Up = sun_height
+		double Day = daylight
+		place_sun Up
+		tint Sun = blend rgb_of(235, 140, 80), rgb_of(217, 217, 204), Up * 3  // golden low down
+		Sun = blend rgb_of(0, 0, 0), Sun, Up / 0.12          // going down, fading out
+		if Up < 0 {
+			Sun = blend rgb_of(0, 0, 0), rgb_of(58, 80, 160), -Up / 0.12   // the moon, coming up
+		}
+		Sun = blend Sun, rgb_of(0, 0, 0), 0.65 * Wet
+		tint All = blend rgb_of(22, 34, 86), rgb_of(89, 89, 102), Day
+		All = blend All, rgb_of(0, 0, 0), 0.2 * Wet
+		tint Sky = blend rgb_of(250, 150, 110), rgb_of(135, 206, 235), Day * 2 - 1
+		if Day < 0.5 {
+			Sky = blend rgb_of(10, 16, 42), rgb_of(250, 150, 110), Day * 2
+		}
+		Sky = blend Sky, blend(rgb_of(20, 24, 32), rgb_of(120, 126, 138), Day), 0.75 * Wet
+		All = blend All, rgb_of(230, 235, 255), 0.8 * Flash    // (119) lightning
+		Sky = blend Sky, rgb_of(230, 235, 255), 0.8 * Flash
+		set_sun_color css(Sun, Fade)
+		set_ambient css(All, Fade)
+		set_background css(Sky, Fade)
+		light_windows 1 - Day
+	}
+
+	// ==== 117.6  How high the sun is =====================================
+
+	// 1 at noon, 0 at sunrise and sunset, -1 at midnight
+	double sun_height const {
+		return sin 2 * PI * (Story.Time - 0.25)
+	}
+
+	// and how much of the day's light there is: none a little after
+	// sunset, all of it once the sun's a little way up
+	double daylight const {
+		double Day = (sun_height + 0.1) / 0.4
+		if Day < 0 {
+			return 0
+		} else if Day > 1 {
+			return 1
+		}
+		return Day
+	}
+
+	// ==== 117.7  Where the sun shines from ===============================
+
+	// rising in the east (+x), setting in the west, a little behind the
+	// camera; never quite flat (the shadows would go on for ever); at
+	// night, the moon, across the sky from it
+	void place_sun double Up {
+		double A = 2 * PI * (Story.Time - 0.25)
+		double Down = -sin(A)
+		double Across = -cos(A)
+		if Up < 0 {
+			Down = sin A
+			Across = cos A
+		}
+		if Down > -0.15 {
+			Down = -0.15
+		}
+		set_sun Across, Down, -0.35
+	}
+
+	// ==== 117.8  A color, written ========================================
+
+	// "rgb(217, 217, 204)", that much of it
+	str css const tint &C, double Amount const {
+		int Red = (int)(C.Red + 0.5)
+		int Green = (int)(C.Green + 0.5)
+		int Blue = (int)(C.Blue + 0.5)
+		return rgb Red, Green, Blue, Amount
+	}
+
+	// "rgb(217, 217, 204)", each part that much of itself
+	str rgb int Red, int Green, int Blue, double Amount const {
+		return "rgb(" + part(Red, Amount).text + ", " + part(Green, Amount).text + ", " + part(Blue, Amount).text + ")"
+	}
+
+	// that much of a color's part, to the nearest whole number
+	int part int Of, double Amount const {
+		return (int)(Of * Amount + 0.5)
+	}
+
+	// ==== 108.18  Every frame  (changed in 109, 110, 112, 113, 114, 115, 116, 117, 118, 119, 121)
+
+	void step {
+		if Mode == BATTLE {
+			battle_step
+		} else if Mode == FADING_OUT || Mode == FADING_IN {
+			fade_step
+		} else if Mode == NOTICED {
+			notice_step                 // (113)
+		} else if Mode == CHOOSING {
+			choose                      // (114)
+		} else if Mode == READING {
+			if key_press "space" {
+				Mode = PLAYING
+				Words.set_text ""
+				Shade.set_text ""
+			}
+		} else if Challenge {
+			challenge_step              // (113)
+		} else if WalkingOff && !People[Leaver].stepping {
+			step_away                   // (113)
+		} else if Hero.stepping {
+			if Hero.StepsLeft == Hero.Frames && (Hero.Dx != 0 || Hero.Dy != 0) {
+				keep_footstep           // (121) a move begun: kept for Ember
+			}
+			if Hero.keep_stepping {
+				arrived
+			}
+		} else {
+			walk_or_look
+		}
+		if Mode != FADING_OUT {
+			move_people
+		}
+		turn_items                      // (114)
+		move_world                      // (116)
+		spread_ripples
+		if !OnTitle {
+			pass_time                   // (117)
+			weather
+			hear_rain                   // (119)
+			storm
+		}
+		shine
+		bob
+		if Dark {
+			in_the_dark                 // (118)
+		}
+		fly_bats                        // (120)
+		turn_beam
+		hear_surf
+		if frame - NameFrom == NAME_FRAMES {
+			Name.set_text ""
+			NameShade.set_text ""
+		}
+		if OnTitle {
+			circle_town                 // (115)
+		} else if Mode != BATTLE {
+			look_at_hero
+		}
+	}
+
+	// ==== 110.5  People walking  (changed in 111, 113, 121) ==============
+
+	// each step they're in, a frame on; and now and then, a new one (113:
+	// only while the hero's walking about)
+	void move_people {
+		for I in People.length {
+			if People[I].stepping {
+				People[I].keep_stepping
+			}
+		}
+		follow_hero                     // (121)
+		if frame % 75 == 0 && Mode == PLAYING {
+			wander
+		}
+	}
+
+	// a step a random way, for one in three of those who wander, to
+	// anywhere free, but not through a way out or over the edge (they
+	// live here); (111) and on the ground
+	void wander {
+		list str Ways = {"up", "down", "left", "right"}
+		for I in People.length {
+			if People[I].Wanders && !People[I].stepping && random(1, 3) == 1 {
+				str Way = Ways[random(0, 3)].copy
+				int C = People[I].Col + across_of(Way)
+				int R = People[I].Row + down_of(Way)
+				if on_map(C, R) && is_free(C, R) && thing_at("way", C, R) == "" && level_at(C, R) == 0 && !follower_at(C, R) {
+					People[I].step Way, true    // ((121) nor onto Ember)
+				}
+			}
+		}
+	}
+
+	// ==== 109.16  Each frame of a fade ===================================
+
+	// the light going down, then (dark) the next area built; or coming up,
+	// then walking on
+	void fade_step {
+		FadeFrame++
+		double Done = FadeFrame / (double)FADE_FRAMES
+		if Mode == FADING_OUT {
+			light 1 - Done
+		} else {
+			light Done
+		}
+		if FadeFrame < FADE_FRAMES {
+			return
+		} else if Mode == FADING_OUT {
+			start_at NextArea.copy, NextCol, NextRow
+		} else {
+			Mode = PLAYING
+		}
+	}
+
+	// ==== 109.17  On the next tile  (changed in 111, 112, 113, 116, 119, 121) ===
+
+	// (111) up high now, or down again? Over the edge, into the area next
+	// door? Or a way out starts here? (112) Or something in the grass?
+	// (113) Or has someone noticed them?
+	void arrived {
+		println "at", Hero.Col, Hero.Row
+		settle_level
+		settle_swimming                 // (116)
+		meet_in_grass
+		look_out
+		str Way = thing_at "way", Hero.Col, Hero.Row
+		if !on_map(Hero.Col, Hero.Row) {
+			cross_over
+		} else if Way != "" {
+			leave_by Way
+		}
+	}
+
+	// into the area next door: it's the area now, with no fade, and the
+	// hero on the same tile, counted on its map, so the camera doesn't jump
+	void cross_over {
+		int J = join_at Hero.Col, Hero.Row
+		str Place = Joins[J].Area.copy
+		int C = Hero.Col - Joins[J].Col
+		int R = Hero.Row - Joins[J].Row
+		OriginX += Joins[J].Col         // (116) the area next door's place in the world
+		OriginZ += Joins[J].Row
+		keep_follower Joins[J].Col, Joins[J].Row   // (121)
+		enter Place, C, R
+	}
+
+	// "bakery 6,7": into the bakery, on its tile 6,7, once it's dark
+	void leave_by const str &Way {
+		list str To = Way.split " "
+		NextArea = To[0].copy
+		NextCol = To[1].split(",")[0].to_int
+		NextRow = To[1].split(",")[1].to_int
+		effect "door"                   // (119)
+		Mode = FADING_OUT
+		FadeFrame = 0
+	}
+
+	// ==== 108.19  On a tile: walk, or look  (changed in 114, 115) ========
+
+	// an arrow key held down starts the next step; Space looks ahead;
+	// (114) S saves; (115) Escape opens the menu
+	void walk_or_look {
+		str Way = held_way
+		if Way != "" {
+			arrow_held Way
+		} else if key_press "space" {
+			look_ahead
+		} else if key_press "s" {
+			save_game
+		} else if key_press "escape" {
+			open_menu                   // (115)
+		}
+	}
+
+	// ==== 108.20  Turning, or walking ====================================
+
+	// a new way only turns the hero; held a moment longer, they walk
+	void arrow_held const str &Way {
+		if Way != Hero.Facing {
+			Hero.face Way
+			Turned = Way.copy
+		} else if Way != Turned || key_press(Way) || key_held_for(Way) >= TURN_TIME {
+			walk Way
+		}
+	}
+
+	// the way an arrow key held down points ("": none)
+	str held_way const {
+		list str Ways = {"up", "down", "left", "right"}
+		for Way in Ways {
+			if key_hold Way {
+				return Way.copy
+			}
+		}
+		return ""
+	}
+
+	// ==== 108.21  Walking  (changed in 109, 110, 111, 114, 116, 118, 119) ===
+
+	// onto the next tile if it's free, else a step on the spot; (111) over
+	// a ledge, a hop; and up or down, to the next tile's height
+	void walk const str &Way {
+		if hops_over Way {
+			Hero.hop Way
+			effect "hop"                // (119)
+			println "hopped", Way, "over a ledge"
+			return
+		}
+		int C = Hero.Col + across_of(Way)
+		int R = Hero.Row + down_of(Way)
+		bool Free = can_go Way
+		Hero.step Way, Free
+		if Free {
+			Hero.To = height_at C, R, Hero.Level
+			Hero.Edge = edge_height Way, C, R
+			if Swimming {
+				ripple Hero.Body.x, Hero.Body.z     // (116)
+				effect "stroke"         // (119)
+			} else {
+				effect "step"
+			}
+		} else {
+			effect "bump"
+			println "bump", Way
+		}
+	}
+
+	// ==== 111.6  At the hero's height  (changed in 116) ==================
+
+	// the next tile that way: free, and at the hero's height; or stairs, or
+	// a bridge (on it from up high, under it from below); or anywhere free
+	// from the stairs, up or down
+	bool can_go const str &Way const {
+		int C = Hero.Col + across_of(Way)
+		int R = Hero.Row + down_of(Way)
+		int To = level_at C, R
+		if Swimming && water_at(C, R) && !someone_at(C, R) {
+			return true                 // (116) on through the water
+		}
+		return is_free(C, R) && (To < 0 || To == Hero.Level || tile_at(Hero.Col, Hero.Row) == 'z')
+	}
+
+	// ==== 111.7  The tile at C, R ========================================
+
+	// on this area's map, or the area next door's beyond its edge; anywhere
+	// else, as if grass
+	char tile_at int C, int R const {
+		if on_map C, R {
+			return Map[R][C]
+		}
+		int J = join_at C, R
+		if J >= 0 {
+			return Joins[J].tile C, R
+		}
+		return '.'
+	}
+
+	// ==== 111.8  How high a tile is  (changed in 116) ====================
+
+	// 1 high ground; 0 the ground; -1 stairs or a bridge, where the hero
+	// stays as they were (on the stairs, part way up; on a bridge, over
+	// it, or under it)
+	int level_at int C, int R const {
+		char Tile = tile_at C, R
+		if Tile == 'z' || Tile == 'B' || Tile == 'P' {
+			return -1
+		}
+		return (int)(Tile == 'h')
+	}
+
+	// and how high someone's feet are there, at that level: on the high
+	// ground, its top; on the stairs, half way up; on a bridge, its top,
+	// or the ground under it
+	double height_at int C, int R, int Level const {
+		char Tile = tile_at C, R
+		if Tile == 'h' {
+			return HIGH
+		} else if Tile == 'K' {
+			return PIER                 // (120) on the boards
+		} else if Tile == '~' {
+			return DEEP                 // (116) in it, swimming
+		} else if Tile == 'z' {
+			return HIGH / 2
+		} else if Tile == 'B' || Tile == 'P' {
+			return HIGH * Level
+		}
+		return 0
+	}
+
+	// ==== 111.12  The edge between two tiles  (changed in 116) ===========
+
+	// how high the hero's feet are as they step from their tile onto the
+	// next: the stairs climb north, so their top edge is the high ground's
+	// height, and their bottom edge the ground's; anywhere else, half way
+	double edge_height const str &Way, int C, int R const {
+		char Here = tile_at Hero.Col, Hero.Row
+		char There = tile_at C, R
+		if (Here == 'z' && Way == "up") || (There == 'z' && Way == "down") {
+			return HIGH
+		} else if (Here == 'z' && Way == "down") || (There == 'z' && Way == "up") {
+			return 0
+		} else if Swimming && (Here == '~') != (There == '~') {
+			return 0                    // (116) the shore: climbing out, or in
+		}
+		return (Hero.From + Hero.To) / 2
+	}
+
+	// ==== 111.9  Up high, or not =========================================
+
+	// on high ground, the hero's up high; on the ground, they're down; on
+	// stairs or a bridge, as they were
+	void settle_level {
+		int Here = level_at Hero.Col, Hero.Row
+		if Here >= 0 && Here != Hero.Level {
+			Hero.Level = Here
+			if Here == 1 {
+				println "up high"
+			} else {
+				println "down again"
+			}
+		}
+	}
+
+	// ==== 111.10  Arriving at a height  (changed in 116) =================
+
+	// (in a new area, or through a door) at the height of the tile they're
+	// on: on a bridge, over it
+	void stand_on_tile {
+		Hero.Level = (int)(level_at(Hero.Col, Hero.Row) != 0)
+		Hero.stand_at height_at(Hero.Col, Hero.Row, Hero.Level)
+		Swimming = water_at Hero.Col, Hero.Row   // (116) saved while swimming
+	}
+
+	// ==== 111.11  A ledge ahead ==========================================
+
+	// walking down into one, on the ground, with a free tile beyond it: the
+	// hero hops over it (from below, it's in the way)
+	bool hops_over const str &Way const {
+		int C = Hero.Col + across_of(Way)
+		int R = Hero.Row + down_of(Way)
+		int Beyond = R + down_of(Way)
+		return Way == "down" && Hero.Level == 0 && tile_at(C, R) == 'v' && is_free(C, Beyond) && level_at(C, Beyond) == 0
+	}
+
+	// a tile on the map, or in an area next door (not a corner), that
+	// isn't in the way, with nobody on it (or stepping onto it); a door, if
+	// a way starts there
+	bool is_free int C, int R const {
+		if someone_at C, R {
+			return false
+		}
+		if on_map C, R {
+			if thing_at("way", C, R) != "" {
+				return true             // (118) a door, or a cave's mouth
+			} else if Map[R][C] == 'D' {
+				return false
+			}
+			return !BLOCKING.contains(Map[R][C]) && item_at(C, R) == ""   // (114) nor a thing
+		}
+		int J = join_at C, R
+		return J >= 0 && !Joins[J].Corner && !BLOCKING.contains(Joins[J].tile(C, R))
+	}
+
+	// ==== 112.20  Tall grass =============================================
+
+	// each step into it: now and then, something's there (a mouse, or one
+	// time in three, a crow)
+	void meet_in_grass {
+		if Mode == PLAYING && tile_at(Hero.Col, Hero.Row) == 'w' && random(1, MEETING) == 1 {
+			start_battle random(1, 3) == 1
+		}
+	}
+
+	// ==== 112.21  A battle begins  (changed in 113) ======================
+
+	// the hero turns to where there's room; there, the one met, still
+	// under the grass, and Ember, ready to jump out; and the camera starts
+	// down
+	void start_battle bool Crow {
+		Hero.face battle_way
+		begin_battle wild_one(Crow), "", 2.1
+	}
+
+	// ==== 113.11  A battle with someone, or something  (changed in 116, 119, 121)
+
+	// Other is Whose ("": nobody's), Ahead of the hero (Ember, at her
+	// level, beside them)
+	void begin_battle critter Other, const str &Whose, double Ahead {
+		Foe = Other
+		Owner = Whose.copy
+		music "battle"                  // (119)
+		show_follower false             // (121) she's the one battling
+		Ours = fox ember_level, Story.Wounds
+		double A = angle_of(Hero.Facing) * PI / 180
+		double Fx = -sin(A)                    // (ahead, the way the hero faces)
+		double Fz = -cos(A)
+		double Rx = cos A                      // (and to their right)
+		double Rz = -sin(A)
+		double G = Hero.Ground
+		double Across = 0.75 - 0.3 * (Ahead + 1)   // (seen from the camera, as far left)
+		double X = Hero.Body.x + Ahead * Fx + Across * Rx
+		double Z = Hero.Body.z + Ahead * Fz + Across * Rz
+		str Kind = Foe.Name.copy
+		Foe.put_out made_of(Kind, X, G, Z), X, Z, G, angle_of(opposite(Hero.Facing))
+		X = Hero.Body.x + 0.6 * Fx + 0.9 * Rx
+		Z = Hero.Body.z + 0.6 * Fz + 0.9 * Rz
+		Ours.put_out made_of("Ember", X, G, Z), X, Z, G, angle_of(Hero.Facing)
+		Foe.BarBack = bar_back
+		Foe.Bar = bar
+		Ours.BarBack = bar_back
+		Ours.Bar = bar
+		flatten_grass true
+		Mode = BATTLE
+		ZoomFrame = 0
+		Leaving = false
+		Over = false
+		Lost = false
+		if Owner == "" {
+			println "something in the grass!"
+		} else {
+			println "a battle with", Owner
+		}
+	}
+
+	// ==== 112.22  Grass flattened ========================================
+
+	// the tall grass between Ember and the other (and round them) out of
+	// the way while they battle; or (Flat false) back again
+	void flatten_grass bool Flat {
+		for Blade in shapes_in "grass" {
+			Blade.set_visible !Flat || !in_the_way(Blade.x, Blade.z)
+		}
+	}
+
+	// near the line from Ember to the other, or the camera behind her
+	bool in_the_way double X, double Z const {
+		double Ax = Ours.X - 1.2 * (Foe.X - Ours.X) / 2
+		double Az = Ours.Z - 1.2 * (Foe.Z - Ours.Z) / 2
+		double Lx = Foe.X - Ax
+		double Lz = Foe.Z - Az
+		double T = ((X - Ax) * Lx + (Z - Az) * Lz) / (Lx * Lx + Lz * Lz)
+		if T < 0 {
+			T = 0
+		} else if T > 1 {
+			T = 1
+		}
+		double Dx = X - (Ax + T * Lx)
+		double Dz = Z - (Az + T * Lz)
+		return Dx * Dx + Dz * Dz < 0.8 * 0.8
+	}
+
+	// ==== 112.23  Room for a battle ======================================
+
+	// the way the hero faces, if three tiles of ground are clear that way;
+	// else the first way that has them
+	str battle_way const {
+		list str Ways = {"up", "down", "left", "right"}
+		if room_for Hero.Facing {
+			return Hero.Facing.copy
+		}
+		for Way in Ways {
+			if room_for Way {
+				return Way.copy
+			}
+		}
+		return Hero.Facing.copy
+	}
+
+	bool room_for const str &Way const {
+		for I in 3 {
+			int C = Hero.Col + across_of(Way) * (I + 1)
+			int R = Hero.Row + down_of(Way) * (I + 1)
+			if BLOCKING.contains(tile_at(C, R)) || level_at(C, R) != 0 {
+				return false
+			}
+		}
+		return true
+	}
+
+	// ==== 112.24  A critter, made  (changed in 113) ======================
+
+	// its shapes, made facing up the map (-z): its body first
+	list world.shape made_of const str &Kind, double X, double G, double Z {
+		if Kind == "Ember" {
+			return make_fox X, G, Z
+		} else if Kind == "field mouse" {
+			return make_mouse X, G, Z
+		} else if Kind == "Bruno" {
+			return make_pup X, G, Z     // (113)
+		}
+		return make_crow X, G, Z
+	}
+
+	// ==== 112.25  Its bar ================================================
+
+	// a health bar, and the dark behind it (each placed every frame)
+	world.shape bar {
+		return add_box BAR, 0.06, 0.04, "#3cc453", 0, -5, 0
+	}
+
+	world.shape bar_back {
+		return add_box BAR + 0.04, 0.1, 0.02, "#333333", 0, -5, 0
+	}
+
+	// ==== 112.26  A fox, made ============================================
+
+	// orange, with a white chest, pointed ears and a bushy tail, tipped white
+	list world.shape make_fox double X, double G, double Z {
+		list world.shape All = {add_box(0.22, 0.2, 0.42, "#e8762c", X, G + 0.25, Z)}
+		join_on All, add_ball(0.13, "#e8762c", X, G + 0.42, Z - 0.24)
+		join_on All, add_cone(0.06, 0.12, "white", X, G + 0.38, Z - 0.36)
+		join_on All, add_box(0.16, 0.12, 0.04, "white", X, G + 0.27, Z - 0.21)
+		for Side in 2 {
+			double Out = Side * 0.14 - 0.07
+			join_on All, add_cone(0.05, 0.13, "#c45a1c", X + Out, G + 0.57, Z - 0.22)
+			join_on All, add_ball(0.025, "black", X + Out * 0.8, G + 0.46, Z - 0.35)
+			join_on All, add_box(0.06, 0.15, 0.06, "#4a2a14", X + Out, G + 0.075, Z - 0.15)
+			join_on All, add_box(0.06, 0.15, 0.06, "#4a2a14", X + Out, G + 0.075, Z + 0.15)
+		}
+		world.shape Tail = add_ball 0.1, "#e8762c", X, G + 0.36, Z + 0.32
+		Tail.set_size 0.14, 0.14, 0.34
+		Tail.set_tilt -35               // (up behind her)
+		join_on All, Tail
+		join_on All, add_ball(0.05, "white", X, G + 0.47, Z + 0.47)
+		return All
+	}
+
+	// ==== 112.27  A field mouse, made ====================================
+
+	// small and grey, with round pink ears and a long thin tail
+	list world.shape make_mouse double X, double G, double Z {
+		world.shape Body = add_ball 0.15, "#9a948c", X, G + 0.13, Z
+		Body.set_size 0.26, 0.22, 0.34
+		list world.shape All = {Body}
+		join_on All, add_ball(0.09, "#9a948c", X, G + 0.18, Z - 0.18)
+		join_on All, add_ball(0.025, "#f2a0b0", X, G + 0.18, Z - 0.27)
+		for Side in 2 {
+			double Out = Side * 0.14 - 0.07
+			world.shape Ear = add_ball 0.05, "#f2a0b0", X + Out, G + 0.28, Z - 0.15
+			Ear.set_size 0.1, 0.1, 0.03
+			join_on All, Ear
+			join_on All, add_ball(0.018, "black", X + Out * 0.6, G + 0.21, Z - 0.25)
+		}
+		world.shape Tail = add_cylinder 0.012, 0.32, "#f2a0b0", X, G + 0.06, Z + 0.3
+		Tail.set_tilt 80
+		join_on All, Tail
+		return All
+	}
+
+	// ==== 112.28  A hill crow, made ======================================
+
+	// black, with a yellow beak, wings at its sides and thin orange legs
+	list world.shape make_crow double X, double G, double Z {
+		world.shape Body = add_ball 0.15, "#22222a", X, G + 0.32, Z
+		Body.set_size 0.26, 0.26, 0.36
+		list world.shape All = {Body}
+		join_on All, add_ball(0.1, "#22222a", X, G + 0.48, Z - 0.15)
+		world.shape Beak = add_cone 0.04, 0.14, "#f2c230", X, G + 0.47, Z - 0.3
+		Beak.set_tilt -90                       // (its point ahead)
+		join_on All, Beak
+		for Side in 2 {
+			double Out = Side * 2 - 1
+			world.shape Wing = add_box 0.04, 0.18, 0.3, "#3a3a46", X + Out * 0.14, G + 0.33, Z + 0.03
+			Wing.set_roll Out * 15
+			join_on All, Wing
+			join_on All, add_ball(0.02, "white", X + Out * 0.06, G + 0.52, Z - 0.22)
+			join_on All, add_cylinder(0.015, 0.2, "#e08a2c", X + Out * 0.06, G + 0.1, Z)
+		}
+		return All
+	}
+
+	// ==== 113.12  A pup, made ============================================
+
+	// brown, with floppy ears, a dark snout and a tail up behind
+	list world.shape make_pup double X, double G, double Z {
+		list world.shape All = {add_box(0.24, 0.22, 0.42, "#8d6e63", X, G + 0.27, Z)}
+		join_on All, add_ball(0.14, "#8d6e63", X, G + 0.45, Z - 0.25)
+		join_on All, add_box(0.1, 0.08, 0.12, "#6d4c41", X, G + 0.41, Z - 0.39)
+		join_on All, add_ball(0.03, "black", X, G + 0.44, Z - 0.45)
+		for Side in 2 {
+			double Out = Side * 2 - 1
+			world.shape Ear = add_box 0.05, 0.15, 0.09, "#5d4037", X + Out * 0.13, G + 0.46, Z - 0.24
+			Ear.set_roll Out * -20
+			join_on All, Ear
+			join_on All, add_ball(0.025, "black", X + Out * 0.06, G + 0.5, Z - 0.37)
+			join_on All, add_box(0.07, 0.17, 0.07, "#5d4037", X + Out * 0.08, G + 0.085, Z - 0.15)
+			join_on All, add_box(0.07, 0.17, 0.07, "#5d4037", X + Out * 0.08, G + 0.085, Z + 0.15)
+		}
+		world.shape Tail = add_cylinder 0.025, 0.22, "#8d6e63", X, G + 0.42, Z + 0.27
+		Tail.set_tilt -40               // (up behind it)
+		join_on All, Tail
+		return All
+	}
+
+	// ==== 112.29  Each frame of a battle =================================
+
+	// the critters moving, and their bars; the camera coming down (or
+	// going back up); then words to read, a hit to land, a menu, or
+	// what's said next
+	void battle_step {
+		Ours.animate
+		Foe.animate
+		double View = angle_of Hero.Facing
+		Ours.show_bar View
+		Foe.show_bar View
+		show_lines
+		if Leaving {
+			zoom_out
+		} else if ZoomFrame < ZOOM_FRAMES {
+			zoom_in
+		} else if Reading {
+			if key_press "space" {
+				Reading = false
+				Words.set_text ""
+				Shade.set_text ""
+			}
+		} else if Hit != 0 {
+			land_hit
+		} else if Ours.busy || Foe.busy || !Ours.caught_up || !Foe.caught_up {
+			return
+		} else if Menu != "" {
+			choose
+		} else {
+			next_beat
+		}
+	}
+
+	// ==== 112.30  Down into the world, and back up  (changed in 113, 115, 116, 119, 121)
+
+	// a frame further down; once there, the critter pops up, and says so
+	void zoom_in {
+		ZoomFrame++
+		battle_camera ZoomFrame / (double)ZOOM_FRAMES
+		if ZoomFrame == ZOOM_FRAMES {
+			Foe.start RISING
+			beat appearing, 0, 0
+			beat "Go, " + Ours.Name + "!", 3, 0
+		}
+	}
+
+	// a frame further up; once there, walking about again
+	void zoom_out {
+		ZoomFrame--
+		battle_camera ZoomFrame / (double)ZOOM_FRAMES
+		if ZoomFrame == 0 {
+			Ours.remove
+			Foe.remove
+			flatten_grass false
+			OursLine.set_text ""
+			FoeLine.set_text ""
+			Mode = PLAYING
+			area_music                  // (119)
+			show_follower !Waiting      // (121) following again
+			println "the battle is over"
+			WalkingOff = Owner != "" && Area != "coast"   // (113) Rufus goes on his way; (120) not here
+			if Owner != "" && Area == "coast" {
+				Story.Answers["rematch"] = "done"
+			}
+		}
+	}
+
+	// the camera, Done of the way (0 to 1) from where it is as the hero
+	// walks to low behind the hero, over their right shoulder, looking
+	// between Ember and the other; eased, so it starts and stops gently
+	void battle_camera double Done {
+		double T = Done * Done * (3 - 2 * Done)
+		double A = angle_of(Hero.Facing) * PI / 180
+		double Fx = -sin(A)
+		double Fz = -cos(A)
+		double Rx = cos A
+		double Rz = -sin(A)
+		double X = Hero.Body.x
+		double Z = Hero.Body.z
+		double G = Hero.Ground
+		move_camera_to mix(X, X - 1.0 * Fx + 0.75 * Rx, T), mix(camera_up + G, 1.2 + G, T), mix(Z + camera_back, Z - 1.0 * Fz + 0.75 * Rz, T)
+		point_camera_at mix(X, X + 1.5 * Fx + 0.3 * Rx, T), mix(0.5 + G, 0.3 + G, T), mix(Z, Z + 1.5 * Fz + 0.3 * Rz, T)
+	}
+
+	// From, To of the way to To
+	double mix double From, double To, double Done const {
+		return From + (To - From) * Done
+	}
+
+	// ==== 113.13  Who it is ==============================================
+
+	// "The wild field mouse", or "Rufus's Bruno"
+	str foe_name const {
+		if Owner == "" {
+			return "The wild " + Foe.Name
+		}
+		return Owner + "'s " + Foe.Name
+	}
+
+	str appearing const {
+		if Owner == "" {
+			return "A wild " + Foe.Name + " appeared!"
+		}
+		return Owner + " sent out " + Foe.Name + "!"
+	}
+
+	// ==== 112.31  Saying, in turn ========================================
+
+	// words to say; then what happens (1 the foe is hit, 2 Ember is; 3
+	// Ember comes out; 4 the foe faints, 5 Ember does; 0 nothing), and
+	// the health it leaves
+	void beat const str &Said, int Then, int Health {
+		Beats.add Said.copy
+		Hits.add Then
+		HealthAfter.add Health
+	}
+
+	// the next words (and whoever hits, jumping at the other as they
+	// show), and what happens after them; none left: the turn's over
+	void next_beat {
+		if Beats.length == 0 {
+			turn_over
+			return
+		}
+		tell Beats[0].copy
+		Hit = Hits[0]
+		HitTo = HealthAfter[0]
+		Beats.remove_at 0
+		Hits.remove_at 0
+		HealthAfter.remove_at 0
+		if Hit == 1 {
+			Ours.start LUNGING
+		} else if Hit == 2 {
+			Foe.start LUNGING
+		}
+	}
+
+	// words over the world, until Space (113: wrapped)
+	void tell const str &Said {
+		show_words Said
+		Reading = true
+		println "said:", Said
+	}
+
+	// ==== 112.32  What happens  (changed in 119) =========================
+
+	// once the words have gone: a hit shakes whoever's hit, and their bar
+	// falls; Ember jumps out; or someone faints
+	void land_hit {
+		if Hit == 1 {
+			Foe.Goal = HitTo
+			Foe.start SHAKING
+			effect "boom"               // (119)
+		} else if Hit == 2 {
+			Ours.Goal = HitTo
+			Ours.start SHAKING
+			effect "boom"
+		} else if Hit == 3 {
+			Ours.start RISING
+		} else if Hit == 4 {
+			Foe.start FAINTING
+		} else if Hit == 5 {
+			Ours.start FAINTING
+		}
+		Hit = 0
+	}
+
+	// ==== 112.33  How each is doing ======================================
+
+	// "Ember  Lv5  21/21", once they're out
+	void show_lines {
+		OursLine.set_text line_of(Ours)
+		FoeLine.set_text line_of(Foe)
+	}
+
+	str line_of const critter &Who const {
+		if !Who.Out {
+			return ""
+		}
+		return Who.Name + "  Lv" + Who.Level.text + "  " + ((int)(Who.Shown + 0.99)).text + "/" + Who.Most.text
+	}
+
+	// ==== 112.34  The turn's end =========================================
+
+	// over: Ember goes back, then the other, if they're still out, and the
+	// camera goes back up; else, what next
+	void turn_over {
+		if !Over {
+			ask "battle", "What will " + Ours.Name + " do?", {"Fight", "Run"}
+		} else if Ours.Out {
+			Ours.start SINKING
+		} else if Foe.Out {
+			Foe.start SINKING
+		} else {
+			Story.Wounds = Ours.Most - Ours.Health
+			if Lost {
+				Story.Wounds = 0
+			}
+			Leaving = true
+		}
+	}
+
+	// ==== 112.35  A menu  (changed in 119) ===============================
+
+	// a question, and its choices under it, the arrow at the first; (114)
+	// asked outside a battle, the hero chooses (and walks no further)
+	void ask const str &Which, const str &Question, list str Answers {
+		if Mode != BATTLE {
+			Mode = CHOOSING
+		}
+		Menu = Which.copy
+		Choices = Answers
+		Choice = 0
+		show_words Question
+		show_choices
+		println "asked:", Question
+	}
+
+	// "> Fight    Run": the arrow at the one chosen
+	void show_choices {
+		str Line = ""
+		for I in Choices.length {
+			if I == Choice {
+				Line = Line + "> "
+			} else {
+				Line = Line + "   "
+			}
+			Line = Line + Choices[I] + "      "
+		}
+		Options.set_text Line
+		OptionsShade.set_text Line
+	}
+
+	// left and right move the arrow; Space chooses
+	void choose {
+		if key_press("right") && Choice + 1 < Choices.length {
+			Choice++
+			effect "menu-move"          // (119)
+			show_choices
+		} else if key_press("left") && Choice > 0 {
+			Choice--
+			effect "menu-move"
+			show_choices
+		} else if key_press "space" {
+			effect "menu-choose"
+			str Which = Menu.copy
+			str Chosen = Choices[Choice].copy
+			Menu = ""
+			Options.set_text ""
+			OptionsShade.set_text ""
+			Words.set_text ""
+			Shade.set_text ""
+			println "chose:", Chosen
+			if Mode == CHOOSING {
+				Mode = PLAYING          // (114) someone's question: they answer back
+				answered Which, Chosen
+			} else {
+				chosen Which, Chosen
+			}
+		}
+	}
+
+	// ==== 112.36  What Ember does  (changed in 113) ======================
+
+	// Fight: which move; Run: away, at once; a move: the turn
+	void chosen const str &Which, const str &Answer {
+		if Answer == "Fight" {
+			ask "moves", "Which move?", Ours.Moves.copy
+		} else if Answer == "Run" {
+			run_away                    // (113) if she can
+		} else if Which == "moves" {
+			take_turn Choice
+		}
+	}
+
+	// ==== 113.14  Running away ===========================================
+
+	// from something wild; not from someone's
+	void run_away {
+		if Owner != "" {
+			beat "There's no running from a battle with " + Owner + "!", 0, 0
+		} else {
+			beat "Got away safely!", 0, 0
+			Over = true
+		}
+	}
+
+	// ==== 112.37  A turn  (changed in 113) ===============================
+
+	// the quicker one goes first; the other, if it can still go, after
+	void take_turn int Move {
+		int Theirs = random 0, (int)Foe.Moves.length - 1
+		if Ours.Speed >= Foe.Speed {
+			ember_goes Move
+			foe_goes Theirs
+		} else {
+			foe_goes Theirs
+			ember_goes Move
+		}
+	}
+
+	void ember_goes int Move {
+		if Over {
+			return
+		}
+		Foe.Health = hurt Foe.Health, damage(Ours, Ours.Powers[Move], Foe)
+		beat Ours.Name + " used " + Ours.Moves[Move] + "!", 1, Foe.Health
+		if Foe.Health == 0 {
+			beat foe_name + " fainted!", 4, 0
+			Over = true
+			after_fainting false
+		}
+	}
+
+	void foe_goes int Move {
+		if Over {
+			return
+		}
+		Ours.Health = hurt Ours.Health, damage(Foe, Foe.Powers[Move], Ours)
+		beat foe_name + " used " + Foe.Moves[Move] + "!", 2, Ours.Health
+		if Ours.Health == 0 {
+			beat Ours.Name + " is worn out!", 5, 0
+			after_fainting true
+			beat "She curls up for a rest, and is soon well again.", 0, 0
+			Over = true
+			Lost = true
+		}
+	}
+
+	// ==== 113.15  Won, or lost ===========================================
+
+	// winning, experience; and someone's owner says what they think
+	void after_fainting bool Ember {
+		if !Ember {
+			gain Foe.Level * 10
+		}
+		if Owner != "" {
+			beat owner_says(Ember), 0, 0
+		}
+	}
+
+	// (120) at the coast, what he says is the coast's
+	str owner_says bool Won const {
+		if Area == "coast" && Won {
+			return Owner + ": Ha! All that training paid off. Come back when you're stronger!"
+		} else if Area == "coast" {
+			return Owner + ": Beaten again! The sea air must suit you and that fox."
+		} else if Won {
+			return Owner + ": Ha! Told you we'd win. See you at the coast!"
+		}
+		return Owner + ": Argh, beaten! Bruno and I will train, and I'll still beat you to the coast!"
+	}
+
+	// ==== 113.16  Experience =============================================
+
+	// enough of it (ten times her level), and Ember grows a level
+	void gain int Points {
+		Story.EmberExperience += Points
+		beat Ours.Name + " gained " + Points.text + " experience!", 0, 0
+		if Story.EmberExperience >= ember_level * 10 {
+			Story.EmberExperience -= ember_level * 10
+			Story.EmberLevel = ember_level + 1
+			beat Ours.Name + " grew to level " + Story.EmberLevel.text + "!", 0, 0
+		}
+	}
+
+	// 5 to begin with
+	int ember_level const {
+		if Story.EmberLevel < 5 {
+			return 5
+		}
+		return Story.EmberLevel
+	}
+
+	// ==== 112.38  How hard a hit is ======================================
+
+	// as FireRed works it out, more or less: by the level, the move's
+	// power, and strength against toughness; then from 85% to all of it
+	int damage const critter &By, int Power, const critter &Target const {
+		int Most = (By.Level * 2 / 5 + 2) * Power * By.Strength / Target.Toughness / 50 + 2
+		return Most * random(85, 100) / 100
+	}
+
+	// health, less a hit, but never below 0
+	int hurt int Health, int Damage const {
+		if Damage >= Health {
+			return 0
+		}
+		return Health - Damage
+	}
+
+	// ==== 113.17  Looking out for the hero ===============================
+
+	// on a tile that makes someone notice; or in front of someone who sees
+	void look_out {
+		int Who = watcher
+		if Who < 0 {
+			Who = seen_by
+		}
+		if Mode == PLAYING && Who >= 0 {
+			noticed_by Who
+		}
+	}
+
+	// "watch 8,1 elder" on this tile: the elder (-1: nobody, or they've
+	// noticed the hero already)
+	int watcher const {
+		str Name = thing_at "watch", Hero.Col, Hero.Row
+		if Name == "" || Story.Noticed.contains(Name) {
+			return -1
+		}
+		return person_named Name
+	}
+
+	int person_named const str &Name const {
+		for I in People.length {
+			if People[I].Who == Name {
+				return (int)I
+			}
+		}
+		return -1
+	}
+
+	// ==== 113.18  Who can see the hero ===================================
+
+	// the first who does (-1: nobody): standing still, facing the hero,
+	// near enough, with nothing in between; who hasn't noticed them before
+	int seen_by const {
+		for I in People.length {
+			str Name = People[I].Who.copy
+			if Sight.contains(Name) && !Story.Noticed.contains(Name) && !People[I].stepping {
+				if in_sight People[I].Col, People[I].Row, People[I].Facing, Sight[Name] {
+					return (int)I
+				}
+			}
+		}
+		return -1
+	}
+
+	// the tiles that way from C, R, as far as Far, until something's in the
+	// way: is the hero on one?
+	bool in_sight int C, int R, const str &Way, int Far const {
+		int X = C + across_of(Way)
+		int Y = R + down_of(Way)
+		while Far > 1 && !Hero.at(X, Y) && is_free(X, Y) {
+			X += across_of Way
+			Y += down_of Way
+			Far--
+		}
+		return Hero.at X, Y
+	}
+
+	// ==== 113.19  Noticed  (changed in 119) ==============================
+
+	// a "!" over their head (not joined on: they stand still while it
+	// shows), and the hero stands still
+	void noticed_by int Who {
+		Story.Noticed.add People[Who].Who.copy
+		Comer = Who
+		NoticeFrame = 0
+		Mode = NOTICED
+		double X = People[Who].Body.x
+		double Y = People[Who].Body.y
+		double Z = People[Who].Body.z
+		Bang = add_box 0.12, 0.4, 0.12, "#e53935", X, Y + 1.25, Z
+		world.shape Dot = add_ball 0.08, "#e53935", X, Y + 0.95, Z
+		Dot.join Bang
+		effect "notice"                 // (119)
+		if People[Who].Who == "rival" {
+			music "rival"               // (his tune, from the moment he sees the hero)
+		}
+		println "noticed by the", People[Who].Who
+	}
+
+	// ==== 113.20  Coming over ============================================
+
+	// the "!" for a moment (jumping up a little); then a step at a time
+	// toward the hero, and talk
+	void notice_step {
+		NoticeFrame++
+		if NoticeFrame < NOTICE_FRAMES {
+			Bang.move 0, 0.012 * (NOTICE_FRAMES / 2 - NoticeFrame) / (NOTICE_FRAMES / 2), 0
+			return
+		} else if NoticeFrame == NOTICE_FRAMES {
+			Bang.remove
+		}
+		if !People[Comer].stepping && !come_closer {
+			arrived_to_talk
+		}
+	}
+
+	// a step closer (false: they're next to the hero, or can't get any
+	// closer)
+	bool come_closer {
+		str Way = way_toward People[Comer].Col, People[Comer].Row
+		if Way != "" {
+			People[Comer].step Way, true
+		}
+		return Way != ""
+	}
+
+	// ==== 113.21  Which way to go ========================================
+
+	// from C, R toward the hero: the way that's further first, if it's free
+	// ("" when they're next to the hero, or neither way is free)
+	str way_toward int C, int R const {
+		for Way in ways_toward C, R {
+			if Way != "" && !next_to_hero(C, R) && on_map(C + across_of(Way), R + down_of(Way)) && is_free(C + across_of(Way), R + down_of(Way)) {
+				return Way.copy
+			}
+		}
+		return ""
+	}
+
+	// the way across, and the way down, the one that's further first
+	list str ways_toward int C, int R const {
+		int Dx = Hero.Col - C
+		int Dy = Hero.Row - R
+		list str Ways = {way_of(Dx, "left", "right"), way_of(Dy, "up", "down")}
+		if Dy * Dy > Dx * Dx {
+			Ways.reverse
+		}
+		return Ways
+	}
+
+	// below 0, Less ("left"); above it, More ("right"); 0: ""
+	str way_of int D, const str &Less, const str &More const {
+		if D < 0 {
+			return Less.copy
+		} else if D > 0 {
+			return More.copy
+		}
+		return ""
+	}
+
+	bool next_to_hero int C, int R const {
+		int Dx = Hero.Col - C
+		int Dy = Hero.Row - R
+		return Dx * Dx + Dy * Dy <= 1
+	}
+
+	// ==== 113.22  Face to face ===========================================
+
+	// next to the hero (or as near as they can get): the hero turns to
+	// them, they turn to the hero, and talk
+	void arrived_to_talk {
+		str Way = ways_toward(People[Comer].Col, People[Comer].Row)[0].copy
+		Hero.face opposite(Way)
+		Mode = PLAYING
+		talk_to Comer
+	}
+
+	// ==== 113.23  The rival's challenge ==================================
+
+	// once his words have gone: a step back, to make room, if he can; he
+	// turns to face the hero; then the battle he asked for
+	void challenge_step {
+		if People[Leaver].stepping {
+			return
+		}
+		int C = People[Leaver].Col + across_of(Hero.Facing)
+		int R = People[Leaver].Row + down_of(Hero.Facing)
+		if !BackedOff && next_to_hero(People[Leaver].Col, People[Leaver].Row) && on_map(C, R) && is_free(C, R) {
+			People[Leaver].step Hero.Facing, true
+			BackedOff = true
+			return
+		}
+		People[Leaver].face opposite(Hero.Facing)
+		Challenge = false
+		begin_battle rival_pup(pup_level), "Rufus", 1.2
+	}
+
+	// ==== 113.24  Walking off ============================================
+
+	// east, a step at a time, as far as he can go; then he's gone
+	void step_away {
+		int C = People[Leaver].Col + 1
+		int R = People[Leaver].Row
+		if on_map(C, R) && is_free(C, R) {
+			People[Leaver].step "right", true
+		} else {
+			People[Leaver].Body.remove
+			People.remove_at Leaver
+			WalkingOff = false
+			println "the rival has gone"
+		}
+	}
+
+	// ==== 115.8  The game's menu =========================================
+
+	// what the hero carries, and what to do
+	void open_menu {
+		str Carrying = "nothing"
+		if Story.Items.length > 0 {
+			Carrying = Story.Items.join ", "
+		}
+		ask "menu", "Carrying: " + Carrying + ".", {"Save", "Options", "Title", "Back"}
+	}
+
+	// ==== 115.9  A menu's answer =========================================
+
+	// the title's, the game's menu's, or the options'
+	void menu_chosen const str &Which, const str &Answer {
+		if Answer == "New game" {
+			new_game
+		} else if Answer == "Continue" {
+			load_game
+		} else if Answer == "Options" {
+			show_options 0
+		} else if Answer == "Save" {
+			save_game
+		} else if Answer == "Title" {
+			show_title
+		} else if Which == "options" {
+			option_chosen Answer
+		}
+	}
+
+	// ==== 115.10  The options  (changed in 117, 119) =====================
+
+	// each says what it is now; choosing it changes it, and the arrow stays
+	// on it (At)
+	void show_options int At {
+		list str Choices = {"Shadows: " + on_or_off(!NoShadows), "Camera: " + near_or_far, "Day: " + day_length}
+		Choices.add "Music: " + on_or_off(!NoMusic)     // (119)
+		Choices.add "Sounds: " + on_or_off(!NoSounds)
+		Choices.add "Back"
+		ask "options", "Options", Choices
+		Choice = At
+		show_choices
+	}
+
+	str on_or_off bool On const {
+		if On {
+			return "on"
+		}
+		return "off"
+	}
+
+	str day_length const {
+		if QuickDays {
+			return "2 minutes"
+		}
+		return "24 minutes"
+	}
+
+	str near_or_far const {
+		if Far {
+			return "far"
+		}
+		return "near"
+	}
+
+	// ==== 119.3  Music on, or off ========================================
+
+	// off: stopped; on again: what should be playing, from its start
+	void music_on bool On {
+		NoMusic = !On
+		if On {
+			str Was = Playing.copy
+			Playing = ""
+			music Was
+		} else {
+			sound.stop_music
+		}
+	}
+
+	// ==== 115.11  An option chosen  (changed in 117, 119) ================
+
+	// shadows on or off, the camera near or far; or back where they came
+	// from: the title, or the game's menu
+	void option_chosen const str &Answer {
+		if Answer.starts_with "Shadows" {
+			NoShadows = !NoShadows
+			set_shadows !NoShadows
+			show_options 0
+		} else if Answer.starts_with "Camera" {
+			Far = !Far
+			show_options 1
+		} else if Answer.starts_with "Day" {
+			QuickDays = !QuickDays          // (117)
+			show_options 2
+		} else if Answer.starts_with "Music" {
+			music_on NoMusic                // (119)
+			show_options 3
+		} else if Answer.starts_with "Sounds" {
+			NoSounds = !NoSounds
+			show_options 4
+		} else if OnTitle {
+			title_menu
+		} else {
+			open_menu
+		}
+	}
+
+	// ==== 116.5  A world that moves ======================================
+
+	// a little each frame: the water's shimmer, its waves, and the wind
+	// in the flowers and the trees; each a little out of step with the
+	// rest, by where it is (its "phase")
+	void move_world {
+		double T = frame / 60.0                 // seconds
+		for Water in shapes_in "water" {
+			double Shine = 0.5 + 0.5 * sin(1.5 * T + phase(Water.x, Water.z))
+			Water.set_color rgb(58 + (int)(12 * Shine), 123 + (int)(16 * Shine), 213 + (int)(14 * Shine), 1)
+		}
+		for Wave in shapes_in "waves" {
+			double Home = round Wave.x          // (it drifts less than half a tile)
+			double Drift = sin 0.8 * T + phase(Home, Wave.z)
+			Wave.move_to Home + 0.25 * Drift, 0.01, Wave.z
+			Wave.set_size 0.25 + 0.15 * (1 - Drift * Drift), 0.008, 0.04
+		}
+		for Foam in shapes_in "foam" {
+			double Home = floor(Foam.x) + 0.5    // (120) at the sand's edge
+			Foam.move_to Home + 0.18 * sin(1.2 * T + phase(Home, Foam.z)), 0.012, Foam.z
+		}
+		for Hull in shapes_in "boats" {
+			double Rock = sin 0.9 * T + phase(Hull.x, Hull.z)
+			Hull.move_to Hull.x, 0.12 + 0.04 * Rock, Hull.z
+			Hull.set_roll 5 * Rock
+		}
+		for Petals in shapes_in "flowers" {
+			Petals.move 0.0006 * cos(2 * T + phase(Petals.x, Petals.z)), 0, 0
+		}
+		for Trunk in shapes_in "trees" {
+			double Wind = phase round(Trunk.x), round(Trunk.z)
+			Trunk.set_tilt 1.5 * sin(1.1 * T + Wind)
+			Trunk.set_roll 1.2 * sin(0.9 * T + 2 * Wind)
+		}
+	}
+
+	// ==== 116.6  Out of step =============================================
+
+	// a number from where something is: things near each other differ,
+	// but only a little
+	double phase double X, double Z const {
+		return 0.4 * X + 0.7 * Z
+	}
+
+	double round double X const {
+		return floor X + 0.5
+	}
+
+	// ==== 117.9  The time passing ========================================
+
+	// a frame's worth of the day; and when night falls, or the day comes,
+	// it says so
+	void pass_time {
+		Story.Time += 1.0 / day_frames
+		if Story.Time >= 1 {
+			Story.Time -= 1
+		}
+		bool Dark = daylight < 0.5
+		if Dark != Night {
+			Night = Dark
+			if Night {
+				println "night falls"
+			} else {
+				println "the sun rises"
+			}
+		}
+	}
+
+	// how long a day is, in frames: as the options say
+	int day_frames const {
+		if QuickDays {
+			return QUICK_DAY
+		}
+		return DAY_FRAMES
+	}
+
+	// ==== 117.10  The weather ============================================
+
+	// now and then the rain starts: one check in so many that it's about
+	// once in RAIN_DAYS days, however long a day is; raining, one check
+	// in six it stops, so a shower lasts a few minutes. It comes on, and
+	// goes off, over three seconds; and the drops fall
+	void weather {
+		if frame % RAIN_CHECK == 0 {
+			int Checks = (int)(RAIN_DAYS * day_frames / RAIN_CHECK)
+			if !Story.Raining && random(1, Checks) == 1 {
+				Story.Raining = true
+				println "it starts to rain"
+			} else if Story.Raining && random(1, 6) == 1 {
+				Story.Raining = false
+				println "the rain stops"
+			}
+		}
+		if Story.Raining && Wet < 1 {
+			Wet += 1.0 / 180
+		} else if !Story.Raining && Wet > 0 {
+			Wet -= 1.0 / 180
+		}
+		fall
+	}
+
+	// ==== 117.11  Raindrops ==============================================
+
+	// as many as it's wet (outside); each falls, and when it lands, it
+	// starts again up above somewhere near the hero (on water, a ripple)
+	void fall {
+		int Wanted = (int)(DROPS * Wet)
+		if Inside {
+			Wanted = 0
+		}
+		while Drops.length < Wanted {
+			world.shape Drop = add_box 0.02, 0.3, 0.02, "#c9d6e3", Hero.Body.x, -1, Hero.Body.z
+			Drops.add Drop
+		}
+		while Drops.length > Wanted {
+			int Last = (int)Drops.length - 1
+			Drops[Last].remove
+			Drops.remove_at Last
+		}
+		for I in Drops.length {
+			if Drops[I].y <= 0 {
+				land (int)I
+			} else {
+				Drops[I].move -0.02, -0.3, 0          // (falling, a little slanted)
+			}
+		}
+	}
+
+	// up above again: somewhere in sight, more of them in front of the hero
+	void land int I {
+		double X = Drops[I].x
+		double Z = Drops[I].z
+		if Drops[I].y > -1 && water_at((int)floor(X - OriginX + 0.5), (int)floor(Z - OriginZ + 0.5)) && random(1, 4) == 1 && Ripples.length < 40 {
+			small_ripple X, Z, 0.3      // (a raindrop's: small)
+		}
+		Drops[I].move_to Hero.Body.x + random(-80, 80) / 10.0, 3 + random(0, 40) / 10.0, Hero.Body.z + random(-70, 30) / 10.0
+	}
+
+	// ==== 119.4  A sound =================================================
+
+	// sounds/step.wav ...: played once, while the game goes on (unless
+	// the options have turned the sounds off)
+	void effect const str &Name {
+		if !NoSounds {
+			sound.play "sounds/" + Name + ".wav"
+		}
+	}
+
+	// ==== 119.5  A sound from somewhere ==================================
+
+	// as loud as it's near the hero: all of it close by, none HEARD
+	// metres off; each loaded once, and played again from the start
+	void effect_at const str &Name, double X, double Z {
+		double Dx = X - Hero.Body.x
+		double Dz = Z - Hero.Body.z
+		double Loud = 1 - sqrt(Dx * Dx + Dz * Dz) / HEARD
+		if NoSounds || Loud <= 0 {
+			return
+		}
+		if !Near.contains Name {
+			Near[Name] = sound.load "sounds/" + Name + ".wav"
+		}
+		Near[Name].stop
+		Near[Name].set_volume Loud
+		Near[Name].play
+	}
+
+	// ==== 119.6  Music ===================================================
+
+	// music/town.mid, round and round, fading in as the last fades out;
+	// the same again goes on as it is
+	void music const str &Name {
+		if Name == Playing {
+			return
+		}
+		Playing = Name.copy
+		if NoMusic {
+			return
+		} else if Name == "" {
+			sound.fade_out_music 1000
+		} else {
+			sound.change_music "music/" + Name + ".mid", 1000
+		}
+	}
+
+	// the area's own (its "music" line), after a battle, say
+	void area_music {
+		music setting("music")
+	}
+
+	// ==== 119.7  The rain, heard =========================================
+
+	// rain.wav, round and round, as loud as it's raining (not inside)
+	void hear_rain {
+		if !RainLoaded {
+			Rain = sound.load "sounds/rain.wav"
+			Rain.set_looping true
+			RainLoaded = true
+		}
+		double Loud = 0.6 * Wet
+		if Inside || NoSounds {
+			Loud = 0
+		}
+		if Loud > 0.01 && !Rain.playing {
+			Rain.play
+		} else if Loud <= 0.01 && Rain.playing {
+			Rain.stop
+		}
+		Rain.set_volume Loud
+	}
+
+	// ==== 119.8  Thunder =================================================
+
+	// raining hard, now and then (once in 20 seconds or so): a flash, and
+	// the thunder
+	void storm {
+		if Wet > 0.9 && !Inside && random(1, 1200) == 1 {
+			Flash = 1
+			effect "thunder"
+			println "thunder"
+		}
+		if Flash > 0 {
+			Flash -= 0.05
+		}
+	}
+
+	// ==== 118.3  A cave's tiles ==========================================
+
+	// rock, of uneven heights; the floor; a stalagmite; a crystal, glowing
+	// (a lamp of its own); water; and the way out
+	void add_cave char Tile, double X, double Z {
+		int Mix = (int)(7 * X + 13 * Z + 1000)
+		if Tile == 'R' {
+			double Tall = 1.0 + 0.15 * (Mix % 5)
+			add_box 1, Tall, 1, ROCK, X, Tall / 2, Z
+			return
+		} else if Tile == '~' {
+			add_water X, Z
+			return
+		}
+		add_plane 1, 1, "#3b3530", X, 0.005, Z
+		if Tile == 'A' {
+			add_cone 0.25, 0.7 + 0.1 * (Mix % 3), "#6b625a", X, 0.35, Z
+		} else if Tile == 'X' {
+			make_crystal X, Z, 0.25
+			world.lamp Glow = add_lamp X, 0.6, Z, "#6fd3ff", 2.5
+			CaveLamps.add Glow
+		} else if Tile == 'o' {
+			add_plane 1, 1, "#140f0c", X, 0.008, Z      // (the way out: darker)
+		}
+	}
+
+	// ==== 118.4  A crystal ===============================================
+
+	// two cones, point to point, pale blue: one standing, one hanging
+	// under it
+	world.shape make_crystal double X, double Z, double Y {
+		world.shape Top = add_cone 0.12, 0.3, "#9fe6ff", X, Y + 0.15, Z
+		world.shape Under = add_cone 0.12, 0.2, "#6fd3ff", X, Y - 0.1, Z
+		Under.set_tilt 180
+		Under.join Top
+		return Top
+	}
+
+	// ==== 118.5  A cave's mouth ==========================================
+
+	// a way in from a cliff (C): a dark opening in its face (by number:
+	// adding a shape changes the world, Things with it)
+	void add_mouths {
+		for I in Things.length {
+			if Things[I].starts_with "way " {
+				list str At = Things[I].split(" ")[1].split ","
+				int C = At[0].to_int
+				int R = At[1].to_int
+				if on_map(C, R) && Map[R][C] == 'C' {
+					add_box 0.7, 0.9, 0.06, "#120e0c", C, 0.45, R + 0.5
+				}
+			}
+		}
+	}
+
+	// ==== 118.6  Into the dark ===========================================
+
+	// the lantern, the bats, and a drop of water ready to fall
+	void into_the_dark {
+		world.lamp Lantern = add_lamp Hero.Body.x, 2.6, Hero.Body.z, "#ffcf8a", LANTERN
+		CaveLamps.add Lantern
+		world.shape Drip = add_box 0.025, 0.08, 0.025, "#bfe3ff", 0, -1, 0
+		Drips.add Drip
+	}
+
+	// ==== 118.7  A bat, or a gull  (changed in 120) =====================
+
+	// "bats 3", or (120) "gulls 3": that many, each over a tile picked at
+	// random (a bat's, the cave's floor), going round it
+	void add_fliers const str &Kind {
+		str Many = setting Kind
+		if Many != "" {
+			for I in Many.to_int {
+				add_flier Kind == "gulls"
+			}
+		}
+	}
+
+	// a small body, two wings joined to it: a bat, dark, low and close
+	// round; a gull, white, higher, and wider round
+	void add_flier bool Gull {
+		int C = random 1, (int)Map[0].length - 2
+		int R = random 1, (int)Map.length - 2
+		while !Gull && Map[R][C] != '.' {
+			C = random 1, (int)Map[0].length - 2
+			R = random 1, (int)Map.length - 2
+		}
+		double X = C + OriginX
+		double Z = R + OriginZ
+		str Color = "#1b1720"
+		str WingColor = "#2a2430"
+		double Y = 1.8
+		if Gull {
+			Color = "white"
+			WingColor = "#d8dde2"
+			Y = 3.6
+		}
+		world.shape Body = add_ball 0.07, Color, X, Y, Z
+		Body.set_size 0.12, 0.1, 0.16
+		for Side in 2 {
+			double Out = Side * 2 - 1
+			world.shape Wing = add_box 0.22, 0.015, 0.12, WingColor, X + Out * 0.13, Y, Z
+			Wing.join Body
+			Wings.add Wing
+		}
+		if Gull {
+			Body.set_scale 2                // (bigger: a gull's body, not its wings)
+			BatWide.add 3.5
+			BatCry.add "gull"
+		} else {
+			BatWide.add 1.3
+			BatCry.add "squeak"
+		}
+		Bats.add Body
+		BatX.add X
+		BatZ.add Z
+		BatY.add Y
+	}
+
+	// ==== 118.8  Each frame in the dark ==================================
+
+	// the lantern goes with the hero, flickering; the bats fly; the water
+	// drips
+	void in_the_dark {
+		int Last = (int)CaveLamps.length - 1          // (the lantern)
+		CaveLamps[Last].move_to Hero.Body.x, Hero.Body.y + 2, Hero.Body.z   // (held up high)
+		CaveLamps[Last].set_reach LANTERN + 0.25 * sin(frame / 7.0) + 0.15 * sin(frame / 3.1)
+		drip
+	}
+
+	// ==== 118.9  Bats flying  (changed in 119) ===========================
+
+	// each round its tile, a little up and down, facing the way it flies,
+	// its wings flapping; each out of step with the others
+	void fly_bats {
+		for I in Bats.length {
+			double Wide = BatWide[I]
+			double A = frame / (35 * Wide) + I * 2.1        // (120) wider round, slower
+			Bats[I].move_to BatX[I] + Wide * cos(A), BatY[I] + 0.2 * sin(3 * A), BatZ[I] + Wide * sin(A)
+			Bats[I].set_angle 180 - A * 180 / PI
+			double Flap = 40 * sin(frame / (2 * Wide) + I)
+			Wings[2 * I].set_roll Flap
+			Wings[2 * I + 1].set_roll -Flap
+			if random(1, 500) == 1 {
+				effect_at BatCry[I].copy, Bats[I].x, Bats[I].z   // (119)
+			}
+		}
+	}
+
+	// ==== 118.10  Dripping  (changed in 119) =============================
+
+	// a drop falls, faster and faster; landing (on water, a ripple), it
+	// waits a little, then falls again somewhere near the hero
+	void drip {
+		if Drips.length == 0 {
+			return
+		}
+		double X = Drips[0].x
+		double Y = Drips[0].y
+		double Z = Drips[0].z
+		if Y > 0.05 {
+			Drips[0].move 0, -0.08, 0
+		} else if Y > -0.5 {
+			if water_at((int)floor(X - OriginX + 0.5), (int)floor(Z - OriginZ + 0.5)) {
+				small_ripple X, Z, 0.5      // (a drip's: smaller)
+			}
+			effect_at "drip", X, Z      // (119)
+			Drips[0].move_to 0, -1, 0           // (out of sight: waiting)
+		} else if random(1, 90) == 1 {
+			Drips[0].move_to Hero.Body.x + random(-40, 40) / 10.0, 2.8, Hero.Body.z + random(-40, 20) / 10.0
+		}
+	}
+
+	// ==== 120.4  The coast's tiles ========================================
+
+	// sand (and on it, where the sea meets it, foam); the pier, boards on
+	// posts over the water; a boat, at anchor on it; a palm; the lighthouse
+	void add_coast char Tile, double X, double Z {
+		if Tile == 's' {
+			add_plane 1, 1, SAND, X, 0.004, Z
+			if tile_at((int)X + 1, (int)Z) == '~' {
+				world.shape Foam = add_box 0.08, 0.012, 0.9, "#f4f8fb", X + 0.5, 0.012, Z
+				Foam.set_group "foam"
+			}
+		} else if Tile == 'K' {
+			add_water X, Z
+			add_box 1, 0.06, 0.9, "#9b7653", X, PIER - 0.03, Z
+			add_cylinder 0.06, 0.6, "#6b4f36", X - 0.4, -0.15, Z + 0.4
+			add_cylinder 0.06, 0.6, "#6b4f36", X + 0.4, -0.15, Z + 0.4
+		} else if Tile == 'u' {
+			add_water X, Z
+			add_boat X, Z
+		} else if Tile == 'Y' {
+			add_plane 1, 1, SAND, X, 0.004, Z
+			add_palm X, Z
+		} else if Tile == 'L' && tile_at((int)X - 1, (int)Z) != 'L' && tile_at((int)X, (int)Z - 1) != 'L' {
+			add_lighthouse X + 0.5, Z + 0.5     // (once, at its top left tile)
+		}
+	}
+
+	// ==== 120.5  A boat ==================================================
+
+	// a hull, its bow a wedge, a mast and a sail, joined: in the group
+	// "boats", to rock on the water
+	void add_boat double X, double Z {
+		world.shape Hull = add_box 0.55, 0.3, 1.1, "#8b4a2b", X, 0.12, Z + 0.1
+		Hull.set_group "boats"
+		world.shape Bow = add_wedge 0.55, 0.3, 0.45, "#8b4a2b", X, 0.12, Z - 0.67
+		Bow.join Hull
+		world.shape Mast = add_cylinder 0.03, 1.4, "#d9c9a8", X, 0.95, Z
+		Mast.join Hull
+		world.shape Sail = add_wedge 0.04, 1.0, 0.7, "#f4efe4", X, 0.9, Z + 0.36
+		Sail.set_angle 180
+		Sail.join Hull
+	}
+
+	// ==== 120.6  A palm ==================================================
+
+	// a tall trunk, leaning, and its fronds, flat boxes joined to its top,
+	// all round, drooping: in the group "trees", to sway as they do
+	void add_palm double X, double Z {
+		world.shape Trunk = add_cylinder 0.08, 1.6, "#9a7b54", X, 0.8, Z
+		Trunk.set_roll 8
+		Trunk.set_group "trees"
+		for I in 6 {
+			double A = I * 60 * PI / 180
+			world.shape Frond = add_box 0.8, 0.03, 0.2, "#3f8f3a", X + 0.4 * cos(A), 1.55, Z + 0.4 * sin(A)
+			Frond.set_angle -I * 60
+			Frond.set_roll 18
+			Frond.join Trunk
+		}
+	}
+
+	// ==== 120.7  The lighthouse ==========================================
+
+	// a white tower, red bands round it, a lamp room at its top and a red
+	// roof; a lamp in it, and its beam, a long pale bar, both lit at night.
+	// The beam glows (set_glow): drawn its own color, not shaded by the
+	// moonlight, and casting no shadow, as light wouldn't
+	void add_lighthouse double X, double Z {
+		add_cylinder 0.75, 0.3, "#8a8178", X, 0.15, Z           // (its rocks)
+		world.shape Tower = add_cylinder 0.6, 4, "white", X, 2, Z
+		for I in 3 {
+			world.shape Band = add_cylinder 0.62, 0.35, "#c8352c", X, 0.8 + I * 1.2, Z
+			Band.join Tower
+		}
+		world.shape Room = add_cylinder 0.42, 0.6, "#fff3c4", X, 4.3, Z
+		Room.join Tower
+		world.shape Roof = add_cone 0.55, 0.6, "#c8352c", X, 4.9, Z
+		Roof.join Tower
+		world.shape Beam = add_box 7, 0.12, 0.12, "#fff6cf", X + 3.5, 4.3, Z
+		Beam.set_glow true
+		Beams.add Beam
+		LampRooms.add Room
+		world.lamp Light = add_lamp X, 4.3, Z, "black", 12
+		Beacons.add Light
+	}
+
+	// ==== 120.8  Its beam going round ====================================
+
+	// at night, the lamp lit, its room glowing, and the beam sweeping round,
+	// out from the tower; by day, none of them
+	void turn_beam {
+		double Lit = 1 - daylight
+		for I in Beams.length {
+			double Tower = Beacons[I].x
+			double TowerZ = Beacons[I].z
+			double A = frame * 1.2
+			double R = A * PI / 180
+			Beams[I].set_angle A
+			Beams[I].move_to Tower + 3.5 * cos(R), 4.3, TowerZ - 3.5 * sin(R)
+			Beams[I].set_visible Lit > 0.3
+			LampRooms[I].set_glow Lit > 0.3
+			Beacons[I].set_color rgb(255, 240, 200, Lit)
+		}
+	}
+
+	// ==== 120.9  The sea, heard ==========================================
+
+	// surf.wav, round and round, in an area by the sea ("sea" after its
+	// map)
+	void hear_surf {
+		if !SurfLoaded {
+			Surf = sound.load "sounds/surf.wav"
+			Surf.set_looping true
+			SurfLoaded = true
+		}
+		bool By = Things.contains("sea") && !NoSounds
+		if By && !Surf.playing {
+			Surf.set_volume 0.5
+			Surf.play
+		} else if !By && Surf.playing {
+			Surf.stop
+		}
+	}
+
+	// ==== 120.10  Rufus, again ===========================================
+
+	// the first time: he's been training here, and Bruno's grown; after,
+	// he's off on the next boat
+	void at_the_coast int Who {
+		if Story.Answers.contains "rematch" {
+			say "Good battle, " + hero_name + ". I'm off on the next boat. Who knows what's out there?"
+		} else {
+			say "So you found the coast too, " + hero_name + "! Bruno and I have been training here. Ready? Let's battle!"
+			if !Story.Noticed.contains("rival") {
+				Story.Noticed.add "rival"   // (met: he's not waiting in the meadow)
+			}
+			Challenge = true
+			BackedOff = false
+			Leaver = Who
+		}
+	}
+
+	// how strong Bruno is: at the coast, he's trained
+	int pup_level const {
+		if Area == "coast" {
+			return 8
+		}
+		return 6
+	}
+
+	// ==== 116.7  Asking the water ========================================
+
+	// the tile ahead is water, and the hero isn't in it: may they swim?
+	void ask_the_water {
+		ask "water", "The water is deep and calm. Swim across?", {"Swim", "Not now"}
+	}
+
+	bool water_at int C, int R const {
+		return tile_at(C, R) == '~'
+	}
+
+	// ==== 116.8  In they go  (changed in 119) ============================
+
+	// a step into the water, down to their chest as they go
+	void swim_in {
+		Swimming = true
+		Hero.step Hero.Facing.copy, true
+		Hero.To = DEEP
+		ripple Hero.Body.x + Hero.Dx, Hero.Body.z + Hero.Dy   // (where they go in)
+		effect "splash"                 // (119)
+		println "swimming"
+	}
+
+	// ==== 116.9  Climbing out  (changed in 119) ==========================
+
+	// on land again (or in water, still swimming)
+	void settle_swimming {
+		bool Wet = water_at Hero.Col, Hero.Row
+		if Swimming && !Wet {
+			effect "splash"             // (119)
+			println "out of the water"
+		}
+		Swimming = Wet
+	}
+
+	// ==== 116.10  Ripples ================================================
+
+	// a ring on the water: a pale disc, with one the water's color just
+	// inside it, a little higher, so only its edge shows
+	void ripple double X, double Z {
+		small_ripple X, Z, 1
+	}
+
+	// one Size as big (a raindrop's, smaller)
+	void small_ripple double X, double Z, double Size {
+		world.shape Edge = add_cylinder 0.2 * Size, 0.004, "#e8f4ff", X, 0.012, Z
+		world.shape Middle = add_cylinder 0.18 * Size, 0.004, "#3a7bd5", X, 0.016, Z
+		Ripples.add Edge
+		Ripples.add Middle
+		RippleAges.add 0
+		RippleSizes.add Size
+	}
+
+	// each a little bigger, and nearer the water's color, until it's gone
+	// (the oldest first in the list: two shapes for each)
+	void spread_ripples {
+		for I in RippleAges.length {
+			RippleAges[I]++
+			double Age = RippleAges[I] / 45.0
+			double Wide = RippleSizes[I] * (0.3 + 1.2 * Age)
+			Ripples[2 * I].set_size Wide, 0.004, Wide
+			Ripples[2 * I].set_color rgb(232 - (int)(174 * Age), 244 - (int)(121 * Age), 255 - (int)(42 * Age), 1)
+			double Inner = Wide - 0.06 * RippleSizes[I]
+			Ripples[2 * I + 1].set_size Inner, 0.004, Inner
+		}
+		if RippleAges.length > 0 && RippleAges[0] >= 45 {
+			Ripples[0].remove
+			Ripples[1].remove
+			Ripples.remove_at 0
+			Ripples.remove_at 0
+			RippleAges.remove_at 0
+			RippleSizes.remove_at 0
+		}
+	}
+
+	// ==== 121.3  Ember, in the area =====================================
+
+	// built with it: walking in from next door, a step behind, where she
+	// was; through a door (or starting), on the hero's tile, out of sight,
+	// with nothing to follow yet
+	void add_follower {
+		double Feet = Hero.Feet
+		if Crossing {
+			Feet = FollowFeet
+		}
+		FollowerParts = make_fox Hero.Col, Feet, Hero.Row
+		Follower.Who = "Ember"
+		Follower.Body.Id = FollowerParts[0].Id   // (the same shapes: their Ids)
+		Follower.Left.Id = FollowerParts[6].Id    // (her front legs swing)
+		Follower.Right.Id = FollowerParts[10].Id
+		Follower.Col = Hero.Col
+		Follower.Row = Hero.Row
+		Follower.StepsLeft = 0
+		Follower.Feet = Feet
+		Follower.stand_at Feet
+		Follower.face Hero.Facing.copy
+		if Crossing {
+			Follower.Body.move FollowCol - Hero.Col, 0, FollowRow - Hero.Row
+			Follower.Col = FollowCol
+			Follower.Row = FollowRow
+			Crossing = false
+			Waiting = false
+		} else {
+			Steps.clear
+			Waiting = true
+		}
+		show_follower !Waiting
+	}
+
+	// the hero walking into the area next door (which is Left, Top on this
+	// one's map): where she'll be in it, on the tile she's stepping to
+	void keep_follower int Left, int Top {
+		Crossing = !Waiting
+		FollowCol = Follower.Col - Left
+		FollowRow = Follower.Row - Top
+		FollowFeet = Follower.Feet
+		if Follower.stepping {
+			FollowCol += Follower.Dx * Follower.Tiles
+			FollowRow += Follower.Dy * Follower.Tiles
+			FollowFeet = Follower.To
+		}
+	}
+
+	void show_follower bool On {
+		for Part in FollowerParts {
+			Part.set_visible On
+		}
+	}
+
+	// she's there (or stepping there), and seen
+	bool follower_at int C, int R const {
+		return !Waiting && Follower.at(C, R)
+	}
+
+	// ==== 121.4  A footstep kept =========================================
+
+	// the hero has begun a move: kept, to make after the next begins. If
+	// she was waiting on the hero's tile, it's free now: there she is
+	void keep_footstep {
+		footstep Step = {.Way = Hero.Facing.copy, .Tiles = Hero.Tiles, .From = Hero.From, .Edge = Hero.Edge, .To = Hero.To}
+		Steps.add Step
+		if Waiting {
+			Waiting = false
+			show_follower Mode != BATTLE
+		}
+	}
+
+	// ==== 121.5  Following ================================================
+
+	// each frame: standing still, and the hero gone on another move since
+	// the one she's to make, she makes it; and then a frame of her step
+	void follow_hero {
+		if !Waiting && !Follower.stepping && Steps.length > 1 {
+			str Way = Steps[0].Way.copy
+			if Steps[0].Tiles == 2 {
+				Follower.hop Way
+			} else {
+				Follower.step Way, true
+			}
+			Follower.Edge = afloat Steps[0].Edge
+			Follower.To = afloat Steps[0].To
+			Steps.remove_at 0
+		}
+		if Follower.stepping {
+			Follower.keep_stepping
+		}
+	}
+
+	// as high as the hero was, there; but in the water (under 0), not as
+	// deep: she's smaller, and swims with her head up
+	double afloat double Height const {
+		if Height < 0 {
+			return Height * 0.6
+		}
+		return Height
+	}
+
+	// ==== 110.6  Who is there ============================================
+
+	// the hero, or one of the people, is there (or stepping there)
+	bool someone_at int C, int R const {
+		return Hero.at(C, R) || person_at(C, R) >= 0
+	}
+
+	// which of the people is there (-1: nobody)
+	int person_at int C, int R const {
+		for I in People.length {
+			if People[I].at C, R {
+				return (int)I
+			}
+		}
+		return -1
+	}
+
+	// someone standing on that tile, to be talked to: not someone part way
+	// off it, nor on their way onto it
+	int talker_at int C, int R const {
+		int Who = person_at C, R
+		if Who >= 0 && !People[Who].stepping && People[Who].Col == C && People[Who].Row == R {
+			return Who
+		}
+		return -1
+	}
+
+	// ==== 108.22  Signs  (changed in 110, 114, 116, 121) =================
+
+	// what a line after the map says about a tile: "sign 16,8 Cabby Town."
+	// asked for ("sign", 16, 8) is "Cabby Town."; "" if there's none
+	str thing_at const str &Kind, int C, int R const {
+		str Start = Kind + " " + C.text + "," + R.text + " "
+		for Line in Things {
+			if Line.starts_with Start {
+				return Line[Start.length to Line.length - 1]
+			}
+		}
+		return ""
+	}
+
+	// Space: someone on the tile the hero faces, to talk to; (114) a thing
+	// to pick up; or a sign
+	void look_ahead {
+		int C = Hero.Col + across_of(Hero.Facing)
+		int R = Hero.Row + down_of(Hero.Facing)
+		int Who = talker_at C, R
+		str Sign = thing_at "sign", C, R
+		if Who >= 0 {
+			talk_to Who
+		} else if follower_at C, R {
+			say "Ember looks up at you, her tail swishing."   // (121)
+		} else if item_at(C, R) != "" {
+			pick_up C, R
+		} else if Sign != "" {
+			say Sign
+		} else if water_at(C, R) && !Swimming {
+			ask_the_water               // (116)
+		}
+	}
+
+	// ==== 114.11  Picking up  (changed in 118, 119) ======================
+
+	// carried now, remembered as taken, and out of the world
+	void pick_up int C, int R {
+		str Name = item_at C, R
+		str Place = C.text + "," + R.text
+		Story.Items.add Name.copy
+		Story.Taken.add Area + " " + Place
+		for Thing in shapes_in "item " + Place {
+			Thing.remove
+		}
+		effect "pick-up"                // (119)
+		say "You found " + description_of(Name) + "!"
+	}
+
+	str description_of const str &Name const {
+		if Name == "spoon" {
+			return "the baker's wooden spoon"
+		} else if Name == "bread" {
+			return "a loaf of fresh bread"
+		} else if Name == "shell" {
+			return "a shining shell"
+		} else if Name == "crystal" {
+			return "a crystal, glowing blue"
+		}
+		return "a " + Name
+	}
+
+	// ==== 110.7  Talking to someone  (changed in 113, 114) ===============
+
+	// they turn to face the hero, and say what they say; (113) Rufus asks
+	// for a battle; (114) the elder and the baker, each in their own way
+	void talk_to int Who {
+		People[Who].face opposite(Hero.Facing)
+		if People[Who].Who == "elder" {
+			talk_to_elder
+		} else if People[Who].Who == "rival" && Area == "coast" {
+			at_the_coast Who                // (120)
+		} else if People[Who].Who == "rival" {
+			say "Hey, " + hero_name + "! I'm Rufus. So you're the new one everyone's talking about? Let's see whose is stronger: your fox, or my Bruno!"
+			Challenge = true
+			BackedOff = false
+			Leaver = Who
+		} else {
+			talk_to_baker
+		}
+	}
+
+	// ==== 114.12  The elder ==============================================
+
+	// he asks the hero's name, once; then he knows it, and sees to Ember
+	void talk_to_elder {
+		if Story.Answers.contains "elder name" {
+			Story.Wounds = 0
+			say "Salve, " + hero_name + "! Let me see to Ember... There: as good as new."
+		} else {
+			ask "elder name", "Salve, amice! I'm the elder of Cabby Town. What's your name?", {"Marcus", "Livia", "Tiro"}
+		}
+	}
+
+	// what the hero told the elder they're called ("friend", until then)
+	str hero_name const {
+		if Story.Answers.contains "elder name" {
+			return Story.Answers["elder name"].copy
+		}
+		return "friend"
+	}
+
+	// ==== 114.13  The baker ==============================================
+
+	// what she says depends on how far the quest has got
+	void talk_to_baker {
+		if Story.Quest == "done" {
+			say "Thank you again, " + hero_name + "! Come back for bread any time."
+		} else if Story.Items.contains "spoon" {
+			give_spoon
+		} else if Story.Quest == "asked" {
+			say "Have you found my spoon? It's in the bakery, the house up the path."
+		} else {
+			ask "baker spoon", "Oh dear, " + hero_name + ". I left my wooden spoon in the bakery. Could you fetch it?", {"Of course!", "Not now."}
+		}
+	}
+
+	// ==== 114.14  Giving it back =========================================
+
+	// the spoon goes, the bread comes, and the quest is done (asked or not:
+	// found before she asked, she's surprised)
+	void give_spoon {
+		str Thanks = "My spoon! Thank you, " + hero_name + "!"
+		if Story.Quest == "" {
+			Thanks = "My spoon! How did you know I'd lost it? Thank you, " + hero_name + "!"
+		}
+		Story.Items.remove_at (int)Story.Items.find("spoon")
+		Story.Items.add "bread"
+		Story.Quest = "done"
+		say Thanks + " Here: a loaf of bread, still warm."
+	}
+
+	// ==== 114.15  An answer  (changed in 115, 116) =======================
+
+	// kept in Story, by its question; and the one asking answers back
+	void answered const str &Which, const str &Answer {
+		if Which == "title" || Which == "menu" || Which == "options" {
+			menu_chosen Which, Answer   // (115) a menu's, not someone's
+			return
+		} else if Which == "water" {
+			if Answer == "Swim" {
+				swim_in                 // (116)
+			}
+			return
+		}
+		Story.Answers[Which] = Answer.copy
+		if Which == "elder name" {
+			say "Salve, " + Answer + "! A fine name. The baker looks worried: go and see her."
+		} else if Answer == "Of course!" {
+			Story.Quest = "asked"
+			say "Thank you, " + hero_name + "! The bakery is the house up the path."
+		} else {
+			say "Oh. Maybe later, then."
+		}
+	}
+
+	// words over the world, until Space; (113) wrapped
+	void say const str &Said {
+		show_words Said
+		Mode = READING
+		println "said:", Said
+	}
+
+	// ==== 113.25  Words, wrapped =========================================
+
+	// over as many lines as they need, the last where one line would be
+	void show_words const str &Said {
+		list str Lines = lines_of Said
+		double Top = 530 - 25 * (Lines.length - 1)
+		Words.move_to 20, Top
+		Shade.move_to 22, Top + 2
+		Words.set_text Lines.join("\n")
+		Shade.set_text Lines.join("\n")
+	}
+
+	// a word at a time, onto the line, or (too long) a new one
+	list str lines_of const str &Said const {
+		list str Lines = {""}
+		for Word in Said.split " " {
+			int Last = (int)Lines.length - 1
+			if Lines[Last] == "" {
+				Lines[Last] = Word.copy
+			} else if Lines[Last].length + 1 + Word.length > WIDE {
+				Lines.add Word.copy
+			} else {
+				Lines[Last] = Lines[Last] + " " + Word
+			}
+		}
+		return Lines
+	}
+}
+
+// ==== 108.23  Starting ===================================================
+
+int main {
+	quest Q
+	Q.run
+}
+
+
+
+// (Cabby's tests go as part 13's do, through the hills, round the lake to
+// the coast, Rufus, and the pier; Ember follows, which prints nothing:)
+// script: frames 60; tap space; frames 40; tap down; frames 20; tap down; frames 20; tap down; frames 20; tap right; frames 3; tap right; frames 20; tap right; frames 20; tap down; frames 3; tap down; frames 20; tap down; frames 20; tap down; frames 20; tap left; frames 3; tap left; frames 20; tap left; frames 20; tap down; frames 3; tap down; frames 20; tap down; frames 20; tap down; frames 20; tap down; frames 20; tap down; frames 20; tap down; frames 20; tap down; frames 20; tap down; frames 20; tap down; frames 20; tap down; frames 20; tap down; frames 20; tap down; frames 20; tap right; frames 3; tap right; frames 20; tap right; frames 20; tap right; frames 20; tap right; frames 20; tap right; frames 20; tap right; frames 20; tap right; frames 20; tap right; frames 20; tap right; frames 20; tap right; frames 20; tap right; frames 20; tap right; frames 20; tap right; frames 20; tap right; frames 20; tap right; frames 20; tap right; frames 20; tap right; frames 20; tap up; frames 3; tap up; frames 20; tap up; frames 20; tap up; frames 20; tap up; frames 20; tap up; frames 20; tap right; frames 3; tap right; frames 20; tap right; frames 20; tap right; frames 20; tap right; frames 20; tap right; frames 20; tap right; frames 20; tap right; frames 20; tap right; frames 20; tap right; frames 20; tap right; frames 20; tap right; frames 20; tap right; frames 20; tap right; frames 20; tap right; frames 20; tap right; frames 20; tap right; frames 20; tap right; frames 20; tap down; frames 3; tap down; frames 20; tap down; frames 20; tap down; frames 20; tap down; frames 20; tap down; frames 20; tap right; frames 3; tap right; frames 20; tap right; frames 20; frames 30; tap right; frames 20; tap right; frames 20; tap right; frames 20; tap right; frames 20; tap right; frames 20; tap right; frames 20; tap right; frames 20; tap right; frames 20; tap right; frames 20; tap space; frames 70; tap space; frames 70; tap space; frames 70; tap space; frames 70; tap space; frames 70; tap space; frames 70; tap space; frames 70; tap space; frames 70; tap space; frames 70; tap space; frames 70; tap space; frames 70; tap space; frames 70; tap space; frames 70; tap space; frames 70; tap space; frames 70; tap space; frames 70; tap space; frames 70; tap space; frames 70; tap space; frames 70; tap space; frames 70; tap space; frames 70; tap space; frames 70; tap space; frames 70; tap space; frames 70; tap space; frames 70; tap space; frames 70; tap space; frames 70; tap space; frames 70; tap space; frames 70; tap space; frames 70; tap space; frames 70; tap space; frames 70; tap space; frames 70; tap space; frames 70; tap space; frames 70; tap space; frames 70; tap space; frames 70; tap space; frames 70; tap space; frames 70; tap space; frames 70; tap space; frames 70; tap space; frames 70; tap space; frames 70; tap up; frames 3; tap up; frames 20; tap right; frames 3; tap right; frames 20; tap right; frames 20; tap right; frames 20; frames 30; close
+//
+// Try this:
+//  - Let her follow two steps behind (121.5: Steps.length > 2).
+//  - Have her say something else when looked at, by the time of day.
+//  - Make her wait outside the houses: not shown while Inside (121.3).
+
+// ---------------------------------------------------------------- output
+//> asked: Left and right to choose; Space to go.
+//> chose: New game
+//> in the town at 8 4
+//> at 8 5
+//> at 8 6
+//> at 8 7
+//> at 9 7
+//> at 10 7
+//> at 10 8
+//> at 10 9
+//> at 10 10
+//> at 9 10
+//> at 8 10
+//> at 8 11
+//> at 8 12
+//> at 8 13
+//> at 8 14
+//> at 8 15
+//> at 8 16
+//> in the hills at 8 0
+//> at 8 1
+//> at 8 2
+//> at 8 3
+//> at 8 4
+//> at 8 5
+//> at 8 6
+//> at 9 6
+//> at 10 6
+//> at 11 6
+//> at 12 6
+//> at 13 6
+//> at 14 6
+//> at 15 6
+//> at 16 6
+//> at 17 6
+//> at 18 6
+//> at 19 6
+//> at 20 6
+//> at 21 6
+//> at 22 6
+//> at 23 6
+//> at 24 6
+//> in the lake at 0 6
+//> at 1 6
+//> at 1 5
+//> at 1 4
+//> at 1 3
+//> at 1 2
+//> at 1 1
+//> at 2 1
+//> at 3 1
+//> at 4 1
+//> at 5 1
+//> at 6 1
+//> at 7 1
+//> at 8 1
+//> at 9 1
+//> at 10 1
+//> at 11 1
+//> at 12 1
+//> at 13 1
+//> at 14 1
+//> at 15 1
+//> at 16 1
+//> at 17 1
+//> at 18 1
+//> at 18 2
+//> at 18 3
+//> at 18 4
+//> at 18 5
+//> at 18 6
+//> at 19 6
+//> at 20 6
+//> in the coast at 0 6
+//> at 1 6
+//> at 2 6
+//> at 3 6
+//> at 4 6
+//> at 5 6
+//> at 6 6
+//> at 7 6
+//> at 8 6
+//> at 9 6
+//> said: So you found the coast too, friend! Bruno and I have been training here. Ready? Let's battle!
+//> a battle with Rufus
+//> said: Rufus sent out Bruno!
+//> said: Go, Ember!
+//> asked: What will Ember do?
+//> chose: Fight
+//> asked: Which move?
+//> chose: Pounce
+//> said: Rufus's Bruno used Bite!
+//> said: Ember used Pounce!
+//> asked: What will Ember do?
+//> chose: Fight
+//> asked: Which move?
+//> chose: Pounce
+//> said: Rufus's Bruno used Bite!
+//> said: Ember used Pounce!
+//> asked: What will Ember do?
+//> chose: Fight
+//> asked: Which move?
+//> chose: Pounce
+//> said: Rufus's Bruno used Bite!
+//> said: Ember is worn out!
+//> said: Rufus: Ha! All that training paid off. Come back when you're stronger!
+//> said: She curls up for a rest, and is soon well again.
+//> the battle is over
+//> at 9 5
+//> at 10 5
+//> at 11 5
+//> at 12 5

@@ -123,6 +123,7 @@ changing for.
 | 1.19.0 | 22 November | Cabby Quest in 3D, part 12: music and sounds, the rain heard, thunder and lightning; `sound.track`'s methods no longer hang |
 | 1.20.0 | 22 November | Cabby Quest in 3D, part 13: the coast, the sea, a pier, boats, palms, gulls, a lighthouse, and Rufus again; glowing shapes in `use world`; the cave's rock solid |
 | 1.21.0 | 23 November | The 3D quest, from your testing: rain once every two or three days, smaller raindrop ripples, and the Elder no longer walks off after Rufus |
+| 1.22.0 | 23 November | Cabby Quest in 3D, part 14: Ember follows the hero, a step behind, over ledges, up stairs, swimming, and into the next area |
 
 ---
 
@@ -2111,6 +2112,16 @@ are.
   while Rufus was walking away after their first battle: walking off was
   still going on in the town, and the one it moved was the Elder. Now
   it stops when the area changes.
+
+*Version 1.22.0, Cabby Quest in 3D, part 14 (your idea):* tutorial 121,
+and chapter 121 of the manual. Ember follows the hero, a step behind.
+Each of the hero's moves is kept (a `footstep`: the way, a step or a
+hop, and its heights), and when the next begins, she makes the one
+before: so she hops the same ledges, climbs the same stairs, and swims,
+her head up. Walking into the next area, she walks on behind; through a
+door, she waits on the hero's tile, out of sight, until the hero steps
+off it. The people don't walk into her; looked at, she swishes her tail;
+in a battle she's hidden, being the one battling.
 
 ## Along the way (dates not recorded)
 
