@@ -113,6 +113,7 @@ changing for.
 | 1.9.0 | 22 November | Cabby Quest in 3D, part 4: the hills climbed, their stairs, high ground, bridge and ledges |
 | 1.10.0 | 22 November | Cabby Quest in 3D, part 5: a battle in the tall grass, in the world itself |
 | 1.11.0 | 22 November | Cabby Quest in 3D, part 6: noticed, and Rufus's battle; experience and levels; world text over several lines |
+| 1.12.0 | 22 November | Cabby Quest in 3D, part 7: the baker's spoon; questions, a thing to pick up, a quest, and saving |
 
 ---
 
@@ -1957,6 +1958,13 @@ sends out his pup, Bruno, made of shapes: a battle that can't be run
 from. Ember gains experience, and grows a level. And in `use world`, a
 `world.text` starts a new line at each `"\n"` in it, so long words can
 be wrapped (the world tests check a second line).
+
+*Version 1.12.0, Cabby Quest in 3D, part 7:* tutorial 114, and chapter
+114 of the manual. The elder asks the hero's name, and everyone uses it;
+the baker asks for her wooden spoon, lost in the bakery, where it turns
+slowly in the air until the hero picks it up; she gives them bread for
+it. Everything the hero has done is in one struct, saved as JSON with S,
+and the game carries on from it next time.
 
 ## Along the way (dates not recorded)
 
