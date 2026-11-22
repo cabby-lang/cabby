@@ -1232,8 +1232,11 @@ object quest : world.window {
 	// beyond this area's edge
 	void add_join const str &Line {
 		neighbour Next = beside Line, Map
-		add_tiles_of Next.Map, Next.Col, Next.Row
-		Joins.add Next
+		list str Rows = Next.Map.copy
+		int Left = Next.Col
+		int Top = Next.Row
+		Joins.add Next                  // (first: its tiles can see each other)
+		add_tiles_of Rows, Left, Top
 	}
 
 	// ==== 109.13  Corners ================================================
@@ -1256,8 +1259,11 @@ object quest : world.window {
 		Corner.move_by Joins[I].Col, Joins[I].Row
 		if join_named(Corner.Area) < 0 && Corner.Area != Area {
 			Corner.Corner = true
-			add_tiles_of Corner.Map, Corner.Col, Corner.Row
+			list str Rows = Corner.Map.copy
+			int Left = Corner.Col
+			int Top = Corner.Row
 			Joins.add Corner
+			add_tiles_of Rows, Left, Top
 		}
 	}
 
@@ -1800,8 +1806,17 @@ object quest : world.window {
 		double Z = Hero.Row + Ahead * Fz + Across * Rz
 		str Kind = Foe.Name.copy
 		Foe.put_out made_of(Kind, X, G, Z), X, Z, G, angle_of(opposite(Hero.Facing))
-		X = Hero.Col + 0.6 * Fx + 0.9 * Rx
-		Z = Hero.Row + 0.6 * Fz + 0.9 * Rz
+		double Front = 0.6                  // (to the hero's right; or, with no
+		double Right = 0.9                  // room there, their left; or in front)
+		if !room_beside(1) {
+			Right = -0.9
+			if !room_beside(-1) {
+				Front = 0.5
+				Right = 0.2
+			}
+		}
+		X = Hero.Col + Front * Fx + Right * Rx
+		Z = Hero.Row + Front * Fz + Right * Rz
 		Ours.put_out made_of("Ember", X, G, Z), X, Z, G, angle_of(Hero.Facing)
 		Foe.BarBack = bar_back
 		Foe.Bar = bar
@@ -1818,6 +1833,22 @@ object quest : world.window {
 		} else {
 			println "a battle with", Owner
 		}
+	}
+
+	// is there room for Ember beside the hero, on that Side (1 their
+	// right, -1 their left), and a tile ahead of that? Nothing in the way,
+	// and the ground as high as the hero's (not a ledge, or a cliff)
+	bool room_beside int Side const {
+		int Ahead = across_of Hero.Facing
+		int Down = down_of Hero.Facing
+		int C = Hero.Col - Down * Side
+		int R = Hero.Row + Ahead * Side
+		return room_at(C, R) && room_at(C + Ahead, R + Down)
+	}
+
+	bool room_at int C, int R const {
+		double Rise = height_at(C, R, Hero.Level) - Hero.Ground
+		return !BLOCKING.contains(tile_at(C, R)) && Rise < 0.05 && Rise > -0.05
 	}
 
 	// ==== 112.22  Grass flattened ========================================
