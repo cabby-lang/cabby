@@ -1,6 +1,6 @@
 # The Cabby Manual
 
-*For Cabby 1.15.0 (2026-11-22).*
+*For Cabby 1.16.0 (2026-11-22).*
 
 A book for learning Cabby one idea at a time, and a reference to come back
 to afterwards.
@@ -222,6 +222,7 @@ int main {
 114. [The baker's spoon](#chapter-114-the-bakers-spoon): questions to answer; what the hero has done, in a struct; a thing to pick up; a quest; saving, and carrying on
 115. [The title, and a menu](#chapter-115-the-title-and-a-menu): a title over the world, the camera circling the town; the game's menu; options for how the world is drawn
 116. [The lake](#chapter-116-the-lake): a world that moves, water, flowers and trees; swimming, after asking the water; ripples; a place reached only by water
+117. [The day, and the rain](#chapter-117-the-day-and-the-rain): the sun crossing the sky, golden light, then a blue night and the moon; windows lit with lamps; rain
 
 **[Appendices](#appendices)**
 
@@ -17567,7 +17568,73 @@ their tile, `Hero.Col`.
 * Hide the hero's legs while they swim, and show them again on land
   (116.9): `Hero.Left.set_visible`.
 
-[← Chapter 115](#chapter-115-the-title-and-a-menu) · [Contents](#contents) · [Appendices →](#appendices)
+[← Chapter 115](#chapter-115-the-title-and-a-menu) · [Contents](#contents) · [Chapter 117 →](#chapter-117-the-day-and-the-rain)
+
+### Chapter 117: The day, and the rain
+
+*Program: `117-quest-3d-weather.cby`, the day passing over the quest, and rain. Libraries: `use world`, `use files`, `use math`, `use json`, `use directories`.*
+
+#### The time of day
+
+`Story.Time` is the time of day (114.1): 0 at midnight, 0.25 at
+sunrise, 0.5 at noon, 0.75 at sunset. Each frame, `pass_time` (117.9)
+moves it on by one frame's worth of a day, `DAY_FRAMES` (117.1): two
+minutes, here, from one midnight to the next. A new game starts a little
+after sunrise; the title shows late morning, and stays there. The time
+is saved with the rest.
+
+#### The light, worked out
+
+Part 2 lit the world by how far through a fade it was (109.15). Now
+`light` just keeps that amount, `Fade`, and every frame `shine` (117.5)
+works out all the light from it, the time and the rain:
+
+* `sun_height` (117.6) is the sine of how far round the day is: 1 at
+  noon, 0 at sunrise and sunset, below 0 at night. `daylight` is how
+  much of the day's light there is: all of it once the sun's a little
+  way up, none a little after it's set.
+* `place_sun` (117.7) moves the sun across the sky, rising in the east
+  and setting in the west. Low down, its shadows are long; it's never
+  quite flat, or they'd go on for ever. At night it's the moon, across
+  the sky from where the sun is.
+* The sun's color is golden low down, white high up; the moon's, a dim
+  blue. The light all round goes from the day's grey to a night blue,
+  and the sky from blue, through a sunset's orange, to a dark blue.
+
+Each color is a `tint` (117.2), a struct of red, green and blue, and
+`blend` mixes two: all of one, all of the other, or part way, as `mix`
+does for numbers (112.30). `css` (117.8) writes one as `use world`
+takes it: `"rgb(255, 214, 130)"`.
+
+#### Windows at night
+
+Each house has two windows (117.4): a pane on its front wall, and a lamp
+just in front of it. By day the pane is dark, and the lamp is black: no
+light at all. As it gets dark, `light_windows` turns the panes a warm
+yellow, and the lamps' light on, spilling onto the ground in front.
+Lamps aren't shapes, so they're kept in a list of their own, moved to
+where the area is (116.11), and taken away with it (109.6).
+
+#### Rain
+
+Now and then, one time in three every `RAIN_CHECK` frames, the rain
+starts, or stops (117.10). `Wet` follows it over three seconds, from 0
+to 1 or back, and dims the sun, the light all round, and the sky,
+greying it.
+
+The raindrops (117.11) are thin pale boxes, as many as it's wet. Each
+frame each falls a little, slanted; when one reaches the ground, it
+starts again up above, somewhere near the hero, more of them in front,
+where the camera looks. One landing on water, now and then, leaves a
+ripple (116.10). Inside a house, there are none.
+
+#### Try this
+
+* A longer day: ten minutes (117.1).
+* Make the moonlight a little brighter, and a little greener (117.5).
+* Light the lamp in the bakery at night: a window on its back wall.
+
+[← Chapter 116](#chapter-116-the-lake) · [Contents](#contents) · [Appendices →](#appendices)
 
 ---
 ## Appendices
@@ -17625,7 +17692,7 @@ Run `cabby` with no file to type Cabby a piece at a time:
 
 ```text
 $ cabby
-Cabby 1.15.0 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
+Cabby 1.16.0 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
 Cabby comes with ABSOLUTELY NO WARRANTY, under the MIT License; "cabby.license" for details.
 >>> int add int a, int b {
 ... 	return a + b
