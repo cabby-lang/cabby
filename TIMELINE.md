@@ -126,6 +126,7 @@ changing for.
 | 1.22.0 | 23 November | Cabby Quest in 3D, part 14: Ember follows the hero, a step behind, over ledges, up stairs, swimming, and into the next area |
 | 1.23.0 | 23 November | Cabby Quest in 3D, part 15: arriving by train at Cabby Town Station, the elder, a home, and Ember given; lines in a map for the 3D quest only |
 | 1.24.0 | 23 November | The 3D quest, from your testing: Ember's back legs and swaying tail, running out from behind the hero into a battle, room beside a ledge; one lighthouse, not four |
+| 1.25.0 | 23 November | Cabby Quest in 3D, part 16: the train leaving, and coming every three minutes (no ticket); worn out in a battle, and waking beside the elder |
 
 ---
 
@@ -2151,6 +2152,16 @@ was (but for its path, now running on to the west edge).
   were built before it was one of the areas next door, so a tile
   couldn't see the tiles beside it. Now it's added first (tutorials 109
   to 122), and the coast's foam shows from next door too.
+
+*Version 1.25.0, Cabby Quest in 3D, part 16 (your ideas):* tutorial 123,
+and chapter 123 of the manual. The train pulls out once the hero is off,
+and comes back every three minutes: pulling in, waiting, pulling out,
+its whistle blowing. Where it is is worked out each frame from the time
+alone (a timetable), so nothing needs keeping. Facing the rails while
+it waits: "You don't have a ticket." And when Ember is worn out in a
+battle, the hero hurries her back to the elder in the last town they
+were in, and wakes beside him (the town's map says where, with a
+"rest" line).
 
 ## Along the way (dates not recorded)
 
