@@ -1,6 +1,6 @@
 # The Cabby Manual
 
-*For Cabby 1.6.1 (2026-11-22).*
+*For Cabby 1.7.0 (2026-11-22).*
 
 A book for learning Cabby one idea at a time, and a reference to come back
 to afterwards.
@@ -214,6 +214,7 @@ int main {
 **[Part XIX: Cabby Quest in 3D](#part-xix-cabby-quest-in-3d)**
 
 108. [The town in 3D](#chapter-108-the-town-in-3d): the quest's map read into a world of shapes; trees, signs, houses and the hero joined together; walking tile by tile; a camera from above
+109. [The areas, and going inside](#chapter-109-the-areas-and-going-inside): areas joined edge to edge, seen and walked into; trees all round; a door into the bakery; a fade with the light; the hills, drawn
 
 **[Appendices](#appendices)**
 
@@ -16956,7 +16957,81 @@ readable on the grass or the sky.
 * Give the houses a chimney: a box joined to the walls, on the roof.
 * Make the water move a little: lower and raise its planes each frame.
 
-[← Chapter 107](#chapter-107-screens-the-mouse-and-the-keyboard) · [Contents](#contents) · [Appendices →](#appendices)
+[← Chapter 107](#chapter-107-screens-the-mouse-and-the-keyboard) · [Contents](#contents) · [Chapter 109 →](#chapter-109-the-areas-and-going-inside)
+
+### Chapter 109: The areas, and going inside
+
+*Program: `109-quest-3d-areas.cby`, the town, the areas round it, and the bakery. Libraries: `use world`, `use files`, `use math`.*
+
+#### Areas next door
+
+The town's map ends with lines like
+
+```text
+join north woods 0
+join east meadow 0
+join south hills 0
+```
+
+as the 2D quest's do (chapter 79), and they're read the same way: each
+is a `neighbour`, an area's map placed beyond an edge, its top left tile
+at a column and row counted on this area's map (109.2). Its tiles are
+built there with this area's (109.12), so the woods can be seen from the
+town, and in 3D they're seen a long way off: the camera looks north,
+over them.
+
+Walking over the edge is walking onto one of their tiles. When a step
+ends off this area's map (109.17), the area next door becomes the area:
+everything is taken away (109.6) and built again around it, the hero on
+the same tile counted on its map. Since everything moves by the same
+amount, nothing seems to move at all, and only the name at the top left
+says the woods are where you are.
+
+The areas next door's own areas next door are built too, at the corners
+(109.13), to be seen but not walked into until they're next door.
+
+#### Trees all round
+
+Where no area reaches, the woods go on: a ring of trees, three deep
+(`RING`, 109.1), round this area and each next door, on every tile no
+map has (109.14). They're cones alone, all leaves: there are hundreds, and
+a trunk each would double them. The grass goes as far as they do
+(109.9).
+
+#### A door, and the light going down
+
+A door is a way, as before (`way 4,5 bakery 6,7`). Instead of the 2D
+quest's black over the stage, the light goes down: the sun, the light
+all round and the sky, a little each frame, to nothing (109.15):
+
+```cabby
+set_sun_color rgb(217, 217, 204, Amount)
+set_ambient rgb(89, 89, 102, Amount)
+```
+
+`rgb` here is the program's own, making `"rgb(108, 108, 102)"` from the
+day's color and how much of it there is. In the dark the bakery is
+built, and the light comes up on it.
+
+#### Inside, and the hills
+
+The bakery's map has walls (`#`), so it's inside: there's no sky, only
+black, and no grass under it, its floor is its own (109.10). An oven is
+a box with its fire joined on, a table its top with a leg.
+
+The hills are drawn as they'll be climbed (109.11): high ground (`h`)
+1.3 metres up, its cliff (`C`) and steps (`z`), a bridge (`B`, `P` over
+the path) at the high ground's height, which the hero walks under, ledges
+(`v`) and tall grass (`w`). For now the high ground, cliffs, steps and
+ledges are in the way, and the path goes through.
+
+#### Try this
+
+* Plant a ring of trees two deep, or five: `RING` (109.1).
+* Make inside a little darker: light it with 0.7 of the day (109.15).
+* Show the name for longer as you come into a house than over an edge.
+
+[← Chapter 108](#chapter-108-the-town-in-3d) · [Contents](#contents) · [Appendices →](#appendices)
 
 ---
 ## Appendices
@@ -17014,7 +17089,7 @@ Run `cabby` with no file to type Cabby a piece at a time:
 
 ```text
 $ cabby
-Cabby 1.6.1 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
+Cabby 1.7.0 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
 Cabby comes with ABSOLUTELY NO WARRANTY, under the MIT License; "cabby.license" for details.
 >>> int add int a, int b {
 ... 	return a + b

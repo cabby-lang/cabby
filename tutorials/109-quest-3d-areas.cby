@@ -1,0 +1,901 @@
+// Tutorial 109: Cabby Quest in 3D, part 2 — the areas, and going inside
+//
+// Run it:      cabby 109-quest-3d-areas.cby
+// Or compile:  cabby -c 109-quest-3d-areas.cby && ./109-quest-3d-areas
+// Library:     use world, use files, use math
+// Topics:      areas joined edge to edge, seen and walked into; a ring of
+//              trees round them; ways through doors; a fade, with the light;
+//              an area's name; inside the bakery; the hills, drawn
+//
+// Part 1 (tutorial 108) walked round the town. Now its edges lead on, as
+// part 3 of the 2D quest's do (tutorial 79): the woods to the north, the
+// meadow to the east, the hills to the south. A line after the town's map,
+//
+//     join north woods 0
+//
+// says the woods are beyond its north edge. They're built there, so they
+// can be seen from the town (better than in 2D: the camera looks a long
+// way north); over the edge the hero is in the woods, with no fade, and
+// the woods' name shows. Where no area reaches, trees grow all round.
+//
+// The bakery's door is a way instead (`way 4,5 bakery 6,7`): the light
+// goes down, the bakery is built in the dark, and the light comes up on
+// the hero inside, by the doormat that leads out again.
+//
+// The hills are drawn as they'll be climbed: high ground, cliffs, steps,
+// a bridge, ledges and tall grass. For now their high ground, cliffs,
+// steps and ledges can't be walked onto; the path goes through.
+//
+// New sections are numbered 109; part 1's keep their 108, and those this
+// part changes say (changed in 109). Chapter 109 of the manual goes
+// through what's new.
+
+use world
+use files
+use math
+
+// ==== 108.1  Sizes and speeds  (changed in 109) ==========================
+
+const double SPEED = 0.0625         // metres a frame: a tile (a metre) is 16 frames
+const int TURN_TIME = 100           // ms: a tap of an arrow shorter than this only turns
+// tiles that can't be walked onto (a door can, if a way starts there)
+const str BLOCKING = "TSH~D#ObhCzv"
+const double HIGH = 1.3             // the hills' high ground: high enough to walk under its bridge
+
+// ==== 109.1  The fade, the name and the trees ============================
+
+const int FADE_FRAMES = 20          // the light going down, and coming up: a third of a second each
+const int NAME_FRAMES = 150         // an area's name shows for two and a half seconds
+const int RING = 3                  // trees this many deep round each area
+
+// ==== 108.2  Which way is across, and down ===============================
+
+// a step that way goes this far across (x): -1, 1 or 0
+int across_of const str &Way {
+	if Way == "left" {
+		return -1
+	} else if Way == "right" {
+		return 1
+	}
+	return 0
+}
+
+// and this far down the map (z, towards the camera): -1, 1 or 0
+int down_of const str &Way {
+	if Way == "up" {
+		return -1
+	} else if Way == "down" {
+		return 1
+	}
+	return 0
+}
+
+// ==== 108.3  Which way they face =========================================
+
+// a shape's angle: 0 faces up the map (-z), and it turns to its left
+double angle_of const str &Way {
+	if Way == "left" {
+		return 90
+	} else if Way == "down" {
+		return 180
+	} else if Way == "right" {
+		return 270
+	}
+	return 0
+}
+
+// ==== 108.4  Someone who walks ===========================================
+
+object walker {
+	world.shape Body                // the rest is joined to it
+	world.shape Left                // their legs, swung as they walk
+	world.shape Right
+	int Col                         // the tile they're on
+	int Row
+	str Facing                      // "down", "up", "left" or "right"
+	int Dx                          // the way they're stepping: -1, 0 or 1
+	int Dy
+	int StepsLeft                   // frames left of this step (0: on a tile)
+
+	bool stepping const {
+		return StepsLeft > 0
+	}
+
+	void face const str &Way {
+		Facing = Way.copy
+		Body.set_angle angle_of(Way)
+	}
+
+	// ==== 108.5  A step ==================================================
+
+	// to the next tile that way, or (Moves false) a step on the spot
+	void step const str &Way, bool Moves {
+		face Way
+		Dx = 0
+		Dy = 0
+		if Moves {
+			Dx = across_of Way
+			Dy = down_of Way
+		}
+		StepsLeft = 16
+	}
+
+	// ==== 108.6  Each frame of a step ====================================
+
+	// a little further, the legs swinging: true in the frame it ends
+	bool keep_stepping {
+		Body.move Dx * SPEED, 0, Dy * SPEED
+		StepsLeft--
+		double Swing = 30 * sin(StepsLeft * 3.14159265 / 8)   // (a swing and back, each step)
+		Left.set_tilt Swing
+		Right.set_tilt -Swing
+		if StepsLeft == 0 {
+			Col += Dx
+			Row += Dy
+			Left.set_tilt 0
+			Right.set_tilt 0
+		}
+		return StepsLeft == 0
+	}
+}
+
+// ==== 109.2  An area next door ===========================================
+
+// another area's map, built beyond an edge of this one; Col and Row are
+// where its top left tile is, counted on this area's map (tutorial 79's)
+object neighbour {
+	str Area                        // "woods"
+	str Side                        // the edge it's beyond: "north"
+	list str Map
+	int Col
+	int Row
+	bool Corner                     // next door to next door: seen, not walked into
+
+	// beyond its edge of Here (this area's map), Along tiles along it
+	void place_beside const list str &Here, int Along {
+		if Side == "north" || Side == "south" {
+			Col = Along
+			Row = beyond Side == "south", (int)Here.length, (int)Map.length
+		} else {
+			Row = Along
+			Col = beyond Side == "east", (int)Here[0].length, (int)Map[0].length
+		}
+	}
+
+	// (an area at a corner: placed beside the area next door, then moved
+	// with it)
+	void move_by int Columns, int Rows {
+		Col += Columns
+		Row += Rows
+	}
+
+	// the first row (or column) past the edge: just after Here's last, or
+	// far enough before 0 to fit its own (Mine)
+	int beyond bool After, int Here, int Mine const {
+		if After {
+			return Here
+		}
+		return -Mine
+	}
+
+	// whether the tile C, R (counted on this area's map) is in it, and what
+	// it is
+	bool has int C, int R const {
+		return R >= Row && R < Row + (int)Map.length && C >= Col && C < Col + (int)Map[R - Row].length
+	}
+
+	char tile int C, int R const {
+		return Map[R - Row][C - Col]
+	}
+}
+
+// ==== 108.7  What's happening  (changed in 109) ==========================
+
+enum mode {
+	PLAYING                         // walking about
+	READING                         // words showing: Space goes on
+	FADING_OUT                      // the light going down, to go through a way
+	FADING_IN                       // and coming up again, there
+}
+
+// ==== 108.8  The world  (changed in 109) =================================
+
+object quest : world.window {
+	list str Map                    // the area's tiles, a character each
+	list str Things                 // the lines after the map: signs ...
+	walker Hero
+	mode Mode
+	world.text Words                // what's being read, over the world
+	world.text Shade                // (the same, a little lower: a shadow for it)
+	str Turned                      // the arrow key that turned the hero
+
+	// ==== 109.3  Going somewhere else ====================================
+
+	str Area                        // the area the hero is in: "town"
+	str NextArea                    // and where they're going, when it's dark
+	int NextCol
+	int NextRow
+	int FadeFrame                   // how far through the fade
+	list neighbour Joins            // the areas next door
+	world.text Name                 // the area's name, at the top left for a moment
+	world.text NameShade
+	long NameFrom                   // the frame it appeared in
+	bool Inside                     // in a house: no sky
+
+	// ==== 108.9  Building it  (changed in 109) ===========================
+
+	void build {
+		set_title "Cabby Quest"
+		set_size 800, 600
+		set_sun -0.3, -1, -0.5
+		NameShade = add_text "", 22, 18
+		NameShade.set_color "black"
+		Name = add_text "", 20, 16
+		Shade = add_text "", 22, 532
+		Shade.set_color "black"
+		Words = add_text "", 20, 530
+		start_at "town", 8, 4
+		on_frame step
+	}
+
+	// ==== 109.4  Arriving ================================================
+
+	// there, out of the dark
+	void start_at const str &Place, int C, int R {
+		enter Place, C, R
+		Mode = FADING_IN
+		FadeFrame = 0
+		light 0
+	}
+
+	// the area built, the hero in it, and its name showing
+	void enter const str &Place, int C, int R {
+		go_to Place, C, R
+		show_name
+		println "in the", Area, "at", C, R
+	}
+
+	// ==== 109.5  Going to an area ========================================
+
+	// everything there is taken away, and the area and those next door built
+	void go_to const str &Place, int C, int R {
+		str Facing = facing_now
+		clear_area
+		Area = Place.copy
+		read_area Place
+		Inside = has_walls
+		add_tiles_of Map.copy, 0, 0     // (a copy: building changes the world, Map with it)
+		add_joins
+		add_ground
+		Hero = new_walker C, R, Facing
+		look_at_hero
+	}
+
+	// ==== 109.6  Clearing the world ======================================
+
+	// every shape removed, and the last area's map forgotten
+	void clear_area {
+		for Old in shapes_in "" {
+			Old.remove
+		}
+		Map.clear
+		Things.clear
+		Joins.clear
+	}
+
+	// a new area, the hero facing as they were ("down" the first time)
+	str facing_now const {
+		if Hero.Facing == "" {
+			return "down"
+		}
+		return Hero.Facing.copy
+	}
+
+	// a house, inside: its map has walls (#)
+	bool has_walls const {
+		for Line in Map {
+			if Line.contains '#' {
+				return true
+			}
+		}
+		return false
+	}
+
+	// ==== 109.7  Its name ================================================
+
+	// "name Cabby Town" after the map: at the top left, for a moment
+	void show_name {
+		str Called = setting "name"
+		Name.set_text Called
+		NameShade.set_text Called
+		NameFrom = frame
+	}
+
+	// what a line after the map, "name Cabby Town", says ("": no such line)
+	str setting const str &Key const {
+		for Line in Things {
+			if Line.starts_with Key + " " {
+				return Line[Key.length + 1 to Line.length - 1]
+			}
+		}
+		return ""
+	}
+
+	// ==== 108.10  Reading an area's map ==================================
+
+	// quest/town.txt: notes (//) first, then the map, a line a row; then,
+	// after ---, a line for each thing in the area (as in tutorial 78)
+	void read_area const str &Area {
+		bool InMap = true
+		for Line in files.lines "quest/" + Area + ".txt" {
+			if Line == "---" {
+				InMap = false
+			} else if !Line.starts_with("//") && Line.trim != "" {
+				if InMap {
+					Map.add Line.copy
+				} else {
+					Things.add Line.copy
+				}
+			}
+		}
+	}
+
+	// ==== 109.8  Just a map ==============================================
+
+	// an area's map, the rows before its ---, into Rows
+	void read_map const str &Place, list str &Rows const {
+		for Line in files.lines "quest/" + Place + ".txt" {
+			if Line == "---" {
+				break
+			} else if !Line.starts_with("//") && Line.trim != "" {
+				Rows.add Line.copy
+			}
+		}
+	}
+
+	// an area's join lines, into Lines
+	void read_joins const str &Place, list str &Lines const {
+		for Line in files.lines "quest/" + Place + ".txt" {
+			if Line.starts_with "join " {
+				Lines.add Line.copy
+			}
+		}
+	}
+
+	// ==== 108.11  The ground, and what's on each tile  (changed in 109) ==
+
+	// a map's tiles, its top left one at Left, Top: this area's at 0, 0,
+	// and the areas' next door beside it
+	void add_tiles_of const list str &Rows, int Left, int Top {
+		for R in Rows.length {
+			for C in Rows[R].length {
+				add_tile Rows[R][C], Left + C, Top + R
+			}
+		}
+	}
+
+	void add_tile char Tile, double X, double Z {
+		if Tile == '=' {
+			add_plane 1, 1, "#d9c38c", X, 0.005, Z            // the path
+		} else if Tile == '~' {
+			add_plane 1, 1, "#3a7bd5", X, 0.005, Z            // water
+		} else if Tile == 'f' {
+			add_flowers X, Z
+		} else if Tile == 'T' {
+			add_tree X, Z
+		} else if Tile == 'S' {
+			add_sign X, Z
+		} else if Tile == 'D' {
+			add_house X, Z
+		} else {
+			add_inside Tile, X, Z
+			add_hills Tile, X, Z
+		}
+	}
+
+	// ==== 109.9  The ground under it all =================================
+
+	// outside, grass as far as the trees go round the areas; inside, the
+	// floor is the map's own, and dark beyond
+	void add_ground {
+		if Inside {
+			return
+		}
+		int Left = 0
+		int Top = 0
+		int Right = (int)Map[0].length
+		int Bottom = (int)Map.length
+		for Next in Joins {
+			Left = min_of Left, Next.Col
+			Top = min_of Top, Next.Row
+			Right = max_of Right, Next.Col + (int)Next.Map[0].length
+			Bottom = max_of Bottom, Next.Row + (int)Next.Map.length
+		}
+		double Wide = Right - Left + 2 * RING
+		double Deep = Bottom - Top + 2 * RING
+		add_plane Wide, Deep, "#6fbf4a", Left - RING + (Wide - 1) / 2, 0, Top - RING + (Deep - 1) / 2
+	}
+
+	int min_of int A, int B const {
+		if A < B {
+			return A
+		}
+		return B
+	}
+
+	int max_of int A, int B const {
+		if A > B {
+			return A
+		}
+		return B
+	}
+
+	// ==== 108.12  Flowers ================================================
+
+	void add_flowers double X, double Z {
+		add_ball 0.06, "yellow", X - 0.2, 0.06, Z - 0.15
+		add_ball 0.06, "white", X + 0.15, 0.06, Z + 0.1
+		add_ball 0.06, "#e8457a", X - 0.05, 0.06, Z + 0.25
+	}
+
+	// ==== 108.13  A tree: a trunk, its leaves joined on ==================
+
+	void add_tree double X, double Z {
+		world.shape Trunk = add_cylinder 0.1, 0.5, "#7a4a24", X, 0.25, Z
+		world.shape Leaves = add_cone 0.45, 1.1, "#2f7d32", X, 1.0, Z
+		Leaves.join Trunk
+	}
+
+	// ==== 108.14  A sign: a post, its board joined on ====================
+
+	void add_sign double X, double Z {
+		world.shape Post = add_box 0.08, 0.7, 0.08, "#7a4a24", X, 0.35, Z
+		world.shape Board = add_box 0.6, 0.35, 0.06, "#c8a165", X, 0.62, Z + 0.05
+		Board.join Post
+	}
+
+	// ==== 108.15  A house: walls, a door and a roof, joined ==============
+
+	// at its door (D, with a wall either side and above it on the map):
+	// the walls cover three tiles across and two up
+	void add_house double X, double Z {
+		world.shape Walls = add_box 3, 1.4, 2, "#f2e6d0", X, 0.7, Z - 0.5
+		world.shape Door = add_box 0.55, 0.95, 0.06, "#8b5a2b", X, 0.475, Z + 0.52
+		Door.join Walls
+		// the roof: two boards, sloping down to the front and to the back
+		world.shape Front = add_box 3.3, 0.08, 1.35, "#b5452c", X, 1.78, Z + 0.05
+		Front.set_tilt 35               // (its back edge up: the ridge)
+		Front.join Walls
+		world.shape Back = add_box 3.3, 0.08, 1.35, "#b5452c", X, 1.78, Z - 1.05
+		Back.set_tilt -35
+		Back.join Walls
+	}
+
+	// ==== 109.10  Inside a house =========================================
+
+	// its walls (#), floor (,), oven (O), a table (b) and the doormat (M)
+	void add_inside char Tile, double X, double Z {
+		if Tile == '#' {
+			add_box 1, 1, 1, "#d7c4a3", X, 0.5, Z
+		} else if Tile == ',' {
+			add_plane 1, 1, "#a0703c", X, 0.005, Z
+		} else if Tile == 'O' {
+			add_plane 1, 1, "#a0703c", X, 0.005, Z
+			world.shape Oven = add_box 0.9, 0.9, 0.8, "#55555e", X, 0.45, Z
+			world.shape Fire = add_box 0.5, 0.3, 0.05, "#ff7a1a", X, 0.35, Z + 0.41
+			Fire.join Oven
+		} else if Tile == 'b' {
+			add_plane 1, 1, "#a0703c", X, 0.005, Z
+			world.shape Top = add_box 0.9, 0.08, 0.9, "#8b5a2b", X, 0.7, Z
+			world.shape Leg = add_box 0.1, 0.66, 0.1, "#8b5a2b", X, 0.33, Z
+			Leg.join Top
+		} else if Tile == 'M' {
+			add_plane 1, 1, "#b03a2e", X, 0.006, Z
+		}
+	}
+
+	// ==== 109.11  The hills ==============================================
+
+	// high ground (h), its cliff (C) and steps up (z), a bridge (B, or P
+	// over the path), ledges to hop down (v), and tall grass (w)
+	void add_hills char Tile, double X, double Z {
+		if Tile == 'h' {
+			add_box 1, HIGH, 1, "#5fa83f", X, HIGH / 2, Z
+		} else if Tile == 'C' {
+			add_box 1, HIGH, 1, "#8d7b68", X, HIGH / 2, Z
+		} else if Tile == 'z' {
+			for I in 3 {
+				double Up = HIGH * (I + 1) / 3
+				add_box 1, Up, 0.34, "#a89a86", X, Up / 2, Z + 0.33 - I * 0.33
+			}
+		} else if Tile == 'B' || Tile == 'P' {
+			if Tile == 'P' {
+				add_plane 1, 1, "#d9c38c", X, 0.005, Z
+			}
+			add_box 1, 0.12, 1, "#8b5a2b", X, HIGH - 0.06, Z
+		} else if Tile == 'v' {
+			add_box 1, 0.3, 0.5, "#5fa83f", X, 0.15, Z - 0.25
+		} else if Tile == 'w' {
+			add_cone 0.12, 0.45, "#3d8b2f", X - 0.2, 0.22, Z - 0.1
+			add_cone 0.12, 0.5, "#3d8b2f", X + 0.15, 0.25, Z + 0.15
+			add_cone 0.12, 0.4, "#3d8b2f", X, 0.2, Z + 0.3
+		}
+	}
+
+	// ==== 109.12  The areas next door ====================================
+
+	// a line for each, after the map; their own next door, at the corners;
+	// then a ring of trees round all of them
+	void add_joins {
+		for I in Things.length {
+			if Things[I].starts_with "join " {
+				add_join Things[I].copy
+			}
+		}
+		add_corners
+		add_rings
+	}
+
+	// "join north woods 0": the woods' map, beyond the north edge of Here
+	// (this area's map, or an area next door's), its column 0 beside Here's
+	neighbour beside const str &Line, const list str &Here const {
+		list str Words = Line.split " "
+		neighbour Next
+		Next.Side = Words[1].copy
+		Next.Area = Words[2].copy
+		read_map Words[2], Next.Map
+		Next.place_beside Here, Words[3].to_int
+		return Next
+	}
+
+	// beyond this area's edge
+	void add_join const str &Line {
+		neighbour Next = beside Line, Map
+		add_tiles_of Next.Map, Next.Col, Next.Row
+		Joins.add Next
+	}
+
+	// ==== 109.13  Corners ================================================
+
+	// the areas next door's own areas next door: one at a corner is seen
+	// from here, before it's walked to (tutorial 79's)
+	void add_corners {
+		int Count = (int)Joins.length
+		for I in Count {
+			list str Lines
+			read_joins Joins[I].Area, Lines
+			for Line in Lines {
+				add_corner Line, (int)I
+			}
+		}
+	}
+
+	void add_corner const str &Line, int I {
+		neighbour Corner = beside Line, Joins[I].Map
+		Corner.move_by Joins[I].Col, Joins[I].Row
+		if join_named(Corner.Area) < 0 && Corner.Area != Area {
+			Corner.Corner = true
+			add_tiles_of Corner.Map, Corner.Col, Corner.Row
+			Joins.add Corner
+		}
+	}
+
+	// which of Joins that area is (-1: none)
+	int join_named const str &Place const {
+		for I in Joins.length {
+			if Joins[I].Area == Place {
+				return (int)I
+			}
+		}
+		return -1
+	}
+
+	// which of Joins has the tile C, R (-1: none)
+	int join_at int C, int R const {
+		for I in Joins.length {
+			if Joins[I].has C, R {
+				return (int)I
+			}
+		}
+		return -1
+	}
+
+	// ==== 109.14  Trees all round ========================================
+
+	// round this area and each next door, RING deep, wherever no area is:
+	// the woods go on (and outside, only there: there's no more to see)
+	void add_rings {
+		if Inside {
+			return
+		}
+		lookup str bool Planted
+		add_ring 0, 0, (int)Map[0].length, (int)Map.length, Planted
+		for I in Joins.length {
+			add_ring Joins[I].Col, Joins[I].Row, (int)Joins[I].Map[0].length, (int)Joins[I].Map.length, Planted
+		}
+	}
+
+	void add_ring int Left, int Top, int Wide, int Deep, lookup str bool &Planted {
+		for R in Top - RING to Top + Deep + RING - 1 {
+			for C in Left - RING to Left + Wide + RING - 1 {
+				str Place = C.text + "," + R.text
+				if !on_map(C, R) && join_at(C, R) < 0 && !Planted.contains(Place) {
+					Planted[Place] = true
+					add_cone 0.45, 1.3, "#2f7d32", C, 0.65, R   // (a tree, all leaves: there are many)
+				}
+			}
+		}
+	}
+
+	bool on_map int C, int R const {
+		return R >= 0 && R < Map.length && C >= 0 && C < Map[R].length
+	}
+
+	// ==== 108.16  A new walker: shapes joined to their body ==============
+
+	// on their tile, their feet on the ground
+	walker new_walker int C, int R, const str &Facing {
+		walker Someone
+		Someone.Col = C
+		Someone.Row = R
+		Someone.Body = add_box 0.4, 0.45, 0.25, "royalblue", C, 0.575, R
+		Someone.Left = add_box 0.15, 0.35, 0.15, "#333344", C - 0.1, 0.175, R
+		Someone.Right = add_box 0.15, 0.35, 0.15, "#333344", C + 0.1, 0.175, R
+		Someone.Left.join Someone.Body
+		Someone.Right.join Someone.Body
+		world.shape Head = add_ball 0.17, "#f1c27d", C, 0.97, R
+		Head.join Someone.Body
+		world.shape Hat = add_cylinder 0.19, 0.1, "#c62828", C, 1.15, R
+		Hat.join Someone.Body
+		Someone.face Facing
+		return Someone
+	}
+
+	// ==== 108.17  The camera =============================================
+
+	// above and behind the hero, looking down at them, as in FireRed
+	void look_at_hero {
+		move_camera_to Hero.Body.x, 7, Hero.Body.z + 5
+		point_camera_at Hero.Body.x, 0.5, Hero.Body.z
+	}
+
+	// ==== 109.15  The light ==============================================
+
+	// all of it at Amount (1: day; 0: dark): the sun, the light all round,
+	// and the sky (inside, black)
+	void light double Amount {
+		set_sun_color rgb(217, 217, 204, Amount)
+		set_ambient rgb(89, 89, 102, Amount)
+		if Inside {
+			set_background "black"
+		} else {
+			set_background rgb(135, 206, 235, Amount)
+		}
+	}
+
+	// "rgb(217, 217, 204)", each part that much of itself
+	str rgb int Red, int Green, int Blue, double Amount const {
+		return "rgb(" + part(Red, Amount).text + ", " + part(Green, Amount).text + ", " + part(Blue, Amount).text + ")"
+	}
+
+	// that much of a color's part, to the nearest whole number
+	int part int Of, double Amount const {
+		return (int)(Of * Amount + 0.5)
+	}
+
+	// ==== 108.18  Every frame  (changed in 109) ==========================
+
+	void step {
+		if Mode == FADING_OUT || Mode == FADING_IN {
+			fade_step
+		} else if Mode == READING {
+			if key_press "space" {
+				Mode = PLAYING
+				Words.set_text ""
+				Shade.set_text ""
+			}
+		} else if Hero.stepping {
+			if Hero.keep_stepping {
+				arrived
+			}
+		} else {
+			walk_or_look
+		}
+		if frame - NameFrom == NAME_FRAMES {
+			Name.set_text ""
+			NameShade.set_text ""
+		}
+		look_at_hero
+	}
+
+	// ==== 109.16  Each frame of a fade ===================================
+
+	// the light going down, then (dark) the next area built; or coming up,
+	// then walking on
+	void fade_step {
+		FadeFrame++
+		double Done = FadeFrame / (double)FADE_FRAMES
+		if Mode == FADING_OUT {
+			light 1 - Done
+		} else {
+			light Done
+		}
+		if FadeFrame < FADE_FRAMES {
+			return
+		} else if Mode == FADING_OUT {
+			start_at NextArea.copy, NextCol, NextRow
+		} else {
+			Mode = PLAYING
+		}
+	}
+
+	// ==== 109.17  On the next tile =======================================
+
+	// over the edge, into the area next door? Or a way out starts here?
+	void arrived {
+		println "at", Hero.Col, Hero.Row
+		str Way = thing_at "way", Hero.Col, Hero.Row
+		if !on_map(Hero.Col, Hero.Row) {
+			cross_over
+		} else if Way != "" {
+			leave_by Way
+		}
+	}
+
+	// into the area next door: it's the area now, with no fade, and the
+	// hero on the same tile, counted on its map, so the camera doesn't jump
+	void cross_over {
+		int J = join_at Hero.Col, Hero.Row
+		str Place = Joins[J].Area.copy
+		int C = Hero.Col - Joins[J].Col
+		int R = Hero.Row - Joins[J].Row
+		enter Place, C, R
+	}
+
+	// "bakery 6,7": into the bakery, on its tile 6,7, once it's dark
+	void leave_by const str &Way {
+		list str To = Way.split " "
+		NextArea = To[0].copy
+		NextCol = To[1].split(",")[0].to_int
+		NextRow = To[1].split(",")[1].to_int
+		Mode = FADING_OUT
+		FadeFrame = 0
+	}
+
+	// ==== 108.19  On a tile: walk, or look ===============================
+
+	// an arrow key held down starts the next step; Space looks ahead
+	void walk_or_look {
+		str Way = held_way
+		if Way != "" {
+			arrow_held Way
+		} else if key_press "space" {
+			look_ahead
+		}
+	}
+
+	// ==== 108.20  Turning, or walking ====================================
+
+	// a new way only turns the hero; held a moment longer, they walk
+	void arrow_held const str &Way {
+		if Way != Hero.Facing {
+			Hero.face Way
+			Turned = Way.copy
+		} else if Way != Turned || key_press(Way) || key_held_for(Way) >= TURN_TIME {
+			walk Way
+		}
+	}
+
+	// the way an arrow key held down points ("": none)
+	str held_way const {
+		list str Ways = {"up", "down", "left", "right"}
+		for Way in Ways {
+			if key_hold Way {
+				return Way.copy
+			}
+		}
+		return ""
+	}
+
+	// ==== 108.21  Walking  (changed in 109) ==============================
+
+	// onto the next tile if it's free, else a step on the spot
+	void walk const str &Way {
+		bool Free = is_free Hero.Col + across_of(Way), Hero.Row + down_of(Way)
+		Hero.step Way, Free
+		if !Free {
+			println "bump", Way
+		}
+	}
+
+	// a tile on the map, or in an area next door (not a corner), that
+	// isn't in the way; a door, if a way starts there
+	bool is_free int C, int R const {
+		if on_map C, R {
+			if Map[R][C] == 'D' {
+				return thing_at("way", C, R) != ""
+			}
+			return !BLOCKING.contains(Map[R][C])
+		}
+		int J = join_at C, R
+		return J >= 0 && !Joins[J].Corner && !BLOCKING.contains(Joins[J].tile(C, R))
+	}
+
+	// ==== 108.22  Signs ==================================================
+
+	// what a line after the map says about a tile: "sign 16,8 Cabby Town."
+	// asked for ("sign", 16, 8) is "Cabby Town."; "" if there's none
+	str thing_at const str &Kind, int C, int R const {
+		str Start = Kind + " " + C.text + "," + R.text + " "
+		for Line in Things {
+			if Line.starts_with Start {
+				return Line[Start.length to Line.length - 1]
+			}
+		}
+		return ""
+	}
+
+	// Space: a sign on the tile the hero faces, read over the world
+	void look_ahead {
+		str Sign = thing_at "sign", Hero.Col + across_of(Hero.Facing), Hero.Row + down_of(Hero.Facing)
+		if Sign != "" {
+			Words.set_text Sign
+			Shade.set_text Sign
+			Mode = READING
+			println "said:", Sign
+		}
+	}
+}
+
+// ==== 108.23  Starting ===================================================
+
+int main {
+	quest Q
+	Q.run
+}
+
+// (Cabby's tests walk along the path to the bakery, in at its door, out
+// by its doormat, and east along the path into the meadow:)
+// script: frames 30; tap down; frames 20; tap down; frames 20; tap down; frames 20; tap left; frames 3; tap left; frames 20; tap left; frames 20; tap left; frames 20; tap left; frames 20; tap up; frames 3; tap up; frames 20; tap up; frames 20; frames 50; tap down; frames 3; tap down; frames 20; frames 50; tap down; frames 20; tap right; frames 3; tap right; frames 20; tap right; frames 20; tap right; frames 20; tap right; frames 20; tap right; frames 20; tap right; frames 20; tap right; frames 20; tap right; frames 20; tap right; frames 20; tap right; frames 20; tap right; frames 20; tap right; frames 20; tap right; frames 20; tap right; frames 20; tap right; frames 20; tap right; frames 20; tap right; frames 20; tap right; frames 20; tap right; frames 20; tap right; frames 20; frames 5; close
+//
+// Try this:
+//  - Plant a ring of trees two deep, or five: RING (109.1).
+//  - Make inside a little darker: light it with 0.7 of the day (109.15).
+//  - Show the name for longer as you come into a house than over an edge.
+
+// ---------------------------------------------------------------- output
+//> in the town at 8 4
+//> at 8 5
+//> at 8 6
+//> at 8 7
+//> at 7 7
+//> at 6 7
+//> at 5 7
+//> at 4 7
+//> at 4 6
+//> at 4 5
+//> in the bakery at 6 7
+//> at 6 8
+//> in the town at 4 6
+//> at 4 7
+//> at 5 7
+//> at 6 7
+//> at 7 7
+//> at 8 7
+//> at 9 7
+//> at 10 7
+//> at 11 7
+//> at 12 7
+//> at 13 7
+//> at 14 7
+//> at 15 7
+//> at 16 7
+//> at 17 7
+//> at 18 7
+//> at 19 7
+//> at 20 7
+//> at 21 7
+//> at 22 7
+//> at 23 7
+//> at 24 7
+//> in the meadow at 0 7
