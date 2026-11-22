@@ -127,7 +127,7 @@ changing for.
 | 1.23.0 | 23 November | Cabby Quest in 3D, part 15: arriving by train at Cabby Town Station, the elder, a home, and Ember given; lines in a map for the 3D quest only |
 | 1.24.0 | 23 November | The 3D quest, from your testing: Ember's back legs and swaying tail, running out from behind the hero into a battle, room beside a ledge; one lighthouse, not four |
 | 1.25.0 | 23 November | Cabby Quest in 3D, part 16: the train leaving, and coming every three minutes (no ticket); worn out in a battle, and waking beside the elder |
-| 1.26.0 | 23 November | `use world`: a model's colors as Blender shows them (glTF's linear colors turned into sRGB) |
+| 1.26.0 | 23 November | `use world`: a model's colors as Blender shows them (glTF's linear colors turned into sRGB), and materials of the older kind (specular-glossiness) read |
 
 ---
 
@@ -2171,7 +2171,10 @@ adds up, and Cabby drew them as if they were already as a screen shows
 them. Now each is turned into sRGB, as `"#e8762c"` is (a picture's own
 pixels already were). Found looking at a fox model you found for Ember:
 orange, not red. The model test's gold is drawn paler, as Blender shows
-it.
+it. And a material given the older way (KHR_materials_pbrSpecularGlossiness,
+as some of Sketchfab's models are: a bear, a fish and a sand mouse you
+found) drew white, without its picture: its "diffuse" color and picture
+are now read as Base Color.
 
 ## Along the way (dates not recorded)
 
