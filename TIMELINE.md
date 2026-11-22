@@ -115,6 +115,7 @@ changing for.
 | 1.11.0 | 22 November | Cabby Quest in 3D, part 6: noticed, and Rufus's battle; experience and levels; world text over several lines |
 | 1.12.0 | 22 November | Cabby Quest in 3D, part 7: the baker's spoon; questions, a thing to pick up, a quest, and saving |
 | 1.13.0 | 22 November | Cabby Quest in 3D, part 8: a title over the world, the game's menu, and options |
+| 1.14.0 | 22 November | Cabby Quest in 3D, part 9: the lake; the world moving; swimming |
 
 ---
 
@@ -1973,6 +1974,16 @@ town, the camera slowly circling it: a new game, Continue, or the
 options. Escape opens the game's menu: what the hero carries, saving,
 the options, and back to the title. The options change how the world is
 drawn: shadows on or off, the camera near or far.
+
+*Version 1.14.0, Cabby Quest in 3D, part 9:* tutorial 116, and chapter
+116 of the manual, from your ideas: the world moves, the water
+shimmering in soft bands with waves drifting on it, the flowers and the
+trees swaying in the wind, each a little out of step with the rest; and
+swimming. Face the water and press Space, and it asks whether to swim;
+the hero goes in up to their chest, ripples spreading behind them, and
+climbs out onto land. A new area, the lake, east of the hills (a gap in
+the hills' east edge, and `quest/lake.txt`), has an island in the
+middle that only a swimmer can reach, and a shell on it.
 
 ## Along the way (dates not recorded)
 

@@ -1,6 +1,6 @@
 # The Cabby Manual
 
-*For Cabby 1.13.0 (2026-11-22).*
+*For Cabby 1.14.0 (2026-11-22).*
 
 A book for learning Cabby one idea at a time, and a reference to come back
 to afterwards.
@@ -221,6 +221,7 @@ int main {
 113. [Noticed, and the rival](#chapter-113-noticed-and-the-rival): a "!" over someone's head, and coming over; a battle that can't be run from; experience and levels; healing; words wrapped
 114. [The baker's spoon](#chapter-114-the-bakers-spoon): questions to answer; what the hero has done, in a struct; a thing to pick up; a quest; saving, and carrying on
 115. [The title, and a menu](#chapter-115-the-title-and-a-menu): a title over the world, the camera circling the town; the game's menu; options for how the world is drawn
+116. [The lake](#chapter-116-the-lake): a world that moves, water, flowers and trees; swimming, after asking the water; ripples; a place reached only by water
 
 **[Appendices](#appendices)**
 
@@ -17470,7 +17471,72 @@ were opened from, the title or the game's menu.
   the day (109.15) at dusk.
 * Show the hero's name, once they have one, under the title.
 
-[← Chapter 114](#chapter-114-the-bakers-spoon) · [Contents](#contents) · [Appendices →](#appendices)
+[← Chapter 114](#chapter-114-the-bakers-spoon) · [Contents](#contents) · [Chapter 116 →](#chapter-116-the-lake)
+
+### Chapter 116: The lake
+
+*Program: `116-quest-3d-lake.cby`, the world moving, and a lake east of the hills. Libraries: `use world`, `use files`, `use math`, `use json`, `use directories`.*
+
+#### A world that moves
+
+Water, flowers and trees are each put in a group as they're made: each
+tile of water in `"water"`, with a wave, a thin pale line, on one tile
+in three, in `"waves"` (116.4); each flower in `"flowers"`, and each
+tree's trunk in `"trees"` (108.12, 108.13). Every frame, `move_world`
+(116.5) finds them with `shapes_in`, and moves each a little:
+
+* the water's color goes a little lighter and darker, round and round;
+* each wave drifts to and fro across its tile, longer in the middle;
+* the flowers sway side to side;
+* the trees lean, forward and back, and side to side, at two different
+  speeds, so they never quite repeat. The leaves are joined to the
+  trunk, so they lean with it, and sway most at the top.
+
+If everything moved together, it would look like one thing moving. So
+each is out of step with the rest, by a `phase` from where it is
+(116.6): `sin` of the time, plus the phase. Things near each other
+differ only a little, so the water's shimmer moves across it in soft
+bands, and a gust goes through the trees.
+
+A wave drifts less than half a tile, so the tile it's on is always its
+`x`, rounded: that's where it drifts round, with no list kept of where
+each one started.
+
+#### The lake
+
+East of the hills is a new area, `quest/lake.txt`: a lake with a shore
+all round, and an island in the middle. The hills' map has an opening
+in its east edge now, and a `join east lake 0`. (The 2D quest sees the
+lake too, but can't swim.)
+
+#### Swimming
+
+Face the water and press Space (108.22): `ask_the_water` (116.7) asks
+whether to swim. Say yes, and `swim_in` (116.8) takes a step into it,
+down to `DEEP` (116.1), a step whose end is lower than its start, as
+part 4's stairs (108.6) are. While `Swimming`, the hero can go on
+through the water (111.6); each step leaves a ripple behind. Stepping
+onto land, they climb out (116.9): `settle_swimming` notices they're
+not on water any more. Each time they want to swim, they ask the water
+again.
+
+#### Ripples
+
+A ripple (116.10) is a ring on the water. Shapes in the world can't be
+seen through, so a ring is two discs: a pale one, and one the water's
+color just inside it and a little higher, so only the pale edge shows.
+Each frame, both grow, and the pale one's color comes nearer the
+water's; after 45 frames, they're taken away. The ripples are kept in a
+list, oldest first, two shapes for each.
+
+#### Try this
+
+* A stronger wind: twice the trees' tilt and roll (116.5).
+* Make the ripples spread wider, and last longer (116.10).
+* Hide the hero's legs while they swim, and show them again on land
+  (116.9): `Hero.Left.set_visible`.
+
+[← Chapter 115](#chapter-115-the-title-and-a-menu) · [Contents](#contents) · [Appendices →](#appendices)
 
 ---
 ## Appendices
@@ -17528,7 +17594,7 @@ Run `cabby` with no file to type Cabby a piece at a time:
 
 ```text
 $ cabby
-Cabby 1.13.0 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
+Cabby 1.14.0 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
 Cabby comes with ABSOLUTELY NO WARRANTY, under the MIT License; "cabby.license" for details.
 >>> int add int a, int b {
 ... 	return a + b

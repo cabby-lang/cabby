@@ -43,7 +43,7 @@ T.hhhh..=....hhhhhhhh..T
 T.hhhhBBPBBBBhhhhhhhh..T
 T.hhhh..=....hhhhhhhh..T
 T.CCzC..=....CCCCzCCC..T
-T.......=..............T
+T.......=...............
 T..f....=.......f......T
 T.......=...S..........T
 Tvvvvvvv=vvvvvvvvvvvvvvT
@@ -57,4 +57,5 @@ TTTTTTTTTTTTTTTTTTTTTTTT
 name The Hills
 music meadow
 join north town 0
+join east lake 0
 sign 12,8 The hills. Climb the steps, and cross the bridge.
