@@ -127,6 +127,7 @@ changing for.
 | 1.23.0 | 23 November | Cabby Quest in 3D, part 15: arriving by train at Cabby Town Station, the elder, a home, and Ember given; lines in a map for the 3D quest only |
 | 1.24.0 | 23 November | The 3D quest, from your testing: Ember's back legs and swaying tail, running out from behind the hero into a battle, room beside a ledge; one lighthouse, not four |
 | 1.25.0 | 23 November | Cabby Quest in 3D, part 16: the train leaving, and coming every three minutes (no ticket); worn out in a battle, and waking beside the elder |
+| 1.26.0 | 23 November | `use world`: a model's colors as Blender shows them (glTF's linear colors turned into sRGB) |
 
 ---
 
@@ -2162,6 +2163,15 @@ it waits: "You don't have a ticket." And when Ember is worn out in a
 battle, the hero hurries her back to the elder in the last town they
 were in, and wakes beside him (the town's map says where, with a
 "rest" line).
+
+*Version 1.26.0 (23 November):* in `use world`, a model's plain colors
+(a material's Base Color, and vertex colors) came out darker and redder
+than in Blender or on Sketchfab: glTF keeps colors linear, as light
+adds up, and Cabby drew them as if they were already as a screen shows
+them. Now each is turned into sRGB, as `"#e8762c"` is (a picture's own
+pixels already were). Found looking at a fox model you found for Ember:
+orange, not red. The model test's gold is drawn paler, as Blender shows
+it.
 
 ## Along the way (dates not recorded)
 

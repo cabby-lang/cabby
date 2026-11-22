@@ -280,6 +280,16 @@ static M4 model_facing(void) { return m_rotate_y((float)M_PI); }
 
 static void skin_mesh(const Model *m, const Prim *p, float (*world)[16], Mesh *out);
 
+/* a linear color part (0 to 1) as a screen shows it: sRGB's curve */
+static float linear_to_srgb(float c)
+{
+	if (c <= 0)
+		return 0;
+	if (c >= 1)
+		return 1;
+	return c <= 0.0031308f ? 12.92f * c : 1.055f * powf(c, 1 / 2.4f) - 0.055f;
+}
+
 static int model_load(const char *path)
 {
 	for (int i = 0; i < nmodels; i++)
@@ -453,6 +463,13 @@ static int model_load(const char *path)
 				}
 				p.two_sided = mat->double_sided;
 			}
+			/* glTF's colors (a material's color, vertex colors) are linear:
+			 * as the light really adds up. Cabby's are as a screen shows them
+			 * ("#e8762c", and a picture's own pixels), so each is turned into
+			 * that (sRGB), or a model's plain colors come out darker and
+			 * redder than Blender shows them */
+			for (int k = 0; k < 3; k++)
+				p.color[k] = linear_to_srgb(p.color[k]);
 			if (node->skin && jo && we) {
 				p.skin = (int)(node->skin - d->skins);
 				p.joints = calloc((size_t)nv * 4, sizeof *p.joints);

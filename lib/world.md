@@ -172,8 +172,10 @@ What comes with it:
 
 * **Its meshes**, each as it hangs from its object in Blender, moved,
   turned and sized as there.
-* **Its materials' colors** (Base Color), and their **pictures** (an Image
-  Texture into Base Color). A picture set to Closest in Blender stays
+* **Its materials' colors** (Base Color), as Blender shows them (glTF
+  keeps colors linear, as light adds up; Cabby turns them into the
+  colors a screen shows, sRGB, as `"#e8762c"` is), and their
+  **pictures** (an Image Texture into Base Color). A picture set to Closest in Blender stays
   sharp, as pixel art should. Where a picture is see-through, so is the
   model. `set_color` tints the whole model (`"white"`: as made), and
   `set_picture` puts a picture of your own on all of it.
