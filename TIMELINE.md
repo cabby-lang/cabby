@@ -122,6 +122,7 @@ changing for.
 | 1.18.0 | 22 November | Cabby Quest in 3D, part 11: the cave, a lantern, crystals, bats and drips; `--style` no longer asks to drop a call's parentheses when its first argument starts with one |
 | 1.19.0 | 22 November | Cabby Quest in 3D, part 12: music and sounds, the rain heard, thunder and lightning; `sound.track`'s methods no longer hang |
 | 1.20.0 | 22 November | Cabby Quest in 3D, part 13: the coast, the sea, a pier, boats, palms, gulls, a lighthouse, and Rufus again; glowing shapes in `use world`; the cave's rock solid |
+| 1.21.0 | 23 November | The 3D quest, from your testing: rain once every two or three days, smaller raindrop ripples, and the Elder no longer walks off after Rufus |
 
 ---
 
@@ -2096,6 +2097,20 @@ test checks a glowing box's color and that it leaves none.
 And in the cave (tutorials 118 to 120), its rock, stalagmites and
 crystals could be walked through: they weren't in `BLOCKING`. Now they
 are.
+
+*Version 1.21.0, from your testing (23 November):* in the 3D quest
+(tutorials 113 to 120):
+
+* **Rain** came a few times a day: every 25 seconds, one time in three,
+  it started or stopped. Now it starts about once in two and a half days
+  (`RAIN_DAYS`), however long a day is, and a shower lasts a few minutes.
+* **Raindrops' ripples** grew as big as a swimmer's. Now
+  `small_ripple` makes one a size smaller: a raindrop's 0.3 as big, a
+  drip's in the cave 0.5.
+* **The Elder walked off east**, quickly, if the hero left the meadow
+  while Rufus was walking away after their first battle: walking off was
+  still going on in the town, and the one it moved was the Elder. Now
+  it stops when the area changes.
 
 ## Along the way (dates not recorded)
 

@@ -1,6 +1,6 @@
 # The Cabby Manual
 
-*For Cabby 1.20.0 (2026-11-22).*
+*For Cabby 1.21.0 (2026-11-23).*
 
 A book for learning Cabby one idea at a time, and a reference to come back
 to afterwards.
@@ -17640,8 +17640,11 @@ where the area is (116.11), and taken away with it (109.6).
 
 #### Rain
 
-Now and then, one time in three every `RAIN_CHECK` frames, the rain
-starts, or stops (117.10). `Wet` follows it over three seconds, from 0
+Every `RAIN_CHECK` frames (25 seconds), the weather may change (117.10).
+If it's dry, the rain starts one time in so many that it's about once in
+`RAIN_DAYS` days (two and a half), however long the options make a day;
+if it's raining, one time in six it stops, so a shower lasts a few
+minutes. `Wet` follows it over three seconds, from 0
 to 1 or back, and dims the sun, the light all round, and the sky,
 greying it.
 
@@ -17649,7 +17652,8 @@ The raindrops (117.11) are thin pale boxes, as many as it's wet. Each
 frame each falls a little, slanted; when one reaches the ground, it
 starts again up above, somewhere near the hero, more of them in front,
 where the camera looks. One landing on water, now and then, leaves a
-ripple (116.10). Inside a house, there are none.
+small ripple: `small_ripple` (116.10) makes one a size as big as a
+swimmer's, here 0.3. Inside a house, there are none.
 
 #### Try this
 
@@ -17920,7 +17924,7 @@ Run `cabby` with no file to type Cabby a piece at a time:
 
 ```text
 $ cabby
-Cabby 1.20.0 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
+Cabby 1.21.0 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
 Cabby comes with ABSOLUTELY NO WARRANTY, under the MIT License; "cabby.license" for details.
 >>> int add int a, int b {
 ... 	return a + b

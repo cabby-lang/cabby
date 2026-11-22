@@ -61,6 +61,7 @@ const double DEEP = -0.4            // a swimmer's feet, under the water
 const int DAY_FRAMES = 86400        // a day: 24 minutes, 12 of day and 12 of night
 const int QUICK_DAY = 7200          // or, in the options, two minutes
 const int RAIN_CHECK = 1500         // every 25 seconds, the weather may change
+const double RAIN_DAYS = 2.5         // it starts to rain about once in this many days
 const int DROPS = 160               // raindrops falling, round the hero
 
 // ==== 118.1  The cave ====================================================
@@ -775,6 +776,7 @@ object quest : world.window {
 	double Flash                    // lightning: 1 at its brightest, fading to 0
 	list world.shape Ripples        // rings spreading on the water (two shapes each)
 	list int RippleAges             // and how many frames each has spread
+	list double RippleSizes         // and how big each grows (1: a swimmer's)
 
 	// ==== 108.9  Building it  (changed in 109, 112, 114, 115) ============
 
@@ -972,8 +974,10 @@ object quest : world.window {
 		Things.clear
 		Joins.clear
 		People.clear
+		WalkingOff = false              // (whoever was walking off went with them)
 		Ripples.clear                   // (116) (gone with the rest)
 		RippleAges.clear
+		RippleSizes.clear
 		Drops.clear                     // (117) and the lamps, which aren't shapes
 		Windows.clear
 		for Lamp in WindowLamps {
@@ -3102,14 +3106,18 @@ object quest : world.window {
 
 	// ==== 117.10  The weather ============================================
 
-	// now and then, one time in three, the rain starts, or stops; it comes
-	// on, and goes off, over three seconds; and the drops fall
+	// now and then the rain starts: one check in so many that it's about
+	// once in RAIN_DAYS days, however long a day is; raining, one check
+	// in six it stops, so a shower lasts a few minutes. It comes on, and
+	// goes off, over three seconds; and the drops fall
 	void weather {
-		if frame % RAIN_CHECK == 0 && random(1, 3) == 1 {
-			Story.Raining = !Story.Raining
-			if Story.Raining {
+		if frame % RAIN_CHECK == 0 {
+			int Checks = (int)(RAIN_DAYS * day_frames / RAIN_CHECK)
+			if !Story.Raining && random(1, Checks) == 1 {
+				Story.Raining = true
 				println "it starts to rain"
-			} else {
+			} else if Story.Raining && random(1, 6) == 1 {
+				Story.Raining = false
 				println "the rain stops"
 			}
 		}
@@ -3153,7 +3161,7 @@ object quest : world.window {
 		double X = Drops[I].x
 		double Z = Drops[I].z
 		if Drops[I].y > -1 && water_at((int)floor(X - OriginX + 0.5), (int)floor(Z - OriginZ + 0.5)) && random(1, 4) == 1 && Ripples.length < 40 {
-			ripple X, Z
+			small_ripple X, Z, 0.3      // (a raindrop's: small)
 		}
 		Drops[I].move_to Hero.Body.x + random(-80, 80) / 10.0, 3 + random(0, 40) / 10.0, Hero.Body.z + random(-70, 30) / 10.0
 	}
@@ -3388,7 +3396,7 @@ object quest : world.window {
 			Drips[0].move 0, -0.08, 0
 		} else if Y > -0.5 {
 			if water_at((int)floor(X - OriginX + 0.5), (int)floor(Z - OriginZ + 0.5)) {
-				ripple X, Z
+				small_ripple X, Z, 0.5      // (a drip's: smaller)
 			}
 			effect_at "drip", X, Z      // (119)
 			Drips[0].move_to 0, -1, 0           // (out of sight: waiting)
@@ -3437,11 +3445,17 @@ object quest : world.window {
 	// a ring on the water: a pale disc, with one the water's color just
 	// inside it, a little higher, so only its edge shows
 	void ripple double X, double Z {
-		world.shape Edge = add_cylinder 0.2, 0.004, "#e8f4ff", X, 0.012, Z
-		world.shape Middle = add_cylinder 0.18, 0.004, "#3a7bd5", X, 0.016, Z
+		small_ripple X, Z, 1
+	}
+
+	// one Size as big (a raindrop's, smaller)
+	void small_ripple double X, double Z, double Size {
+		world.shape Edge = add_cylinder 0.2 * Size, 0.004, "#e8f4ff", X, 0.012, Z
+		world.shape Middle = add_cylinder 0.18 * Size, 0.004, "#3a7bd5", X, 0.016, Z
 		Ripples.add Edge
 		Ripples.add Middle
 		RippleAges.add 0
+		RippleSizes.add Size
 	}
 
 	// each a little bigger, and nearer the water's color, until it's gone
@@ -3450,10 +3464,11 @@ object quest : world.window {
 		for I in RippleAges.length {
 			RippleAges[I]++
 			double Age = RippleAges[I] / 45.0
-			double Wide = 0.3 + 1.2 * Age
+			double Wide = RippleSizes[I] * (0.3 + 1.2 * Age)
 			Ripples[2 * I].set_size Wide, 0.004, Wide
 			Ripples[2 * I].set_color rgb(232 - (int)(174 * Age), 244 - (int)(121 * Age), 255 - (int)(42 * Age), 1)
-			Ripples[2 * I + 1].set_size Wide - 0.06, 0.004, Wide - 0.06
+			double Inner = Wide - 0.06 * RippleSizes[I]
+			Ripples[2 * I + 1].set_size Inner, 0.004, Inner
 		}
 		if RippleAges.length > 0 && RippleAges[0] >= 45 {
 			Ripples[0].remove
@@ -3461,6 +3476,7 @@ object quest : world.window {
 			Ripples.remove_at 0
 			Ripples.remove_at 0
 			RippleAges.remove_at 0
+			RippleSizes.remove_at 0
 		}
 	}
 

@@ -725,6 +725,7 @@ object quest : world.window {
 		Things.clear
 		Joins.clear
 		People.clear
+		WalkingOff = false              // (whoever was walking off went with them)
 	}
 
 	// ==== 110.3  The people in an area ===================================

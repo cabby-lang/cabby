@@ -878,6 +878,7 @@ object quest : world.window {
 		Things.clear
 		Joins.clear
 		People.clear
+		WalkingOff = false              // (whoever was walking off went with them)
 		Ripples.clear                   // (116) (gone with the rest)
 		RippleAges.clear
 	}
