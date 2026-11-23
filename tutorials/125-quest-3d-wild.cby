@@ -586,6 +586,7 @@ const str ELDER_MODEL = "models/elder.glb"
 
 const str MOUSE_MODEL = "models/mouse.glb"
 const str CROW_MODEL = "models/crow.glb"
+const str GULL_MODEL = "models/gull.glb"
 
 // ==== 112.14  A field mouse  (changed in 125) ============================
 
@@ -3549,7 +3550,7 @@ object quest : world.window {
 		Drips.add Drip
 	}
 
-	// ==== 118.7  A bat, or a gull  (changed in 120) =====================
+	// ==== 118.7  A bat, or a gull  (changed in 120, 125) =================
 
 	// "bats 3", or (120) "gulls 3": that many, each over a tile picked at
 	// random (a bat's, the cave's floor), going round it
@@ -3583,14 +3584,21 @@ object quest : world.window {
 		}
 		world.shape Body = add_ball 0.07, Color, X, Y, Z
 		Body.set_size 0.12, 0.1, 0.16
+		if Gull {
+			// (125) a gull is a model, flying, its wings its own: the two
+			// below, out of sight, are only for fly_bats to flap
+			Body.remove
+			Body = add_model GULL_MODEL, X, Y, Z
+			Body.play "fly"
+		}
 		for Side in 2 {
 			double Out = Side * 2 - 1
 			world.shape Wing = add_box 0.22, 0.015, 0.12, WingColor, X + Out * 0.13, Y, Z
 			Wing.join Body
+			Wing.set_visible !Gull
 			Wings.add Wing
 		}
 		if Gull {
-			Body.set_scale 2                // (bigger: a gull's body, not its wings)
 			BatWide.add 3.5
 			BatCry.add "gull"
 		} else {
