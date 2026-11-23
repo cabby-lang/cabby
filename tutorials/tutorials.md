@@ -1,6 +1,6 @@
 # The Cabby Manual
 
-*For Cabby 1.28.0 (2026-11-23).*
+*For Cabby 1.29.0 (2026-11-23).*
 
 A book for learning Cabby one idea at a time, and a reference to come back
 to afterwards.
@@ -230,7 +230,7 @@ int main {
 122. [Arriving](#chapter-122-arriving): a story at the start, a step at a time; a train, slowing into a station, steam rising; lines in a map for the 3D quest only; a home, and Ember given
 123. [Trains, and the elder](#chapter-123-trains-and-the-elder): a timetable, worked out from the time alone; pulling in, waiting, pulling out; no ticket; worn out, and back to the elder
 124. [Models](#chapter-124-models): models made by others, in place of shapes: a fox, a dog, an old man; their animations, played; a walker whose body is a model; credit where it's due
-125. [The wild ones, as models](#chapter-125-the-wild-ones-as-models): a field mouse and a hill crow as models; a model made smaller, keeping only what's used
+125. [The wild ones, as models](#chapter-125-the-wild-ones-as-models): a field mouse, a hill crow and the gulls as models; a model made smaller, keeping only what's used
 
 **[Appendices](#appendices)**
 
@@ -18185,6 +18185,13 @@ each with `model_of` (124.2), as it does Ember; each has `Lift` 0 and a
 `Moving` animation (112.14, 112.15): the mouse runs out at Ember, and
 the crow hops.
 
+#### The gulls
+
+The coast's gulls (118.7) are a model too, a seagull flying: its body is
+the model, playing `"fly"`, its wings its own. `fly_bats` flaps two
+wings for each flier, so a gull still has two, out of sight, joined to
+it: they flap, harmlessly.
+
 #### Only what's used
 
 The sand mouse came with fourteen animations: walking, running, four
@@ -18261,7 +18268,7 @@ Run `cabby` with no file to type Cabby a piece at a time:
 
 ```text
 $ cabby
-Cabby 1.28.0 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
+Cabby 1.29.0 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
 Cabby comes with ABSOLUTELY NO WARRANTY, under the MIT License; "cabby.license" for details.
 >>> int add int a, int b {
 ... 	return a + b

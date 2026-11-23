@@ -130,6 +130,7 @@ changing for.
 | 1.26.0 | 23 November | `use world`: a model's colors as Blender shows them (glTF's linear colors turned into sRGB), and materials of the older kind (specular-glossiness) read |
 | 1.27.0 | 23 November | Cabby Quest in 3D, part 17: Ember a fox, Bruno a black dog, the elder an old man: models made by others (CC BY 4.0, credited), with their animations |
 | 1.28.0 | 23 November | Cabby Quest in 3D, part 18: the field mouse and the hill crow as models |
+| 1.29.0 | 23 November | Cabby Quest in 3D, part 18: the coast's gulls a model, flying |
 
 ---
 
@@ -2193,6 +2194,9 @@ The elder is a walker whose body is the model.
 models: the field mouse a sand mouse (running out at Ember), the hill
 crow a crow (hopping). The sand mouse's file keeps only the three of its
 fourteen animations a battle needs (10 MB down to 2.6 MB). Both credited.
+
+*Version 1.29.0 (23 November):* the coast's gulls (tutorial 125, chapter
+125) are a model, a low-poly seagull, flying; credited.
 
 ## Along the way (dates not recorded)
 
