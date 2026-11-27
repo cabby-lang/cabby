@@ -137,7 +137,7 @@ changing for.
 | 1.33.0 | 27 November | Cabby Quest in 3D, part 20: the party; who leads, following and battling first; the next sent out when one's worn out; each one's level, wounds and experience |
 | 1.34.0 | 27 November | Cabby Quest in 3D, part 21: the town through the day; the baker there by day, her shop open once the spoon's back; the spoon found only by day; a bed; the days counted |
 | 1.35.0 | 27 November | C files of your own: `use local mylib` builds `mylib.c` beside it (a kept `.so` for the interpreter, compiled in by `cabby -c`), with `mylib.link`'s flags |
-| 1.35.1 | 28 November | Cabby Quest fixes: the bakery a room again, not a cave, at night (its line is now `unlit`); a model stops running once it's out in a battle; the follower out of the way when a battle begins; the quest's tests given longer on slower computers |
+| 1.35.1 | 28 November | Cabby Quest fixes: the bakery a room again, not a cave, at night (its line is now `unlit`); a model stops running once it's out in a battle; the follower out of the way when a battle begins; the quest's tests given longer on slower computers; `make wasm` builds again |
 
 ---
 
@@ -2277,7 +2277,8 @@ once she'd run out into a battle: `finish` plays "idle" again (tutorials
 battle begins: she's out of sight until she's sent out (tutorial 128).
 And a tutorial that plays itself through a script now has five minutes,
 not one, to do it: the quest's longest took 45 seconds here, and more on
-Debian.
+Debian. And `make wasm` builds again: 1.35.0's C files of your own
+(which a browser can't build) were left in the WebAssembly interpreter.
 
 ## Along the way (dates not recorded)
 

@@ -4478,8 +4478,7 @@ static void load_natives(Program *prog)
 	(void)prog;
 	extern void (*cby_invoke_hook)(void *, void *);   /* (in rt.c, for them all) */
 	cby_invoke_hook = interp_invoke;
-	return;
-#endif
+#else
 	for (int i = 0; i < prog->natives.len; i++) {
 		NativeLib *nl = &prog->natives.items[i];
 		char path[4096];
@@ -4500,6 +4499,7 @@ static void load_natives(Program *prog)
 		if (hook)
 			*hook = interp_invoke;
 	}
+#endif
 }
 
 typedef struct {
