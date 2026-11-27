@@ -1,6 +1,6 @@
 # The Cabby Manual
 
-*For Cabby 1.35.0 (2026-11-27).*
+*For Cabby 1.35.1 (2026-11-28).*
 
 A book for learning Cabby one idea at a time, and a reference to come back
 to afterwards.
@@ -18425,7 +18425,8 @@ has moved into place `I`.
 
 #### Too dark to find
 
-The bakery's `dark` line says it has no lamps. `too_dark` is true there
+The bakery's `unlit` line says it has no lamps (not `dark`, which
+makes an area a cave, 118). `too_dark` is true there
 at night, and then `item_at` (114.7) finds nothing: the spoon isn't
 drawn, and can't be picked up. Looking where it is says it's too dark to
 find anything. `keep_hours` takes each item's shapes away and adds them
@@ -18518,7 +18519,7 @@ Run `cabby` with no file to type Cabby a piece at a time:
 
 ```text
 $ cabby
-Cabby 1.35.0 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
+Cabby 1.35.1 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
 Cabby comes with ABSOLUTELY NO WARRANTY, under the MIT License; "cabby.license" for details.
 >>> int add int a, int b {
 ... 	return a + b

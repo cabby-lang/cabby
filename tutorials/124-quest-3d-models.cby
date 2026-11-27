@@ -419,7 +419,7 @@ object critter {
 		}
 	}
 
-	// ==== 112.7  Each frame ==============================================
+	// ==== 112.7  Each frame  (changed in 124) ============================
 
 	// a frame further through what it's doing: rising up, and a little
 	// over; a jump forward, and back; shaking side to side, blinking;
@@ -468,6 +468,9 @@ object critter {
 			show true
 		}
 		Doing = STILL
+		if Moving != "" && Out {
+			Parts[0].play "idle"        // (124) there: still again
+		}
 	}
 
 	// ==== 112.8  Where it is now =========================================

@@ -39,6 +39,10 @@ for f in "$DIR"/*.cby; do
 		# no display is needed, and the look is always the light one
 		runner=(env CABBY_GUI_SCRIPT="$script")
 	fi
+	# (a game played through by a script, as the quest's are, can take a
+	# minute or more on a slower computer, drawn without a graphics card)
+	limit=60
+	if [[ -n "$script" ]]; then limit=300; fi
 	sed -n 's/^\/\/> \{0,1\}//p' "$f" > "$TMP/want"
 	want_exit=$(sed -n 's/^\/\/ exit: //p' "$f" | head -1)
 	read -r -a args <<< "$(sed -n 's/^\/\/ args: //p' "$f" | head -1)"
@@ -46,9 +50,9 @@ for f in "$DIR"/*.cby; do
 		if ! (cd "$DIR" && "$CLI" -c "$f" -o "$TMP/$name") > "$TMP/err" 2>&1; then
 			fail=$((fail+1)); echo "FAIL $name (compile)"; head -20 "$TMP/err" | sed 's/^/  | /'; continue
 		fi
-		(cd "$rundir" && timeout 60 ${runner[@]+"${runner[@]}"} "$TMP/$name" ${args[@]+"${args[@]}"}) > "$TMP/got" 2> "$TMP/err.raw"; rc=$?
+		(cd "$rundir" && timeout $limit ${runner[@]+"${runner[@]}"} "$TMP/$name" ${args[@]+"${args[@]}"}) > "$TMP/got" 2> "$TMP/err.raw"; rc=$?
 	else
-		(cd "$rundir" && timeout 60 ${runner[@]+"${runner[@]}"} "$CLI" "$f" ${args[@]+"${args[@]}"}) > "$TMP/got" 2> "$TMP/err.raw"; rc=$?
+		(cd "$rundir" && timeout $limit ${runner[@]+"${runner[@]}"} "$CLI" "$f" ${args[@]+"${args[@]}"}) > "$TMP/got" 2> "$TMP/err.raw"; rc=$?
 	fi
 	# what a window tutorial saves next to itself (a `// leaves:` line) is
 	# the test's to tidy away

@@ -41,7 +41,7 @@
 //   shop <col>,<row> <who> <facing>          (3D, tutorial 128 on) <who>
 //                                            keeps the shop here: there by
 //                                            day, once it's open
-//   dark                                     (3D, tutorial 128 on) no lamps:
+//   unlit                                    (3D, tutorial 128 on) no lamps:
 //                                            nothing's found here at night
 // An area joined on to the north or south should be as wide as this one,
 // and one to the east or west as tall: an area at a corner, next door to
