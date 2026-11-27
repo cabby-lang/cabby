@@ -1,6 +1,6 @@
 # The Cabby Manual
 
-*For Cabby 1.38.1 (2026-11-28).*
+*For Cabby 1.39.0 (2026-11-28).*
 
 A book for learning Cabby one idea at a time, and a reference to come back
 to afterwards.
@@ -237,6 +237,7 @@ int main {
 129. [Switching, and sharing](#chapter-129-switching-and-sharing): a choice that asks another question; switching in a battle, taking the turn; a list of who's battled, kept through a battle; experience shared out among them
 130. [New Cabbymon](#chapter-130-new-cabbymon): which wild ones live where, from the areas' files; choosing by chances; a map changed as it's read; a kind's numbers and model, looked up by its name
 131. [The Cabbyball, thrown](#chapter-131-the-cabbyball-thrown): a thing thrown along an arc; something shrunk away, and back; a wobble; beats with no words; one thing waiting for another
+132. [Townsfolk](#chapter-132-townsfolk): a person who's a model, by their name; walking as they step; what someone says, from the areas' files, one line after another
 
 **[Appendices](#appendices)**
 
@@ -18636,7 +18637,76 @@ the one going was hit, and the one coming out showed its bar. Now
 * Show the ball in the hero's hand for a moment before it's thrown.
 * Give the wild one a little bounce as it bursts back out.
 
-[← Chapter 130](#chapter-130-new-cabbymon) · [Contents](#contents) · [Appendices →](#appendices)
+[← Chapter 130](#chapter-130-new-cabbymon) · [Contents](#contents) · [Chapter 132 →](#chapter-132-townsfolk)
+
+### Chapter 132: Townsfolk
+
+*Program: `132-quest-3d-folk.cby`, more people, and models. Libraries: `use world`, `use files`, `use math`, `use json`, `use directories`, `use sound`.*
+
+The town had two people in it, the elder and the baker, and the baker was
+boxes. Now she's a model, and there are more: a farmer who wanders by the
+pond, and a traveller at the station, waiting for a train east.
+
+#### A person who's a model
+
+`new_walker` (108.16) made the elder a model since part 17; now anyone
+can be. `person_model` (132.3) gives a person's model by their name
+(`""` for one made of boxes, as the hero still is), and `new_walker`
+makes those with one with `modelled_walker` (124.3).
+
+#### Walking as they step
+
+The elder's model has no walk, so he glides; these three have one.
+`walking` (132.2) plays a person's "walk" while they're stepping and
+"idle" when they're not, if their model has a walk
+(`Body.animations.contains`). `move_people` (110.5) says it for everyone,
+every frame: `play` goes on with what's already playing, so saying it
+again changes nothing.
+
+`walking` is a function on its own, outside the game's object. Inside
+it, `walking People[I]` would lend the game twice: once as itself (a
+method can change the game), and once as one of its people, which it
+could then change two ways at once. Cabby won't allow that. A function
+on its own doesn't have the game, so lending it one person is fine.
+
+#### What they say
+
+Who's where is in the areas' files, as before; a `folk` line is a person
+only this quest (and those after it) puts there, as a `person` line is
+for all of them, so the older parts' towns stay as they were. And what
+they say is there too, a line each:
+
+```text
+3d folk 15,11 farmer left wanders
+3d says farmer Morning! I keep the cows in the meadow, to the east. ...
+3d says farmer Mind the woods to the north, if your Cabbymon are tired. ...
+```
+
+`talk_to_folk` (132.4) finds their lines, and says the next each time
+they're talked to, round to the first again: `Chats` (a lookup, by who)
+counts how often, and `Said % Lines.length` picks the line.
+
+#### The models
+
+The three models are from Sketchfab (`models/CREDITS.md` says whose).
+`tools/prepare-model.py` made them ready, with something new: `--color`
+makes one of a model's materials (named in its file) another color. The
+traveller's clothes were black; now they're blue:
+
+```text
+tools/prepare-model.py male.glb models/traveller.glb --scale 0.37 --rename walking=walk --still idle=walk --color "clothing=#2f4f7f"
+```
+
+It also keeps only what's still used, now, so leaving animations out
+(`--keep`) makes the file smaller.
+
+#### Try this
+
+* Give the traveller a line that changes once the ticket office opens.
+* Let the farmer run (his model has "run") when it's raining.
+* Make a townsperson of your own, with a model and lines.
+
+[← Chapter 131](#chapter-131-the-cabbyball-thrown) · [Contents](#contents) · [Appendices →](#appendices)
 
 ---
 ## Appendices
@@ -18696,7 +18766,7 @@ Run `cabby` with no file to type Cabby a piece at a time:
 
 ```text
 $ cabby
-Cabby 1.38.1 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
+Cabby 1.39.0 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
 Cabby comes with ABSOLUTELY NO WARRANTY, under the MIT License; "cabby.license" for details.
 >>> int add int a, int b {
 ... 	return a + b

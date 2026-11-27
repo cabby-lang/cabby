@@ -3,7 +3,7 @@
 
     tools/prepare-model.py IN.glb OUT.glb [--scale S] [--turn DEGREES]
         [--lift Y] [--forward Z] [--rename OLD=NEW ...] [--keep NAME ...]
-        [--still NEW=OLD ...]
+        [--still NEW=OLD ...] [--color MATERIAL=#rrggbb ...]
 
   --scale S         made S times as big
   --turn DEGREES    turned round, to its left (as `turn` turns a shape):
@@ -17,6 +17,9 @@
   --keep NAME       only the animations named (after renaming) are kept
   --still NEW=OLD   a new animation, NEW, of OLD's first moment only: a
                     model with only a walk can stand still with it (idle)
+  --color MATERIAL=#rrggbb
+                    one of its materials (by name: "clothing") made that
+                    color, as a screen shows it
 
 The model's own nodes are put under one new node that scales, turns and
 moves them all, so a skinned character bends as before. And every
@@ -107,6 +110,96 @@ def add_still(gltf, binary, new, old):
     anims.append({'name': new, 'samplers': samplers, 'channels': [dict(c) for c in src['channels']]})
 
 
+def compact(gltf, binary):
+    """only what's still used kept: the data of animations left out, or
+    renamed away, goes (a model's file is as small as it can be)"""
+    views = gltf.get('bufferViews', [])
+    used_acc = set()
+    for m in gltf.get('meshes', []):
+        for q in m['primitives']:
+            used_acc.update(q.get('attributes', {}).values())
+            for t in q.get('targets', []):
+                used_acc.update(t.values())
+            if 'indices' in q:
+                used_acc.add(q['indices'])
+    for a in gltf.get('animations', []):
+        for smp in a['samplers']:
+            used_acc.update((smp['input'], smp['output']))
+    for sk in gltf.get('skins', []):
+        if 'inverseBindMatrices' in sk:
+            used_acc.add(sk['inverseBindMatrices'])
+    accs = gltf.get('accessors', [])
+    acc_map, new_accs = {}, []
+    for i, acc in enumerate(accs):
+        if i in used_acc:
+            acc_map[i] = len(new_accs)
+            new_accs.append(acc)
+    # each accessor's data copied on its own, packed tight (several often
+    # share one block, with what's left out in it too); and each picture's
+    new_views, out = [], bytearray()
+
+    def keep(data, target=None):
+        out.extend(b'\0' * (-len(out) % 8))
+        view = {'buffer': 0, 'byteOffset': len(out), 'byteLength': len(data)}
+        if target:
+            view['target'] = target
+        out.extend(data)
+        new_views.append(view)
+        return len(new_views) - 1
+    copied = {}   # (the same data, used twice, copied once)
+    for acc in new_accs:
+        if acc.get('sparse'):
+            sys.exit('a model with sparse accessors: not made smaller (not yet)')
+        if 'bufferView' not in acc:
+            continue
+        v = views[acc['bufferView']]
+        size = SIZES[acc['componentType']] * COUNTS[acc['type']]
+        stride = v.get('byteStride', size)
+        start = v.get('byteOffset', 0) + acc.get('byteOffset', 0)
+        same = (acc['bufferView'], acc.get('byteOffset', 0), acc['count'], acc['componentType'], acc['type'])
+        if same in copied:
+            acc['bufferView'] = copied[same]
+            acc.pop('byteOffset', None)
+            continue
+        # (a vertex's values start on a multiple of 4 bytes: three bytes of
+        # color, say, are given a fourth, unused)
+        step = size + (-size % 4) if COUNTS[acc['type']] > 1 else size
+        pad = b'\0' * (step - size)
+        data = b''.join(bytes(binary[start + i * stride:start + i * stride + size]) + pad for i in range(acc['count']))
+        acc['bufferView'] = keep(data, v.get('target'))
+        if step != size:
+            new_views[-1]['byteStride'] = step
+        copied[same] = acc['bufferView']
+        acc.pop('byteOffset', None)
+    view_map = {}
+    for img in gltf.get('images', []):
+        if 'bufferView' in img:
+            old = img['bufferView']
+            if old not in view_map:
+                v = views[old]
+                view_map[old] = keep(bytes(binary[v.get('byteOffset', 0):v.get('byteOffset', 0) + v['byteLength']]))
+    for img in gltf.get('images', []):
+        if 'bufferView' in img:
+            img['bufferView'] = view_map[img['bufferView']]
+    for m in gltf.get('meshes', []):
+        for q in m['primitives']:
+            q['attributes'] = {k: acc_map[v] for k, v in q['attributes'].items()}
+            if 'indices' in q:
+                q['indices'] = acc_map[q['indices']]
+            if 'targets' in q:
+                q['targets'] = [{k: acc_map[v] for k, v in t.items()} for t in q['targets']]
+    for a in gltf.get('animations', []):
+        for smp in a['samplers']:
+            smp['input'] = acc_map[smp['input']]
+            smp['output'] = acc_map[smp['output']]
+    for sk in gltf.get('skins', []):
+        if 'inverseBindMatrices' in sk:
+            sk['inverseBindMatrices'] = acc_map[sk['inverseBindMatrices']]
+    gltf['accessors'] = new_accs
+    gltf['bufferViews'] = new_views
+    return out
+
+
 def fill_animations(gltf, binary):
     """each animation moves every (node, path) any of them does: those it
     doesn't, held where the model has them"""
@@ -142,6 +235,7 @@ def main():
     p.add_argument('--rename', action='append', default=[])
     p.add_argument('--keep', action='append', default=[])
     p.add_argument('--still', action='append', default=[])
+    p.add_argument('--color', action='append', default=[])
     a = p.parse_args()
     gltf, binary = read_glb(a.input)
     if not a.output:
@@ -152,6 +246,9 @@ def main():
         for anim in gltf.get('animations', []):
             end = max(gltf['accessors'][s['input']].get('max', [0])[0] for s in anim['samplers'])
             print(f'  animation "{anim.get("name", "")}": {end:.2f} seconds')
+        names = [m.get('name', '') for m in gltf.get('materials', [])]
+        if names:
+            print(f'  materials: {", ".join(names)}')
         extras = gltf.get('asset', {}).get('extras', {})
         for k in ('title', 'author', 'source', 'license'):
             if k in extras:
@@ -163,6 +260,19 @@ def main():
         if not found:
             sys.exit(f'no animation named "{old}"')
         found[0]['name'] = new
+    for pair in a.color:
+        name, hexa = pair.split('=', 1)
+        found = [m for m in gltf.get('materials', []) if m.get('name') == name]
+        if not found:
+            sys.exit(f'no material named "{name}" (it has: {", ".join(m.get("name", "") for m in gltf.get("materials", []))})')
+        h = hexa.lstrip('#')
+        # (a glTF file keeps colors linear, as light adds up: from the sRGB a screen shows)
+        srgb = [int(h[i:i + 2], 16) / 255 for i in (0, 2, 4)]
+        linear = [c / 12.92 if c <= 0.04045 else ((c + 0.055) / 1.055) ** 2.4 for c in srgb]
+        for m in found:
+            pbr = m.setdefault('pbrMetallicRoughness', {})
+            pbr['baseColorFactor'] = linear + [pbr.get('baseColorFactor', [1, 1, 1, 1])[3]]
+            pbr.pop('baseColorTexture', None)
     for pair in a.still:
         new, old = pair.split('=', 1)
         add_still(gltf, binary, new, old)
@@ -171,6 +281,8 @@ def main():
         if not gltf['animations']:
             del gltf['animations']
     fill_animations(gltf, binary)
+    if binary:
+        binary = compact(gltf, binary)
     if a.scale != 1 or a.turn or a.lift or a.forward:
         half = math.radians(a.turn) / 2
         wrapper = {'name': 'prepared', 'children': list(gltf['scenes'][gltf.get('scene', 0)]['nodes'])}

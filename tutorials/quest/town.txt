@@ -46,6 +46,11 @@
 //   grass <col>,<row> <col>,<row>            (3D, tutorial 130 on) the grass
 //                                            (.) from one tile to the other
 //                                            is tall grass (w)
+//   folk <col>,<row> <who> <facing> [wanders] (3D, tutorial 132 on) someone
+//                                            who lives here, as "person"
+//   says <who> <words>                       (3D, tutorial 132 on) what
+//                                            <who> says, a line each time
+//                                            they're talked to
 //   wild <kind> <chance>                     (3D, tutorial 130 on) <kind> is
 //                                            met in the tall grass here, as
 //                                            often as <chance> is of all
@@ -86,5 +91,9 @@ sign 16,5 The door is locked.
 way 4,5 bakery 6,7
 person 11,3 elder down wanders
 person 6,9 baker right
+3d folk 15,11 farmer left wanders
+3d says farmer Morning! I keep the cows in the meadow, to the east. Wild ones wander in among them now and then: a bison, once.
+3d says farmer Mind the woods to the north, if your Cabbymon are tired. There's a bear in the long grass, and it doesn't like being woken.
+3d says farmer The baker's bread is the best there is. It'll put any Cabbymon right again, once her shop's open.
 3d shut baker
 sees baker 3

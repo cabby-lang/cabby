@@ -26,4 +26,7 @@ name Cabby Town Station
 music town
 join east town 0
 sign 8,8 Cabby Town Station. The town is along the path, to the east.
+3d folk 5,10 traveller left
+3d says traveller I'm waiting for the train east, to the cities. You'll want a ticket for it one day, when the office opens.
+3d says traveller "Back soon", the sign says. It's said that for a week now.
 sign 8,3 The ticket office. "Closed. Back soon."

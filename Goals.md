@@ -82,8 +82,11 @@ what's still to come has the detail.*
   - [ ] *Both have far too many triangles (the girl 25,000, the boy
     82,500): you're decimating them in Blender (to about 3,000 each)
     first.*
-- [ ] Townspeople from your models: the bearded man (walk, run, idle,
+- [x] Townspeople from your models: the bearded man (walk, run, idle,
   fight, death), the low-poly dude, male and female (walking).
+  *Done (1.39.0, tutorial 132): the baker (the casual woman), the farmer
+  (the bearded man), the traveller (the low-poly man). The low-poly
+  woman's sportswear didn't suit the baker; the dude isn't used yet.*
 - [ ] Buildings and things from your models: the barn, the old building,
   the double bed (the hero's home), a fire (the bakery's oven, a camp
   fire); the yacht for the coast's boats; a few trees from the tree pack
