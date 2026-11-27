@@ -10,6 +10,7 @@
 #include <sys/wait.h>
 #include <unistd.h>
 #include <dirent.h>
+#include <sys/utsname.h>
 
 #include "diag.h"
 #include "runtime/rt.h"
@@ -4376,15 +4377,32 @@ static const char *find_wasi_sdk(char *buf, size_t size)
 	char home_tools[4096] = "";
 	const char *home = getenv("HOME");
 	if (home && *home) {
-		/* (the newest of ~/tools/wasi-sdk-*) */
+		/* (the newest of ~/tools/wasi-sdk-* made for this computer,
+		 * wasi-sdk-*-x86_64-linux, -arm64-macos and so on; or else the
+		 * newest of any) */
+		char host[160] = "";
+		struct utsname u;
+		if (uname(&u) == 0) {
+			const char *cpu = strcmp(u.machine, "aarch64") == 0 ? "arm64" : u.machine;
+			const char *os = strcmp(u.sysname, "Darwin") == 0 ? "macos" : strcmp(u.sysname, "Linux") == 0 ? "linux" : u.sysname;
+			snprintf(host, sizeof host, "-%s-%s", cpu, os);
+		}
 		snprintf(home_tools, sizeof home_tools, "%s/tools", home);
 		DIR *d = opendir(home_tools);
 		char best[256] = "";
+		bool best_here = false;
 		if (d) {
 			struct dirent *e;
-			while ((e = readdir(d)))
-				if (strncmp(e->d_name, "wasi-sdk", 8) == 0 && strcmp(e->d_name, best) > 0)
+			while ((e = readdir(d))) {
+				if (strncmp(e->d_name, "wasi-sdk", 8) != 0)
+					continue;
+				size_t n = strlen(e->d_name), h = strlen(host);
+				bool here = h && n > h && strcmp(e->d_name + n - h, host) == 0;
+				if ((here && !best_here) || (here == best_here && strcmp(e->d_name, best) > 0)) {
 					snprintf(best, sizeof best, "%s", e->d_name);
+					best_here = here;
+				}
+			}
 			closedir(d);
 		}
 		if (*best) {
