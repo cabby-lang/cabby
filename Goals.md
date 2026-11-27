@@ -65,6 +65,8 @@ what's still to come has the detail.*
   - [x] *The first in the party follows the hero (Ember, until then).
     Done (1.33.0, tutorial 127): who leads chosen in the menu; the
     party battles, the next sent out when one's worn out.*
+  - [x] *Switching who's out in a battle, and the experience shared
+    among all who battled. Done (1.36.0, tutorial 129).*
   - [ ] *New Cabbymon from your models: the bear, the border collie, the
     bison, the cow; one day a fishing one (the anglerfish).*
 - [x] The town living through the day: the baker can't open the bakery
