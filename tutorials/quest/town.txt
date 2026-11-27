@@ -65,6 +65,10 @@
 //   tiles <col>,<row> <tiles>                (3D, tutorial 133 on) those
 //                                            tiles laid on the map, from
 //                                            <col>,<row> rightwards
+//   lay <col>,<row> <tiles>                  (3D, tutorial 135 on) as tiles,
+//                                            for part 28 on: a campfire (F),
+//                                            and the double bed and long
+//                                            table, two tiles each
 //   wild <kind> <chance>                     (3D, tutorial 130 on) <kind> is
 //                                            met in the tall grass here, as
 //                                            often as <chance> is of all

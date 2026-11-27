@@ -15,4 +15,7 @@
 ---
 name Home
 music house
+3d lay 2,2 Q
+3d lay 2,3 Q
+3d lay 10,2 b
 way 6,8 town 16,6

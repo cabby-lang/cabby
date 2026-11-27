@@ -50,6 +50,7 @@ TTTTTTTT=TTTTTTTTTTT
 name The Woods
 music woods
 join south town 0
+3d lay 5,11 F
 3d grass 9,8 18,12
 3d wild border collie 2
 3d wild bear 1

@@ -218,17 +218,21 @@ their feet, and sized at random: Blender puts all of that right, and
 Apply > All Transforms keeps it.
 
 **Without Blender.** `tools/prepare-model.py`, in Cabby's source, makes
-a `.glb` from Sketchfab ready for a game: `--scale`, `--turn` (to face
-forwards, -z), `--lift`, `--forward` (back, given less than 0: a long
+a `.glb` from Sketchfab ready for a game: `--scale`, or `--height` (so
+many metres tall, its feet at 0), `--center` (its middle where it's
+put), `--turn` (to face forwards, -z), `--lift`, `--forward` (back, given less than 0: a long
 animal's middle where it's put), `--rename OLD=NEW` and `--keep NAME` for
 its animations, and `--still idle=walk` (a model with only a walk can
 stand still with its first moment), and `--color MATERIAL=#rrggbb`
-(one of its materials made a color: a baker's clothes white). It also
+(one of its materials made a color: a baker's clothes white), and
+`--pictures 512` (its pictures no bigger than that: a smaller file; it
+needs Pillow, `pip install pillow`). It also
 makes every animation move
 every bone that any of them moves, so one played after another never
 leaves a leg where the last put it, and keeps only what's used, so the
 file is no bigger than it needs to be. Given only the model, it says
-what's in it: its triangles, animations and materials, and who made it.
+what's in it: its triangles, its size in metres, its animations and
+materials, and who made it.
 
 ## Light
 
