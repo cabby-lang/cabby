@@ -67,8 +67,10 @@ what's still to come has the detail.*
     party battles, the next sent out when one's worn out.*
   - [ ] *New Cabbymon from your models: the bear, the border collie, the
     bison, the cow; one day a fishing one (the anglerfish).*
-- [ ] The town living through the day: the baker can't open the bakery
+- [x] The town living through the day: the baker can't open the bakery
   until the spoon is found, and the spoon can only be found by day.
+  *Done (1.34.0, tutorial 128): the baker keeps hours, her shop opens
+  once the spoon's back; a bed, and the days counted.*
 - [ ] Choosing the hero at the start: Majd the Boy or Majd the Girl, and
   the rival is the one not chosen.
   - [ ] *Both have far too many triangles (the girl 25,000, the boy

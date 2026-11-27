@@ -35,6 +35,14 @@
 //   rest <col>,<row>                         (3D, tutorial 123 on) where the
 //                                            hero wakes, worn out, the elder
 //                                            just above
+//   shut <who>                               (3D, tutorial 128 on) <who> is
+//                                            here only by day, while their
+//                                            shop is shut
+//   shop <col>,<row> <who> <facing>          (3D, tutorial 128 on) <who>
+//                                            keeps the shop here: there by
+//                                            day, once it's open
+//   dark                                     (3D, tutorial 128 on) no lamps:
+//                                            nothing's found here at night
 // An area joined on to the north or south should be as wide as this one,
 // and one to the east or west as tall: an area at a corner, next door to
 // two areas next door, is placed beside each, and they should agree (the
@@ -71,4 +79,5 @@ sign 16,5 The door is locked.
 way 4,5 bakery 6,7
 person 11,3 elder down wanders
 person 6,9 baker right
+3d shut baker
 sees baker 3

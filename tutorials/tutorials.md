@@ -1,6 +1,6 @@
 # The Cabby Manual
 
-*For Cabby 1.33.0 (2026-11-27).*
+*For Cabby 1.34.0 (2026-11-27).*
 
 A book for learning Cabby one idea at a time, and a reference to come back
 to afterwards.
@@ -233,6 +233,7 @@ int main {
 125. [The wild ones, as models](#chapter-125-the-wild-ones-as-models): a field mouse, a hill crow and the gulls as models; a model made smaller, keeping only what's used
 126. [Cabbyballs](#chapter-126-cabbyballs): catching wild Cabbymon, a chance from how worn out each is; the party, the bag and the book, kept in the saved game; the menu showing them
 127. [The party](#chapter-127-the-party): a record kept as a line of text; who leads, chosen from a menu; the follower made again as another model; the next sent out when one's worn out; each one's own level, wounds and experience
+128. [The town through the day](#chapter-128-the-town-through-the-day): people who keep hours; a room too dark to search at night; a bed, to sleep until morning; the days counted; the baker's shop, open once the spoon is back
 
 **[Appendices](#appendices)**
 
@@ -18338,7 +18339,77 @@ and saying the right thing when it's looked at (`looked_at`).
 * Show each one's experience toward its next level in the party.
 * One that can't battle (worn out) doesn't follow: the next one does.
 
-[← Chapter 126](#chapter-126-cabbyballs) · [Contents](#contents) · [Appendices →](#appendices)
+[← Chapter 126](#chapter-126-cabbyballs) · [Contents](#contents) · [Chapter 128 →](#chapter-128-the-town-through-the-day)
+
+### Chapter 128: The town through the day
+
+*Program: `128-quest-3d-day.cby`, the town keeping its hours. Libraries: `use world`, `use files`, `use math`, `use json`, `use directories`, `use sound`.*
+
+Day has followed night since part 10 (117), but nobody noticed. Now the
+town does: the baker keeps hours, her spoon can only be found by day,
+and the hero has a bed to sleep in.
+
+#### Who's out, at this hour
+
+Two new kinds of line in the areas' files (the 3D quest's only, so each
+starts `3d`) say who keeps hours. The town's `shut baker` says the baker
+is out there only by day, while her shop is shut; the bakery's `shop 5,3
+baker down` says she keeps the shop, there by day once it's open. At
+night, she's gone home, from both.
+
+`add_people` (110.3) now hands each line to `add_if_out` (128.1), which
+adds a person only if they're out now (`out_now`), and the shopkeeper
+only if the shop's open (`shop_open`: her spoon back, and the sun up).
+Whether it's dark is `dark_now`: the same test as night falling (117.9),
+`daylight` under a half.
+
+#### Keeping hours
+
+When night falls, or the day comes, `pass_time` (117.9) sets `HoursDue`;
+the next time the hero is free to walk (108.19) `keep_hours` (128.2)
+takes away everyone who keeps hours, and adds back whoever's out now.
+Waiting for that moment means nobody vanishes in the middle of talking,
+or of a battle. Taking a person away is `People[I].Body.remove`: the rest
+of them is joined to their body, so it goes too; then
+`People.remove_at I`, and the loop doesn't move on, because the next one
+has moved into place `I`.
+
+#### Too dark to find
+
+The bakery's `dark` line says it has no lamps. `too_dark` is true there
+at night, and then `item_at` (114.7) finds nothing: the spoon isn't
+drawn, and can't be picked up. Looking where it is says it's too dark to
+find anything. `keep_hours` takes each item's shapes away and adds them
+again, if they can be seen, so the spoon appears when the sun rises; and
+`light_by_day` lights the room, the daylight through its windows, while
+the sun's up.
+
+#### A bed, and the days
+
+Looking at the bed at home (122.4's `Q` tiles) asks to sleep: at night,
+until morning (a new day, and every Cabbymon rested); by day, until it's
+dark (128.3). `Story.Days` (114.1) counts the days, one more at midnight
+(117.9) or sleeping through it, and the menu now says which day it is,
+and what time (128.4): "Day 2, morning."
+
+#### The shop
+
+The spoon given back (114.14), the baker can open the bakery again. In
+her shop (128.5) there's fresh bread once a day, for the hero and their
+Cabbymon, which makes them all well again; the day it was last given is
+kept in `Story.Answers`, as `"bread day"`. And someone who can notice the
+hero (113.18) has now noticed them once they've talked (110.7), so the
+baker doesn't come over to talk again, having just been given her spoon.
+
+#### Try this
+
+* Send the elder home at night too, and let the hero's bed heal their
+  Cabbymon in his place.
+* Make the hill crows come out only by day, and something else by night.
+* Give the bakery a lamp, once it's open, so the shop keeps going into
+  the evening.
+
+[← Chapter 127](#chapter-127-the-party) · [Contents](#contents) · [Appendices →](#appendices)
 
 ---
 ## Appendices
@@ -18396,7 +18467,7 @@ Run `cabby` with no file to type Cabby a piece at a time:
 
 ```text
 $ cabby
-Cabby 1.33.0 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
+Cabby 1.34.0 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
 Cabby comes with ABSOLUTELY NO WARRANTY, under the MIT License; "cabby.license" for details.
 >>> int add int a, int b {
 ... 	return a + b

@@ -135,6 +135,7 @@ changing for.
 | 1.31.0 | 27 November | `key_hold "shift"` (and ctrl, alt) in games and worlds; world text the same on every computer under a script; `make wasm` says where to get wasi-sdk |
 | 1.32.0 | 27 November | Cabby Quest in 3D, part 19: Cabbyballs; catching wild Cabbymon; the party, the bag and the book, in the menu |
 | 1.33.0 | 27 November | Cabby Quest in 3D, part 20: the party; who leads, following and battling first; the next sent out when one's worn out; each one's level, wounds and experience |
+| 1.34.0 | 27 November | Cabby Quest in 3D, part 21: the town through the day; the baker there by day, her shop open once the spoon's back; the spoon found only by day; a bed; the days counted |
 
 ---
 
@@ -2244,6 +2245,16 @@ one is worn out, the next who can battle is sent out, running from
 behind the hero; only when all are does the hero hurry back to the
 elder, who heals them all. Each one caught has its own level, wounds and
 experience, kept in the saved game as a line of text each.
+
+*Version 1.34.0, Cabby Quest in 3D, part 21 (your idea):* tutorial 128,
+and chapter 128 of the manual. The town lives through the day. The baker
+stands outside her bakery by day, and goes home at night; she can't open
+the bakery until her spoon is found, and the bakery has no lamps, so the
+spoon can only be found by day. Once it's back, she keeps her shop by
+day, with fresh bread once a day that makes every Cabbymon well. The bed
+at home sleeps the hero until morning, or rests them until dark; the days
+are counted, and the menu says which day it is. The areas' files gain
+`shut`, `shop` and `dark` lines.
 
 ## Along the way (dates not recorded)
 
