@@ -133,6 +133,7 @@ changing for.
 | 1.29.0 | 23 November | Cabby Quest in 3D, part 18: the coast's gulls a model, flying |
 | 1.30.0 | 23 November | From your testing: Ember three-quarters the size, and standing about with no jump as it goes round |
 | 1.31.0 | 27 November | `key_hold "shift"` (and ctrl, alt) in games and worlds; world text the same on every computer under a script; `make wasm` says where to get wasi-sdk |
+| 1.32.0 | 27 November | Cabby Quest in 3D, part 19: Cabbyballs; catching wild Cabbymon; the party, the bag and the book, in the menu |
 
 ---
 
@@ -2224,6 +2225,15 @@ same way), from 1.7 to 5.1 seconds of the fox's long animation, about
 * **`make wasm` on a Mac** failed with "/bin/clang: No such file": with
   no wasi-sdk found, it used `/bin/clang`. Now it stops and says where
   to get wasi-sdk (and `wasm/README.md` says how to let macOS run it).
+
+*Version 1.32.0, Cabby Quest in 3D, part 19 (your idea):* tutorial 126,
+and chapter 126 of the manual. Once the hero has done something for the
+town (the baker's spoon, or Rufus at the coast), the elder gives them
+five Cabbyballs and a book. In a battle with a wild one, "Ball" throws
+one: the more worn out it is, the likelier it stays caught (from one in
+five, to nearly always). Caught, it goes into a ball, left where it
+was, and joins the party; every kind met is in the book. The game's
+menu shows the party, the bag and the book. All kept in the saved game.
 
 ## Along the way (dates not recorded)
 

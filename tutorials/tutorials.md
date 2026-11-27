@@ -1,6 +1,6 @@
 # The Cabby Manual
 
-*For Cabby 1.31.0 (2026-11-27).*
+*For Cabby 1.32.0 (2026-11-27).*
 
 A book for learning Cabby one idea at a time, and a reference to come back
 to afterwards.
@@ -231,6 +231,7 @@ int main {
 123. [Trains, and the elder](#chapter-123-trains-and-the-elder): a timetable, worked out from the time alone; pulling in, waiting, pulling out; no ticket; worn out, and back to the elder
 124. [Models](#chapter-124-models): models made by others, in place of shapes: a fox, a dog, an old man; their animations, played; a walker whose body is a model; credit where it's due
 125. [The wild ones, as models](#chapter-125-the-wild-ones-as-models): a field mouse, a hill crow and the gulls as models; a model made smaller, keeping only what's used
+126. [Cabbyballs](#chapter-126-cabbyballs): catching wild Cabbymon, a chance from how worn out each is; the party, the bag and the book, kept in the saved game; the menu showing them
 
 **[Appendices](#appendices)**
 
@@ -18210,7 +18211,70 @@ you say so, as `models/CREDITS.md` does.)
 * Find the sand mouse's attack, and put it back (`models/CREDITS.md`
   says where it came from).
 
-[← Chapter 124](#chapter-124-models) · [Contents](#contents) · [Appendices →](#appendices)
+[← Chapter 124](#chapter-124-models) · [Contents](#contents) · [Chapter 126 →](#chapter-126-cabbyballs)
+
+### Chapter 126: Cabbyballs
+
+*Program: `126-quest-3d-cabbyballs.cby`, catching wild Cabbymon. Libraries: `use world`, `use files`, `use math`, `use json`, `use directories`, `use sound`.*
+
+The wild ones in the tall grass could only be battled. Now they can be
+caught.
+
+#### Earned
+
+Once the hero has done something for the town (found the baker's spoon,
+or battled Rufus at the coast: `earned_balls`, 126.2), the elder gives
+them `BALLS_GIVEN` Cabbyballs (126.1, five), and a book to keep note of
+every kind they meet (`give_balls`). Talking to him does that the first
+time after; then he sees to Ember, as before (114.12).
+
+#### Kept with the rest
+
+What's caught is saved with the rest of the game, in `progress` (114.1):
+
+* `Balls`, how many are carried;
+* `Party`, the Cabbymon caught, each a line of its kind and its level
+  (`"hill crow 4"`), Ember always first, and not in it;
+* `Seen`, every kind met in the wild (`start_battle` adds it, 112.21);
+* `Caught`, every kind caught.
+
+A game saved before this part has none of them: `json`'s `fill` leaves
+each as it starts, 0 or empty.
+
+#### A ball, thrown
+
+Against a wild one, with balls in the bag, the battle's choices are
+"Fight", "Ball" and "Run" (`battle_choices`, 126.3; never against
+someone's: Rufus's Bruno is Rufus's). `throw_ball` (126.4) takes one
+from the bag, and its chance, out of a hundred, is a fifth and three
+quarters more of how worn out the Cabbymon is: at full health 20, at its
+last nearly 95. So it's worth wearing one down first, but not so far
+that it faints. Caught, it's said in a beat (112.31) whose `Then` is 6:
+the Cabbymon sinks out of sight and a ball is left where it was, red
+with a white band (`into_the_ball`); the battle's over. Not caught, it
+breaks free, and has its turn.
+
+A party holds `PARTY_MOST` (six), Ember too: a seventh caught goes to
+the elder's, to be looked after, but is in the book all the same.
+
+#### The menu
+
+Escape's menu (115.8) now starts with "Party" and "Bag", and, once the
+book's given, "Book" (126.5): each says what it shows, as someone
+speaking does. The party is Ember, with her level and health, and then
+each caught, with its level; the bag, the balls and whatever else is
+carried; the book, how many kinds have been met and caught, and each.
+
+Ember still follows the hero, and battles: the party's other Cabbymon
+are caught, not yet sent out.
+
+#### Try this
+
+* Make a ball likelier to catch a crow than a mouse (126.4).
+* Let the baker sell Cabbyballs, for the bread (126.2).
+* Put a party Cabbymon into battle in Ember's place, once caught.
+
+[← Chapter 125](#chapter-125-the-wild-ones-as-models) · [Contents](#contents) · [Appendices →](#appendices)
 
 ---
 ## Appendices
@@ -18268,7 +18332,7 @@ Run `cabby` with no file to type Cabby a piece at a time:
 
 ```text
 $ cabby
-Cabby 1.31.0 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
+Cabby 1.32.0 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
 Cabby comes with ABSOLUTELY NO WARRANTY, under the MIT License; "cabby.license" for details.
 >>> int add int a, int b {
 ... 	return a + b
