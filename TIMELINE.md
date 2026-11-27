@@ -131,6 +131,7 @@ changing for.
 | 1.27.0 | 23 November | Cabby Quest in 3D, part 17: Ember a fox, Bruno a black dog, the elder an old man: models made by others (CC BY 4.0, credited), with their animations |
 | 1.28.0 | 23 November | Cabby Quest in 3D, part 18: the field mouse and the hill crow as models |
 | 1.29.0 | 23 November | Cabby Quest in 3D, part 18: the coast's gulls a model, flying |
+| 1.30.0 | 23 November | From your testing: Ember three-quarters the size, and standing about with no jump as it goes round |
 
 ---
 
@@ -2197,6 +2198,14 @@ fourteen animations a battle needs (10 MB down to 2.6 MB). Both credited.
 
 *Version 1.29.0 (23 November):* the coast's gulls (tutorial 125, chapter
 125) are a model, a low-poly seagull, flying; credited.
+
+*Version 1.30.0, from your testing (23 November):* Ember (tutorials 124
+and 125) is three-quarters the size she was, a fox's size beside the
+hero, her health bar lower to match. And standing about, she jumped
+each time her idle went round: it was cut where her pose was only near
+the same at both ends. Now it's cut where it's the same (and moving the
+same way), from 1.7 to 5.1 seconds of the fox's long animation, about
+75 times closer. Her file keeps only what's used (1.4 MB down to 573 KB).
 
 ## Along the way (dates not recorded)
 
