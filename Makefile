@@ -441,8 +441,20 @@ uninstall:
 # wrapper made for it (wasm/calls.c, from the libraries' extern lines). No
 # compiling, no interactive session, and only the libraries that need
 # nothing of the computer's own.
-WASI_SDK ?= $(firstword $(lastword $(sort $(wildcard $(HOME)/tools/wasi-sdk-*))) $(wildcard /opt/wasi-sdk))
+# (in ~/tools, the newest made for this computer, wasi-sdk-*-x86_64-linux
+# or -arm64-macos and so on; or else the newest of any)
+WASI_HOST := $(subst aarch64,arm64,$(shell uname -m))-$(subst darwin,macos,$(shell uname -s | tr A-Z a-z))
+WASI_SDK ?= $(firstword $(lastword $(sort $(wildcard $(HOME)/tools/wasi-sdk-*-$(WASI_HOST)))) \
+	$(lastword $(sort $(wildcard $(HOME)/tools/wasi-sdk-*))) $(wildcard /opt/wasi-sdk))
 WASM_CC := $(WASI_SDK)/bin/clang
+# (one for another computer, which this one can't run: say so)
+ifneq ($(WASI_SDK),)
+ifneq ($(filter wasm%,$(MAKECMDGOALS)),)
+ifneq ($(shell $(WASM_CC) --version > /dev/null 2>&1 && echo runs),runs)
+$(error $(WASM_CC) can't be run here: is it the wasi-sdk for another computer? This one wants wasi-sdk-*-$(WASI_HOST).tar.gz, from https://github.com/WebAssembly/wasi-sdk/releases, unpacked into ~/tools)
+endif
+endif
+endif
 # (none found, and asked for: say where to get it, not "no /bin/clang")
 ifeq ($(WASI_SDK),)
 ifneq ($(filter wasm%,$(MAKECMDGOALS)),)

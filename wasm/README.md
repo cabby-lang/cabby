@@ -19,7 +19,9 @@ on a canvas, and are played there with the keyboard and the mouse.
 It needs **wasi-sdk** 33 or newer (a clang for WebAssembly, with its C library), from
 <https://github.com/WebAssembly/wasi-sdk/releases>: unpack the one for your
 computer (`x86_64-linux`, `arm64-linux`, `arm64-macos`) into `~/tools`, where
-the Makefile looks for it, or say where it is:
+the Makefile looks for it, or say where it is. (With more than one there,
+the one for this computer is chosen; one for another computer, which this
+one can't run, is said to be.)
 
     make wasm-site                          # (finds ~/tools/wasi-sdk-*)
     make wasm-site WASI_SDK=/opt/wasi-sdk

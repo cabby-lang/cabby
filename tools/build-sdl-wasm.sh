@@ -16,12 +16,13 @@ SDL_VERSION=3.2.24
 here=$(cd "$(dirname "$0")/.." && pwd)
 sdk=${1:-${WASI_SDK:-}}
 if [ -z "$sdk" ]; then
-	for d in "$HOME"/tools/wasi-sdk-* /opt/wasi-sdk; do
-		[ -x "$d/bin/clang" ] && sdk=$d
+	# (the newest that runs here: one for another computer won't)
+	for d in /opt/wasi-sdk "$HOME"/tools/wasi-sdk-*; do
+		[ -x "$d/bin/clang" ] && "$d/bin/clang" --version > /dev/null 2>&1 && sdk=$d
 	done
 fi
 if [ -z "$sdk" ] || [ ! -x "$sdk/bin/clang" ]; then
-	echo "build-sdl-wasm.sh: no wasi-sdk (give its folder, or unpack it into ~/tools)" >&2
+	echo "build-sdl-wasm.sh: no wasi-sdk that runs here (give its folder, or unpack the one for this computer into ~/tools: wasi-sdk-*-$(uname -m | sed s/aarch64/arm64/)-$(uname -s | tr A-Z a-z | sed s/darwin/macos/).tar.gz)" >&2
 	exit 1
 fi
 for tool in git cmake; do

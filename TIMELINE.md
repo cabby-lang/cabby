@@ -142,6 +142,7 @@ changing for.
 | 1.37.0 | 28 November | Cabby Quest in 3D, part 23: new Cabbymon from your models (a border collie, a cow, a bison, a bear); tall grass in the woods and the meadow, each area saying what lives in it; `tools/prepare-model.py` |
 | 1.37.1 | 28 November | `tools/build-sdl-wasm.sh` runs on a Mac (its bash, 3.2, took an empty list for a missing one) |
 | 1.38.0 | 28 November | Cabby Quest in 3D, part 24: the Cabbyball thrown, the wild one shrinking in, wobbles, caught or bursting open; a switched-in one hit, not the one gone; the bear and bison centred, and smaller; models' animations moving every bone |
+| 1.38.1 | 28 November | wasi-sdk: the one for this computer chosen, and one for another computer said to be |
 
 ---
 
@@ -2322,6 +2323,14 @@ middle where it stands, and made a little smaller (`--forward`, new in
 `tools/prepare-model.py`). And each model's animations now move every
 bone any of them moves: the border collie's, which didn't, left legs
 where the last animation had them.
+
+*Version 1.38.1, wasi-sdk for this computer (from your Arch computer):*
+`make wasm` took whichever wasi-sdk in `~/tools` sorted last, and with
+the one for an ARM computer there it stopped with "cannot execute binary
+file". Now the Makefile, `tools/build-sdl-wasm.sh` and `cabby -c --wasm`
+choose the one made for this computer (`wasi-sdk-*-x86_64-linux`,
+`-arm64-macos` and so on) when there's one, and the Makefile says plainly
+when the one it has is for another computer.
 
 ## Along the way (dates not recorded)
 
