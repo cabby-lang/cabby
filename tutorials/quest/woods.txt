@@ -50,4 +50,7 @@ TTTTTTTT=TTTTTTTTTTT
 name The Woods
 music woods
 join south town 0
+3d grass 9,8 18,12
+3d wild border collie 2
+3d wild bear 1
 sign 3,2 The woods. Cabby Town is to the south, down the path.

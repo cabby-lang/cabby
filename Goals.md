@@ -67,8 +67,10 @@ what's still to come has the detail.*
     party battles, the next sent out when one's worn out.*
   - [x] *Switching who's out in a battle, and the experience shared
     among all who battled. Done (1.36.0, tutorial 129).*
-  - [ ] *New Cabbymon from your models: the bear, the border collie, the
-    bison, the cow; one day a fishing one (the anglerfish).*
+  - [x] *New Cabbymon from your models: the bear, the border collie, the
+    bison, the cow. Done (1.37.0, tutorial 130): in the woods and the
+    meadow, which grow tall grass.*
+  - [ ] *One day a fishing one (the anglerfish).*
 - [x] The town living through the day: the baker can't open the bakery
   until the spoon is found, and the spoon can only be found by day.
   *Done (1.34.0, tutorial 128): the baker keeps hours, her shop opens

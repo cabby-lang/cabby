@@ -43,6 +43,13 @@
 //                                            day, once it's open
 //   unlit                                    (3D, tutorial 128 on) no lamps:
 //                                            nothing's found here at night
+//   grass <col>,<row> <col>,<row>            (3D, tutorial 130 on) the grass
+//                                            (.) from one tile to the other
+//                                            is tall grass (w)
+//   wild <kind> <chance>                     (3D, tutorial 130 on) <kind> is
+//                                            met in the tall grass here, as
+//                                            often as <chance> is of all
+//                                            the area's chances added up
 // An area joined on to the north or south should be as wide as this one,
 // and one to the east or west as tall: an area at a corner, next door to
 // two areas next door, is placed beside each, and they should agree (the

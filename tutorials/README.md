@@ -1,6 +1,6 @@
 # Cabby tutorials
 
-*For Cabby 1.36.0 (2026-11-28).*
+*For Cabby 1.37.0 (2026-11-28).*
 
 A hundred and six short programs, each about one keyword, feature or library, in
 an order where each uses only what came before it. Each one
@@ -287,6 +287,7 @@ between `{` and `}` to run them as one input and see them as a program would. (`
 | 127 | `127-quest-3d-party.cby` | Cabby Quest in 3D, part 20: the party; who leads, following and battling first; the next sent out when one's worn out; each one's level, wounds and experience |
 | 128 | `128-quest-3d-day.cby` | Cabby Quest in 3D, part 21: the town through the day; the baker there by day, her shop open once the spoon's back; the spoon found only by day; a bed; the days counted |
 | 129 | `129-quest-3d-switch.cby` | Cabby Quest in 3D, part 22: switching who's out in a battle; the experience shared among all who battled |
+| 130 | `130-quest-3d-kinds.cby` | Cabby Quest in 3D, part 23: new Cabbymon (a border collie, a cow, a bison, a bear), and tall grass in the woods and the meadow, each area saying what lives in it |
 
 Every keyword in the language appears in at least one tutorial. The manual's
 appendices and the main README (installed as
