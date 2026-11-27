@@ -1,6 +1,6 @@
 # The Cabby Manual
 
-*For Cabby 1.37.1 (2026-11-28).*
+*For Cabby 1.38.0 (2026-11-28).*
 
 A book for learning Cabby one idea at a time, and a reference to come back
 to afterwards.
@@ -236,6 +236,7 @@ int main {
 128. [The town through the day](#chapter-128-the-town-through-the-day): people who keep hours; a room too dark to search at night; a bed, to sleep until morning; the days counted; the baker's shop, open once the spoon is back
 129. [Switching, and sharing](#chapter-129-switching-and-sharing): a choice that asks another question; switching in a battle, taking the turn; a list of who's battled, kept through a battle; experience shared out among them
 130. [New Cabbymon](#chapter-130-new-cabbymon): which wild ones live where, from the areas' files; choosing by chances; a map changed as it's read; a kind's numbers and model, looked up by its name
+131. [The Cabbyball, thrown](#chapter-131-the-cabbyball-thrown): a thing thrown along an arc; something shrunk away, and back; a wobble; beats with no words; one thing waiting for another
 
 **[Appendices](#appendices)**
 
@@ -18578,7 +18579,64 @@ place: `Line[C] = 'w'`.
 * Make the bear come out only at night (part 21's `dark_now`).
 * Give each kind a third move.
 
-[← Chapter 129](#chapter-129-switching-and-sharing) · [Contents](#contents) · [Appendices →](#appendices)
+[← Chapter 129](#chapter-129-switching-and-sharing) · [Contents](#contents) · [Chapter 131 →](#chapter-131-the-cabbyball-thrown)
+
+### Chapter 131: The Cabbyball, thrown
+
+*Program: `131-quest-3d-ball.cby`, catching as something to watch. Libraries: `use world`, `use files`, `use math`, `use json`, `use directories`, `use sound`.*
+
+A Cabbyball used to be words: "You threw a Cabbyball!", and "Caught!".
+Now it's thrown. It flies from the hero's hand in an arc, the wild one
+shrinks into it, and it drops to the ground; it wobbles, once, twice,
+three times, and clicks shut: caught. Or it bursts open before then,
+and the wild one grows back.
+
+#### Beats with no words
+
+A battle is a list of beats (112.31): words, then what happens. Now a
+beat can have no words (`""`, 112.31): nothing to read, so what happens
+starts at once. `throw_ball` (126.4) says "You threw a Cabbyball!" with
+a new `Then`, 9 (the throw); then a beat with no words for each wobble
+(10); and then either "Caught!" (6), or one more with no words (11: it
+bursts open) and "Oh no! It broke free!". Whether it's caught is rolled
+before any of it is shown: three wobbles if it is, fewer if not.
+
+#### One thing waiting for another
+
+The battle already waits while either of them is moving (`busy`) before
+the next beat (112.29). Now it waits while the ball is moving too:
+`BallDoing` says what it's doing (131.1: `THROWN`, `WOBBLING` or
+`OPENING`, or 0 for nothing), and `move_ball` moves it each frame
+(131.3), setting it back to 0 when it's done.
+
+#### Along an arc, and shrunk
+
+Thrown, the ball goes from the hero's hand (`throw_the_ball`, 131.2: to
+their right, at shoulder height) to the wild one's middle. A frame `T`
+of the way there (0 to 1), it's that much of the way along, and up a
+little more, `1.2 * sin(T * PI)`: nothing at the start and end, most
+halfway. That's the arc. It spins as it goes (`set_roll`). There,
+`shrink_foe` makes the wild one smaller each frame (`set_scale`, from 1
+to 0), until it's hidden; then the ball falls, faster as it goes (`T *
+T`). Wobbling, it rolls from side to side, a little less each time.
+Bursting open, the ball's gone, and the wild one grows back, as it
+shrank, but the other way.
+
+#### A switch, and who's hit
+
+Part 22's switch had a mistake: the wild one's turn was worked out as the
+switch was chosen, while the one coming back was still the one out. So
+the one going was hit, and the one coming out showed its bar. Now
+`switch_to` (129.2) only sets `FoeAfter`; once the next one is out (`Then`
+7, 112.32), the wild one has its go, and hits it.
+
+#### Try this
+
+* Make a ball wobble more slowly when the chance was low.
+* Show the ball in the hero's hand for a moment before it's thrown.
+* Give the wild one a little bounce as it bursts back out.
+
+[← Chapter 130](#chapter-130-new-cabbymon) · [Contents](#contents) · [Appendices →](#appendices)
 
 ---
 ## Appendices
@@ -18638,7 +18696,7 @@ Run `cabby` with no file to type Cabby a piece at a time:
 
 ```text
 $ cabby
-Cabby 1.37.1 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
+Cabby 1.38.0 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
 Cabby comes with ABSOLUTELY NO WARRANTY, under the MIT License; "cabby.license" for details.
 >>> int add int a, int b {
 ... 	return a + b

@@ -680,7 +680,7 @@ critter bison {
 	critter Bison
 	Bison.set_up "bison", 7, 28, 13, 13, 8
 	Bison.Lift = 0
-	Bison.Top = 1.05
+	Bison.Top = 0.9
 	Bison.Moving = "walk"
 	Bison.Moves = {"Charge", "Stomp"}
 	Bison.Powers = {50, 35}
@@ -692,7 +692,7 @@ critter woods_bear {
 	critter Bear
 	Bear.set_up "bear", 8, 30, 15, 11, 9
 	Bear.Lift = 0
-	Bear.Top = 1.1
+	Bear.Top = 0.95
 	Bear.Moving = "walk"
 	Bear.Moves = {"Swipe", "Maul"}
 	Bear.Powers = {50, 45}

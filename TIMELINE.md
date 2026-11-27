@@ -141,6 +141,7 @@ changing for.
 | 1.36.0 | 28 November | Cabby Quest in 3D, part 22: switching who's out in a battle; the experience shared among all who battled |
 | 1.37.0 | 28 November | Cabby Quest in 3D, part 23: new Cabbymon from your models (a border collie, a cow, a bison, a bear); tall grass in the woods and the meadow, each area saying what lives in it; `tools/prepare-model.py` |
 | 1.37.1 | 28 November | `tools/build-sdl-wasm.sh` runs on a Mac (its bash, 3.2, took an empty list for a missing one) |
+| 1.38.0 | 28 November | Cabby Quest in 3D, part 24: the Cabbyball thrown, the wild one shrinking in, wobbles, caught or bursting open; a switched-in one hit, not the one gone; the bear and bison centred, and smaller; models' animations moving every bone |
 
 ---
 
@@ -2307,6 +2308,20 @@ variable": a Mac's bash is 3.2, which, with `set -u`, takes an empty
 list (no Ninja) as one that isn't there. Without it, `make wasm` built
 the interpreter without the gui and game libraries, and the playground
 said `use gui` needed SDL.
+
+*Version 1.38.0, Cabby Quest in 3D, part 24 (your idea, and fixes from
+your playing):* tutorial 131, and chapter 131 of the manual. The
+Cabbyball is thrown along an arc from the hero's hand; the wild one
+shrinks into it, and it drops; it wobbles, three times and caught with a
+click, or bursting open before then, the wild one growing back. Beats
+can have no words: only something happening. Switching (part 22) hit
+the one going back, not the one coming out, whose bar showed the other's
+health: now the wild one's turn waits until it's out. The bear's and the
+bison's heads reached the hero in a battle: each is moved back, its
+middle where it stands, and made a little smaller (`--forward`, new in
+`tools/prepare-model.py`). And each model's animations now move every
+bone any of them moves: the border collie's, which didn't, left legs
+where the last animation had them.
 
 ## Along the way (dates not recorded)
 
