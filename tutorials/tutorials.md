@@ -1,6 +1,6 @@
 # The Cabby Manual
 
-*For Cabby 1.35.1 (2026-11-28).*
+*For Cabby 1.36.0 (2026-11-28).*
 
 A book for learning Cabby one idea at a time, and a reference to come back
 to afterwards.
@@ -234,6 +234,7 @@ int main {
 126. [Cabbyballs](#chapter-126-cabbyballs): catching wild Cabbymon, a chance from how worn out each is; the party, the bag and the book, kept in the saved game; the menu showing them
 127. [The party](#chapter-127-the-party): a record kept as a line of text; who leads, chosen from a menu; the follower made again as another model; the next sent out when one's worn out; each one's own level, wounds and experience
 128. [The town through the day](#chapter-128-the-town-through-the-day): people who keep hours; a room too dark to search at night; a bed, to sleep until morning; the days counted; the baker's shop, open once the spoon is back
+129. [Switching, and sharing](#chapter-129-switching-and-sharing): a choice that asks another question; switching in a battle, taking the turn; a list of who's battled, kept through a battle; experience shared out among them
 
 **[Appendices](#appendices)**
 
@@ -18459,7 +18460,58 @@ baker doesn't come over to talk again, having just been given her spoon.
 * Give the bakery a lamp, once it's open, so the shop keeps going into
   the evening.
 
-[← Chapter 127](#chapter-127-the-party) · [Contents](#contents) · [Appendices →](#appendices)
+[← Chapter 127](#chapter-127-the-party) · [Contents](#contents) · [Chapter 129 →](#chapter-129-switching-and-sharing)
+
+### Chapter 129: Switching, and sharing
+
+*Program: `129-quest-3d-switch.cby`, the party battling together. Libraries: `use world`, `use files`, `use math`, `use json`, `use directories`, `use sound`.*
+
+Part 20 sent out the next of the party only when one was worn out. Now
+the hero can switch who's out whenever it's their turn, and everyone who
+battled shares what's won.
+
+#### Who can switch in
+
+`others_able` (129.1) lists the party by number (0 Ember, 1 the first
+caught, and so on), all but the one out who can still battle, and
+`can_switch` says whether there are any. While there are, the battle's
+choices (126.3) have "Switch", before "Run".
+
+#### A choice that asks another question
+
+Choosing "Switch" (112.36) asks another question: "Who will go out?"
+(`ask_switch`, 129.2), each by name and health, and "Back". The answer
+is a line of text ("Field mouse 14/14"), but the one it means is a
+number: `ask_switch` keeps the numbers in `Others`, in the same order as
+the choices, so the one chosen is `Others[Choice]`. "Back" goes back to
+the battle's choices (`turn_over`, 112.34, asks them again).
+
+#### Switching
+
+`switch_to` keeps the wounds of the one out, then two beats: "Come back"
+(a new `Then`, 8, in `land_hit`, 112.32: it runs back behind the hero, as
+at a battle's end) and "Go" (7, part 20's: the next runs out from behind
+the hero). Switching is the turn: the other one has its go
+(`foe_goes`), and hits whoever has just come out.
+
+#### Sharing it out
+
+`Battled`, a list of numbers, keeps everyone who's been out in this
+battle: the first (113.11), whoever's switched in, and whoever's sent out
+when one's worn out (112.37), each once (`battled`, 129.2). Winning, `share_out` (129.3) shares the
+experience among those of them who can still battle (and whoever's out,
+who won it), in equal shares, at least a point each. `gain_for` gives
+one of them its share: Ember's own, or, for one caught, `member_gains`
+(127.2), which works on whoever `Current` says, so `gain_for` sets
+`Current` to that one, and back again after.
+
+#### Try this
+
+* Give the one who was out at the end a bigger share.
+* Let a worn-out one that battled still have its share.
+* Show in the switch's question which of them have battled already.
+
+[← Chapter 128](#chapter-128-the-town-through-the-day) · [Contents](#contents) · [Appendices →](#appendices)
 
 ---
 ## Appendices
@@ -18519,7 +18571,7 @@ Run `cabby` with no file to type Cabby a piece at a time:
 
 ```text
 $ cabby
-Cabby 1.35.1 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
+Cabby 1.36.0 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
 Cabby comes with ABSOLUTELY NO WARRANTY, under the MIT License; "cabby.license" for details.
 >>> int add int a, int b {
 ... 	return a + b
