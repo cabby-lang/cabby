@@ -567,7 +567,7 @@ critter fox int Level, int Wounds {
 	critter Ember
 	Ember.set_up "Ember", Level, 11 + 2 * Level, 6 + Level, 4 + Level, 7 + Level
 	Ember.Lift = 0                      // ((124) a model: its feet at 0)
-	Ember.Top = 0.75                    // (and her bar)
+	Ember.Top = 0.6                     // (and her bar)
 	Ember.Moving = "run"
 	Ember.Health = Ember.Most - Wounds
 	if Ember.Health < 1 {
