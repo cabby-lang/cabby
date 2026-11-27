@@ -4,7 +4,7 @@
  * They're drawn into a picture of their own (the overlay), made again only
  * when one changes, then laid over each frame: by Cabby's drawing, or as a
  * texture by OpenGL. Fonts as gui's are (sdl_common.h); with none on the
- * computer, Cabby's own 8 by 16 one. */
+ * computer, or under a script, Cabby's own 8 by 16 one. */
 
 typedef struct Text {
 	int world, alive, visible;
@@ -110,8 +110,10 @@ static void overlay_text(const Text *t, float k)
 	float px = (float)(t->size * k);
 	float left = (float)(t->x * k), pen = left, top = (float)(t->y * k);
 	const unsigned char *p = (const unsigned char *)t->text;
-	if (!f->data) {
-		/* Cabby's own: 8 by 16, made bigger in whole pixels */
+	if (!f->data || scripted()) {
+		/* Cabby's own: 8 by 16, made bigger in whole pixels (and always,
+		 * under a script, so text is drawn the same on every computer, as
+		 * the rest of the world is: tests look at its pixels) */
 		int scale = (int)(px / 16 + 0.5f);
 		if (scale < 1)
 			scale = 1;

@@ -443,6 +443,12 @@ uninstall:
 # nothing of the computer's own.
 WASI_SDK ?= $(firstword $(lastword $(sort $(wildcard $(HOME)/tools/wasi-sdk-*))) $(wildcard /opt/wasi-sdk))
 WASM_CC := $(WASI_SDK)/bin/clang
+# (none found, and asked for: say where to get it, not "no /bin/clang")
+ifeq ($(WASI_SDK),)
+ifneq ($(filter wasm%,$(MAKECMDGOALS)),)
+$(error make $(firstword $(filter wasm%,$(MAKECMDGOALS))) needs wasi-sdk 33 or newer, a clang for WebAssembly: unpack the one for your computer (on a Mac with an Apple processor, wasi-sdk-*-arm64-macos.tar.gz) from https://github.com/WebAssembly/wasi-sdk/releases into ~/tools, or give its place: make wasm WASI_SDK=/path/to/wasi-sdk (see wasm/README.md))
+endif
+endif
 ifneq ($(WASI_SDK),)
 CFLAGS += -DCABBY_WASI_SDK='"$(WASI_SDK)"'
 endif

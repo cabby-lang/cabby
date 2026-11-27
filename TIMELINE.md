@@ -132,6 +132,7 @@ changing for.
 | 1.28.0 | 23 November | Cabby Quest in 3D, part 18: the field mouse and the hill crow as models |
 | 1.29.0 | 23 November | Cabby Quest in 3D, part 18: the coast's gulls a model, flying |
 | 1.30.0 | 23 November | From your testing: Ember three-quarters the size, and standing about with no jump as it goes round |
+| 1.31.0 | 27 November | `key_hold "shift"` (and ctrl, alt) in games and worlds; world text the same on every computer under a script; `make wasm` says where to get wasi-sdk |
 
 ---
 
@@ -2206,6 +2207,23 @@ each time her idle went round: it was cut where her pose was only near
 the same at both ends. Now it's cut where it's the same (and moving the
 same way), from 1.7 to 5.1 seconds of the fox's long animation, about
 75 times closer. Her file keeps only what's used (1.4 MB down to 573 KB).
+
+*Version 1.31.0, from your week (27 November):*
+
+* **Shift, Ctrl and Alt** held on their own had no names in `use game`
+  and `use world`, so `key_hold "shift"` was never true (your open-world
+  game's running). Now `"shift"`, `"ctrl"` and `"alt"` (either of each)
+  can be held and pressed, as any key; they aren't keys typed (`on_key`),
+  nor shortcuts. (A test script's `hold shift` always worked: it names
+  the key itself, which is why the tests never saw it.)
+* **The world test failed on Debian:** text over the world was drawn in
+  the computer's own font (whatever `fc-match Sans` gives), and one of
+  the scene test's pixels was inside a letter of it. Under a script,
+  world text is now in Cabby's own 8 by 16 font, so the picture is the
+  same on every computer, to the pixel, as the docs say.
+* **`make wasm` on a Mac** failed with "/bin/clang: No such file": with
+  no wasi-sdk found, it used `/bin/clang`. Now it stops and says where
+  to get wasi-sdk (and `wasm/README.md` says how to let macOS run it).
 
 ## Along the way (dates not recorded)
 

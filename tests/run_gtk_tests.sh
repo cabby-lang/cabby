@@ -26,6 +26,8 @@ pass=0; fail=0; notyet=0
 for f in "$DIR"/*.cby; do
 	rm -rf "${CABBY_SAVE_FOLDERS:?}"/*   # (each tutorial starts with no saved games)
 	grep -q '^use gui$' "$f" || continue
+	# (videos need the videos library, built only where FFmpeg was found)
+	if grep -q '^use videos' "$f" && [[ ! -f "$LIBDIR/libcabbyvideos.so" ]]; then continue; fi
 	script=$(sed -n 's/^\/\/ script: //p' "$f" | head -1)
 	[[ -n "$script" ]] || continue
 	name=$(basename "$f" .cby)

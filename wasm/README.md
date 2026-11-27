@@ -24,6 +24,11 @@ the Makefile looks for it, or say where it is:
     make wasm-site                          # (finds ~/tools/wasi-sdk-*)
     make wasm-site WASI_SDK=/opt/wasi-sdk
 
+On a Mac, programs unpacked from a download are blocked ("can't be opened")
+until macOS is told they're wanted, once:
+
+    xattr -dr com.apple.quarantine ~/tools/wasi-sdk-*
+
 `make wasm` makes `cabby.wasm`, and the runtime that compiled programs
 need (`lib/wasm/libcabbyrt.a`, which `make install` installs too).
 
