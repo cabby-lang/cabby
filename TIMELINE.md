@@ -140,6 +140,7 @@ changing for.
 | 1.35.1 | 28 November | Cabby Quest fixes: the bakery a room again, not a cave, at night (its line is now `unlit`); a model stops running once it's out in a battle; the follower out of the way when a battle begins; the quest's tests given longer on slower computers; `make wasm` builds again |
 | 1.36.0 | 28 November | Cabby Quest in 3D, part 22: switching who's out in a battle; the experience shared among all who battled |
 | 1.37.0 | 28 November | Cabby Quest in 3D, part 23: new Cabbymon from your models (a border collie, a cow, a bison, a bear); tall grass in the woods and the meadow, each area saying what lives in it; `tools/prepare-model.py` |
+| 1.37.1 | 28 November | `tools/build-sdl-wasm.sh` runs on a Mac (its bash, 3.2, took an empty list for a missing one) |
 
 ---
 
@@ -2299,6 +2300,13 @@ caught are all made from its kind's name. `tools/prepare-model.py` makes
 a model ready for a game: scaled, turned to face forwards, its
 animations renamed or kept, and a still "idle" from a walk's first
 moment.
+
+*Version 1.37.1, SDL for WebAssembly on a Mac (from your Mac):*
+`tools/build-sdl-wasm.sh` stopped at once with "generator[@]: unbound
+variable": a Mac's bash is 3.2, which, with `set -u`, takes an empty
+list (no Ninja) as one that isn't there. Without it, `make wasm` built
+the interpreter without the gui and game libraries, and the playground
+said `use gui` needed SDL.
 
 ## Along the way (dates not recorded)
 

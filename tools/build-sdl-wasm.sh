@@ -38,7 +38,7 @@ fi
 
 generator=()
 command -v ninja > /dev/null && generator=(-G Ninja)
-cmake -S "$src" -B "$out/build" "${generator[@]}" \
+cmake -S "$src" -B "$out/build" ${generator[@]+"${generator[@]}"} \
 	-DCMAKE_TOOLCHAIN_FILE="$sdk/share/cmake/wasi-sdk-p1.cmake" -DWASI_SDK_PREFIX="$sdk" \
 	-DCMAKE_BUILD_TYPE=MinSizeRel -DCMAKE_INSTALL_PREFIX="$out" \
 	-DCMAKE_C_FLAGS="-D_WASI_EMULATED_SIGNAL -D_WASI_EMULATED_PROCESS_CLOCKS -D_WASI_EMULATED_MMAN -D_WASI_EMULATED_GETPID" \
