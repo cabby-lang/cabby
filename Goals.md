@@ -111,11 +111,12 @@ what's still to come has the detail.*
 
 ## The language and its tools
 
-- [ ] C files of your own, seen by Cabby without making a library first:
+- [x] C files of your own, seen by Cabby without making a library first:
   `use local mylib` with `mylib.c` beside `mylib.hby`.
-  - [ ] *The interpreter compiles it to a `.so` (kept, and made again
+  - [x] *The interpreter compiles it to a `.so` (kept, and made again
     only when the `.c` changes) and loads it; `cabby -c` compiles it into
-    the program.*
+    the program. Done (1.35.0): kept in `~/.cache/cabby` (or
+    `$CABBY_CACHE`); flags in `mylib.link`; manual chapter 33.*
   - [ ] *Today: `libcabbymylib.so` (for the interpreter), `.a` and
     `mylib.link` (for `-c`) in a folder, and `CABBY_LIB` pointing at it.*
 - [ ] Libraries written in Cabby, compiled once, used from the

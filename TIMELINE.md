@@ -136,6 +136,7 @@ changing for.
 | 1.32.0 | 27 November | Cabby Quest in 3D, part 19: Cabbyballs; catching wild Cabbymon; the party, the bag and the book, in the menu |
 | 1.33.0 | 27 November | Cabby Quest in 3D, part 20: the party; who leads, following and battling first; the next sent out when one's worn out; each one's level, wounds and experience |
 | 1.34.0 | 27 November | Cabby Quest in 3D, part 21: the town through the day; the baker there by day, her shop open once the spoon's back; the spoon found only by day; a bed; the days counted |
+| 1.35.0 | 27 November | C files of your own: `use local mylib` builds `mylib.c` beside it (a kept `.so` for the interpreter, compiled in by `cabby -c`), with `mylib.link`'s flags |
 
 ---
 
@@ -2255,6 +2256,16 @@ day, with fresh bread once a day that makes every Cabbymon well. The bed
 at home sleeps the hero until morning, or rests them until dark; the days
 are counted, and the menu says which day it is. The areas' files gain
 `shut`, `shop` and `dark` lines.
+
+*Version 1.35.0, C files of your own (your idea):* `use local mylib`,
+with `mylib.c` beside `mylib.hby` (or beside a `mylib.cby` with no
+header), needs no library built first. The interpreter builds the `.c`
+with the system's C compiler (`$CABBY_CC`, or `cc`) into a `.so` kept in
+`~/.cache/cabby` (or `$CABBY_CACHE`), named for where the `.c` is, and
+builds it again only when the `.c`, or `mylib.link` beside it, changes.
+`cabby -c` compiles it into the program (and into a WebAssembly one
+too). Its functions are declared with `extern`; flags go in
+`mylib.link`. Manual chapter 33 says how, with new multi-file tests.
 
 ## Along the way (dates not recorded)
 

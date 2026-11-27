@@ -1,0 +1,6 @@
+// twice.cby: no header; its C, twice.c, is beside it
+extern int twice_c int N
+
+int four_times int N {
+	return twice_c twice_c(N)
+}

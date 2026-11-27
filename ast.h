@@ -511,10 +511,13 @@ typedef struct SourceFile {
 typedef VEC(SourceFile) SourceFileVec;
 
 /* A library header (`use name`) and the directory it was found in; the
- * back ends look there for its native code (libcabby<name>.so / .a). */
+ * back ends look there for its native code (libcabby<name>.so / .a). Or,
+ * for `use local name`, a C file of one's own beside it (name.c): the
+ * interpreter builds it into a kept .so, and `cabby -c` compiles it in. */
 typedef struct NativeLib {
 	const char *name;
 	const char *dir;
+	const char *source;   /* (use local: the .c; NULL for a library's) */
 } NativeLib;
 
 typedef VEC(NativeLib) NativeLibVec;

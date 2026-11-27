@@ -1,6 +1,6 @@
 # The Cabby Manual
 
-*For Cabby 1.34.0 (2026-11-27).*
+*For Cabby 1.35.0 (2026-11-27).*
 
 A book for learning Cabby one idea at a time, and a reference to come back
 to afterwards.
@@ -5423,6 +5423,8 @@ arguments, for instance. Calling C is only as safe as C. Prefer Cabby's own
 
 In the interpreter, `extern` functions are found in the C library and the
 math library while the program runs. Compiled programs are linked with them.
+C of your own can be found too: a `.c` file beside a header of yours is
+built with the program ([Chapter 33](#chapter-33-splitting-a-program-into-files)).
 
 #### In short
 
@@ -6809,6 +6811,51 @@ A type a file declares can start with any prefix (`struct geo.size` makes
 are written: open `lib/brightness.hby` and you'll find
 `int brightness.level`, with the C it calls underneath.
 
+#### C of your own, beside it
+
+Some of a program is best written in C: a loop that has to be as fast as
+it can be, or a C library that needs a little C around it. Put it in a
+`.c` file with the header's name, beside it, and declare its functions
+in the header with `extern` ([Chapter 27](#chapter-27-calling-c)):
+
+```c
+/* adder.c */
+int add_up(int a, int b)
+{
+	return a + b;
+}
+```
+
+```cabby
+// adder.hby
+extern int add_up int a, int b
+```
+
+```cabby
+// main.cby
+use local adder
+
+int main {
+	println add_up(2, 3)
+}
+```
+
+`cabby main.cby` builds `adder.c` with the system's C compiler (`cc`, or
+whichever `$CABBY_CC` says) into a library of its own, keeps it in
+Cabby's cache folder (`~/.cache/cabby`, or `$CABBY_CACHE`), and loads it.
+The next time, it's already built: it's built again only when `adder.c`
+changes. `cabby -c main.cby` compiles `adder.c` into the program. If it
+doesn't build, the C compiler says why, and nothing runs.
+
+Flags it needs, such as another C library to link with (`-lsqlite3`) or
+a setting (`-DSTEP=10`), go in `adder.link` beside it, separated by
+spaces; running and compiling both use them. And a file of plain
+functions with no header (`adder.cby`) can have its `.c` beside it in
+just the same way.
+
+This is what Cabby's own libraries with C in them are, built ahead of
+time (`libcabby<name>.so`, and `.a` for compiling), without the building.
+
 #### In short
 
 * `.hby` for declarations, `.cby` beside it for bodies; `use local path`
@@ -6816,6 +6863,8 @@ are written: open `lib/brightness.hby` and you'll find
 * `static` keeps a top-level name private to its file.
 * A file's name is a prefix for its functions: `tools.twice` in
   `tools.cby`, brought in by `use local tools`.
+* A `.c` beside it, with the same name, is built with the program; its
+  functions are declared with `extern`.
 
 #### Try this
 
@@ -18442,7 +18491,9 @@ it (`make wasm`).
 **Where `use` looks.** `use name` searches `$CABBY_LIB`, then `lib/` next to
 the `cabby` program, then `../lib/cabby` relative to it, then
 `/usr/local/lib/cabby` and `/usr/lib/cabby`. `use local name` looks next to
-the file that says it.
+the file that says it, and builds a `name.c` beside it with the program
+(into `~/.cache/cabby`, or `$CABBY_CACHE`, when running it; see
+[Chapter 33](#chapter-33-splitting-a-program-into-files)).
 
 **Installing.** From Cabby's source folder: `make`, then `sudo make install`
 (to `/usr/local`), or `make install PREFIX=$HOME/.local` for one user.
@@ -18467,7 +18518,7 @@ Run `cabby` with no file to type Cabby a piece at a time:
 
 ```text
 $ cabby
-Cabby 1.34.0 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
+Cabby 1.35.0 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
 Cabby comes with ABSOLUTELY NO WARRANTY, under the MIT License; "cabby.license" for details.
 >>> int add int a, int b {
 ... 	return a + b

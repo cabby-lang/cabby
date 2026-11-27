@@ -1,0 +1,7 @@
+// a C file of one's own beside a header: use local own/adder, with
+// own/adder.c, built with the program
+use local own/adder
+
+int main {
+	println add_up(2, 3), scaled(4.0)
+}

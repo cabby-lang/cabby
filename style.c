@@ -301,6 +301,8 @@ static bool own_file(const Program *prog, const char *path)
 	const char *base = slash ? slash + 1 : path;
 	for (int i = 0; i < prog->natives.len; i++) {
 		const NativeLib *nl = &prog->natives.items[i];
+		if (nl->source)
+			continue;   /* (use local, with a .c: the header's one's own) */
 		size_t nlen = strlen(nl->name);
 		if (strlen(nl->dir) == dirlen && strncmp(nl->dir, path, dirlen) == 0 &&
 		    strncmp(base, nl->name, nlen) == 0 && (strcmp(base + nlen, ".hby") == 0 || strcmp(base + nlen, ".cby") == 0))
