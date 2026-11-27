@@ -139,6 +139,7 @@ changing for.
 | 1.35.0 | 27 November | C files of your own: `use local mylib` builds `mylib.c` beside it (a kept `.so` for the interpreter, compiled in by `cabby -c`), with `mylib.link`'s flags |
 | 1.35.1 | 28 November | Cabby Quest fixes: the bakery a room again, not a cave, at night (its line is now `unlit`); a model stops running once it's out in a battle; the follower out of the way when a battle begins; the quest's tests given longer on slower computers; `make wasm` builds again |
 | 1.36.0 | 28 November | Cabby Quest in 3D, part 22: switching who's out in a battle; the experience shared among all who battled |
+| 1.37.0 | 28 November | Cabby Quest in 3D, part 23: new Cabbymon from your models (a border collie, a cow, a bison, a bear); tall grass in the woods and the meadow, each area saying what lives in it; `tools/prepare-model.py` |
 
 ---
 
@@ -2287,6 +2288,17 @@ back and sends out another of the party who can still battle; it takes
 the turn, so the other one has its go. After a win, the experience is
 shared out evenly among all who battled and can still battle, not only
 whoever was out at the end.
+
+*Version 1.37.0, Cabby Quest in 3D, part 23 (your idea, and your
+models):* tutorial 130, and chapter 130 of the manual. A border collie,
+a cow, a bison and a bear, each its own model with its own numbers and
+moves. The woods and the meadow grow tall grass (`3d grass` lines, so
+the 2D quest's maps stay as they were), and each area's `wild` lines say
+what lives there and how often it's met. A wild one, its model, and one
+caught are all made from its kind's name. `tools/prepare-model.py` makes
+a model ready for a game: scaled, turned to face forwards, its
+animations renamed or kept, and a still "idle" from a walk's first
+moment.
 
 ## Along the way (dates not recorded)
 

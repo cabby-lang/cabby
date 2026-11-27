@@ -55,4 +55,8 @@ rival 13,7 left
 sees rival 5
 watch 1,7 rival
 watch 1,8 rival
+3d grass 12,9 18,13
+3d wild cow 3
+3d wild border collie 2
+3d wild bison 1
 sign 17,7 East: the road to the coast. (It's closed for now.)

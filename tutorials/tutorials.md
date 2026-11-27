@@ -1,6 +1,6 @@
 # The Cabby Manual
 
-*For Cabby 1.36.0 (2026-11-28).*
+*For Cabby 1.37.0 (2026-11-28).*
 
 A book for learning Cabby one idea at a time, and a reference to come back
 to afterwards.
@@ -235,6 +235,7 @@ int main {
 127. [The party](#chapter-127-the-party): a record kept as a line of text; who leads, chosen from a menu; the follower made again as another model; the next sent out when one's worn out; each one's own level, wounds and experience
 128. [The town through the day](#chapter-128-the-town-through-the-day): people who keep hours; a room too dark to search at night; a bed, to sleep until morning; the days counted; the baker's shop, open once the spoon is back
 129. [Switching, and sharing](#chapter-129-switching-and-sharing): a choice that asks another question; switching in a battle, taking the turn; a list of who's battled, kept through a battle; experience shared out among them
+130. [New Cabbymon](#chapter-130-new-cabbymon): which wild ones live where, from the areas' files; choosing by chances; a map changed as it's read; a kind's numbers and model, looked up by its name
 
 **[Appendices](#appendices)**
 
@@ -18511,7 +18512,73 @@ one of them its share: Ember's own, or, for one caught, `member_gains`
 * Let a worn-out one that battled still have its share.
 * Show in the switch's question which of them have battled already.
 
-[← Chapter 128](#chapter-128-the-town-through-the-day) · [Contents](#contents) · [Appendices →](#appendices)
+[← Chapter 128](#chapter-128-the-town-through-the-day) · [Contents](#contents) · [Chapter 130 →](#chapter-130-new-cabbymon)
+
+### Chapter 130: New Cabbymon
+
+*Program: `130-quest-3d-kinds.cby`, more to meet. Libraries: `use world`, `use files`, `use math`, `use json`, `use directories`, `use sound`.*
+
+Until now the only wild ones were the hills' field mice and crows. Now the
+woods and the meadow have tall grass too, and each area's file says what
+lives in it: a border collie and, now and then, a bear in the woods; a
+cow, the collie and, rarely, a bison in the meadow.
+
+#### Four more
+
+Each new kind is a function that makes one, as the mouse and crow are
+(130.2): its name, level and numbers (`set_up`), how high its bar goes
+(`Top`), the animation it moves with (`Moving`), and its two moves. The
+bear is the strongest, at level 8; the cow is the slowest, and the
+hardest to hurt.
+
+Their models (130.1) are from Sketchfab, as the others are
+(`models/CREDITS.md` says whose, and what was changed). Each was made
+ready with `tools/prepare-model.py`, which scales a model, turns it to
+face forwards, renames its animations, and, for one with only a walk,
+keeps the walk's first moment as an "idle" to stand still with:
+
+```text
+tools/prepare-model.py bear.glb   (what it has: its triangles, animations, and who made it)
+tools/prepare-model.py bear.glb models/bear.glb --scale 0.35 --turn 90 --rename metarigAction=walk --still idle=walk
+```
+
+#### By name
+
+`wild_of` (130.3) makes a wild one from its kind's name: "border collie"
+gives `border_collie`. It replaces tutorial 113's `wild_one`, which only knew a
+crow from a mouse. `model_path` gives a kind's model the same way, and
+`made_of` (112.24) and `model_for` (127.4) both ask it, so a new kind is
+added in one place for battles, and for following the hero. One caught
+is made from its kind's name too (`member_critter`, 127.1), so a bear in
+the party is a bear.
+
+#### Who lives here
+
+An area's file says who lives there, a line each: `wild border collie
+2`. The last word is its chance; the words between are its kind.
+`met_here` (130.4) adds the chances up and rolls a number from 1 to all
+of them; going down the list, it takes each one's chance away, and the
+one that takes it to 0 or below is met. With chances 2 and 1, the collie
+is met two times in three, and the bear one. With no `wild` lines (the
+hills), it's a field mouse, or one time in three a crow, as before.
+
+#### A map changed as it's read
+
+The tall grass is a line too: `grass 9,8 18,12`, the grass (`.`) from
+one tile to the other made tall (`w`). These lines are for the 3D quest
+only (`3d grass`), so the 2D quest's meadow stays as it was.
+`grow_grass` (130.5) changes the map's rows as soon as `read_maps` (117.12)
+has read them, so the grass is there whichever way the area is built:
+walked into, or seen next door. A string's character can be changed in
+place: `Line[C] = 'w'`.
+
+#### Try this
+
+* Put cows in the hills too, rarely, with a `wild cow 1` line.
+* Make the bear come out only at night (part 21's `dark_now`).
+* Give each kind a third move.
+
+[← Chapter 129](#chapter-129-switching-and-sharing) · [Contents](#contents) · [Appendices →](#appendices)
 
 ---
 ## Appendices
@@ -18571,7 +18638,7 @@ Run `cabby` with no file to type Cabby a piece at a time:
 
 ```text
 $ cabby
-Cabby 1.36.0 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
+Cabby 1.37.0 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
 Cabby comes with ABSOLUTELY NO WARRANTY, under the MIT License; "cabby.license" for details.
 >>> int add int a, int b {
 ... 	return a + b

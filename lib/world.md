@@ -217,6 +217,13 @@ plenty for a character), centred on their middle rather than standing on
 their feet, and sized at random: Blender puts all of that right, and
 Apply > All Transforms keeps it.
 
+**Without Blender.** `tools/prepare-model.py`, in Cabby's source, makes
+a `.glb` from Sketchfab ready for a game: `--scale`, `--turn` (to face
+forwards, -z), `--lift`, `--rename OLD=NEW` and `--keep NAME` for its
+animations, and `--still idle=walk` (a model with only a walk can stand
+still with its first moment). Given only the model, it says what's in
+it: its triangles, its animations, and who made it.
+
 ## Light
 
 Every shape is lit by three kinds of light, added together:
