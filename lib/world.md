@@ -457,7 +457,8 @@ or with none, Cabby's own.
 ## Keys and the mouse
 
 Keys are read in frames, as in a game, by name (`"up"`, `"space"`, `"w"`,
-`"enter"`, `"f1"`):
+`"enter"`, `"f1"`; and `"shift"`, `"ctrl"` and `"alt"`, either of each, to
+run while Shift is held, say):
 
 | Member | What it does |
 |---|---|
@@ -518,7 +519,8 @@ and frames run only when the script says. The commands are game's
 | `pixel <x> <y>` | prints the color drawn there: `pixel 160 220: #239024` |
 
 Under a script, Cabby draws the world itself, off screen, so no display is
-needed and the picture is the same on every computer, to the pixel.
+needed and the picture is the same on every computer, to the pixel:
+text over the world is in Cabby's own 8 by 16 font, not the computer's.
 (`CABBY_WORLD_DRAWING=opengl` draws it with OpenGL instead, to compare.)
 
 ## Not in world yet

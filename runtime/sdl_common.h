@@ -560,6 +560,19 @@ static void key_name_of(const char *in, char *out, size_t size)
 }
 
 /* SDL's name for a key, as the game library writes it */
+/* Shift, Ctrl or Alt (either of each), as a key held on its own, for a
+ * game or a world's key_hold "shift"; NULL for any other key */
+static inline const char *modifier_name(SDL_Keycode k)
+{
+	if (k == SDLK_LSHIFT || k == SDLK_RSHIFT)
+		return "shift";
+	if (k == SDLK_LCTRL || k == SDLK_RCTRL)
+		return "ctrl";
+	if (k == SDLK_LALT || k == SDLK_RALT)
+		return "alt";
+	return NULL;
+}
+
 static void sdl_key_name(SDL_Keycode k, char *out, size_t size)
 {
 	out[0] = '\0';

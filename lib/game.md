@@ -228,6 +228,8 @@ clouds, or a roof to walk under.
 Keys are named as a canvas names them: `"a"` to `"z"`, `"0"` to `"9"`,
 `"space"`, `"enter"`, `"escape"`, `"tab"`, `"backspace"`, `"up"`,
 `"down"`, `"left"`, `"right"`, `"f1"` to `"f12"`; capitals don't matter.
+And `"shift"`, `"ctrl"` and `"alt"` (either of each), held on their own:
+`key_hold "shift"` to run, say.
 
 ```cabby
 if key_press "space" {          // once, when it goes down: jump

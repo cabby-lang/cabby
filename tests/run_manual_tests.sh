@@ -120,6 +120,10 @@ for kindfile in $(ls *.kind 2>/dev/null | sort -n); do
 	kind=$(cat "$n.kind")
 	src="$n.cby"
 	# Examples refer to the tutorial folders (use local geometry/...).
+	# (videos need the videos library, built only where FFmpeg was found)
+	if grep -q '^use videos' "$src" && [ ! -f "$LIBDIR/libcabbyvideos.so" ] && [ ! -f "$LIBDIR/libcabbyvideos.dylib" ]; then
+		skipped=$((skipped + 1)); continue
+	fi
 	case "$kind" in
 	run|both|input|main|warning-main|panic|gui|tui)
 		if [ ! -f "$n.expect" ]; then
@@ -258,6 +262,6 @@ done < <(awk '!code && /^[[:space:]]*```/ { code = 1; next }
 	!code { s = $0; gsub(/`[^`]*`/, "", s); if (s ~ /&&|\|\||==/) print NR }' "$MANUAL")
 
 note=""
-[ $skipped -gt 0 ] && note=" ($skipped window examples skipped: no virtual display or gui library)"
+[ $skipped -gt 0 ] && note=" ($skipped examples skipped: no virtual display, gui library or FFmpeg)"
 echo "manual: $pass examples passed, $links links checked, $fail failed$note"
 [ $fail -eq 0 ]

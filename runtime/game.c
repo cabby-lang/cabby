@@ -1207,6 +1207,12 @@ static void key_named(int64_t win, const char *name, int ctrl, int shift, int al
 /* SDL's key */
 static void key_event(int64_t win, SDL_Keycode code, SDL_Keymod mods, int down, int repeat)
 {
+	const char *mod = modifier_name(code);
+	if (mod) {   /* held (key_hold "shift"), but not a key typed, nor a shortcut */
+		if (!repeat)
+			key_goes(win, mod, down);
+		return;
+	}
 	char name[16];
 	sdl_key_name(code, name, sizeof name);
 	key_named(win, name, (mods & SDL_KMOD_CTRL) != 0, (mods & SDL_KMOD_SHIFT) != 0, (mods & SDL_KMOD_ALT) != 0, down, repeat);
