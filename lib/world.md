@@ -219,10 +219,13 @@ Apply > All Transforms keeps it.
 
 **Without Blender.** `tools/prepare-model.py`, in Cabby's source, makes
 a `.glb` from Sketchfab ready for a game: `--scale`, `--turn` (to face
-forwards, -z), `--lift`, `--rename OLD=NEW` and `--keep NAME` for its
-animations, and `--still idle=walk` (a model with only a walk can stand
-still with its first moment). Given only the model, it says what's in
-it: its triangles, its animations, and who made it.
+forwards, -z), `--lift`, `--forward` (back, given less than 0: a long
+animal's middle where it's put), `--rename OLD=NEW` and `--keep NAME` for
+its animations, and `--still idle=walk` (a model with only a walk can
+stand still with its first moment). It also makes every animation move
+every bone that any of them moves, so one played after another never
+leaves a leg where the last put it. Given only the model, it says what's
+in it: its triangles, its animations, and who made it.
 
 ## Light
 

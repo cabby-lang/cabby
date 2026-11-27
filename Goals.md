@@ -67,6 +67,8 @@ what's still to come has the detail.*
     party battles, the next sent out when one's worn out.*
   - [x] *Switching who's out in a battle, and the experience shared
     among all who battled. Done (1.36.0, tutorial 129).*
+  - [x] *The Cabbyball thrown: the wild one shrinking in, wobbles, and
+    caught or bursting open. Done (1.38.0, tutorial 131).*
   - [x] *New Cabbymon from your models: the bear, the border collie, the
     bison, the cow. Done (1.37.0, tutorial 130): in the woods and the
     meadow, which grow tall grass.*

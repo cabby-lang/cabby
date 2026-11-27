@@ -2,20 +2,27 @@
 """Make a model from Sketchfab (or anywhere) ready for a Cabby game.
 
     tools/prepare-model.py IN.glb OUT.glb [--scale S] [--turn DEGREES]
-        [--lift Y] [--rename OLD=NEW ...] [--keep NAME ...] [--still NEW=OLD ...]
+        [--lift Y] [--forward Z] [--rename OLD=NEW ...] [--keep NAME ...]
+        [--still NEW=OLD ...]
 
   --scale S         made S times as big
   --turn DEGREES    turned round, to its left (as `turn` turns a shape):
                     a model facing +x (to the right) needs --turn 90 to
                     face -z, forwards, as Cabby's shapes do
   --lift Y          moved up (or down, given less than 0): its feet at 0
+  --forward Z       moved forwards (or back, given less than 0), once it's
+                    turned: its middle at 0, so a long animal stands where
+                    it's put, not with its head a metre in front
   --rename OLD=NEW  an animation renamed: "Armature|Walk.001"=walk
   --keep NAME       only the animations named (after renaming) are kept
   --still NEW=OLD   a new animation, NEW, of OLD's first moment only: a
                     model with only a walk can stand still with it (idle)
 
 The model's own nodes are put under one new node that scales, turns and
-lifts them all, so a skinned character bends as before. Nothing else is
+moves them all, so a skinned character bends as before. And every
+animation is made to move every bone that any of them moves (those it
+left alone, as they are in the model): played one after another, one
+animation never leaves a leg where the last one put it. Nothing else is
 changed: its meshes, pictures and the rest are copied as they are. Run
 it with no options to see what a model has.
 """
@@ -100,6 +107,30 @@ def add_still(gltf, binary, new, old):
     anims.append({'name': new, 'samplers': samplers, 'channels': [dict(c) for c in src['channels']]})
 
 
+def fill_animations(gltf, binary):
+    """each animation moves every (node, path) any of them does: those it
+    doesn't, held where the model has them"""
+    anims = gltf.get('animations', [])
+    moved = {(c['target'].get('node'), c['target']['path']) for a in anims for c in a['channels']
+             if c['target']['path'] in ('translation', 'rotation', 'scale') and 'node' in c['target']}
+    time_acc = None
+    for a in anims:
+        has = {(c['target'].get('node'), c['target']['path']) for c in a['channels']}
+        for node, path in sorted(moved - has):
+            if time_acc is None:
+                view = add_view(gltf, binary, struct.pack('<f', 0.0))
+                gltf['accessors'].append({'bufferView': view, 'componentType': 5126, 'count': 1,
+                                          'type': 'SCALAR', 'min': [0.0], 'max': [0.0]})
+                time_acc = len(gltf['accessors']) - 1
+            rest = {'translation': [0, 0, 0], 'rotation': [0, 0, 0, 1], 'scale': [1, 1, 1]}[path]
+            value = gltf['nodes'][node].get(path, rest)
+            view = add_view(gltf, binary, struct.pack('<%df' % len(value), *value))
+            gltf['accessors'].append({'bufferView': view, 'componentType': 5126, 'count': 1,
+                                      'type': 'VEC4' if path == 'rotation' else 'VEC3'})
+            a['samplers'].append({'input': time_acc, 'output': len(gltf['accessors']) - 1, 'interpolation': 'STEP'})
+            a['channels'].append({'sampler': len(a['samplers']) - 1, 'target': {'node': node, 'path': path}})
+
+
 def main():
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument('input')
@@ -107,6 +138,7 @@ def main():
     p.add_argument('--scale', type=float, default=1)
     p.add_argument('--turn', type=float, default=0)
     p.add_argument('--lift', type=float, default=0)
+    p.add_argument('--forward', type=float, default=0)
     p.add_argument('--rename', action='append', default=[])
     p.add_argument('--keep', action='append', default=[])
     p.add_argument('--still', action='append', default=[])
@@ -138,15 +170,16 @@ def main():
         gltf['animations'] = [x for x in gltf.get('animations', []) if x.get('name') in a.keep]
         if not gltf['animations']:
             del gltf['animations']
-    if a.scale != 1 or a.turn or a.lift:
+    fill_animations(gltf, binary)
+    if a.scale != 1 or a.turn or a.lift or a.forward:
         half = math.radians(a.turn) / 2
         wrapper = {'name': 'prepared', 'children': list(gltf['scenes'][gltf.get('scene', 0)]['nodes'])}
         if a.scale != 1:
             wrapper['scale'] = [a.scale] * 3
         if a.turn:
             wrapper['rotation'] = [0, math.sin(half), 0, math.cos(half)]
-        if a.lift:
-            wrapper['translation'] = [0, a.lift, 0]
+        if a.lift or a.forward:
+            wrapper['translation'] = [0, a.lift, a.forward]   # (a glTF file's front is +z)
         gltf['nodes'].append(wrapper)
         gltf['scenes'][gltf.get('scene', 0)]['nodes'] = [len(gltf['nodes']) - 1]
     if binary:
