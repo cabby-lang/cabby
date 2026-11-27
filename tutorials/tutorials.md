@@ -1,6 +1,6 @@
 # The Cabby Manual
 
-*For Cabby 1.40.0 (2026-11-28).*
+*For Cabby 1.41.0 (2026-11-28).*
 
 A book for learning Cabby one idea at a time, and a reference to come back
 to afterwards.
@@ -239,6 +239,7 @@ int main {
 131. [The Cabbyball, thrown](#chapter-131-the-cabbyball-thrown): a thing thrown along an arc; something shrunk away, and back; a wobble; beats with no words; one thing waiting for another
 132. [Townsfolk](#chapter-132-townsfolk): a person who's a model, by their name; walking as they step; what someone says, from the areas' files, one line after another
 133. [A ticket for the train](#chapter-133-a-ticket-for-the-train): money, earned and spent; something open once the story's got that far; the hero carried off by the train; tiles laid on a map as it's read
+134. [The credits](#chapter-134-the-credits): a file written for people (a Markdown table), read by a program; text taken apart and put back together; words rolling up the screen; a crow that flies
 
 **[Appendices](#appendices)**
 
@@ -18779,7 +18780,65 @@ that file where the game keeps its saved one, and the script picks
 * Let the traveller say something new once the office opens.
 * Show the train pulling in at the halt, as at the station.
 
-[← Chapter 132](#chapter-132-townsfolk) · [Contents](#contents) · [Appendices →](#appendices)
+[← Chapter 132](#chapter-132-townsfolk) · [Contents](#contents) · [Chapter 134 →](#chapter-134-the-credits)
+
+### Chapter 134: The credits
+
+*Program: `134-quest-3d-credits.cby`, whose work is in the game. Libraries: `use world`, `use files`, `use math`, `use json`, `use directories`, `use sound`.*
+
+Every model in the game is someone else's work, shared so long as they're
+named. `models/CREDITS.md` names them, for a person reading the source.
+Now the game names them too: the title has "Credits", rolling up over the
+town.
+
+#### A file written for people
+
+`CREDITS.md` is Markdown, and its models are a table, a row each:
+
+```text
+| `crow.glb` (the hill crow) | [Crow](https://sketchfab.com/...) | [TheNorthernHarpy](https://sketchfab.com/...) | ... |
+```
+
+`credit_lines` (134.3) reads the file a line at a time, and takes the
+rows that start `` | ` ``. `split " | "` cuts a row into its cells: the
+file, the model's name, whose it is, and what was changed. A bar inside a
+cell is written `\|` in Markdown, which has no space before its bar, so
+`" | "` doesn't cut there. Since the game reads the same file a person
+does, a model added to it is in the credits too, with nothing else to
+change.
+
+#### Text taken apart
+
+A cell is Markdown, not plain words: `[Crow](https://...)` is a link.
+`plain` (134.2) goes through it a character at a time, keeping a link's
+words and leaving out where it goes (from `](` to `)`), leaving out
+backquotes, and turning `\|` back into a bar. `what_it_is` takes the
+first cell, `` `crow.glb` (the hill crow) ``, and gives what's in the
+brackets, with a capital: "The hill crow". Ember's and Bruno's rows now
+say who they are in brackets too, as names.
+
+#### Rolling up
+
+All the lines become one `world.text`, joined with `"\n"`, with a black
+one under it for a shadow (134.4). `roll_credits` starts them below the
+window; `roll_on` moves them up a little each frame (`ROLL_SPEED`) while
+the camera goes on circling the town, until the last line is gone off the
+top, or Space or Escape is pressed: then the title's back. It's called
+from `walk_or_look` (108.19), as part 26's `ride_on` is: while the credits
+roll, there's nothing else to do.
+
+#### A crow that flies
+
+Following the hero, a crow hopped (`walk_of`, 127.4). Its model can fly:
+now it flaps after them.
+
+#### Try this
+
+* Roll the credits at the end of the game, too, once there's an end.
+* Give the game's name in the credits a bigger size than the rest.
+* Add the music's and the sounds' makers, from a file of their own.
+
+[← Chapter 133](#chapter-133-a-ticket-for-the-train) · [Contents](#contents) · [Appendices →](#appendices)
 
 ---
 ## Appendices
@@ -18839,7 +18898,7 @@ Run `cabby` with no file to type Cabby a piece at a time:
 
 ```text
 $ cabby
-Cabby 1.40.0 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
+Cabby 1.41.0 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
 Cabby comes with ABSOLUTELY NO WARRANTY, under the MIT License; "cabby.license" for details.
 >>> int add int a, int b {
 ... 	return a + b

@@ -93,7 +93,8 @@ what's still to come has the detail.*
   (split into a file each).
   - [ ] *Make the big pictures smaller first: the bus station (5 MB), the
     old house (17 MB).*
-- [ ] A credits screen in the game, from `tutorials/models/CREDITS.md`.
+- [x] A credits screen in the game, from `tutorials/models/CREDITS.md`.
+  *Done (1.41.0, tutorial 134): on the title, rolling up over the town.*
 - [ ] The elder walking: the old man's model has no walk animation (he
   stands idle as he moves). *Another model, or one made in Blender.*
 - [x] A ticket, bought later in the game, to take the train to new areas
@@ -103,7 +104,8 @@ what's still to come has the detail.*
   but across the whole map, the world seen passing below.
 - [ ] The 3D quest in a browser (using Cabby's own drawing).
 - [ ] *Small ones: let the crow flap, not hop (its model has "flap" and
-  "glide"); Ember running after the hero when they're far ahead.*
+  "glide") (done, 1.41.0: as it follows); Ember running after the hero
+  when they're far ahead.*
 
 ## A third kind of game: open world, and physics
 

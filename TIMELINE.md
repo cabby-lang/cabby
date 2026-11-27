@@ -145,6 +145,7 @@ changing for.
 | 1.38.1 | 28 November | wasi-sdk: the one for this computer chosen, and one for another computer said to be |
 | 1.39.0 | 28 November | Cabby Quest in 3D, part 25: townsfolk from your models (the baker; a farmer, walking by the pond; a traveller at the station), saying their lines in turn; `tools/prepare-model.py --color`, and smaller files |
 | 1.40.0 | 28 November | Cabby Quest in 3D, part 26: denarii, won in battles; the ticket office, open once Rufus is beaten at the coast; a ticket, and the train east to a new halt on the coast, and back; a tutorial's test can start from a saved game |
+| 1.41.0 | 28 November | Cabby Quest in 3D, part 27: the credits, read from models/CREDITS.md and rolling up over the town; the hill crow flapping after the hero |
 
 ---
 
@@ -2354,6 +2355,14 @@ Halt, a platform and sign laid on the coast's map (`3d tiles` lines);
 waving at the halt's sign brings a train back. And a tutorial's test can
 start from a saved game: a `// saved: FILE FOLDER` line puts FILE where
 the game keeps its saved one.
+
+*Version 1.41.0, Cabby Quest in 3D, part 27 (your idea):* tutorial 134,
+and chapter 134 of the manual. The title has "Credits": who made the
+game, and every model in it, by name and whose it is, rolling up over
+the circling town. The game reads them from `models/CREDITS.md`, its
+Markdown table taken apart a cell at a time, so a model added there is
+in the credits too. And the hill crow flaps after the hero, rather than
+hopping.
 
 ## Along the way (dates not recorded)
 
