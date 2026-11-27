@@ -143,6 +143,7 @@ changing for.
 | 1.37.1 | 28 November | `tools/build-sdl-wasm.sh` runs on a Mac (its bash, 3.2, took an empty list for a missing one) |
 | 1.38.0 | 28 November | Cabby Quest in 3D, part 24: the Cabbyball thrown, the wild one shrinking in, wobbles, caught or bursting open; a switched-in one hit, not the one gone; the bear and bison centred, and smaller; models' animations moving every bone |
 | 1.38.1 | 28 November | wasi-sdk: the one for this computer chosen, and one for another computer said to be |
+| 1.39.0 | 28 November | Cabby Quest in 3D, part 25: townsfolk from your models (the baker; a farmer, walking by the pond; a traveller at the station), saying their lines in turn; `tools/prepare-model.py --color`, and smaller files |
 
 ---
 
@@ -2331,6 +2332,16 @@ file". Now the Makefile, `tools/build-sdl-wasm.sh` and `cabby -c --wasm`
 choose the one made for this computer (`wasi-sdk-*-x86_64-linux`,
 `-arm64-macos` and so on) when there's one, and the Makefile says plainly
 when the one it has is for another computer.
+
+*Version 1.39.0, Cabby Quest in 3D, part 25 (your idea, and your
+models):* tutorial 132, and chapter 132 of the manual. The baker is a
+model (the casual woman), and two more live in the 3D quest: a farmer
+(the bearded man), who wanders by the town's pond, walking as he goes,
+and a traveller (the low-poly man, his clothes made blue) at the
+station. What each says is in the areas' files (`3d says` lines), the
+next line each time they're talked to. A person's model walks while
+they step and stands when they stop. `tools/prepare-model.py` gains
+`--color`, lists a model's materials, and keeps only what's still used.
 
 ## Along the way (dates not recorded)
 
