@@ -134,6 +134,7 @@ changing for.
 | 1.30.0 | 23 November | From your testing: Ember three-quarters the size, and standing about with no jump as it goes round |
 | 1.31.0 | 27 November | `key_hold "shift"` (and ctrl, alt) in games and worlds; world text the same on every computer under a script; `make wasm` says where to get wasi-sdk |
 | 1.32.0 | 27 November | Cabby Quest in 3D, part 19: Cabbyballs; catching wild Cabbymon; the party, the bag and the book, in the menu |
+| 1.33.0 | 27 November | Cabby Quest in 3D, part 20: the party; who leads, following and battling first; the next sent out when one's worn out; each one's level, wounds and experience |
 
 ---
 
@@ -2234,6 +2235,15 @@ one: the more worn out it is, the likelier it stays caught (from one in
 five, to nearly always). Caught, it goes into a ball, left where it
 was, and joins the party; every kind met is in the book. The game's
 menu shows the party, the bag and the book. All kept in the saved game.
+
+*Version 1.33.0, Cabby Quest in 3D, part 20 (your idea):* tutorial 127,
+and chapter 127 of the manual. The party battles and follows. The menu's
+"Party" chooses who leads: the leader follows the hero, as its own model
+(a crow hopping, a mouse scurrying), and goes first into a battle. When
+one is worn out, the next who can battle is sent out, running from
+behind the hero; only when all are does the hero hurry back to the
+elder, who heals them all. Each one caught has its own level, wounds and
+experience, kept in the saved game as a line of text each.
 
 ## Along the way (dates not recorded)
 

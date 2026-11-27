@@ -1,6 +1,6 @@
 # The Cabby Manual
 
-*For Cabby 1.32.0 (2026-11-27).*
+*For Cabby 1.33.0 (2026-11-27).*
 
 A book for learning Cabby one idea at a time, and a reference to come back
 to afterwards.
@@ -232,6 +232,7 @@ int main {
 124. [Models](#chapter-124-models): models made by others, in place of shapes: a fox, a dog, an old man; their animations, played; a walker whose body is a model; credit where it's due
 125. [The wild ones, as models](#chapter-125-the-wild-ones-as-models): a field mouse, a hill crow and the gulls as models; a model made smaller, keeping only what's used
 126. [Cabbyballs](#chapter-126-cabbyballs): catching wild Cabbymon, a chance from how worn out each is; the party, the bag and the book, kept in the saved game; the menu showing them
+127. [The party](#chapter-127-the-party): a record kept as a line of text; who leads, chosen from a menu; the follower made again as another model; the next sent out when one's worn out; each one's own level, wounds and experience
 
 **[Appendices](#appendices)**
 
@@ -18274,7 +18275,70 @@ are caught, not yet sent out.
 * Let the baker sell Cabbyballs, for the bread (126.2).
 * Put a party Cabbymon into battle in Ember's place, once caught.
 
-[← Chapter 125](#chapter-125-the-wild-ones-as-models) · [Contents](#contents) · [Appendices →](#appendices)
+[← Chapter 125](#chapter-125-the-wild-ones-as-models) · [Contents](#contents) · [Chapter 127 →](#chapter-127-the-party)
+
+### Chapter 127: The party
+
+*Program: `127-quest-3d-party.cby`, the party battling and following. Libraries: `use world`, `use files`, `use math`, `use json`, `use directories`, `use sound`.*
+
+Part 19 caught wild Cabbymon, but only Ember battled, or followed. Now
+the party is a party.
+
+#### A record, as a line
+
+Each one caught has its own kind, level, wounds and experience: a
+`member` (127.1), a struct. The saved game keeps the party as a list of
+lines, one each, `"hill crow|4|0|10"`: `line_of_member` writes a member
+as one, and `member_from` reads it back, splitting at the `|`s. A game
+saved by part 19 has `"hill crow 4"` instead: `member_from` reads that
+too, its last word the level. Keeping a record as text like this needs
+nothing new of `json`, and a person can read it in the saved file.
+
+`member_critter` makes one for a battle: the wild one's numbers (the
+hill crow's, 112.15), and for each level it's grown, two more health and
+one more of each of the rest, as Bruno's grow (113.3). Its name has a
+capital, "Hill crow", as a name in a sentence ("Hill crow used Peck!");
+`kind_of` takes it back to its kind, to choose its model.
+
+#### Each of the party
+
+`critter_of` (127.2) makes any of them for a battle by number: 0 is
+Ember, 1 the first caught, and so on. `first_able` finds who can battle:
+from one, then each after it, round to the start; -1 if none can. Ember's
+`fox` (112.13) never gives her less than 1 health to begin a battle with,
+so `critter_of` says when she's worn out itself.
+
+`keep_wounds` keeps how hurt whoever's out is, with them; `heal_all`
+heals them all (the elder does, 114.12, and waking beside him, 123.4).
+Experience (113.16) goes to whoever won: one caught grows a level at ten
+times its level, as Ember does (`member_gains`).
+
+#### The next, sent out
+
+When the one battling is worn out (112.37), its wounds are kept, and
+`first_able` looks for the next. If there is one, a beat with `Then` 7
+(112.32) sends it out: `send_out_next` (127.3) takes the worn-out one's
+shapes away, and makes the next where it stood, running out from behind
+the hero (121's `RUNNING`). Only when none can battle does the hero
+hurry them all back to the elder.
+
+#### Who leads
+
+`Story.Lead` (114.1) says who leads: the one who follows the hero, and
+goes first into a battle (`begin_battle` starts with `first_able` from
+it, 113.11). The menu's "Party" (127.4) asks which, listing them all
+with their levels and health; choosing one makes it the leader.
+`change_lead` makes the follower again, where it was, as the new
+leader's model (`model_for`), walking its way (`walk_of`: a crow hops),
+and saying the right thing when it's looked at (`looked_at`).
+
+#### Try this
+
+* Let the hero switch who's out in a battle, as a choice: "Switch".
+* Show each one's experience toward its next level in the party.
+* One that can't battle (worn out) doesn't follow: the next one does.
+
+[← Chapter 126](#chapter-126-cabbyballs) · [Contents](#contents) · [Appendices →](#appendices)
 
 ---
 ## Appendices
@@ -18332,7 +18396,7 @@ Run `cabby` with no file to type Cabby a piece at a time:
 
 ```text
 $ cabby
-Cabby 1.32.0 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
+Cabby 1.33.0 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
 Cabby comes with ABSOLUTELY NO WARRANTY, under the MIT License; "cabby.license" for details.
 >>> int add int a, int b {
 ... 	return a + b
