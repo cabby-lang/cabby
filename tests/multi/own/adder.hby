@@ -1,0 +1,4 @@
+// adder.hby: C functions of one's own, in adder.c beside it (with the
+// flags in adder.link): Cabby builds it with the program
+extern int add_up int a, int b
+extern double scaled double x

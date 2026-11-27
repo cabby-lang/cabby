@@ -11,6 +11,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#ifndef __wasi__
+#include <limits.h>
+#include <sys/stat.h>
+#include <sys/wait.h>
+#include <unistd.h>
+#endif
 
 #include "diag.h"
 #include "runtime/rt.h"
@@ -4352,6 +4358,117 @@ static void interp_invoke(void *obj, void *fn)
 	rt_gil_leave(was);
 }
 
+#ifndef __wasi__
+/* `use local mylib`, with mylib.c beside it: built into a .so of its own
+ * (with the flags in mylib.link, if there is one), kept in Cabby's cache
+ * folder ($CABBY_CACHE, or ~/.cache/cabby), and built again only when the
+ * .c, or the .link, is newer than it. The compiler is $CABBY_CC, or cc. */
+static bool newer(const char *path, const struct stat *than)
+{
+	struct stat st;
+	if (stat(path, &st) != 0)
+		return false;
+#if defined(__APPLE__)
+	struct timespec a = st.st_mtimespec, b = than->st_mtimespec;
+#else
+	struct timespec a = st.st_mtim, b = than->st_mtim;
+#endif
+	return a.tv_sec > b.tv_sec || (a.tv_sec == b.tv_sec && a.tv_nsec > b.tv_nsec);
+}
+
+static void own_c_built(const NativeLib *nl, char *so, size_t size)
+{
+	char dir[4096];
+	const char *cache = getenv("CABBY_CACHE");
+	const char *xdg = getenv("XDG_CACHE_HOME");
+	const char *home = getenv("HOME");
+	if (cache && *cache)
+		snprintf(dir, sizeof dir, "%s", cache);
+	else if (xdg && *xdg)
+		snprintf(dir, sizeof dir, "%s/cabby", xdg);
+	else if (home && *home)
+		snprintf(dir, sizeof dir, "%s/.cache/cabby", home);
+	else
+		snprintf(dir, sizeof dir, "/tmp/cabby-cache");
+	for (char *p = dir + 1; *p; p++) {   /* (each folder on the way, as mkdir -p) */
+		if (*p == '/') {
+			*p = 0;
+			mkdir(dir, 0755);
+			*p = '/';
+		}
+	}
+	mkdir(dir, 0755);
+	/* named for the .c and where it is, so two of the same name don't meet */
+	char full[PATH_MAX];
+	if (!realpath(nl->source, full))
+		snprintf(full, sizeof full, "%s", nl->source);
+	uint64_t h = 1469598103934665603ULL;
+	for (const char *p = full; *p; p++)
+		h = (h ^ (unsigned char)*p) * 1099511628211ULL;
+	char link[4096];
+	if (snprintf(so, size, "%s/%s-%016" PRIx64 ".so", dir, nl->name, h) >= (int)size ||
+	    snprintf(link, sizeof link, "%s/%s.link", nl->dir, nl->name) >= (int)sizeof link) {
+		fprintf(stderr, "cabby: the path to %s is too long\n", nl->source);
+		exit(1);
+	}
+	struct stat st;
+	if (stat(so, &st) == 0 && !newer(nl->source, &st) && !newer(link, &st))
+		return;
+	const char *cc = getenv("CABBY_CC");
+	if (!cc || !*cc)
+		cc = "cc";
+	char tmp[4200];
+	snprintf(tmp, sizeof tmp, "%s.%d", so, (int)getpid());
+	char *argv[80];
+	int argc = 0;
+	argv[argc++] = (char *)cc;
+	argv[argc++] = "-shared";
+	argv[argc++] = "-fPIC";
+	argv[argc++] = "-O2";
+#if defined(__APPLE__)
+	argv[argc++] = "-undefined";
+	argv[argc++] = "dynamic_lookup";
+#endif
+	argv[argc++] = "-o";
+	argv[argc++] = tmp;
+	argv[argc++] = (char *)nl->source;
+	int words = argc;   /* (the .link's, freed once it's built) */
+	FILE *lf = fopen(link, "r");
+	if (lf) {
+		char word[4096];
+		while (argc < 78 && fscanf(lf, "%4095s", word) == 1)
+			argv[argc++] = strdup(word);
+		fclose(lf);
+	}
+	argv[argc] = NULL;
+	fflush(stdout);
+	pid_t pid = fork();
+	if (pid == 0) {
+		execvp(argv[0], argv);
+		_exit(127);
+	}
+	int status = 0;
+	int rc = pid < 0 || waitpid(pid, &status, 0) < 0 ? -1 : WIFEXITED(status) ? WEXITSTATUS(status) : -1;
+	for (int i = words; i < argc; i++)
+		free(argv[i]);
+	if (rc == 127 || rc < 0) {
+		fprintf(stderr, "cabby: could not run '%s' to build %s (install a C compiler, or set CABBY_CC)\n", cc,
+			nl->source);
+		exit(1);
+	}
+	if (rc != 0) {
+		unlink(tmp);
+		fprintf(stderr, "cabby: building %s failed (see the messages above)\n", nl->source);
+		exit(1);
+	}
+	if (rename(tmp, so) != 0) {
+		fprintf(stderr, "cabby: can't keep %s as %s\n", nl->source, so);
+		unlink(tmp);
+		exit(1);
+	}
+}
+#endif
+
 static void load_natives(Program *prog)
 {
 #ifdef __wasi__
@@ -4366,7 +4483,10 @@ static void load_natives(Program *prog)
 	for (int i = 0; i < prog->natives.len; i++) {
 		NativeLib *nl = &prog->natives.items[i];
 		char path[4096];
-		snprintf(path, sizeof path, "%s/libcabby%s.so", nl->dir, nl->name);
+		if (nl->source)
+			own_c_built(nl, path, sizeof path);   /* (use local, with a .c beside it) */
+		else
+			snprintf(path, sizeof path, "%s/libcabby%s.so", nl->dir, nl->name);
 		FILE *f = fopen(path, "r");
 		if (!f)
 			continue;   /* a header of plain declarations */
@@ -4430,6 +4550,8 @@ static bool on_main_thread(Program *prog)
 #if defined(__APPLE__)
 	for (int i = 0; i < prog->natives.len; i++) {
 		const char *n = prog->natives.items[i].name;
+		if (prog->natives.items[i].source)
+			continue;   /* (one's own C: whatever it's called) */
 		if (!strcmp(n, "gui") || !strcmp(n, "game") || !strcmp(n, "gtk") || !strcmp(n, "tgame") || !strcmp(n, "world") ||
 		    !strcmp(n, "bluetooth"))
 			return true;

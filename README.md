@@ -17,7 +17,7 @@ cabby --check     prog.cby              type- and ownership-check only
 cabby --style     prog.cby              list names and calls that don't follow STYLE.md
 cabby --dump-ast  prog.cby              print the syntax tree
 cabby --dump-tokens prog.cby            print the token stream
-cabby --version                         which Cabby this is: "Cabby 1.34.0 (2026-11-27)"
+cabby --version                         which Cabby this is: "Cabby 1.35.0 (2026-11-27)"
 cabby --license                         Cabby's license (MIT)
 ```
 
@@ -1222,6 +1222,15 @@ with C code of its own: `libcabby<name>.so` (which the interpreter loads)
 and `libcabby<name>.a` plus `<name>.link` (linked into compiled programs).
 That is how `use gui` reaches SDL, and `use gtk` GTK.
 
+**C of your own.** `use local mylib`, with `mylib.c` beside `mylib.hby`
+(or beside a `mylib.cby` with no header), needs no library built first:
+the interpreter builds `mylib.c` with the system's C compiler (`cc`, or
+`$CABBY_CC`) into a `.so` it keeps in `~/.cache/cabby` (or
+`$CABBY_CACHE`), and builds it again only when the `.c` changes; `cabby
+-c` compiles it into the program. Its functions are declared with
+`extern` in the header. Flags it needs (`-lsqlite3`, `-DDEBUG`) go in
+`mylib.link` beside it.
+
 ---
 
 ## 12. The interactive session
@@ -1230,7 +1239,7 @@ Run `cabby` with no file to type Cabby a piece at a time:
 
 ```
 $ cabby
-Cabby 1.34.0 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
+Cabby 1.35.0 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
 Cabby comes with ABSOLUTELY NO WARRANTY, under the MIT License; "cabby.license" for details.
 >>> int add int a, int b {
 ... 	return a + b

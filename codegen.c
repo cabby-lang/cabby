@@ -4453,6 +4453,10 @@ static int compile_wasm(Sema *S, const CompileOptions *opt, const char *out_name
 	for (int i = 0; i < prog->natives.len && nlibs < 38; i++) {
 		NativeLib *nl = &prog->natives.items[i];
 		char path[4096];
+		if (nl->source) {
+			libs[nlibs++] = (char *)nl->source;   /* (use local: one's own C, built for WebAssembly too) */
+			continue;
+		}
 		snprintf(path, sizeof path, "%s/wasm/libcabby%s.a", nl->dir, nl->name);
 		if (access(path, R_OK) != 0)
 			continue;
@@ -4573,10 +4577,14 @@ int compile_program(Sema *S, const char *src_path, const CompileOptions *opt)
 	for (int i = 0; i < prog->natives.len && argc < 200; i++) {
 		NativeLib *nl = &prog->natives.items[i];
 		char path[4096];
-		snprintf(path, sizeof path, "%s/libcabby%s.a", nl->dir, nl->name);
-		if (access(path, R_OK) != 0)
-			continue;
-		argv[argc++] = strdup(path);
+		if (nl->source) {
+			argv[argc++] = (char *)nl->source;   /* (use local: one's own C, compiled in) */
+		} else {
+			snprintf(path, sizeof path, "%s/libcabby%s.a", nl->dir, nl->name);
+			if (access(path, R_OK) != 0)
+				continue;
+			argv[argc++] = strdup(path);
+		}
 		snprintf(path, sizeof path, "%s/%s.link", nl->dir, nl->name);
 		FILE *lf = fopen(path, "r");
 		if (lf) {

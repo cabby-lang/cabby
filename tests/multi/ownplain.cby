@@ -1,0 +1,6 @@
+// C beside a file of plain functions, with no header
+use local own/twice
+
+int main {
+	println four_times(5)
+}

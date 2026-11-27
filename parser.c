@@ -2816,6 +2816,30 @@ static EnumDecl *parse_enum(Parser *P)
 
 static void push_decl(Parser *P, Decl *d) { vec_push(P->arena, P->ld->prog->decls, d); }
 
+/* `use local mylib`: a C file of one's own beside it (mylib.c, next to
+ * mylib.hby or mylib.cby) is built with the program, its functions
+ * declared there with `extern` */
+static void add_own_c(Parser *P, const char *path)
+{
+	size_t pl = strlen(path);
+	if (pl < 5)
+		return;
+	char *c = arena_alloc(P->arena, pl - 1);
+	memcpy(c, path, pl - 4);
+	memcpy(c + pl - 4, ".c", 3);
+	struct stat st;
+	if (stat(c, &st) != 0)
+		return;
+	for (int i = 0; i < P->ld->prog->natives.len; i++)
+		if (P->ld->prog->natives.items[i].source && strcmp(P->ld->prog->natives.items[i].source, c) == 0)
+			return;
+	const char *slash = strrchr(c, '/');
+	const char *base = slash ? slash + 1 : c;
+	NativeLib nl = { arena_strndup(P->arena, base, strlen(base) - 2),
+			 slash ? arena_strndup(P->arena, c, (size_t)(slash - c)) : ".", c };
+	vec_push(P->arena, P->ld->prog->natives, nl);
+}
+
 static void parse_top(Parser *P)
 {
 	Token t = P->cur;
@@ -2857,6 +2881,7 @@ static void parse_top(Parser *P)
 				memcpy(impl + pl - 4, ".cby", 4);
 				if (stat(impl, &st) == 0) {
 					parse_file(P->ld, impl, l);
+					add_own_c(P, impl);
 					diag_set_file(P->file);
 					expect_newline(P, "use");
 					return;
@@ -2935,13 +2960,15 @@ static void parse_top(Parser *P)
 			/* a library header may come with native code: libcabby<name>.so/.a */
 			const char *slash = strrchr(path, '/');
 			NativeLib nl = { arena_strndup(P->arena, t.v.str.data, t.v.str.len - 4),
-					 slash ? arena_strndup(P->arena, path, (size_t)(slash - path)) : "." };
+					 slash ? arena_strndup(P->arena, path, (size_t)(slash - path)) : ".", NULL };
 			bool seen = false;
 			for (int i = 0; i < P->ld->prog->natives.len; i++)
 				if (strcmp(P->ld->prog->natives.items[i].name, nl.name) == 0)
 					seen = true;
 			if (!seen)
 				vec_push(P->arena, P->ld->prog->natives, nl);
+		} else {
+			add_own_c(P, path);
 		}
 		diag_set_file(P->file);
 		expect_newline(P, "use");

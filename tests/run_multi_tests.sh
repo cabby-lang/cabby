@@ -35,6 +35,20 @@ check_output headers_and_impl "$DIR/multi/main.cby" $'42 true 12\n5 10\nprintf 7
 check_output example "$DIR/../examples/example.cby" $'The char you chose is...\nf\n5'
 check_output headerless_module "$DIR/multi/headerless.cby" '42'
 check_output local_prefix "$DIR/multi/prefixed.cby" '5.0 7.0'
+# C of one's own beside a header, or a file of plain functions: built by
+# the interpreter into a kept .so (in CABBY_CACHE), or compiled in by -c
+export CABBY_CACHE="$TMP/cache"
+check_output own_c "$DIR/multi/ownc.cby" '105 10.0'
+check_output own_c_no_header "$DIR/multi/ownplain.cby" '20'
+if [[ "$MODE" == "run" ]]; then
+	# kept, and built again only when the .c changes
+	mkdir "$TMP/again"
+	cp -r "$DIR/multi/own" "$DIR/multi/ownc.cby" "$TMP/again/"
+	check_output own_c_kept "$TMP/again/ownc.cby" '105 10.0'
+	sed -i.old 's/2\.5/4.0/' "$TMP/again/own/adder.c"
+	touch -d '+2 seconds' "$TMP/again/own/adder.c" 2>/dev/null || touch "$TMP/again/own/adder.c"
+	check_output own_c_rebuilt "$TMP/again/ownc.cby" '105 16.0'
+fi
 check_error  static_is_private "$DIR/multi/private.cby" "'helper' is declared static in"
 
 echo "multi-file tests ($MODE): $pass passed, $fail failed"
