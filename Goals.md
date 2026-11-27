@@ -96,8 +96,9 @@ what's still to come has the detail.*
 - [ ] A credits screen in the game, from `tutorials/models/CREDITS.md`.
 - [ ] The elder walking: the old man's model has no walk animation (he
   stands idle as he moves). *Another model, or one made in Blender.*
-- [ ] A ticket, bought later in the game, to take the train to new areas
-  without the long way round.
+- [x] A ticket, bought later in the game, to take the train to new areas
+  without the long way round. *Done (1.40.0, tutorial 133): to the coast
+  and back, once Rufus is beaten there; denarii, won in battles.*
 - [ ] Flying to a place on a Cabbymon: not off the screen with a fade,
   but across the whole map, the world seen passing below.
 - [ ] The 3D quest in a browser (using Cabby's own drawing).

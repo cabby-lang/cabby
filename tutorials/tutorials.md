@@ -1,6 +1,6 @@
 # The Cabby Manual
 
-*For Cabby 1.39.0 (2026-11-28).*
+*For Cabby 1.40.0 (2026-11-28).*
 
 A book for learning Cabby one idea at a time, and a reference to come back
 to afterwards.
@@ -238,6 +238,7 @@ int main {
 130. [New Cabbymon](#chapter-130-new-cabbymon): which wild ones live where, from the areas' files; choosing by chances; a map changed as it's read; a kind's numbers and model, looked up by its name
 131. [The Cabbyball, thrown](#chapter-131-the-cabbyball-thrown): a thing thrown along an arc; something shrunk away, and back; a wobble; beats with no words; one thing waiting for another
 132. [Townsfolk](#chapter-132-townsfolk): a person who's a model, by their name; walking as they step; what someone says, from the areas' files, one line after another
+133. [A ticket for the train](#chapter-133-a-ticket-for-the-train): money, earned and spent; something open once the story's got that far; the hero carried off by the train; tiles laid on a map as it's read
 
 **[Appendices](#appendices)**
 
@@ -18706,7 +18707,79 @@ It also keeps only what's still used, now, so leaving animations out
 * Let the farmer run (his model has "run") when it's raining.
 * Make a townsperson of your own, with a model and lines.
 
-[← Chapter 131](#chapter-131-the-cabbyball-thrown) · [Contents](#contents) · [Appendices →](#appendices)
+[← Chapter 131](#chapter-131-the-cabbyball-thrown) · [Contents](#contents) · [Chapter 133 →](#chapter-133-a-ticket-for-the-train)
+
+### Chapter 133: A ticket for the train
+
+*Program: `133-quest-3d-ticket.cby`, the train taken. Libraries: `use world`, `use files`, `use math`, `use json`, `use directories`, `use sound`.*
+
+Trains have stopped at the station since part 16, and the hero couldn't
+get on one. The ticket office was "Closed. Back soon." Now it opens, once
+the hero has been to the coast the long way round and battled Rufus
+there; and a ticket, bought with the denarii won in battles, takes them
+east by train to a halt on the coast, and back.
+
+#### Denarii
+
+The town's coins are denarii: `Story.Denarii` (114.1), kept in the saved
+game. Each battle won earns some (`earn`, 133.2): two for each of a wild
+one's levels, found in the grass, or what Rufus pays, beaten (`PRIZE`,
+133.1). The bag shows them (126.5). A ticket costs `FARE`, 50.
+
+#### Open, once the story's got that far
+
+`office_open` (133.3) is true once there's a "rematch" answer: the coast's
+battle with Rufus, part 13's. Two lines in the station's file only count
+once it is: `clerk 9,4 down`, the clerk by the door (`add_if_out`,
+128.1), and `opened 8,3 ...`, what the office's sign says now, in place of
+"Closed" (108.22). Talking to the clerk (`talk_to_clerk`) sells a ticket,
+if there's money enough; it's an item, as the spoon was, and it's for
+good.
+
+#### Carried off
+
+At the platform, looking at the rails (123.3) while a train waits, a
+ticket gets the hero aboard (`board`, 133.4): they're hidden, with
+whoever follows, and `Riding` is set. While it is, `walk_or_look`
+(108.19) does nothing but `ride_on`: it waits, frame after frame, until
+the timetable says the train's gone (pulled in, waited, and pulled out),
+then fades to where the station's `ride coast 2,5` line says. The train
+takes them, and nothing new was needed to show it: the timetable (123.2)
+runs it, as ever, with the hero out of sight aboard.
+
+#### A halt, laid on the map
+
+The coast had no station. Now it has a halt: a little platform and a
+sign, laid on its map as it's read (`lay_tiles`, 133.6), by `3d tiles`
+lines, as part 23's grass was grown:
+
+```text
+3d tiles 1,4 S
+3d tiles 1,5 ppp
+3d halt 1,4 station 4,7
+```
+
+`S` is a sign; `p` is platform, as the station's is. The `halt` line is
+on the sign's tile, so looking at it (`at_the_halt`, 133.5) with a ticket
+asks to wave a train down, and `ride_back` fades back to the station's
+platform.
+
+#### A saved game, for the test
+
+Getting this far takes a long time: the spoon, the meadow, the coast. So
+this part's test doesn't play there: it starts from a saved game
+(`quest-saves/133-ticket.json`), the hero at the station with Rufus
+beaten and 55 denarii. Its `// saved:` line tells the test suite to put
+that file where the game keeps its saved one, and the script picks
+"Continue". The file is the same JSON the game writes when it saves.
+
+#### Try this
+
+* Make a ticket cost less for a hero who's caught every kind.
+* Let the traveller say something new once the office opens.
+* Show the train pulling in at the halt, as at the station.
+
+[← Chapter 132](#chapter-132-townsfolk) · [Contents](#contents) · [Appendices →](#appendices)
 
 ---
 ## Appendices
@@ -18766,7 +18839,7 @@ Run `cabby` with no file to type Cabby a piece at a time:
 
 ```text
 $ cabby
-Cabby 1.39.0 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
+Cabby 1.40.0 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
 Cabby comes with ABSOLUTELY NO WARRANTY, under the MIT License; "cabby.license" for details.
 >>> int add int a, int b {
 ... 	return a + b
