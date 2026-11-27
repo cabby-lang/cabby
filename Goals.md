@@ -58,11 +58,13 @@ what's still to come has the detail.*
 
 ## Cabby Quest in 3D: still to come
 
-- [ ] Cabbyballs: after a few quests, the elder gives the hero Cabbyballs
+- [x] Cabbyballs: after a few quests, the elder gives the hero Cabbyballs
   to catch wild ones, and the book that lists what's been caught.
-  - [ ] *The menu shows the book, the Cabbymon in the party, and the
-    bag (what's carried).*
-  - [ ] *The first in the party follows the hero (Ember, until then).*
+  - [x] *The menu shows the book, the Cabbymon in the party, and the
+    bag (what's carried). Done (1.32.0, tutorial 126).*
+  - [x] *The first in the party follows the hero (Ember, until then).
+    Done (1.33.0, tutorial 127): who leads chosen in the menu; the
+    party battles, the next sent out when one's worn out.*
   - [ ] *New Cabbymon from your models: the bear, the border collie, the
     bison, the cow; one day a fishing one (the anglerfish).*
 - [ ] The town living through the day: the baker can't open the bakery
