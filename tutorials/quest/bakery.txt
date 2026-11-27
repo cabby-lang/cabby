@@ -26,6 +26,8 @@
 //   sees <who> <tiles>                       <who> sees the hero that many
 //                                            tiles in front of them (once)
 //   rival <col>,<row> <facing>               Rufus, there until he's met the hero
+//   3d <line>                                a line for the 3D quest only
+//                                            (see town.txt): "shop" and "dark"
 // An area joined on to the north or south should be as wide as this one,
 // and one to the east or west as tall: an area at a corner, next door to
 // two areas next door, is placed beside each, and they should agree (the
@@ -45,3 +47,5 @@ name The Bakery
 music house
 way 6,8 town 4,6
 item 9,4 spoon
+3d shop 5,3 baker down
+3d dark
