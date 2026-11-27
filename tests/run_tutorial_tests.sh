@@ -43,6 +43,14 @@ for f in "$DIR"/*.cby; do
 	# minute or more on a slower computer, drawn without a graphics card)
 	limit=60
 	if [[ -n "$script" ]]; then limit=300; fi
+	# a game that starts from a saved one (a `// saved: FILE FOLDER` line):
+	# FILE, beside the tutorial, put where the game keeps FOLDER's
+	# saved.json, in the save folders the tests use
+	saved=$(sed -n 's/^\/\/ saved: //p' "$f" | head -1)
+	if [[ -n "$saved" ]]; then
+		mkdir -p "$CABBY_SAVE_FOLDERS/${saved#* }"
+		cp "$DIR/${saved%% *}" "$CABBY_SAVE_FOLDERS/${saved#* }/saved.json"
+	fi
 	sed -n 's/^\/\/> \{0,1\}//p' "$f" > "$TMP/want"
 	want_exit=$(sed -n 's/^\/\/ exit: //p' "$f" | head -1)
 	read -r -a args <<< "$(sed -n 's/^\/\/ args: //p' "$f" | head -1)"

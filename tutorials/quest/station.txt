@@ -29,4 +29,7 @@ sign 8,8 Cabby Town Station. The town is along the path, to the east.
 3d folk 5,10 traveller left
 3d says traveller I'm waiting for the train east, to the cities. You'll want a ticket for it one day, when the office opens.
 3d says traveller "Back soon", the sign says. It's said that for a week now.
+3d clerk 9,4 down
+3d opened 8,3 The ticket office. Open: tickets east, to the coast and back, 50 denarii.
+3d ride coast 2,5
 sign 8,3 The ticket office. "Closed. Back soon."

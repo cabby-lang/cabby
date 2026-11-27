@@ -365,6 +365,8 @@ install: all
 	install -d $(DESTDIR)$(PREFIX)/share/doc/cabby/tutorials/music $(DESTDIR)$(PREFIX)/share/doc/cabby/tutorials/quest
 	install -m 644 tutorials/music/* $(DESTDIR)$(PREFIX)/share/doc/cabby/tutorials/music/
 	install -m 644 tutorials/quest/* $(DESTDIR)$(PREFIX)/share/doc/cabby/tutorials/quest/
+	install -d $(DESTDIR)$(PREFIX)/share/doc/cabby/tutorials/quest-saves
+	install -m 644 tutorials/quest-saves/* $(DESTDIR)$(PREFIX)/share/doc/cabby/tutorials/quest-saves/
 	install -d $(DESTDIR)$(PREFIX)/share/doc/cabby/tutorials/maps
 	install -m 644 tutorials/maps/* $(DESTDIR)$(PREFIX)/share/doc/cabby/tutorials/maps/
 

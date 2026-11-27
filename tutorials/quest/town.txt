@@ -51,6 +51,20 @@
 //   says <who> <words>                       (3D, tutorial 132 on) what
 //                                            <who> says, a line each time
 //                                            they're talked to
+//   clerk <col>,<row> <facing>               (3D, tutorial 133 on) the ticket
+//                                            office's clerk, there once
+//                                            it's open
+//   opened <col>,<row> <what it says>        (3D, tutorial 133 on) what a
+//                                            sign says once the office is
+//                                            open
+//   ride <area> <col>,<row>                  (3D, tutorial 133 on) where the
+//                                            train from here sets the hero
+//                                            down
+//   halt <col>,<row> <area> <col>,<row>      (3D, tutorial 133 on) a halt's
+//                                            sign: a train back to there
+//   tiles <col>,<row> <tiles>                (3D, tutorial 133 on) those
+//                                            tiles laid on the map, from
+//                                            <col>,<row> rightwards
 //   wild <kind> <chance>                     (3D, tutorial 130 on) <kind> is
 //                                            met in the tall grass here, as
 //                                            often as <chance> is of all

@@ -144,6 +144,7 @@ changing for.
 | 1.38.0 | 28 November | Cabby Quest in 3D, part 24: the Cabbyball thrown, the wild one shrinking in, wobbles, caught or bursting open; a switched-in one hit, not the one gone; the bear and bison centred, and smaller; models' animations moving every bone |
 | 1.38.1 | 28 November | wasi-sdk: the one for this computer chosen, and one for another computer said to be |
 | 1.39.0 | 28 November | Cabby Quest in 3D, part 25: townsfolk from your models (the baker; a farmer, walking by the pond; a traveller at the station), saying their lines in turn; `tools/prepare-model.py --color`, and smaller files |
+| 1.40.0 | 28 November | Cabby Quest in 3D, part 26: denarii, won in battles; the ticket office, open once Rufus is beaten at the coast; a ticket, and the train east to a new halt on the coast, and back; a tutorial's test can start from a saved game |
 
 ---
 
@@ -2342,6 +2343,17 @@ station. What each says is in the areas' files (`3d says` lines), the
 next line each time they're talked to. A person's model walks while
 they step and stands when they stop. `tools/prepare-model.py` gains
 `--color`, lists a model's materials, and keeps only what's still used.
+
+*Version 1.40.0, Cabby Quest in 3D, part 26 (your idea):* tutorial 133,
+and chapter 133 of the manual. Battles won earn denarii (a wild one's
+level twice over; Rufus pays 25). The station's ticket office opens once
+Rufus has been battled at the coast, with a clerk by its door, selling
+tickets for 50 denarii. Shown at the platform while a train waits, a
+ticket takes the hero aboard, and the train carries them east to Coast
+Halt, a platform and sign laid on the coast's map (`3d tiles` lines);
+waving at the halt's sign brings a train back. And a tutorial's test can
+start from a saved game: a `// saved: FILE FOLDER` line puts FILE where
+the game keeps its saved one.
 
 ## Along the way (dates not recorded)
 
