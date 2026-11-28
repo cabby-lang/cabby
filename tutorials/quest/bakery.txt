@@ -46,6 +46,7 @@
 name The Bakery
 music house
 way 6,8 town 4,6
+3d lay 6,2 b
 item 9,4 spoon
 3d shop 5,3 baker down
 3d unlit

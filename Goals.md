@@ -91,8 +91,12 @@ what's still to come has the detail.*
   the double bed (the hero's home), a fire (the bakery's oven, a camp
   fire); the yacht for the coast's boats; a few trees from the tree pack
   (split into a file each).
+  - [x] *The double bed, the fire (the oven, campfires), the yacht, and
+    the long table. Done (1.42.0, tutorial 135).*
+  - [ ] *The barn, the old building, and trees from the tree pack.*
   - [ ] *Make the big pictures smaller first: the bus station (5 MB), the
     old house (17 MB).*
+    *(`tools/prepare-model.py --pictures 1024` does it now, 1.42.0.)*
 - [x] A credits screen in the game, from `tutorials/models/CREDITS.md`.
   *Done (1.41.0, tutorial 134): on the title, rolling up over the town.*
 - [ ] The elder walking: the old man's model has no walk animation (he

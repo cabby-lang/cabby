@@ -4,6 +4,7 @@
     tools/prepare-model.py IN.glb OUT.glb [--scale S] [--turn DEGREES]
         [--lift Y] [--forward Z] [--rename OLD=NEW ...] [--keep NAME ...]
         [--still NEW=OLD ...] [--color MATERIAL=#rrggbb ...]
+        [--height H] [--center] [--pictures PIXELS]
 
   --scale S         made S times as big
   --turn DEGREES    turned round, to its left (as `turn` turns a shape):
@@ -17,6 +18,10 @@
   --keep NAME       only the animations named (after renaming) are kept
   --still NEW=OLD   a new animation, NEW, of OLD's first moment only: a
                     model with only a walk can stand still with it (idle)
+  --height H        made H metres tall (instead of --scale), its feet at 0
+  --center          its middle, seen from above, where it's put (0, 0)
+  --pictures PIXELS its pictures made no bigger than that, across or down
+                    (with Pillow: pip install pillow), so the file's smaller
   --color MATERIAL=#rrggbb
                     one of its materials (by name: "clothing") made that
                     color, as a screen shows it
@@ -200,6 +205,76 @@ def compact(gltf, binary):
     return out
 
 
+def multiply(a, b):
+    return [sum(a[r + 4 * k] * b[k + 4 * c] for k in range(4)) for c in range(4) for r in range(4)]
+
+
+def local_matrix(node):
+    """a node's own matrix (column by column, as glTF keeps them)"""
+    if 'matrix' in node:
+        return list(node['matrix'])
+    tx, ty, tz = node.get('translation', [0, 0, 0])
+    x, y, z, w = node.get('rotation', [0, 0, 0, 1])
+    sx, sy, sz = node.get('scale', [1, 1, 1])
+    r = [1 - 2 * (y * y + z * z), 2 * (x * y + z * w), 2 * (x * z - y * w), 0,
+         2 * (x * y - z * w), 1 - 2 * (x * x + z * z), 2 * (y * z + x * w), 0,
+         2 * (x * z + y * w), 2 * (y * z - x * w), 1 - 2 * (x * x + y * y), 0,
+         0, 0, 0, 1]
+    return multiply([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, tx, ty, tz, 1],
+                    multiply(r, [sx, 0, 0, 0, 0, sy, 0, 0, 0, 0, sz, 0, 0, 0, 0, 1]))
+
+
+def bounds(gltf):
+    """the box round its meshes, as they're placed in its scene (as made:
+    a skinned one's bones, as they stand, aren't counted): (lowest x, y, z),
+    (highest x, y, z); or None, with no meshes"""
+    lo, hi = [float('inf')] * 3, [float('-inf')] * 3
+
+    def visit(i, parent):
+        node = gltf['nodes'][i]
+        m = multiply(parent, local_matrix(node))
+        if 'mesh' in node:
+            for q in gltf['meshes'][node['mesh']]['primitives']:
+                acc = gltf['accessors'][q['attributes']['POSITION']]
+                a, b = acc['min'], acc['max']
+                for cx in (a[0], b[0]):
+                    for cy in (a[1], b[1]):
+                        for cz in (a[2], b[2]):
+                            p = [m[k] * cx + m[4 + k] * cy + m[8 + k] * cz + m[12 + k] for k in range(3)]
+                            for k in range(3):
+                                lo[k] = min(lo[k], p[k])
+                                hi[k] = max(hi[k], p[k])
+        for c in node.get('children', []):
+            visit(c, m)
+    for i in gltf['scenes'][gltf.get('scene', 0)]['nodes']:
+        visit(i, [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1])
+    return (lo, hi) if lo[0] != float('inf') else None
+
+
+def smaller_pictures(gltf, binary, most):
+    """each picture bigger than most pixels, across or down, made smaller"""
+    try:
+        from PIL import Image
+    except ImportError:
+        sys.exit('--pictures needs Pillow, which reads and writes pictures: pip install pillow')
+    import io
+    views = gltf.get('bufferViews', [])
+    for img in gltf.get('images', []):
+        if 'bufferView' not in img:
+            continue
+        v = views[img['bufferView']]
+        start = v.get('byteOffset', 0)
+        picture = Image.open(io.BytesIO(bytes(binary[start:start + v['byteLength']])))
+        if max(picture.size) <= most:
+            continue
+        picture.thumbnail((most, most))
+        out = io.BytesIO()
+        jpeg = img.get('mimeType') == 'image/jpeg'
+        picture.save(out, 'JPEG' if jpeg else 'PNG', **({'quality': 88} if jpeg else {'optimize': True}))
+        data = out.getvalue()
+        img['bufferView'] = add_view(gltf, binary, data)   # (the old one's left out, as it's used no more)
+
+
 def fill_animations(gltf, binary):
     """each animation moves every (node, path) any of them does: those it
     doesn't, held where the model has them"""
@@ -236,6 +311,9 @@ def main():
     p.add_argument('--keep', action='append', default=[])
     p.add_argument('--still', action='append', default=[])
     p.add_argument('--color', action='append', default=[])
+    p.add_argument('--height', type=float, default=0)
+    p.add_argument('--center', action='store_true')
+    p.add_argument('--pictures', type=int, default=0)
     a = p.parse_args()
     gltf, binary = read_glb(a.input)
     if not a.output:
@@ -246,6 +324,11 @@ def main():
         for anim in gltf.get('animations', []):
             end = max(gltf['accessors'][s['input']].get('max', [0])[0] for s in anim['samplers'])
             print(f'  animation "{anim.get("name", "")}": {end:.2f} seconds')
+        box = bounds(gltf)
+        if box:
+            lo, hi = box
+            print(f'  size: {hi[0] - lo[0]:.2f} across, {hi[1] - lo[1]:.2f} high, {hi[2] - lo[2]:.2f} deep '
+                  f'(from {lo[0]:.2f}, {lo[1]:.2f}, {lo[2]:.2f} to {hi[0]:.2f}, {hi[1]:.2f}, {hi[2]:.2f})')
         names = [m.get('name', '') for m in gltf.get('materials', [])]
         if names:
             print(f'  materials: {", ".join(names)}')
@@ -280,18 +363,35 @@ def main():
         gltf['animations'] = [x for x in gltf.get('animations', []) if x.get('name') in a.keep]
         if not gltf['animations']:
             del gltf['animations']
+    if a.pictures:
+        smaller_pictures(gltf, binary, a.pictures)
     fill_animations(gltf, binary)
+    box = bounds(gltf)
+    if a.height and box:
+        a.scale = a.height / (box[1][1] - box[0][1])
+    if (a.height or a.center) and box:
+        # (where its feet, and its middle, go, once it's scaled and turned)
+        half = math.radians(a.turn)
+        mx, mz = (box[0][0] + box[1][0]) / 2, (box[0][2] + box[1][2]) / 2
+        if a.height:
+            a.lift = -box[0][1] * a.scale
+        if a.center:
+            tx = math.cos(half) * mx + math.sin(half) * mz
+            tz = -math.sin(half) * mx + math.cos(half) * mz
+            a.side = -tx * a.scale
+            a.forward = -tz * a.scale
     if binary:
         binary = compact(gltf, binary)
-    if a.scale != 1 or a.turn or a.lift or a.forward:
+    side = getattr(a, 'side', 0)
+    if a.scale != 1 or a.turn or a.lift or a.forward or side:
         half = math.radians(a.turn) / 2
         wrapper = {'name': 'prepared', 'children': list(gltf['scenes'][gltf.get('scene', 0)]['nodes'])}
         if a.scale != 1:
             wrapper['scale'] = [a.scale] * 3
         if a.turn:
             wrapper['rotation'] = [0, math.sin(half), 0, math.cos(half)]
-        if a.lift or a.forward:
-            wrapper['translation'] = [0, a.lift, a.forward]   # (a glTF file's front is +z)
+        if a.lift or a.forward or side:
+            wrapper['translation'] = [side, a.lift, a.forward]   # (a glTF file's front is +z)
         gltf['nodes'].append(wrapper)
         gltf['scenes'][gltf.get('scene', 0)]['nodes'] = [len(gltf['nodes']) - 1]
     if binary:

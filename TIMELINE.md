@@ -146,6 +146,7 @@ changing for.
 | 1.39.0 | 28 November | Cabby Quest in 3D, part 25: townsfolk from your models (the baker; a farmer, walking by the pond; a traveller at the station), saying their lines in turn; `tools/prepare-model.py --color`, and smaller files |
 | 1.40.0 | 28 November | Cabby Quest in 3D, part 26: denarii, won in battles; the ticket office, open once Rufus is beaten at the coast; a ticket, and the train east to a new halt on the coast, and back; a tutorial's test can start from a saved game |
 | 1.41.0 | 28 November | Cabby Quest in 3D, part 27: the credits, read from models/CREDITS.md and rolling up over the town; the hill crow flapping after the hero |
+| 1.42.0 | 28 November | Cabby Quest in 3D, part 28: things from your models (a double bed, a fire in the oven, long tables, yachts) and campfires; `tools/prepare-model.py` measures and fits a model, and makes its pictures smaller |
 
 ---
 
@@ -2363,6 +2364,17 @@ the circling town. The game reads them from `models/CREDITS.md`, its
 Markdown table taken apart a cell at a time, so a model added there is
 in the credits too. And the hill crow flaps after the hero, rather than
 hopping.
+
+*Version 1.42.0, Cabby Quest in 3D, part 28 (your idea, and your
+models):* tutorial 135, and chapter 135 of the manual. The hero's bed is
+the double bed, over two tiles by two; the bakery's oven has the fire
+in its front, glowing; the bakery's and the home's tables are the long
+wooden one; the coast's boats are the yacht, rocking at anchor; and
+campfires (a new tile, `F`), in the woods and on the coast, flicker in
+the dark. New `3d lay` lines lay tiles for this part on. Part 27's test
+shows the new models in the credits. `tools/prepare-model.py` measures a
+model (its size in metres), and gains `--height`, `--center` and
+`--pictures`.
 
 ## Along the way (dates not recorded)
 

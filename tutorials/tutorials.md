@@ -1,6 +1,6 @@
 # The Cabby Manual
 
-*For Cabby 1.41.0 (2026-11-28).*
+*For Cabby 1.42.0 (2026-11-28).*
 
 A book for learning Cabby one idea at a time, and a reference to come back
 to afterwards.
@@ -240,6 +240,7 @@ int main {
 132. [Townsfolk](#chapter-132-townsfolk): a person who's a model, by their name; walking as they step; what someone says, from the areas' files, one line after another
 133. [A ticket for the train](#chapter-133-a-ticket-for-the-train): money, earned and spent; something open once the story's got that far; the hero carried off by the train; tiles laid on a map as it's read
 134. [The credits](#chapter-134-the-credits): a file written for people (a Markdown table), read by a program; text taken apart and put back together; words rolling up the screen; a crow that flies
+135. [Things](#chapter-135-things): a model in place of shapes; one model over several tiles; a fire's light, flickering; a model in a group that rocks
 
 **[Appendices](#appendices)**
 
@@ -18838,7 +18839,71 @@ now it flaps after them.
 * Give the game's name in the credits a bigger size than the rest.
 * Add the music's and the sounds' makers, from a file of their own.
 
-[← Chapter 133](#chapter-133-a-ticket-for-the-train) · [Contents](#contents) · [Appendices →](#appendices)
+[← Chapter 133](#chapter-133-a-ticket-for-the-train) · [Contents](#contents) · [Chapter 135 →](#chapter-135-things)
+
+### Chapter 135: Things
+
+*Program: `135-quest-3d-things.cby`, more models. Libraries: `use world`, `use files`, `use math`, `use json`, `use directories`, `use sound`.*
+
+The people and the Cabbymon are models now; most of the world's things
+were still boxes. Now the hero's bed is a double bed, the bakery's oven
+has a fire in it, glowing, its table and the hero's are long wooden ones,
+the coast's boats are yachts, and there are campfires, in the woods and
+on the coast, lighting up the dark.
+
+#### A model in place of shapes
+
+Each tile was built from shapes (109.10, 120.5, 122.4); now some are a
+model: `add_model BED_MODEL, X, 0, Z`, where the shapes were (the models
+are in 135.1). The boats' yachts join the group "boats" (`set_group`),
+so they rock on the water as the boats did (116.5): a model is a shape
+like any other.
+
+#### One model over several tiles
+
+A double bed is two tiles by two; a long table is two tiles along. A
+model over several tiles is added once, at its top left tile: the one
+with no bed tile to its left or above it, as the lighthouse was (120.4).
+Put at that tile's corner, half a tile over and down (`X + 0.5, Z +
+0.5`), the bed's middle is the middle of its four. A table's middle is
+halfway along however many it has (`table_reach`, 135.3).
+
+The home's bed and table only had one tile each. A `lay` line in the
+home's file lays another, as part 26's `tiles` lines did; a new kind of
+line, so that parts 26 and 27, which read `tiles` lines, keep their
+homes as they were.
+
+#### Firelight
+
+`add_fire` (135.2) puts a fire model where it's told, playing its
+flames ("burn"), and a lamp in it: orange. Each frame, `flicker` changes
+each fire's lamp's reach a little, by two waves added together, one
+slow and one quick: never the same twice running, and never far from
+3.5 metres, as firelight is. The oven has one in its open front; a
+campfire (`F`, a new tile, in the way as a tree is) is a ring of stones
+and two logs, with one on top, and looking at it, it's warm.
+
+#### The models
+
+They're from Sketchfab, as the rest (`models/CREDITS.md`; the credits,
+part 27's, show them too, with nothing else to change).
+`tools/prepare-model.py` now measures a model, and fits it: `--height`
+makes it so many metres tall, its feet on the ground; `--center` puts
+its middle where it's put; and `--pictures` makes its pictures smaller
+(the table's file was 2.3 MB, nearly all of it its picture; now it's
+0.7 MB):
+
+```text
+tools/prepare-model.py table.glb models/table.glb --height 0.75 --center --turn 90 --pictures 512
+```
+
+#### Try this
+
+* Put a campfire somewhere of your own, with a `3d lay` line.
+* Make a campfire crackle as the hero walks by.
+* Let the yachts sail, slowly, round the bay.
+
+[← Chapter 134](#chapter-134-the-credits) · [Contents](#contents) · [Appendices →](#appendices)
 
 ---
 ## Appendices
@@ -18898,7 +18963,7 @@ Run `cabby` with no file to type Cabby a piece at a time:
 
 ```text
 $ cabby
-Cabby 1.41.0 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
+Cabby 1.42.0 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
 Cabby comes with ABSOLUTELY NO WARRANTY, under the MIT License; "cabby.license" for details.
 >>> int add int a, int b {
 ... 	return a + b

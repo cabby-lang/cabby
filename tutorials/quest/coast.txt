@@ -32,6 +32,7 @@ sea
 gulls 3
 join west lake 0
 rematch 10,6 left
+3d lay 6,8 F
 3d tiles 1,4 S
 3d tiles 1,5 ppp
 3d halt 1,4 station 4,7
