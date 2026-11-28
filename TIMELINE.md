@@ -156,6 +156,7 @@ changing for.
 | 1.49.0 | 28 November | Cabby Quest in 3D, part 35: a mountain east of the meadow, three levels high, stairs on every side climbing whichever way; the camera rising over a cliff |
 | 1.50.0 | 28 November | Cabby Quest in 3D, part 36: the whole world round the town on the title; no shadows high up; the mountain joined to the coast. `shapes_in` lists shapes in the order they were added, even in removed ones' places (the flight back from Pinewood) |
 | 1.51.0 | 28 November | Cabby Quest in 3D, part 37: the summit, an edelweiss to pick, a post, and the sentinel, a rare Cabbymon battled once; things put at the ground's height. The world drawn from half as far as the nearest shape: no stripes far off |
+| 1.52.0 | 28 November | Cabby Quest in 3D, part 38: trainers on the mountain, who see the hero and battle them, and battle again, stronger, when talked to |
 
 ---
 
@@ -2463,6 +2464,13 @@ beaten or caught. Things to pick up and posts go at the ground's height,
 on high ground too. And the world library draws from half as far as the
 nearest shape (not always 5 cm), so far off, from high up, paths and
 water aren't striped.
+
+*Version 1.52.0, Cabby Quest in 3D, part 38 (your idea):* tutorial 145,
+and chapter 145 of the manual. Hiker Dana and Climber Ines on the
+mountain see the hero, come over and battle, as Rufus does, each with a
+Cabbymon; beaten, they stay, and talked to again, battle again, a level
+stronger each time. New mountain lines: `trainer`, `team`, `challenge`
+and `beaten`. People on high ground stand on top of it.
 
 ## Along the way (dates not recorded)
 

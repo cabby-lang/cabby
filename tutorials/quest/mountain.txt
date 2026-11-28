@@ -15,6 +15,14 @@
 //   post <col>,<row> <what it says>          a sign, on a post
 //   rare <col>,<row> <kind> <facing>         a Cabbymon standing there,
 //                                            battled once, when looked at
+// And (tutorial 145 on):
+//   trainer <col>,<row> <who> <facing> <tiles>  someone who lives here,
+//                                            seeing the hero that far in
+//                                            front of them, to battle
+//   team <who> <name>: <kind> <level>        what they're called, and
+//                                            their Cabbymon
+//   challenge <who> <words>                  what they say, to battle
+//   beaten <who> <words>                     and what they say, beaten
 TTTTTTTTTTTTTsss~~~~
 Tf..........fsss~~~~
 T.111111z111.sss~~~~
@@ -44,3 +52,11 @@ wild bear 1
 find 6,6 edelweiss
 post 7,8 The top of the mountain. On a clear day you can see Pinewood from here.
 rare 7,7 sentinel up
+trainer 3,10 hiker up 4
+team hiker Hiker Dana: bear 9
+challenge hiker Up here, everyone battles! Let's see what you and your Cabbymon have got!
+beaten hiker Whew! You climb like a goat and battle like a bear. Talk to me if you want another go.
+trainer 9,4 climber left 3
+team climber Climber Ines: hill crow 11
+challenge climber The wind's strong up here, and so is my crow. Ready?
+beaten climber Blown away! Come back any time: we'll be stronger.
