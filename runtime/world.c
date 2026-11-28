@@ -220,6 +220,7 @@ typedef struct Mesh {
 	V3 lo, hi;            /* the box round it */
 	unsigned gl_vao, gl_vbo, gl_ebo;
 	int changed;          /* its vertices moved (a skin bent): OpenGL's copy is out of date */
+	int remade;           /* (a mesh shape's, made again: OpenGL's copy is to be made again) */
 	int shared_ix;        /* (its triangles are another mesh's) */
 } Mesh;
 
@@ -436,6 +437,9 @@ typedef struct Shape {
 	uint64_t born;        /* when it was added, counted: shapes_in lists them in this order */
 	int first_child, next_child;   /* (what's joined to it: slot + 1; 0, none) */
 	int glow;             /* drawn its own color, as bright in the dark as in the sun; casts no shadow */
+	struct Mesh *own;     /* a mesh shape's own triangles (add_mesh); NULL for the rest */
+	float *points;        /* (its points, while they're being given: x y z each) */
+	int npoints;
 } Shape;
 
 static Shape *shapes;
@@ -490,6 +494,7 @@ typedef struct World {
 	int mouse_x, mouse_y;
 	int locked;           /* lock_mouse: hidden, and moved_x/moved_y say how far it went */
 	double moved_x, moved_y, moving_x, moving_y;
+	double wheel, wheeling;   /* the mouse's wheel turned this frame (and since the last) */
 	char key[16];
 	int open, closing;
 } World;
@@ -575,6 +580,7 @@ int cby_world_paused(int64_t id) { return id < 1 ? 0 : world(id)->paused; }
 int cby_world_mouse_x(int64_t id) { return world(id)->mouse_x; }
 int cby_world_mouse_y(int64_t id) { return world(id)->mouse_y; }
 double cby_world_mouse_moved_x(int64_t id) { return world(id)->moved_x; }
+double cby_world_mouse_wheel(int64_t id) { return world(id)->wheel; }
 double cby_world_mouse_moved_y(int64_t id) { return world(id)->moved_y; }
 
 static char *handed;   /* text being handed to Cabby, a byte at a time */
@@ -814,6 +820,14 @@ void cby_world_shape_remove(int64_t id)
 	}
 	unlink_child(s);
 	s->joined = 0;
+	if (s->own) {   /* (its triangles: OpenGL's copy goes with the window) */
+		free(s->own->v);
+		free(s->own->ix);
+		s->own->v = NULL, s->own->ix = NULL, s->own->nv = s->own->ni = 0;
+		s->own = NULL;
+		free(s->points);
+		s->points = NULL, s->npoints = 0;
+	}
 	/* its slot, for the next shape (a model's keeps its pose: not again) */
 	if (s->model < 0) {
 		if (nfree_slots == cap_free_slots)
@@ -854,6 +868,99 @@ int64_t cby_world_shape_group_length(int64_t id) { return hand(shape(id)->group)
 #include "world_models.h"
 
 /* a model, its origin (where Blender's was: usually its feet) at X, Y, Z */
+/* ---- a mesh shape: triangles of its own, given point by point (add_mesh,
+ * set_mesh), each triangle flat (its own normal), seen from both sides */
+
+int64_t cby_world_add_mesh(int64_t id, const char *c, double x, double y, double z)
+{
+	int64_t s = new_shape(id, MESH_BOX, 1, 1, 1, c, x, y, z);
+	Shape *sh = shape(s);
+	sh->own = mesh_new();
+	sh->own->two_sided = 1;
+	return s;
+}
+
+static Shape *mesh_shape(int64_t id)
+{
+	Shape *s = shape(id);
+	if (!s->own && s->alive)
+		fail("%s", "set_mesh is for a shape made by add_mesh");
+	return s;
+}
+
+/* its triangles let go of, to be given again */
+void cby_world_mesh_clear(int64_t id)
+{
+	Shape *s = mesh_shape(id);
+	if (!s->own)
+		return;
+	free(s->own->v);
+	free(s->own->ix);
+	s->own->v = NULL, s->own->ix = NULL, s->own->nv = s->own->ni = 0;
+	s->npoints = 0;
+	s->own->remade = 1;
+}
+
+void cby_world_mesh_point(int64_t id, double x, double y, double z)
+{
+	Shape *s = mesh_shape(id);
+	if (!s->own)
+		return;
+	s->points = realloc(s->points, sizeof *s->points * 3 * (size_t)(s->npoints + 1));
+	float *p = s->points + 3 * s->npoints++;
+	p[0] = (float)x, p[1] = (float)y, p[2] = (float)z;
+}
+
+/* a triangle of three of its points (counted from 0), counterclockwise
+ * seen from the side it faces */
+void cby_world_mesh_triangle(int64_t id, int64_t a, int64_t b, int64_t c)
+{
+	Shape *s = mesh_shape(id);
+	if (!s->own)
+		return;
+	if (a < 0 || b < 0 || c < 0 || a >= s->npoints || b >= s->npoints || c >= s->npoints) {
+		char msg[200];
+		snprintf(msg, sizeof msg, "a triangle's corners are its points, 0 to %d: %lld, %lld, %lld isn't", s->npoints - 1,
+			 (long long)a, (long long)b, (long long)c);
+		fail("%s", msg);
+	}
+	const float *pa = s->points + 3 * a, *pb = s->points + 3 * b, *pc = s->points + 3 * c;
+	V3 A = v3(pa[0], pa[1], pa[2]), B = v3(pb[0], pb[1], pb[2]), C = v3(pc[0], pc[1], pc[2]);
+	V3 n = v_cross(v_sub(B, A), v_sub(C, A));
+	n = v_len(n) > 1e-12f ? v_norm(n) : v3(0, 1, 0);
+	uint32_t base = (uint32_t)s->own->nv;
+	mesh_vertex(s->own, A.x, A.y, A.z, n.x, n.y, n.z, 0, 0);
+	mesh_vertex(s->own, B.x, B.y, B.z, n.x, n.y, n.z, 1, 0);
+	mesh_vertex(s->own, C.x, C.y, C.z, n.x, n.y, n.z, 0, 1);
+	mesh_triangle(s->own, base, base + 1, base + 2);
+}
+
+/* all given: the box round it, and OpenGL's copy made again */
+void cby_world_mesh_done(int64_t id)
+{
+	Shape *s = mesh_shape(id);
+	if (!s->own)
+		return;
+	mesh_bounds(s->own);
+	if (!s->own->nv)
+		s->own->lo = s->own->hi = v3(0, 0, 0);
+	s->own->remade = 1;
+}
+
+/* a box laid from one place to another: Thick across, as long as the
+ * distance between (a line, as an editor draws edges) */
+void cby_world_shape_lay(int64_t id, double x1, double y1, double z1, double x2, double y2, double z2)
+{
+	Shape *s = shape(id);
+	double dx = x2 - x1, dy = y2 - y1, dz = z2 - z1;
+	double flat = sqrt(dx * dx + dz * dz), len = sqrt(dx * dx + dy * dy + dz * dz);
+	s->x = (x1 + x2) / 2, s->y = (y1 + y2) / 2, s->z = (z1 + z2) / 2;
+	s->d = len > 1e-9 ? len : 1e-9;
+	s->yaw = flat > 1e-9 ? atan2(-dx, -dz) * 180 / M_PI : 0;
+	s->pitch = atan2(dy, flat) * 180 / M_PI;
+	s->roll = 0;
+}
+
 int64_t cby_world_add_model(int64_t id, const char *path, double x, double y, double z)
 {
 	int m = model_load(path);
@@ -1056,8 +1163,8 @@ static M4 shape_matrix(const Shape *s)
 {
 	M4 m = shape_rigid(s);
 	float k = (float)s->scale;
-	if (s->model >= 0)
-		return m_mul(m, m_scale(k, k, k));   /* (a model is its own size) */
+	if (s->model >= 0 || s->own)
+		return m_mul(m, m_scale(k, k, k));   /* (a model, or a mesh shape, is its own size) */
 	float h = s->mesh == MESH_PLANE ? 1.0f : (float)s->h;
 	return m_mul(m, m_scale((float)s->w * k, h * k, (float)s->d * k));
 }
@@ -1066,8 +1173,9 @@ static M4 shape_matrix(const Shape *s)
 static void shape_box(const Shape *s, V3 *lo, V3 *hi)
 {
 	M4 m = shape_matrix(s);
-	V3 mlo = s->model >= 0 ? models[s->model].lo : meshes[s->mesh].lo;
-	V3 mhi = s->model >= 0 ? models[s->model].hi : meshes[s->mesh].hi;
+	const Mesh *me = s->own ? s->own : &meshes[s->mesh];
+	V3 mlo = s->model >= 0 ? models[s->model].lo : me->lo;
+	V3 mhi = s->model >= 0 ? models[s->model].hi : me->hi;
 	*lo = v3(1e30f, 1e30f, 1e30f);
 	*hi = v3(-1e30f, -1e30f, -1e30f);
 	for (int i = 0; i < 8; i++) {
@@ -1132,7 +1240,7 @@ static int shape_parts(Shape *s, long frame)
 		if (cap_parts < 1)
 			parts = realloc(parts, sizeof *parts * (size_t)(cap_parts = 8));
 		Part *p = &parts[0];
-		p->mesh = &meshes[s->mesh];
+		p->mesh = s->own ? s->own : &meshes[s->mesh];
 		p->model = place;
 		p->color[0] = s->color.r, p->color[1] = s->color.g, p->color[2] = s->color.b, p->color[3] = s->color.a;
 		p->picture = s->picture;
@@ -2157,6 +2265,8 @@ static void step(int64_t id)
 	w->moved_x = w->moving_x;
 	w->moved_y = w->moving_y;
 	w->moving_x = w->moving_y = 0;
+	w->wheel = w->wheeling;
+	w->wheeling = 0;
 	for (int i = 0; i < nshapes; i++)
 		if (shapes[i].world == id && shapes[i].alive && shapes[i].model >= 0)
 			pose_step(&models[shapes[i].model], shapes[i].pose);
@@ -2227,6 +2337,53 @@ static void mouse_event(int64_t id, float x, float y, int click)
 	w->mouse_x = (int)floor(x);
 	w->mouse_y = (int)floor(y);
 	invoke(click ? w->clicked : w->moved);
+}
+
+/* where a place in the world is on the window, in its points (as the
+ * mouse's are): -1 for both when it's behind the camera */
+static void window_size(World *w, int *ww, int *wh)
+{
+	*ww = w->width, *wh = w->height;
+	if (window && !scripted())
+		SDL_GetWindowSize(window, ww, wh);
+}
+
+static int on_screen(int64_t id, double x, double y, double z, double *px, double *py)
+{
+	World *w = world(id);
+	int width, height;
+	window_size(w, &width, &height);
+	float aspect = (float)width / (float)height;
+	float t = tanf(radians(w->fov) / 2);
+	V3 f = v_norm(camera_forward(w));
+	V3 s = v_norm(v_cross(f, v3(0, 1, 0)));
+	if (v_len(s) < 1e-6f)
+		s = v3(1, 0, 0);
+	V3 u = v_cross(s, f);
+	V3 v = v_sub(v3((float)x, (float)y, (float)z), v3((float)w->cx, (float)w->cy, (float)w->cz));
+	float depth = v_dot(v, f);
+	if (depth <= 1e-6f) {
+		*px = *py = -1;
+		return 0;
+	}
+	float nx = v_dot(v, s) / (depth * t * aspect), ny = v_dot(v, u) / (depth * t);
+	*px = (nx + 1) / 2 * width - 0.5;
+	*py = (1 - ny) / 2 * height - 0.5;
+	return 1;
+}
+
+double cby_world_screen_x(int64_t id, double x, double y, double z)
+{
+	double px, py;
+	on_screen(id, x, y, z, &px, &py);
+	return px;
+}
+
+double cby_world_screen_y(int64_t id, double x, double y, double z)
+{
+	double px, py;
+	on_screen(id, x, y, z, &px, &py);
+	return py;
 }
 
 /* the shape under the mouse (0: none) */
@@ -2302,8 +2459,17 @@ void cby_world_run(int64_t id)
 						SDL_SetWindowRelativeMouseMode(window, false);
 					}
 					key_event(id, e.key.key, e.key.mod, e.type == SDL_EVENT_KEY_DOWN, e.key.repeat);
-				} else if (e.type == SDL_EVENT_MOUSE_BUTTON_DOWN)
-					mouse_event(id, e.button.x, e.button.y, 1);
+				} else if (e.type == SDL_EVENT_MOUSE_BUTTON_DOWN || e.type == SDL_EVENT_MOUSE_BUTTON_UP) {
+					/* held, as a key is: key_hold "mouse left" */
+					const char *b = e.button.button == SDL_BUTTON_LEFT ? "mouse left"
+							: e.button.button == SDL_BUTTON_MIDDLE ? "mouse middle"
+							: e.button.button == SDL_BUTTON_RIGHT ? "mouse right" : NULL;
+					if (b)
+						key_goes(id, b, e.type == SDL_EVENT_MOUSE_BUTTON_DOWN);
+					if (e.type == SDL_EVENT_MOUSE_BUTTON_DOWN)
+						mouse_event(id, e.button.x, e.button.y, 1);
+				} else if (e.type == SDL_EVENT_MOUSE_WHEEL)
+					w->wheeling += e.wheel.y;
 				else if (e.type == SDL_EVENT_MOUSE_MOTION) {
 					w->moving_x += e.motion.xrel;
 					w->moving_y += e.motion.yrel;
@@ -2453,6 +2619,8 @@ static void run_script_steps(int64_t id)
 				mouse_event(id, (float)x, (float)y, cmd[1] == 'r');
 			else
 				fprintf(stderr, "world script: '%s' needs a place in the window: press 120 80\n", cmd);
+		} else if (strncmp(cmd, "wheel ", 6) == 0) {
+			w->wheeling += atof(cmd + 6);   /* (the wheel turned that much: up, more than 0) */
 		} else if (strncmp(cmd, "look ", 5) == 0) {
 			/* look <dx> <dy>: the mouse moved that far (as a locked mouse is read) */
 			double x = 0, y = 0;

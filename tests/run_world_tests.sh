@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 # The world library (3D). tests/world/api.cby prints its numbers (moving,
 # turning, touching, the camera, the mouse, keys, timers), and physics.cby
-# its (falling, landing, joined shapes), checked against their //> lines. tests/world/scene.cby is looked at: the colors drawn at
+# its (falling, landing, joined shapes), checked against their //> lines;
+# mesh.cby (shapes of one's own, lines, the window's places, the mouse's
+# buttons and wheel) its, and its colors (mesh.pixels), as model.cby's. tests/world/scene.cby is looked at: the colors drawn at
 # the places in scene.script must be scene.pixels's (and shadows.cby's,
 # shadows.script's and shadows.pixels's), give or take 3 (a
 # little either way where a computer's sin and cos differ in the last
@@ -84,14 +86,14 @@ close_enough() {   # want got tolerance
 kinds=(cabby)
 [[ "$(uname)" != Darwin ]] && kinds+=(opengl)
 cp "$DIR/robot.glb" "$TMP/"
-for name in scene shadows model; do
+for name in scene shadows model mesh; do
 	prog_for $name || { fail=$((fail+1)); continue; }
 	if [[ $name == scene ]]; then
 		script="frames 2; $(cat "$DIR/scene.script"); close"
 	elif [[ $name == shadows ]]; then
 		script="frames 1; $(cat "$DIR/shadows.script"); close"
 	else
-		script=$(sed -n 's/^\/\/ script: //p' "$DIR/model.cby")
+		script=$(sed -n 's/^\/\/ script: //p' "$DIR/$name.cby")
 	fi
 	for kind in "${kinds[@]}"; do
 		tol=3
@@ -106,11 +108,11 @@ for name in scene shadows model; do
 			[[ "$(grep '^shadows:' "$TMP/out" | tr '\n' ' ')" == "shadows: true shadows: false " ]] ||
 				{ ok=0; echo "  | not 'shadows: true', then 'shadows: false'" >> "$TMP/why"; }
 		else
-			sed -n 's/^\/\/> \{0,1\}//p' "$DIR/model.cby" > "$TMP/want"
+			sed -n 's/^\/\/> \{0,1\}//p' "$DIR/$name.cby" > "$TMP/want"
 			grep -v '^pixel' "$TMP/out" > "$TMP/got"
 			cmp -s "$TMP/want" "$TMP/got" || { ok=0; diff "$TMP/want" "$TMP/got" | head -10 | sed 's/^/  | /' >> "$TMP/why"; }
-			panic=$(sed -n 's/^\/\/ panic: //p' "$DIR/model.cby")
-			grep -qF -- "$panic" "$TMP/err" || { ok=0; echo "  | no panic: $panic" >> "$TMP/why"; }
+			panic=$(sed -n 's/^\/\/ panic: //p' "$DIR/$name.cby")
+			[[ -z "$panic" ]] || grep -qF -- "$panic" "$TMP/err" || { ok=0; echo "  | no panic: $panic" >> "$TMP/why"; }
 		fi
 		if [[ $ok -eq 1 ]]; then
 			pass=$((pass+1))

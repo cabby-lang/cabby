@@ -246,6 +246,17 @@ double cby_bytes_double_at(int64_t h, int64_t at, int big)
 	return d;
 }
 
+/* a float: 4 bytes, a number with about 7 digits (as 3D models and
+ * sounds keep theirs) */
+double cby_bytes_float_at(int64_t h, int64_t at, int big)
+{
+	check_stretch(B(h), at, 4, "a float (4 bytes)");
+	uint32_t v = (uint32_t)get_raw(B(h), at, 4, big);
+	float f;
+	memcpy(&f, &v, sizeof f);
+	return f;
+}
+
 /* where the number goes: `at`, or the end when at is -1 (adding) */
 static uint8_t *place(Bytes *b, int64_t at, int64_t size, const char *what)
 {
@@ -277,6 +288,14 @@ void cby_bytes_put_double(int64_t h, int64_t at, int big, double d)
 	uint64_t v;
 	memcpy(&v, &d, sizeof v);
 	put_raw(place(B(h), at, 8, "a double (8 bytes)"), 8, big, v);
+}
+
+void cby_bytes_put_float(int64_t h, int64_t at, int big, double d)
+{
+	float f = (float)d;
+	uint32_t v;
+	memcpy(&v, &f, sizeof v);
+	put_raw(place(B(h), at, 4, "a float (4 bytes)"), 4, big, v);
 }
 
 /* ---- as text */

@@ -106,6 +106,9 @@ seen from above), as a person turns.
 | `world.shape add_cone double Radius, double Height, const str &Color, double X, double Y, double Z` | A cone, its point up. |
 | `world.shape add_wedge double Width, double Height, double Depth, const str &Color, double X, double Y, double Z` | A box cut corner to corner: its bottom whole, a sheer face at its front (-z, the way shapes face), and a slope up to it from the back's bottom edge. A ramp, a roof's side, a ledge. Turn it (`set_angle`) to face another way. |
 | `world.shape add_model const str &Path, double X, double Y, double Z` | A model made in Blender: see [Models from Blender](#models-from-blender). |
+| `world.shape add_mesh const list double &Points, const list int &Triangles, const str &Color, double X, double Y, double Z` | A shape of your own, of triangles: see [Shapes of your own](#shapes-of-your-own). |
+| `world.shape add_line double X1, double Y1, double Z1, double X2, double Y2, double Z2, double Thick, const str &Color` | A line from one place to another: a box Thick across, as long as it takes. `Line.lay X1, Y1, Z1, X2, Y2, Z2` moves it. |
+| `double screen_x double X, double Y, double Z`, `double screen_y ...` | Where a place in the world is in the window, in pixels from its top left, as the mouse's place is (`-1` for both when it's behind the camera): to find what's under the mouse, a corner or an edge, by how near it is. |
 | `list world.shape shapes_in const str &Group` | The shapes in a group, in the order they were added (`""`: all), even where a shape added later took the place of one removed. |
 | `list world.shape touching const world.shape &Shape, const str &Group` | Those in a group (`""`: any) that the shape touches. |
 | `world.lamp add_lamp double X, double Y, double Z, const str &Color, double Reach` | A lamp: see [Light](#light). |
@@ -374,6 +377,63 @@ Hiding or removing a shape hides or removes what's joined to it. A
 joined shape doesn't fall by itself: what it's joined to does, and it
 lands with it (a car on its wheels).
 
+## Shapes of your own
+
+`add_mesh` makes a shape of triangles you give it: its **points**, x, y
+and z of each in turn, counted from where the shape is; and its
+**triangles**, three of the points each, counted from 0. A triangle faces
+the side its points go round counterclockwise; it's flat (one way all
+over), and seen from both sides. `set_mesh` gives the shape new points
+and triangles, as it's shown: a program that changes a model, a corner
+at a time, says what it is now.
+
+| Member | What it does |
+|---|---|
+| `void set_mesh const list double &Points, const list int &Triangles` | Its points and triangles, given again. |
+
+A mesh shape is moved, turned and scaled as any shape is (`set_scale`,
+not `set_size`: it's the size its points make it), and its box, for
+`top`, `bottom` and `touches`, is the box round its points.
+
+A triangle, and then a square, two triangles, in its place:
+
+<!-- gui: frames 2; pixel 100 100; tap space; frames 1; pixel 60 80; close -->
+```cabby
+use world
+
+object shapes : world.window {
+	world.shape Mine
+
+	void build {
+		set_size 200, 200
+		list double Points = {-1, 0, 0, 1, 0, 0, 0, 1.5, 0}
+		list int Triangles = {0, 1, 2}
+		Mine = add_mesh Points, Triangles, "orange", 0, 0, 0
+		move_camera_to 0, 0.5, 4
+		point_camera_at 0, 0.5, 0
+		on_frame step
+	}
+
+	void step {
+		if key_press "space" {
+			list double Square = {-1, 0, 0, 1, 0, 0, 1, 1, 0, -1, 1, 0}
+			list int Halves = {0, 1, 2, 0, 2, 3}
+			Mine.set_mesh Square, Halves
+		}
+	}
+}
+
+int main {
+	shapes S
+	S.run
+}
+```
+
+```text
+pixel 100 100: #c37e00
+pixel 60 80: #c37e00
+```
+
 ## Physics
 
 A shape that **falls** is pulled down by gravity, lands on what's solid,
@@ -491,6 +551,12 @@ run while Shift is held, say):
 | `bool mouse_on_shape`, `world.shape shape_at_mouse` | Whether there's a shape under the mouse, and which: the nearest. |
 | `void lock_mouse bool On`, `bool mouse_locked` | Hides the mouse and keeps it in the window, for looking round. Escape lets it go. |
 | `double mouse_moved_x`, `double mouse_moved_y` | How far the mouse moved in this frame, in pixels: for looking round with a locked mouse. |
+| `double mouse_wheel` | How far the mouse's wheel turned in this frame: up (away from you), more than 0. |
+
+The mouse's buttons are read as keys are: `key_hold "mouse left"` (and
+`"mouse middle"`, `"mouse right"`) while one's held down, and
+`key_press` and `key_release` in the frames it goes down and comes up:
+dragging, as a 3D editor's camera is turned.
 
 ## Frames and timers
 
@@ -535,6 +601,8 @@ and frames run only when the script says. The commands are game's
 | Command | Does |
 |---|---|
 | `look <dx> <dy>` | the mouse moved that far, as a locked mouse is read |
+| `wheel <n>` | the mouse's wheel turned that far (up, more than 0) |
+| `hold mouse left`, `release mouse left` | a mouse button held down, and let go (`mouse middle`, `mouse right` too) |
 | `pixel <x> <y>` | prints the color drawn there: `pixel 160 220: #239024` |
 
 Under a script, Cabby draws the world itself, off screen, so no display is

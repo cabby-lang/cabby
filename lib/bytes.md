@@ -105,14 +105,17 @@ that aren't). Letters show where a format put words, such as `PNG` and
 
 One byte only holds 0 to 255, so bigger numbers take several bytes in a
 row, just as C keeps them: a `short` takes 2, an `int` 4, a `long` or a
-`double` 8.
+`double` 8. A `float` is a smaller `double`, 4 bytes, good to about 7
+digits: 3D models (`.glb`) and sounds keep their numbers that way. Cabby
+has no `float` of its own, so it's read as a `double`, and written from
+one.
 
 | Write | Reads or writes |
 |---|---|
-| `B.short_at At`, `B.int_at At`, `B.long_at At`, `B.double_at At` | the number at byte `At` |
+| `B.short_at At`, `B.int_at At`, `B.long_at At`, `B.double_at At`, `B.float_at At` | the number at byte `At` |
 | `B.unsigned_short_at At`, `B.unsigned_int_at At` | the same bytes counted from 0 up (see below) |
-| `B.set_short_at At, N`, `set_int_at`, `set_long_at`, `set_double_at` | writes over the bytes at `At` |
-| `B.add_short N`, `add_int`, `add_long`, `add_double` | adds the number's bytes on the end |
+| `B.set_short_at At, N`, `set_int_at`, `set_long_at`, `set_double_at`, `set_float_at` | writes over the bytes at `At` |
+| `B.add_short N`, `add_int`, `add_long`, `add_double`, `add_float` | adds the number's bytes on the end |
 | the same names ending `_big` | the same, biggest byte first (see below) |
 
 ### Byte order

@@ -96,6 +96,15 @@ extern long cby_world_add_cylinder long win, double r, double h, str color, doub
 extern long cby_world_add_cone long win, double r, double h, str color, double x, double y, double z
 extern long cby_world_add_wedge long win, double w, double h, double d, str color, double x, double y, double z
 extern long cby_world_add_model long win, str path, double x, double y, double z
+extern long cby_world_add_mesh long win, str color, double x, double y, double z
+extern void cby_world_mesh_clear long shape
+extern void cby_world_mesh_point long shape, double x, double y, double z
+extern void cby_world_mesh_triangle long shape, long a, long b, long c
+extern void cby_world_mesh_done long shape
+extern void cby_world_shape_lay long shape, double x1, double y1, double z1, double x2, double y2, double z2
+extern double cby_world_screen_x long win, double x, double y, double z
+extern double cby_world_screen_y long win, double x, double y, double z
+extern double cby_world_mouse_wheel long win
 extern void cby_world_shape_play long shape, str name, int loop
 extern void cby_world_shape_stop_animation long shape
 extern void cby_world_shape_set_animation_speed long shape, double speed
@@ -508,6 +517,28 @@ object world.shape {
 	bool same_as const world.shape &Other const {
 		return Id == Other.Id
 	}
+
+	// ---- a mesh shape's own triangles (add_mesh)
+
+	// its points (x, y and z of each in turn, from its middle) and its
+	// triangles (three points each, counted from 0, counterclockwise seen
+	// from the side it faces), given again: what it is now
+	void set_mesh const list double &Points, const list int &Triangles const {
+		cby_world_mesh_clear Id
+		for I in Points.length / 3 {
+			cby_world_mesh_point Id, Points[3 * I], Points[3 * I + 1], Points[3 * I + 2]
+		}
+		for I in Triangles.length / 3 {
+			cby_world_mesh_triangle Id, Triangles[3 * I], Triangles[3 * I + 1], Triangles[3 * I + 2]
+		}
+		cby_world_mesh_done Id
+	}
+
+	// laid from one place to the other, as long as it takes (a line made
+	// by add_line, moved)
+	void lay double X1, double Y1, double Z1, double X2, double Y2, double Z2 const {
+		cby_world_shape_lay Id, X1, Y1, Z1, X2, Y2, Z2
+	}
 }
 
 // ---- lamps: light from a place, falling off with distance
@@ -688,6 +719,35 @@ object world.window {
 	world.shape add_model const str &Path, double X, double Y, double Z {
 		open
 		return world.shape{.Id = cby_world_add_model(Win, Path, X, Y, Z)}
+	}
+
+	// a shape of your own: Points (x, y and z of each in turn, from X, Y,
+	// Z) joined by Triangles (three points each, counted from 0,
+	// counterclockwise seen from the side it faces), each triangle flat,
+	// seen from both sides. set_mesh changes them.
+	world.shape add_mesh const list double &Points, const list int &Triangles, const str &Color, double X, double Y, double Z {
+		open
+		world.shape Mesh = world.shape{.Id = cby_world_add_mesh(Win, Color, X, Y, Z)}
+		Mesh.set_mesh Points, Triangles
+		return Mesh
+	}
+
+	// a line from one place to another: a box Thick across, as long as it
+	// takes (lay moves it)
+	world.shape add_line double X1, double Y1, double Z1, double X2, double Y2, double Z2, double Thick, const str &Color {
+		world.shape Line = add_box Thick, Thick, 1, Color, X1, Y1, Z1
+		Line.lay X1, Y1, Z1, X2, Y2, Z2
+		return Line
+	}
+
+	// where a place in the world is in the window, in pixels from its
+	// top left, as the mouse's are (-1, both, behind the camera)
+	double screen_x double X, double Y, double Z const {
+		return cby_world_screen_x(Win, X, Y, Z)
+	}
+
+	double screen_y double X, double Y, double Z const {
+		return cby_world_screen_y(Win, X, Y, Z)
 	}
 
 	// every shape in a group, in the order they were added ("" for all)
@@ -974,6 +1034,11 @@ object world.window {
 
 	double mouse_moved_y const {
 		return cby_world_mouse_moved_y Win
+	}
+
+	// how far the mouse's wheel turned this frame: up (away), more than 0
+	double mouse_wheel const {
+		return cby_world_mouse_wheel Win
 	}
 
 	// ---- random numbers

@@ -1,6 +1,6 @@
 # The Cabby Manual
 
-*For Cabby 1.54.0 (2026-11-28).*
+*For Cabby 1.56.0 (2026-11-28).*
 
 A book for learning Cabby one idea at a time, and a reference to come back
 to afterwards.
@@ -253,6 +253,7 @@ int main {
 145. [Trainers](#chapter-145-trainers): one way of doing something made to work for anyone the area's file names; a count kept in the story
 146. [The hollow](#chapter-146-the-hollow): a way that goes only one way; a map changed by its own file, for the new parts only
 147. [The isle](#chapter-147-the-isle): one journey's way of doing things used for another; a line in one area's file found from another's
+148. [The forester](#chapter-148-the-forester): a story in stages, kept in one answer; who's where, by the story; a shop
 
 **[Appendices](#appendices)**
 
@@ -19660,7 +19661,67 @@ coast's gull, made bigger, with a still "idle" (`tools/prepare-model.py
 * Give the isle a rare one, on a rock out in the water.
 * Let a Cabbymon that swims (a new kind) carry the hero across.
 
-[← Chapter 146](#chapter-146-the-hollow) · [Contents](#contents) · [Appendices →](#appendices)
+[← Chapter 146](#chapter-146-the-hollow) · [Contents](#contents) · [Chapter 148 →](#chapter-148-the-forester)
+
+### Chapter 148: The forester
+
+*Program: `148-quest-3d-forester.cby`, Pinewood's own quest. Libraries: `use world`, `use files`, `use math`, `use json`, `use directories`, `use sound`.*
+
+Pinewood has a story of its own now, as Cabby Town has the baker's spoon
+(part 7). The forester's store says he's "gone into the forest, back by
+dark", and he isn't back: the innkeeper's worried. He's lost in the Deep
+Forest, in a clearing among the trees. Found, he hurries home; and there,
+beside his store's door, he thanks the hero with five Cabbyballs, and
+opens his store, where they're sold for denarii.
+
+#### A story in one answer
+
+Where the story's got to is one answer, kept in the saved game with the
+rest (`Story.Answers["forester"]`): none yet while he's lost; `"found"`;
+and `"thanked"`, once he's given his thanks. `forester_now` (148.1) reads
+it, and everything else asks it.
+
+#### Who's where
+
+Pinewood's file and the forest's say where he is at each stage:
+
+```text
+lost forester
+home forester 4,4 down
+astray 7,5 forester down
+```
+
+`add_if_out` (128.1), which already leaves out the baker by night,
+leaves out his usual line (`folk 5,7 forester right wanders`) while he's
+`lost`, and once he's `home_now`, when he stands by his door instead,
+not wandering; and in the forest, `astray` puts him in his clearing
+until he's found. (New words, again, so the parts before this one keep
+him in Pinewood all along.)
+
+Found (`found_forester`), he says so, and is gone once his words are:
+`Vanishing` names who, and the frame that closes the words (108.18)
+takes him away (`vanish`).
+
+While he's lost, the innkeeper says so (a `worry` line, said instead of
+her others; she still heals the party); and his store's sign says what
+a `back` line says once he's back.
+
+#### A shop
+
+Talked to after his thanks, the forester asks if the hero would like a
+Cabbyball, for `BALL_PRICE` denarii (`buy_ball`, 148.2): with enough,
+the denarii go down and the Cabbyballs up; without, he says how to earn
+them. Denarii are won in battles (part 26), and now there's something
+to spend them on besides the train.
+
+#### Try this
+
+* Let the forester sell something else: a potion, to heal one of the
+  party.
+* Make him follow the hero home, as Ember does, instead of hurrying off.
+* Give the store a counter inside, and the forester behind it.
+
+[← Chapter 147](#chapter-147-the-isle) · [Contents](#contents) · [Appendices →](#appendices)
 
 ---
 ## Appendices
@@ -19720,7 +19781,7 @@ Run `cabby` with no file to type Cabby a piece at a time:
 
 ```text
 $ cabby
-Cabby 1.54.0 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
+Cabby 1.56.0 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
 Cabby comes with ABSOLUTELY NO WARRANTY, under the MIT License; "cabby.license" for details.
 >>> int add int a, int b {
 ... 	return a + b

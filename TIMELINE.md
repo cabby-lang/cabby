@@ -159,6 +159,8 @@ changing for.
 | 1.52.0 | 28 November | Cabby Quest in 3D, part 38: trainers on the mountain, who see the hero and battle them, and battle again, stronger, when talked to |
 | 1.53.0 | 28 November | Cabby Quest in 3D, part 39: the hollow, a cave in the mountain; its ledge, hopped down to a tunnel into the cave by the lake, one way only |
 | 1.54.0 | 28 November | Cabby Quest in 3D, part 40: the isle, sailed to from the coast with the sailor, over the sea; sea gulls in its tall grass |
+| 1.55.0 | 28 November | Cabby Quest in 3D, part 41: the forester, lost in the Deep Forest, found; his thanks, and his store, selling Cabbyballs for denarii |
+| 1.56.0 | 28 November | For Kiln, a 3D modeller in Cabby: `world`'s shapes of your own (`add_mesh`, `set_mesh`), lines (`add_line`), where a place is in the window (`screen_x`, `screen_y`), the mouse's buttons as keys and its wheel; `bytes`'s 4-byte floats |
 
 ---
 
@@ -2487,6 +2489,24 @@ the sailor at the coast's pier sails the hero across in his boat, the way
 a flight goes (the areas between built, a straight line, eased), and
 back. Sea gulls, a new kind, in its tall grass (the gull model, bigger);
 the credits list it. New `ferry` lines.
+
+*Version 1.55.0, Cabby Quest in 3D, part 41 (your idea):* tutorial 148,
+and chapter 148 of the manual. Pinewood's own quest: the forester is
+lost in the Deep Forest (the innkeeper's worried); found in a clearing,
+he hurries home, thanks the hero with five Cabbyballs, and opens his
+store, selling them for denarii. New lines `lost`, `home`, `astray`,
+`worry` and `back`.
+
+*Version 1.56.0, the ground for Kiln (your idea: a small 3D modeller, as
+Blender is, written in Cabby):* the `world` library gains shapes of your
+own, triangles from points (`add_mesh`, changed while shown with
+`set_mesh`), lines between two places (`add_line`, `lay`), where a place
+in the world is in the window (`screen_x`, `screen_y`), the mouse's
+buttons read as keys (`key_hold "mouse left"`) and its wheel
+(`mouse_wheel`); test scripts gain `wheel` and `hold mouse left`. `bytes`
+reads and writes 4-byte floats (`float_at`, `add_float`), as `.glb`
+files keep their numbers. `tests/world/mesh.cby` checks them, drawn by
+Cabby and by OpenGL alike.
 
 ## Along the way (dates not recorded)
 
