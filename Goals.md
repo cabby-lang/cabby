@@ -125,8 +125,9 @@ what's still to come has the detail.*
 - [x] A cave in the mountain, joined to the cave by the lake: a ledge
   lets the hero go from the mountain's to the lake's, not back. *Done
   (1.53.0, tutorial 146): the hollow.*
-- [ ] Crossing the sea from the coast to an island: a boat (the yacht),
-  or a Cabbymon that swims.
+- [x] Crossing the sea from the coast to an island: a boat (the yacht),
+  or a Cabbymon that swims. *Done (1.54.0, tutorial 147): the sailor's
+  boat to the isle. A Cabbymon that swims is still to come.*
 - [ ] Pinewood's own quest: the forester, lost in the Deep Forest.
 - [ ] The 3D quest in a browser (using Cabby's own drawing).
 - [ ] *Small ones: let the crow flap, not hop (its model has "flap" and

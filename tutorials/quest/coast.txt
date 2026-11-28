@@ -39,3 +39,4 @@ rematch 10,6 left
 sign 7,5 The coast. The road back west goes round the lake.
 3d open 9,0 sss~~~~~~~~
 3d mount north mountain 0
+3d ferry 11,3 sailor down isle 3,6 13,5

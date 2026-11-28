@@ -1,6 +1,6 @@
 # The Cabby Manual
 
-*For Cabby 1.53.0 (2026-11-28).*
+*For Cabby 1.54.0 (2026-11-28).*
 
 A book for learning Cabby one idea at a time, and a reference to come back
 to afterwards.
@@ -252,6 +252,7 @@ int main {
 144. [The summit](#chapter-144-the-summit): things put at the ground's height, wherever it is; a battle that happens once (unless it's run from); remembering it
 145. [Trainers](#chapter-145-trainers): one way of doing something made to work for anyone the area's file names; a count kept in the story
 146. [The hollow](#chapter-146-the-hollow): a way that goes only one way; a map changed by its own file, for the new parts only
+147. [The isle](#chapter-147-the-isle): one journey's way of doing things used for another; a line in one area's file found from another's
 
 **[Appendices](#appendices)**
 
@@ -19603,7 +19604,63 @@ before this one should keep both as they were. Two more new words:
 * Let the lake's cave have a ledge of its own, down to its water.
 * Make a second way into the hollow, from the mountain's top.
 
-[← Chapter 145](#chapter-145-trainers) · [Contents](#contents) · [Appendices →](#appendices)
+[← Chapter 145](#chapter-145-trainers) · [Contents](#contents) · [Chapter 147 →](#chapter-147-the-isle)
+
+### Chapter 147: The isle
+
+*Program: `147-quest-3d-isle.cby`, across the sea. Libraries: `use world`, `use files`, `use math`, `use json`, `use directories`, `use sound`.*
+
+Out at sea, east of the coast, there's an isle: sand and palms, and
+tall grass where sea gulls live. A sailor stands by the coast's pier, his
+boat tied up beside it. Ask, and he sails the hero across, the isle
+coming nearer over the water, to its own pier; and he's there to sail
+them back.
+
+#### The ferry
+
+The sailor is one line in the coast's file:
+
+```text
+3d ferry 11,3 sailor down isle 3,6 13,5
+```
+
+him, at 11,3, facing down (folk, as a trainer is, 145.1); where he sails
+to, the isle, and the tile the hero steps off onto there; and where his
+boat's tied up here, 13,5. The isle's file has the same, the other way:
+`ferry 3,5 sailor down coast 12,5 0,6`. `add_ferry` (147.2) puts his boat
+there, the yacht, bigger than the others (`FERRY_SCALE`), rocking with
+them.
+
+#### A flight, by sea
+
+Sailing is part 34's flight, flat: the isle has a place in `world.txt`,
+so `set_sail` (147.3) works out where the boat goes in the world, builds
+the areas on the way (`build_beyond`, as a flight does), and turns the
+boat and the hero the way it goes (`atan2`). `sail_on` (147.4) moves them
+a little further each frame, eased, rocking; and there, builds the isle
+where it is in the world, so nothing seems to move (as landing does,
+141.5). A plane of sea as far as can be seen goes under it all, as the
+far land does for a flight.
+
+Where the boat ties up at the other end is in the other area's file:
+`dock_in` looks through the isle's lines (`Maps["isle"]`) for its ferry
+line back to here, and reads where its boat is. One area's file, found
+from another's.
+
+#### Sea gulls
+
+The isle's tall grass has a new kind: the sea gull (147.1), quick and
+hard to hit, flying a little over the ground (`Lift`). Its model is the
+coast's gull, made bigger, with a still "idle" (`tools/prepare-model.py
+--still idle=fly`), so it can follow the hero if it's caught.
+
+#### Try this
+
+* Let the sailor charge a fare (denarii, as the ticket does).
+* Give the isle a rare one, on a rock out in the water.
+* Let a Cabbymon that swims (a new kind) carry the hero across.
+
+[← Chapter 146](#chapter-146-the-hollow) · [Contents](#contents) · [Appendices →](#appendices)
 
 ---
 ## Appendices
@@ -19663,7 +19720,7 @@ Run `cabby` with no file to type Cabby a piece at a time:
 
 ```text
 $ cabby
-Cabby 1.53.0 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
+Cabby 1.54.0 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
 Cabby comes with ABSOLUTELY NO WARRANTY, under the MIT License; "cabby.license" for details.
 >>> int add int a, int b {
 ... 	return a + b

@@ -1,0 +1,30 @@
+// The isle, east of the coast across the sea (3D quest, part 40): sand,
+// palms and tall grass, where sea gulls live; a pier on its west side,
+// and the sailor's ferry, back to the coast.
+//
+// The map comes first, a character for each tile (as the coast's map).
+// Then, after a line of ---, what else is here, as in the town's map, and:
+//   ferry <col>,<row> <who> <facing> <area> <col>,<row> <col>,<row>
+//          someone there (as folk) who sails the hero to that area, onto
+//          the first tile; the second is where their boat is tied up, here
+~~~~~~~~~~~~~~~~
+~~~sssssssss~~~~
+~~sYs..f..Yss~~~
+~~s...wwww...s~~
+~ss.Y.wwww.T.s~~
+~s....wwww...ss~
+~KKs.f...T....s~
+~ss...........s~
+~~sY...wwww.Ys~~
+~~ss...wwww..s~~
+~~~ssssssssss~~~
+~~~~~~~~~~~~~~~~
+---
+name The Isle
+music lake
+sea
+gulls 4
+ferry 3,5 sailor down coast 12,5 0,6
+wild sea gull 3
+wild field mouse 1
+find 12,9 shell

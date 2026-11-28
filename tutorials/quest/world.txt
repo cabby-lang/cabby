@@ -18,3 +18,4 @@ place coast 44,16
 place wilds 0,-34
 place village 4,-44
 place mountain 44,0
+place isle 68,18
