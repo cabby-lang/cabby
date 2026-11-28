@@ -55,6 +55,12 @@ rival 13,7 left
 sees rival 5
 watch 1,7 rival
 watch 1,8 rival
+3d build 12,1 NNNN
+3d build 12,2 NNNN
+3d build 12,3 NNNN
+3d plant 11,1 y
+3d plant 16,2 k
+3d plant 17,4 y
 3d grass 12,9 18,13
 3d wild cow 3
 3d wild border collie 2

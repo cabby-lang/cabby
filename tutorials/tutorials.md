@@ -1,6 +1,6 @@
 # The Cabby Manual
 
-*For Cabby 1.43.0 (2026-11-28).*
+*For Cabby 1.44.0 (2026-11-28).*
 
 A book for learning Cabby one idea at a time, and a reference to come back
 to afterwards.
@@ -242,6 +242,7 @@ int main {
 134. [The credits](#chapter-134-the-credits): a file written for people (a Markdown table), read by a program; text taken apart and put back together; words rolling up the screen; a crow that flies
 135. [Things](#chapter-135-things): a model in place of shapes; one model over several tiles; a fire's light, flickering; a model in a group that rocks
 136. [The deep forest](#chapter-136-the-deep-forest): a new area, and a new town, made only of their files; light made dimmer, not dark; someone who does something when talked to; a path that goes on beyond the map
+137. [A farm, and a store](#chapter-137-a-farm-and-a-store): buildings that are models, each over a block of tiles; trees that are models, swaying; one model each from a pack of them
 
 **[Appendices](#appendices)**
 
@@ -18970,7 +18971,59 @@ to go straight on. In a forest of grass, that's often.
   out in the forest wakes there.
 * Make a forest of your own: a map, and its lines, in a file.
 
-[← Chapter 135](#chapter-135-things) · [Contents](#contents) · [Appendices →](#appendices)
+[← Chapter 135](#chapter-135-things) · [Contents](#contents) · [Chapter 137 →](#chapter-137-a-farm-and-a-store)
+
+### Chapter 137: A farm, and a store
+
+*Program: `137-quest-3d-farm.cby`, buildings and trees. Libraries: `use world`, `use files`, `use math`, `use json`, `use directories`, `use sound`.*
+
+The meadow has a farm now, where the farmer keeps his cows: a thatched
+barn, with an oak and cypresses round it. And in Pinewood, the forester
+has a store, in place of its other house. They're models, from Sketchfab
+(`models/CREDITS.md`).
+
+#### Over a block of tiles
+
+A building covers a block of tiles: the barn four by three (`N`), the
+store five by three (`G`), laid on the maps by `build` lines (and trees
+by `plant` lines: new words, as part 28's `lay` was, so that the parts
+before this one keep their meadow and their Pinewood as they were). Like
+the double bed, its model is added once, at its top left tile
+(`add_built`, 137.2), but now the block can be any size: `block_wide`
+counts its tiles rightwards, and `block_deep` downwards, and the model's
+middle is halfway across both. Every tile of the block is in the way
+(`BLOCKING`), so the hero walks round it, and looking at the barn says
+what's there.
+
+#### Trees that sway
+
+An oak (`k`) or a cypress (`y`) is a model on its tile, in the group
+"trees" (`set_group`), so it sways in the wind as the woods' trees do
+(116.5): the same as any shape in that group.
+
+#### One from a pack
+
+The oak and the cypress came from one file: a pack of eight trees.
+`tools/prepare-model.py` lists a model's parts, given only the model, and
+`--only` keeps just one of them, where it stood, leaving the rest out of
+the file too:
+
+```text
+tools/prepare-model.py tree-pack.glb models/oak.glb --only Circle.005 --height 2.4 --center
+```
+
+And it measures a model from every point of it now, not from the
+lowest and highest points its file says it has: the barn's file said its
+lowest was well below the ground, and fitted by that, it floated.
+
+#### Try this
+
+* Plant a row of oaks of your own along the town's path, with `3d plant`
+  lines.
+* Use another tree from the pack for the forest's clearings.
+* Let the farmer go to his barn by day (part 21's hours).
+
+[← Chapter 136](#chapter-136-the-deep-forest) · [Contents](#contents) · [Appendices →](#appendices)
 
 ---
 ## Appendices
@@ -19030,7 +19083,7 @@ Run `cabby` with no file to type Cabby a piece at a time:
 
 ```text
 $ cabby
-Cabby 1.43.0 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
+Cabby 1.44.0 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
 Cabby comes with ABSOLUTELY NO WARRANTY, under the MIT License; "cabby.license" for details.
 >>> int add int a, int b {
 ... 	return a + b

@@ -148,6 +148,7 @@ changing for.
 | 1.41.0 | 28 November | Cabby Quest in 3D, part 27: the credits, read from models/CREDITS.md and rolling up over the town; the hill crow flapping after the hero |
 | 1.42.0 | 28 November | Cabby Quest in 3D, part 28: things from your models (a double bed, a fire in the oven, long tables, yachts) and campfires; `tools/prepare-model.py` measures and fits a model, and makes its pictures smaller |
 | 1.43.0 | 28 November | Cabby Quest in 3D, part 29: the Deep Forest, dim, its tall grass across it again and again; Pinewood beyond it, whose innkeeper heals; paths that go on beyond a map's edge; the hero facing on, after a wild battle |
+| 1.44.0 | 28 November | Cabby Quest in 3D, part 30: a farm in the meadow (the barn, an oak, cypresses) and a store in Pinewood (the old building), from your models; `tools/prepare-model.py --only`, and measuring from every point |
 
 ---
 
@@ -2387,6 +2388,17 @@ wild ones. Beyond it is Pinewood, a village of two houses, a forester
 `heals` line). A path at a map's edge now goes on into the trees beyond
 it. And after a wild battle, the hero faces the way they were going.
 Part 27's credits show the two new models.
+
+*Version 1.44.0, Cabby Quest in 3D, part 30 (your models):* tutorial
+137, and chapter 137 of the manual. The meadow has a farm: the thatched
+barn over a block of four tiles by three, with an oak and cypresses from
+the tree pack round it. Pinewood's other house is the forester's store,
+the old building. Each building is one model over its block of tiles,
+any size; trees sway as the others do. New `build` and `plant` lines.
+`tools/prepare-model.py` gains `--only` (one part of a model: one tree
+of the pack), lists a model's parts, and measures from every point of
+it (the barn's file had its lowest point wrong, and floated). Part 27's
+credits show the new models.
 
 ## Along the way (dates not recorded)
 

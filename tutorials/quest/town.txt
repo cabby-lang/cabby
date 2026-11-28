@@ -69,6 +69,12 @@
 //                                            for part 28 on: a campfire (F),
 //                                            and the double bed and long
 //                                            table, two tiles each
+//   build <col>,<row> <tiles>                (3D, tutorial 137 on) as lay,
+//                                            for buildings: a barn (N), a
+//                                            store (G), a block of each
+//   plant <col>,<row> <tiles>                (3D, tutorial 137 on) as lay,
+//                                            for trees: an oak (k), a
+//                                            cypress (y)
 //   wild <kind> <chance>                     (3D, tutorial 130 on) <kind> is
 //                                            met in the tall grass here, as
 //                                            often as <chance> is of all
