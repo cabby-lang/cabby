@@ -106,7 +106,7 @@ seen from above), as a person turns.
 | `world.shape add_cone double Radius, double Height, const str &Color, double X, double Y, double Z` | A cone, its point up. |
 | `world.shape add_wedge double Width, double Height, double Depth, const str &Color, double X, double Y, double Z` | A box cut corner to corner: its bottom whole, a sheer face at its front (-z, the way shapes face), and a slope up to it from the back's bottom edge. A ramp, a roof's side, a ledge. Turn it (`set_angle`) to face another way. |
 | `world.shape add_model const str &Path, double X, double Y, double Z` | A model made in Blender: see [Models from Blender](#models-from-blender). |
-| `list world.shape shapes_in const str &Group` | The shapes in a group, in the order they were added (`""`: all). |
+| `list world.shape shapes_in const str &Group` | The shapes in a group, in the order they were added (`""`: all), even where a shape added later took the place of one removed. |
 | `list world.shape touching const world.shape &Shape, const str &Group` | Those in a group (`""`: any) that the shape touches. |
 | `world.lamp add_lamp double X, double Y, double Z, const str &Color, double Reach` | A lamp: see [Light](#light). |
 | `world.text add_text const str &Text, double X, double Y` | Text over the world: see [Text over the world](#text-over-the-world). |

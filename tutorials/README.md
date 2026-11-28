@@ -1,6 +1,6 @@
 # Cabby tutorials
 
-*For Cabby 1.49.0 (2026-11-28).*
+*For Cabby 1.50.0 (2026-11-28).*
 
 A hundred and six short programs, each about one keyword, feature or library, in
 an order where each uses only what came before it. Each one
@@ -302,6 +302,7 @@ between `{` and `}` to run them as one input and see them as a program would. (`
 | 140 | `140-quest-3d-run.cby` | Cabby Quest in 3D, part 33: running, with Shift, the hero leaning into it; and the one following running after them until it's caught up |
 | 141 | `141-quest-3d-over.cby` | Cabby Quest in 3D, part 34: over the world, flying all the way to the town, the areas between built for it (the treetops, between the woods and Pinewood) |
 | 142 | `142-quest-3d-mountain.cby` | Cabby Quest in 3D, part 35: a mountain east of the meadow, three levels high, with stairs up on every side (some climbed away from the camera, behind a cliff) |
+| 143 | `143-quest-3d-world.cby` | Cabby Quest in 3D, part 36: the whole world round the town on the title (the coast and the mountain too); no shadows high up, flying |
 
 Every keyword in the language appears in at least one tutorial. The manual's
 appendices and the main README (installed as

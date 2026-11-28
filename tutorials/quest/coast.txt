@@ -37,3 +37,5 @@ rematch 10,6 left
 3d tiles 1,5 ppp
 3d halt 1,4 station 4,7
 sign 7,5 The coast. The road back west goes round the lake.
+3d open 9,0 sss~~~~~~~~
+3d mount north mountain 0

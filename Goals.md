@@ -121,7 +121,8 @@ what's still to come has the detail.*
 - [x] Mountains: levels one above another, with stairs up from every
   side, not only from the south as in the hills. *Done (1.49.0, tutorial
   142): the mountain east of the meadow, three levels high; behind a
-  cliff, the camera rises to see over it.*
+  cliff, the camera rises to see over it. Joined to the coast to its
+  south, the beach down its east side (1.50.0).*
 - [ ] The 3D quest in a browser (using Cabby's own drawing).
 - [ ] *Small ones: let the crow flap, not hop (its model has "flap" and
   "glide") (done, 1.41.0: as it follows); Ember running after the hero

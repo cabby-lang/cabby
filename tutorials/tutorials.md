@@ -1,6 +1,6 @@
 # The Cabby Manual
 
-*For Cabby 1.49.0 (2026-11-28).*
+*For Cabby 1.50.0 (2026-11-28).*
 
 A book for learning Cabby one idea at a time, and a reference to come back
 to afterwards.
@@ -248,6 +248,7 @@ int main {
 140. [Running](#chapter-140-running): a key held with another; a step in half the time; a model's animations, asked for by name
 141. [Over the world](#chapter-141-over-the-world): a map of the world, from a file; building more of it on the way; a straight line between two places, and the way it points (atan2); a camera that turns to look that way
 142. [The mountain](#chapter-142-the-mountain): a character that's a number; working out which way something faces from what's round it; a camera that rises to see over what's in the way
+143. [The whole world](#chapter-143-the-whole-world): one function for two jobs, told which by what it's given; shadows turned off and on
 
 **[Appendices](#appendices)**
 
@@ -19366,7 +19367,71 @@ meadow as it was (and the mountain has a place in `world.txt`).
 * Let a ledge (`v`) drop the hero a level on the mountain, as in the
   hills.
 
-[← Chapter 141](#chapter-141-over-the-world) · [Contents](#contents) · [Appendices →](#appendices)
+[← Chapter 141](#chapter-141-over-the-world) · [Contents](#contents) · [Chapter 143 →](#chapter-143-the-whole-world)
+
+### Chapter 143: The whole world
+
+*Program: `143-quest-3d-world.cby`, the title, and the flight. Libraries: `use world`, `use files`, `use math`, `use json`, `use directories`, `use sound`.*
+
+The title circled Cabby Town and showed only what's built with it: the
+areas next door, and theirs at the corners. The coast and the mountain,
+further off, weren't there. Now the title shows the whole world round
+the town: every area with a place in `world.txt`, fifty tiles round it
+(`TITLE_REACH`), Pinewood and the treetops to the north, the coast and
+the mountain to the east.
+
+#### One function, two jobs
+
+Part 34's flight already builds areas from `world.txt`: those near the
+way. That's the same job, in a different box. So `build_the_way` is
+`build_beyond` now (141.3), given the box (left, top, right and bottom,
+on this area's map) and whether to say what it builds:
+
+```cabby
+build_beyond Left, Top, Right, Bottom, true
+```
+
+`plan_the_way` (141.2) gives it the box round the way's two ends,
+`MARGIN` wider; `show_title` (115.3) gives it the box round the town,
+and says nothing (the title shows at the start of every game, and the
+tests would all say what it built).
+
+#### No shadows high up
+
+The sun's shadows are cast in the thirty metres round the camera. Flying,
+high up, that's spread over far more of the world, and each shadow's
+edge came out in stripes. So `fly_over` (141.4) turns them off above
+`SHADOWS_BELOW` metres, and on again below (`set_shadows`).
+
+#### The mountain and the coast
+
+The mountain goes on south to the coast now, and the coast north to it
+(`3d mount`, part 35's new word), the beach and the sea down the
+mountain's east side meeting the coast's. The coast's north edge was all
+trees; `3d open 9,0 sss~~~~~~~~` lays sand and sea there. The mountain
+is twenty tiles wide, as the coast is: an area joined to the north or
+south should be as wide.
+
+#### A fix in the world library
+
+Flying from Pinewood back to Cabby Town, Pinewood went blank as the crow
+took off, and the hero landed among trees that weren't there. Building
+the way moves only the new shapes: those `shapes_in ""` lists after the
+ones there before, as it promised to list them in the order they were
+added. But a removed shape's place is used again by the next one added,
+and `shapes_in` listed them by place: after the first flight (the crow
+and the far land removed), the next flight's new shapes were listed
+among the old ones, so the wrong ones were moved. `shapes_in` keeps its
+promise now, so parts 34 and 35 fly as they should without a change.
+
+#### Try this
+
+* Let the title's camera circle wider and higher, to see all of it.
+* Leave out the areas not yet been to, so the title doesn't give them
+  away: keep a list of every area entered, in the saved game.
+* Turn the shadows off when the camera's far back (Options: Far).
+
+[← Chapter 142](#chapter-142-the-mountain) · [Contents](#contents) · [Appendices →](#appendices)
 
 ---
 ## Appendices
@@ -19426,7 +19491,7 @@ Run `cabby` with no file to type Cabby a piece at a time:
 
 ```text
 $ cabby
-Cabby 1.49.0 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
+Cabby 1.50.0 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
 Cabby comes with ABSOLUTELY NO WARRANTY, under the MIT License; "cabby.license" for details.
 >>> int add int a, int b {
 ... 	return a + b

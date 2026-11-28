@@ -433,12 +433,14 @@ typedef struct Shape {
 	 * a shape's id is its slot and this, so an id kept after its shape was
 	 * removed doesn't reach the next shape in its slot */
 	uint32_t gen;
+	uint64_t born;        /* when it was added, counted: shapes_in lists them in this order */
 	int first_child, next_child;   /* (what's joined to it: slot + 1; 0, none) */
 	int glow;             /* drawn its own color, as bright in the dark as in the sun; casts no shadow */
 } Shape;
 
 static Shape *shapes;
 static int nshapes, cap_shapes;
+static uint64_t nborn;     /* shapes added so far, all worlds */
 static int *free_slots, nfree_slots, cap_free_slots;
 
 /* a shape's id from its slot, and its slot from its id */
@@ -672,7 +674,7 @@ static int64_t new_shape(int64_t id, int mesh, double w, double h, double d, con
 		}
 		slot = nshapes++;
 	}
-	shapes[slot] = (Shape){ .world = (int)id, .alive = 1, .visible = 1, .mesh = mesh, .x = x, .y = y, .z = z,
+	shapes[slot] = (Shape){ .world = (int)id, .alive = 1, .visible = 1, .born = ++nborn, .mesh = mesh, .x = x, .y = y, .z = z,
 				.w = w, .h = h, .d = d, .scale = 1, .color = color(c), .picture = -1, .group = strdup(""),
 				.model = -1, .solid = 1, .bounce = 0.3, .friction = 0.5, .gen = gen };
 	return id_of(slot);
@@ -1173,6 +1175,14 @@ static int shape_parts(Shape *s, long frame)
 static int64_t *found;
 static int nfound, cap_found;
 
+/* (found's ids, by when their shapes were added: a slot a removed shape
+ * left is used again, so slot order isn't it) */
+static int by_birth(const void *a, const void *b)
+{
+	uint64_t x = shapes[slot_of(*(const int64_t *)a)].born, y = shapes[slot_of(*(const int64_t *)b)].born;
+	return (x > y) - (x < y);
+}
+
 int cby_world_find(int64_t id, int64_t touching_id, const char *group)
 {
 	nfound = 0;
@@ -1187,6 +1197,7 @@ int cby_world_find(int64_t id, int64_t touching_id, const char *group)
 			found = realloc(found, sizeof *found * (size_t)(cap_found = cap_found * 2 + 64));
 		found[nfound++] = id_of(i);
 	}
+	qsort(found, (size_t)nfound, sizeof *found, by_birth);
 	return nfound;
 }
 
