@@ -151,6 +151,7 @@ changing for.
 | 1.44.0 | 28 November | Cabby Quest in 3D, part 30: a farm in the meadow (the barn, an oak, cypresses) and a store in Pinewood (the old building), from your models; `tools/prepare-model.py --only`, and measuring from every point |
 | 1.45.0 | 28 November | Cabby Quest in 3D, part 31: flying, with a hill crow in the party, to any town been to; campfires' light kept with them over a map's edge (parts 28 to 30 too) |
 | 1.46.0 | 28 November | Cabby Quest in 3D, part 32: the flight, seen: up over the town, the land below, and down out of the sky over the other town |
+| 1.47.0 | 28 November | Cabby Quest in 3D, part 33: running, with Shift; the one following runs after the hero until it's caught up |
 
 ---
 
@@ -2418,6 +2419,12 @@ over land as far as can be seen; the crow glides off into the fade, and
 at the other end comes down out of the sky over the town, sets the hero
 down and flies off. Four stages counted in frames, eased in and out.
 "Fly" is only offered outside.
+
+*Version 1.47.0, Cabby Quest in 3D, part 33 (a goal from your list):*
+tutorial 140, and chapter 140 of the manual. Shift held with an arrow,
+the hero runs: each step in half the time, leaning into it. The one
+following falls behind, and runs after them (its model's own run, if it
+has one) until it's caught up.
 
 ## Along the way (dates not recorded)
 

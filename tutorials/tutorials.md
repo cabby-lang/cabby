@@ -1,6 +1,6 @@
 # The Cabby Manual
 
-*For Cabby 1.46.0 (2026-11-28).*
+*For Cabby 1.47.0 (2026-11-28).*
 
 A book for learning Cabby one idea at a time, and a reference to come back
 to afterwards.
@@ -245,6 +245,7 @@ int main {
 137. [A farm, and a store](#chapter-137-a-farm-and-a-store): buildings that are models, each over a block of tiles; trees that are models, swaying; one model each from a pack of them
 138. [Flying](#chapter-138-flying): a choice there only when something's true; a list of places, grown as they're visited; a model carrying the hero up and away; firelight kept where its fire is
 139. [The flight](#chapter-139-the-flight): a journey in stages, counted in frames; easing in and out; a camera that rises with what it follows; land as far as can be seen
+140. [Running](#chapter-140-running): a key held with another; a step in half the time; a model's animations, asked for by name
 
 **[Appendices](#appendices)**
 
@@ -19144,7 +19145,62 @@ a house, or a cave.
 * Put clouds up there (big white balls, flattened), for the hero to fly
   through on the way.
 
-[← Chapter 138](#chapter-138-flying) · [Contents](#contents) · [Appendices →](#appendices)
+[← Chapter 138](#chapter-138-flying) · [Contents](#contents) · [Chapter 140 →](#chapter-140-running)
+
+### Chapter 140: Running
+
+*Program: `140-quest-3d-run.cby`, Shift held. Libraries: `use world`, `use files`, `use math`, `use json`, `use directories`, `use sound`.*
+
+Hold Shift with an arrow, and the hero runs: each step in half the time,
+leaning into it, their legs swinging further. Ember (or whoever leads the
+party) falls behind, and runs after them until she's caught up.
+
+#### Shift held
+
+`running` (140.3) is `key_hold "shift"`, as long as the hero isn't
+swimming. `walk` (108.21) starts a step as it always has, and then, if
+they're running and the way is free, makes it a run:
+
+```cabby
+Hero.step Way, Free
+if Free && running {
+	Hero.run
+}
+```
+
+#### A step in half the time
+
+`run` (140.2) is the walker's: the step just begun is `Running`, and its
+`Frames` are halved. Each frame of it (`keep_stepping`, 108.6) goes
+twice `SPEED`, so it still ends a tile on, in half the frames; and the
+legs swing further (45 degrees, not 30). `step` (108.5) sets `Running`
+back to false, so every step is a walk unless it's made a run.
+
+The hero leans forward into it (`lean`, 140.3): their body tilted
+(`set_tilt`), its head forward, and everything joined to it with it. Once
+they've stopped, or let go of Shift, `arrived` (109.17) stands them up
+straight again.
+
+#### Running after them
+
+The one following makes the hero's steps after them (part 21), one step
+behind. With the hero running, the steps waiting for her (`Steps`) pile
+up; more than one behind, she runs her next one (`follow_hero`, 121.5),
+and keeps running until she's caught up, when she walks again.
+
+Running, she plays her model's own run (`run_after`, 140.4), if it has
+one: `animations` lists them by name, and Ember, the field mouse and the
+border collie each have a `"run"`. A model with only a walk (the bear,
+the cow) plays it twice as fast.
+
+#### Try this
+
+* Let the hero run only once they've been given running shoes (a new
+  item), by the hero's mother at home.
+* Make a bump, running into something, louder than walking into it.
+* Let the follower run only when it's three steps behind, or more.
+
+[← Chapter 139](#chapter-139-the-flight) · [Contents](#contents) · [Appendices →](#appendices)
 
 ---
 ## Appendices
@@ -19204,7 +19260,7 @@ Run `cabby` with no file to type Cabby a piece at a time:
 
 ```text
 $ cabby
-Cabby 1.46.0 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
+Cabby 1.47.0 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
 Cabby comes with ABSOLUTELY NO WARRANTY, under the MIT License; "cabby.license" for details.
 >>> int add int a, int b {
 ... 	return a + b
