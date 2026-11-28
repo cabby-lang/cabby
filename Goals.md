@@ -47,13 +47,6 @@ what's still to come has the detail.*
   dog, the elder the old man, the field mouse, the hill crow, the gulls),
   credited in `tutorials/models/CREDITS.md`.*
 
-## Waiting to be merged
-
-- [ ] *#60, Cabby 1.31.0: `key_hold "shift"` (and ctrl, alt) in games and
-  worlds; world text in Cabby's own font under a test script (the Debian
-  failure); `make wasm` says where to get wasi-sdk; the GTK and manual
-  tests skip videos without FFmpeg.*
-
 ---
 
 ## Cabby Quest in 3D: still to come
@@ -161,6 +154,16 @@ what's still to come has the detail.*
     code agreeing on how data is laid out.*
 - [ ] WebAssembly on the Mac: wasi-sdk (arm64-macos) into `~/tools`, then
   `xattr -dr com.apple.quarantine ~/tools/wasi-sdk-*`; `make wasm`.
+
+## Tools written in Cabby
+
+- [ ] The main Linux command-line tools, made again in Cabby, each a
+  small program (and a tutorial): `cp`, `mv`, `rm`, `ls`, `cat`, `grep`,
+  `find`, `wc`, `head` and `tail`; and `scp`, copying over SSH.
+- [ ] A terminal emulator: a window that runs a shell (through a
+  pseudo-terminal), with the colors, cursor movement and screen-clearing
+  a terminal program expects; in a gui window, and with `use tui` inside
+  another terminal too, as `tmux` runs.
 
 ## Further off
 
