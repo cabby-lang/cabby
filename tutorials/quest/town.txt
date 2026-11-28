@@ -82,6 +82,10 @@
 //                                            met in the tall grass here, as
 //                                            often as <chance> is of all
 //                                            the area's chances added up
+//   open <col>,<row> <tiles>                 (3D, tutorial 142 on) as lay;
+//                                            a sign under the new tiles goes
+//   signpost <col>,<row> <what it says>      (3D, tutorial 142 on) as sign
+//   mount <side> <area> <along>              (3D, tutorial 142 on) as join
 // An area joined on to the north or south should be as wide as this one,
 // and one to the east or west as tall: an area at a corner, next door to
 // two areas next door, is placed beside each, and they should agree (the

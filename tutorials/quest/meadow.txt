@@ -66,3 +66,7 @@ watch 1,8 rival
 3d wild border collie 2
 3d wild bison 1
 sign 17,7 East: the road to the coast. (It's closed for now.)
+3d open 17,7 ===
+3d open 16,8 S
+3d signpost 16,8 East: the mountain.
+3d mount east mountain 0
