@@ -155,6 +155,7 @@ changing for.
 | 1.48.0 | 28 November | Cabby Quest in 3D, part 34: over the world, flying all the way, no fade; a map of where each area is; the treetops between the woods and Pinewood |
 | 1.49.0 | 28 November | Cabby Quest in 3D, part 35: a mountain east of the meadow, three levels high, stairs on every side climbing whichever way; the camera rising over a cliff |
 | 1.50.0 | 28 November | Cabby Quest in 3D, part 36: the whole world round the town on the title; no shadows high up; the mountain joined to the coast. `shapes_in` lists shapes in the order they were added, even in removed ones' places (the flight back from Pinewood) |
+| 1.51.0 | 28 November | Cabby Quest in 3D, part 37: the summit, an edelweiss to pick, a post, and the sentinel, a rare Cabbymon battled once; things put at the ground's height. The world drawn from half as far as the nearest shape: no stripes far off |
 
 ---
 
@@ -2453,6 +2454,15 @@ lists them in the order they were added now, as it said (and
 town, the coast and the mountain too; flying, there are no shadows high
 up; and the mountain goes on south to the coast, the beach down its
 east side (part 35's test walks the new mountain).
+
+*Version 1.51.0, Cabby Quest in 3D, part 37 (your idea):* tutorial 144,
+and chapter 144 of the manual. The mountain's top has an edelweiss to
+pick, a post to read, and the sentinel (tutorial 90's robot), a rare
+Cabbymon battled once when looked at, remembered in the saved game once
+beaten or caught. Things to pick up and posts go at the ground's height,
+on high ground too. And the world library draws from half as far as the
+nearest shape (not always 5 cm), so far off, from high up, paths and
+water aren't striped.
 
 ## Along the way (dates not recorded)
 

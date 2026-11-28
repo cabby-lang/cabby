@@ -123,6 +123,17 @@ what's still to come has the detail.*
   142): the mountain east of the meadow, three levels high; behind a
   cliff, the camera rises to see over it. Joined to the coast to its
   south, the beach down its east side (1.50.0).*
+- [x] The mountain's top worth the climb: a collectible, and a rare
+  Cabbymon. *Done (1.51.0, tutorial 144): an edelweiss, a post, and the
+  sentinel, battled once.*
+- [ ] Trainers along the routes, a couple of them on the mountain, who
+  battle the hero when they see them; a rematch after, by talking to
+  them.
+- [ ] A cave in the mountain, joined to the cave by the lake: a ledge
+  lets the hero go from the mountain's to the lake's, not back.
+- [ ] Crossing the sea from the coast to an island: a boat (the yacht),
+  or a Cabbymon that swims.
+- [ ] Pinewood's own quest: the forester, lost in the Deep Forest.
 - [ ] The 3D quest in a browser (using Cabby's own drawing).
 - [ ] *Small ones: let the crow flap, not hop (its model has "flap" and
   "glide") (done, 1.41.0: as it follows); Ember running after the hero
