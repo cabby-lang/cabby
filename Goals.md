@@ -113,6 +113,9 @@ what's still to come has the detail.*
   (1.45.0, tutorial 138): up and away, and a fade.*
 - [ ] Flying to a place on a Cabbymon: not off the screen with a fade,
   but across the whole map, the world seen passing below.
+  - [x] *Up with the crow, the world seen below, and down out of the sky
+    over the other town. Done (1.46.0, tutorial 139). Between the two,
+    it's still a fade: the towns aren't on one map.*
 - [ ] The 3D quest in a browser (using Cabby's own drawing).
 - [ ] *Small ones: let the crow flap, not hop (its model has "flap" and
   "glide") (done, 1.41.0: as it follows); Ember running after the hero
