@@ -128,12 +128,42 @@ what's still to come has the detail.*
 - [x] Crossing the sea from the coast to an island: a boat (the yacht),
   or a Cabbymon that swims. *Done (1.54.0, tutorial 147): the sailor's
   boat to the isle. A Cabbymon that swims is still to come.*
-- [ ] Pinewood's own quest: the forester, lost in the Deep Forest.
+- [x] Pinewood's own quest: the forester, lost in the Deep Forest.
+  *Done (1.55.0, tutorial 148): found, he thanks the hero, and his store
+  sells Cabbyballs.*
 - [ ] The 3D quest in a browser (using Cabby's own drawing).
 - [ ] *Small ones: let the crow flap, not hop (its model has "flap" and
   "glide") (done, 1.41.0: as it follows); Ember running after the hero
   when they're far ahead (done, 1.47.0, tutorial 140: the hero runs with
   Shift, and she runs to catch up).*
+
+## Kiln: a 3D modeller, written in Cabby
+
+A small modeller, as Blender is, with only what's needed at first, and
+more as it's needed; `.glb` in and out, and scripted in Cabby, as Blender
+is in Python. In `apps/kiln/`.
+
+- [x] The ground, in the libraries: shapes of your own (`add_mesh`,
+  `set_mesh`), lines, where a place is in the window, the mouse's buttons
+  and wheel; `bytes`'s floats. *Done (1.56.0).*
+- [x] The model, in Cabby: corners and faces; a cube, plane, cylinder,
+  cone, sphere and grid; moving, turning and scaling what's chosen,
+  extruding, adding a corner, a face from corners, merging, deleting,
+  undo; `.glb` read and written. *Done (1.57.0): `apps/kiln/model`.*
+- [x] The editor: orbiting, panning and zooming the view; a grid; objects,
+  and editing one (Tab); corners, edges, faces; G, R, S, with X, Y, Z;
+  E to extrude; Shift-A to add; Ctrl-S, Ctrl-Z. *Done (1.58.0).*
+  - [ ] *Typed amounts (G X 2 Enter), snapping to the grid, a 3D cursor,
+    loop cuts, choosing by dragging a box.*
+- [x] Scripting: `use local kiln/model` in your own Cabby programs, and F5
+  in the editor running one on the model. *Done (1.58.0): a model's own
+  script, house.cby for house.glb.*
+- [x] Rigging: an armature, bones, weights, posing; skins in `.glb`.
+  *Done (1.59.0): B, Ctrl-P, P.*
+  - [ ] *Weights painted by hand; bones turned at rest (their roll).*
+- [x] Animation: a timeline, keys, playing; animations in `.glb`. *Done
+  (1.59.0): one animation for now; moving the root bone, not only
+  turning, still to come.*
 
 ## A third kind of game: open world, and physics
 

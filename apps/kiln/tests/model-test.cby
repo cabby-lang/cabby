@@ -1,0 +1,93 @@
+// Kiln's model, without a window: shapes made, changed, and written to a
+// .glb file and read back. (Run from apps/kiln: cabby tests/model-test.cby)
+//> a cube: 8 corners, 6 faces, 12 edges
+//> its top faces 0.0 1.0 0.0
+//> its top extruded, a metre up: 12 corners, 10 faces, 20 edges
+//> the new top's middle 0.0 2.0 0.0
+//> the top's corner, scaled and turned: 0 0.7071
+//> its top merged into a point: 9 corners, 9 faces, 16 edges
+//> that point deleted: 8 corners, 5 faces, 12 edges
+//> a plane: 4 corners, 1 faces, 4 edges
+//> a grid: 25 corners, 16 faces, 40 edges
+//> a cylinder: 16 corners, 10 faces, 24 edges
+//> a cone: 9 corners, 9 faces, 16 edges
+//> a sphere: 42 corners, 48 faces, 88 edges
+//> a cube drawn: 8 points, 12 triangles
+//> colours: 0.2159 #ff8000
+//> read back, cube #e06030 at 2.0: 8 corners, 6 faces, 12 edges
+//> read back, sphere #c8c8c8 at 0.0: 42 corners, 48 faces, 88 edges
+//> read back, cube.2 #c8c8c8 at 0.0: 8 corners, 6 faces, 12 edges
+//> undone: true 0 parts
+
+use local ../model
+
+// to four places, the same on every computer
+str r4 double V {
+	long N = (long)round(V * 10000)
+	if N == 0 {
+		return "0"
+	}
+	return (N / 10000.0).text
+}
+
+void show const str &What, const part &P {
+	println What + ":", P.Points.length, "corners,", P.Faces.length, "faces,", P.edges.length / 2, "edges"
+}
+
+int main {
+	part Cube = cube_part 2
+	show "a cube", Cube
+	point3 Up = Cube.normal_of 4
+	println "its top faces", Up.X, Up.Y, Up.Z
+	list int Top = {4}
+	list int Made = Cube.extrude Top
+	point3 Way = Cube.normal_of_faces Top
+	Cube.move_points Made, Way.X, Way.Y, Way.Z
+	show "its top extruded, a metre up", Cube
+	point3 Middle = Cube.middle_of Made
+	println "the new top's middle", Middle.X, Middle.Y, Middle.Z
+	for F in Cube.Faces.length {
+		point3 N = Cube.normal_of((int)F)
+		point3 Mid = Cube.middle_of Cube.Faces[F]
+		if N.X * Mid.X + N.Y * (Mid.Y - 0.5) + N.Z * Mid.Z <= 0 {
+			println "face", F, "faces inwards"
+		}
+	}
+	Cube.scale_points Made, 0.5, 1, 0.5, Middle
+	Cube.turn_points Made, "y", 45, Middle
+	println "the top's corner, scaled and turned:", r4(Cube.Points[Made[0]].X), r4(Cube.Points[Made[0]].Z)
+	Cube.merge_points Made
+	show "its top merged into a point", Cube
+	list int Gone = {(int)Cube.Points.length - 1}
+	Cube.delete_points Gone
+	show "that point deleted", Cube
+	show "a plane", plane_part(1)
+	show "a grid", grid_part(4, 2)
+	show "a cylinder", cylinder_part(8, 0.5, 1)
+	show "a cone", cone_part(8, 0.5, 1)
+	show "a sphere", sphere_part(6, 8, 1)
+	list double Points
+	list int Tris
+	cube_part(1).triangles_into Points, Tris
+	println "a cube drawn:", Points.length / 3, "points,", Tris.length / 3, "triangles"
+	println "colours:", r4(light_of("#ff8000")[1]), color_of(1, 0.2158605, 0)
+	scene S
+	S.keep
+	part Box = cube_part 1
+	Box.Name = S.free_name "cube"
+	Box.Color = "#e06030"
+	Box.AtX = 2
+	S.Parts.add Box
+	part Ball = sphere_part 6, 8, 0.5
+	Ball.Name = "sphere"
+	S.Parts.add Ball
+	part Second = cube_part 0.5
+	Second.Name = S.free_name "cube"
+	S.Parts.add Second
+	S.save_glb "/tmp/kiln-test.glb"
+	scene Back = load_glb "/tmp/kiln-test.glb"
+	for P in Back.Parts {
+		show "read back, " + P.Name + " " + P.Color + " at " + P.AtX.text, P
+	}
+	println "undone:", S.undo, S.Parts.length, "parts"
+}

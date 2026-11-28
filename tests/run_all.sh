@@ -31,6 +31,8 @@ $t/run_accessibility_tests.sh ./cabby run
 $t/run_accessibility_tests.sh ./cabby compile
 $t/run_world_tests.sh ./cabby run
 $t/run_world_tests.sh ./cabby compile
+$t/run_kiln_tests.sh ./cabby run
+$t/run_kiln_tests.sh ./cabby compile
 $t/run_bluetooth_tests.sh ./cabby run
 $t/run_bluetooth_tests.sh ./cabby compile
 $t/run_emails_tests.sh ./cabby run

@@ -1,0 +1,46 @@
+// figure.cby — a Kiln script: a small figure made, rigged and animated,
+// all by script, as Blender can be in Python. Run from apps/kiln:
+//
+//     cabby examples/figure.cby figure.glb
+//     cabby kiln.cby figure.glb        (then P, and Space: it waves)
+//
+// A body, a head and an arm; a spine bone and an arm bone; the arm
+// skinned to them; and "wave", the arm going up and down again.
+
+use local ../model
+
+int main int Argc, str Argv[] {
+	str Path = "figure.glb"
+	if Argc > 1 {
+		Path = Argv[1].copy
+	}
+	scene S
+	part Body = cylinder_part 12, 0.25, 0.8
+	Body.Name = "body"
+	Body.Color = "#3a7bd5"
+	Body.AtY = 0.9
+	S.Parts.add Body
+	part Head = sphere_part 8, 12, 0.2
+	Head.Name = "head"
+	Head.Color = "#f2c9a0"
+	Head.AtY = 1.5
+	S.Parts.add Head
+	part Arm = cube_part 1
+	list int All = Arm.all_points
+	point3 Middle = {0, 0, 0}
+	Arm.scale_points All, 0.7, 0.12, 0.12, Middle
+	Arm.Name = "arm"
+	Arm.Color = "#f2c9a0"
+	Arm.AtX = 0.6
+	Arm.AtY = 1.2
+	S.Parts.add Arm
+	int Spine = S.add_bone "spine", -1, point3{0, 0.5, 0}, point3{0, 1.3, 0}
+	int Shoulder = S.add_bone "arm", Spine, point3{0.25, 1.2, 0}, point3{0.95, 1.2, 0}
+	S.skin 2
+	int Wave = S.action_named "wave"
+	S.Actions[Wave].set_key Shoulder, 0, quat_turn("z", 20)
+	S.Actions[Wave].set_key Shoulder, 0.5, quat_turn("z", 70)
+	S.Actions[Wave].set_key Shoulder, 1, quat_turn("z", 20)
+	S.save_glb Path
+	println "made", Path
+}
