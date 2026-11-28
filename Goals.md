@@ -119,9 +119,9 @@ what's still to come has the detail.*
 - [x] The mountain's top worth the climb: a collectible, and a rare
   Cabbymon. *Done (1.51.0, tutorial 144): an edelweiss, a post, and the
   sentinel, battled once.*
-- [ ] Trainers along the routes, a couple of them on the mountain, who
+- [x] Trainers along the routes, a couple of them on the mountain, who
   battle the hero when they see them; a rematch after, by talking to
-  them.
+  them. *Done (1.52.0, tutorial 145): Hiker Dana and Climber Ines.*
 - [ ] A cave in the mountain, joined to the cave by the lake: a ledge
   lets the hero go from the mountain's to the lake's, not back.
 - [ ] Crossing the sea from the coast to an island: a boat (the yacht),

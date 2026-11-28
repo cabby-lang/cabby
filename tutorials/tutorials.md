@@ -1,6 +1,6 @@
 # The Cabby Manual
 
-*For Cabby 1.51.0 (2026-11-28).*
+*For Cabby 1.52.0 (2026-11-28).*
 
 A book for learning Cabby one idea at a time, and a reference to come back
 to afterwards.
@@ -250,6 +250,7 @@ int main {
 142. [The mountain](#chapter-142-the-mountain): a character that's a number; working out which way something faces from what's round it; a camera that rises to see over what's in the way
 143. [The whole world](#chapter-143-the-whole-world): one function for two jobs, told which by what it's given; shadows turned off and on
 144. [The summit](#chapter-144-the-summit): things put at the ground's height, wherever it is; a battle that happens once (unless it's run from); remembering it
+145. [Trainers](#chapter-145-trainers): one way of doing something made to work for anyone the area's file names; a count kept in the story
 
 **[Appendices](#appendices)**
 
@@ -19497,7 +19498,65 @@ shape, so high up, depth is kept a hundred times more finely.
 * Let the sentinel, beaten, leave something behind to pick up.
 * Make it come back, after the hero's slept: once a day.
 
-[← Chapter 143](#chapter-143-the-whole-world) · [Contents](#contents) · [Appendices →](#appendices)
+[← Chapter 143](#chapter-143-the-whole-world) · [Contents](#contents) · [Chapter 145 →](#chapter-145-trainers)
+
+### Chapter 145: Trainers
+
+*Program: `145-quest-3d-trainers.cby`, the hiker and the climber. Libraries: `use world`, `use files`, `use math`, `use json`, `use directories`, `use sound`.*
+
+There are trainers on the mountain: Hiker Dana, by the stairs on the
+west, and Climber Ines, on the second level. Each has a Cabbymon, sees
+the hero coming, comes over and asks for a battle, as Rufus does (part
+6). Beaten, they stay where they are; talk to them again, and they'll
+battle again, their Cabbymon a level stronger each time.
+
+#### In the area's file
+
+A trainer takes four lines in the mountain's file:
+
+```text
+trainer 3,10 hiker up 4
+team hiker Hiker Dana: bear 9
+challenge hiker Up here, everyone battles! ...
+beaten hiker Whew! You climb like a goat and battle like a bear. ...
+```
+
+`trainers_in` (145.1) makes the first into two lines the game already
+knows: `folk 3,10 hiker up` (someone who lives here, part 25) and `sees
+hiker 4` (who sees the hero four tiles in front of them, part 6). They're
+new words, so the parts before this one leave the trainers out (their
+tests walk the same way up the mountain). The others are read when
+they're needed, by `line_for`: the rest of the line that starts with a
+word and who it's about.
+
+#### Rufus's way, for anyone
+
+Seen, a trainer comes over and talks, as anyone who sees the hero does
+(113.20). `talk_to` (110.7) sends anyone with a `team` line to
+`talk_to_trainer` (145.2): not beaten yet, they say their challenge and
+`Challenge` is set, so once the words have gone, `challenge_step`
+(113.23) steps them back for room and begins the battle, as it does for
+Rufus; but now it asks first whose battle it is, and for a trainer
+begins it with their Cabbymon (`trainers_own`, 145.3), and their name
+as its owner. Only Rufus walks off afterwards.
+
+#### Again, and stronger
+
+`wins_over` counts how often a trainer's been beaten: a number kept in
+the story as text (`Story.Answers["beat hiker"]`, `"1"`), saved with the
+rest. `trainer_after` (145.4) adds one, when the hero wins. Talked to
+again, they ask "Back for another battle?", and their Cabbymon is that
+many levels stronger (`member_critter`, as the party's are made).
+
+People on high ground stand on top of it now, as things do (part 37).
+
+#### Try this
+
+* Give a trainer two Cabbymon, sent out one after the other.
+* Put a trainer in the hills, on the high ground, who sees down a path.
+* Let a trainer give the hero something, the first time they're beaten.
+
+[← Chapter 144](#chapter-144-the-summit) · [Contents](#contents) · [Appendices →](#appendices)
 
 ---
 ## Appendices
@@ -19557,7 +19616,7 @@ Run `cabby` with no file to type Cabby a piece at a time:
 
 ```text
 $ cabby
-Cabby 1.51.0 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
+Cabby 1.52.0 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
 Cabby comes with ABSOLUTELY NO WARRANTY, under the MIT License; "cabby.license" for details.
 >>> int add int a, int b {
 ... 	return a + b

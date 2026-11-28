@@ -1,6 +1,6 @@
 # Cabby tutorials
 
-*For Cabby 1.51.0 (2026-11-28).*
+*For Cabby 1.52.0 (2026-11-28).*
 
 A hundred and six short programs, each about one keyword, feature or library, in
 an order where each uses only what came before it. Each one
@@ -304,6 +304,7 @@ between `{` and `}` to run them as one input and see them as a program would. (`
 | 142 | `142-quest-3d-mountain.cby` | Cabby Quest in 3D, part 35: a mountain east of the meadow, three levels high, with stairs up on every side (some climbed away from the camera, behind a cliff) |
 | 143 | `143-quest-3d-world.cby` | Cabby Quest in 3D, part 36: the whole world round the town on the title (the coast and the mountain too); no shadows high up, flying |
 | 144 | `144-quest-3d-summit.cby` | Cabby Quest in 3D, part 37: the top of the mountain: an edelweiss to pick, a post to read, and the sentinel, a rare Cabbymon battled once |
+| 145 | `145-quest-3d-trainers.cby` | Cabby Quest in 3D, part 38: trainers on the mountain, who see the hero and battle them; and battle again, stronger, when talked to |
 
 Every keyword in the language appears in at least one tutorial. The manual's
 appendices and the main README (installed as
