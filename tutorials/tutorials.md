@@ -1,6 +1,6 @@
 # The Cabby Manual
 
-*For Cabby 1.47.0 (2026-11-28).*
+*For Cabby 1.48.0 (2026-11-28).*
 
 A book for learning Cabby one idea at a time, and a reference to come back
 to afterwards.
@@ -246,6 +246,7 @@ int main {
 138. [Flying](#chapter-138-flying): a choice there only when something's true; a list of places, grown as they're visited; a model carrying the hero up and away; firelight kept where its fire is
 139. [The flight](#chapter-139-the-flight): a journey in stages, counted in frames; easing in and out; a camera that rises with what it follows; land as far as can be seen
 140. [Running](#chapter-140-running): a key held with another; a step in half the time; a model's animations, asked for by name
+141. [Over the world](#chapter-141-over-the-world): a map of the world, from a file; building more of it on the way; a straight line between two places, and the way it points (atan2); a camera that turns to look that way
 
 **[Appendices](#appendices)**
 
@@ -19200,7 +19201,95 @@ the cow) plays it twice as fast.
 * Make a bump, running into something, louder than walking into it.
 * Let the follower run only when it's three steps behind, or more.
 
-[← Chapter 139](#chapter-139-the-flight) · [Contents](#contents) · [Appendices →](#appendices)
+[← Chapter 139](#chapter-139-the-flight) · [Contents](#contents) · [Chapter 141 →](#chapter-141-over-the-world)
+
+### Chapter 141: Over the world
+
+*Program: `141-quest-3d-over.cby`, all the way there. Libraries: `use world`, `use files`, `use math`, `use json`, `use directories`, `use sound`.*
+
+Part 32's flight went up, off into a fade, and down at the other town.
+Now there's no fade: the crow carries the hero all the way, in a straight
+line, over everything between the two towns. From Cabby Town to Pinewood,
+that's the woods, and then the treetops (the Deep Forest, from above),
+and Pinewood in its clearing.
+
+#### A map of the world
+
+The areas joined at their edges know where they are beside each other;
+but Pinewood is reached through the Deep Forest, by a way, and a way
+says nothing about where a place is. So the world has a map of its own,
+`quest/world.txt`: a line for each area outdoors, its top left tile's
+column and row, counted from Cabby Town's.
+
+```text
+place town 0,0
+place woods 0,-14
+place wilds 0,-34
+place village 4,-44
+```
+
+North is up the map, so the woods, beyond Cabby Town's north edge, are
+at row -14 (they're 14 rows deep). `wilds.txt` is the treetops: a map
+of trees, clearings and ponds that's never walked in, only flown over.
+
+`place_of` (141.1) finds an area's line; `col_of` and `row_of` read its
+numbers. Areas entered by a way (a house, the cave, the Deep Forest) have
+no place; flying from one, it's part 32's flight, and the fade.
+
+#### The way there
+
+`plan_the_way` (141.2) works out where the hero will land, in the world:
+the town's place, less this area's, is where its top left tile is on this
+area's map (`ThereCol`, `ThereRow`), and its `fly` tile is that far on
+again. From there to here is the way: how far (`sqrt`), so how many
+frames it takes at `CRUISE_SPEED`; and which way it points, as a shape's
+angle, for the hero, the crow and the camera to turn to:
+
+```cabby
+Heading = atan2(-Dx, -Dz) * 180 / PI
+```
+
+`atan2` gives the angle of a direction, from -180 to 180 degrees here:
+straight up the map (`Dz` below 0) is 0, left is 90, right -90, and down
+180. Turning from 0 to it the camera always goes the shortest way round.
+
+#### Building the way
+
+`build_the_way` (141.3) builds every area with a place that's near the
+way (in the box round its two ends, `MARGIN` tiles wider) and not built
+already: it's added to `Joins` as an area at a corner is (109.13), seen
+but not walked into, so its tiles see each other; then its tiles, its
+ground, and the trees round it.
+
+Everything an area has is made at its tiles on this area's map, and then
+moved to where this area is in the world (116.11). Here only what's new
+is to be moved: `shapes_in ""` lists the shapes in the order they were
+added, so those from the count before on are the new ones; and the
+lamps the same way (`move_lamps`, 141.6: a function of its own, outside
+the object, as the lists it moves are the object's).
+
+The far woods (139.2) aren't put on top of any of it (`on_an_area`), and
+the far land is the grass's own green now, so the areas' ground and it
+are one.
+
+#### All the way there
+
+`fly_over` (141.4) is the flight in its stages: up, the camera turning
+round behind the hero (`FlyAngle`, used by `look_at_hero`, 108.17);
+across, `Cruise` frames, eased; and down onto the `fly` tile, the camera
+turning back. Then `land_there` (141.5): it's the town's area now, built
+again where it is in the world, as walking over an edge does (109.17), so
+nothing seems to move; and the crow flies off.
+
+#### Try this
+
+* Give the coast a `fly` line, and fly there: over Cabby Town, the hills
+  and the lake.
+* Fly higher the further it is.
+* Let Fly list the towns nearest first (how far each is, from
+  `world.txt`).
+
+[← Chapter 140](#chapter-140-running) · [Contents](#contents) · [Appendices →](#appendices)
 
 ---
 ## Appendices
@@ -19260,7 +19349,7 @@ Run `cabby` with no file to type Cabby a piece at a time:
 
 ```text
 $ cabby
-Cabby 1.47.0 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
+Cabby 1.48.0 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
 Cabby comes with ABSOLUTELY NO WARRANTY, under the MIT License; "cabby.license" for details.
 >>> int add int a, int b {
 ... 	return a + b

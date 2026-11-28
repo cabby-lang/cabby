@@ -1,0 +1,51 @@
+{
+ "answers": {
+  "start": "done",
+  "elder name": "Marcus",
+  "baker spoon": "Of course!",
+  "balls": "given",
+  "rematch": "done"
+ },
+ "quest": "done",
+ "items": [
+  "bread",
+  "ticket"
+ ],
+ "taken": [
+  "bakery 9,4"
+ ],
+ "noticed": [
+  "rival",
+  "baker",
+  "elder"
+ ],
+ "wounds": 0,
+ "ember_level": 8,
+ "ember_experience": 20,
+ "time": 0.45,
+ "raining": false,
+ "town": "town",
+ "balls": 3,
+ "party": [
+  "field mouse|4|0|10",
+  "hill crow|5|0|0"
+ ],
+ "seen": [
+  "field mouse",
+  "hill crow"
+ ],
+ "caught": [
+  "field mouse",
+  "hill crow"
+ ],
+ "lead": 0,
+ "days": 3,
+ "denarii": 5,
+ "area": "town",
+ "col": 16,
+ "row": 8,
+ "facing": "up",
+ "visited": [
+  "village"
+ ]
+}

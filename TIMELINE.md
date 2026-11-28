@@ -152,6 +152,7 @@ changing for.
 | 1.45.0 | 28 November | Cabby Quest in 3D, part 31: flying, with a hill crow in the party, to any town been to; campfires' light kept with them over a map's edge (parts 28 to 30 too) |
 | 1.46.0 | 28 November | Cabby Quest in 3D, part 32: the flight, seen: up over the town, the land below, and down out of the sky over the other town |
 | 1.47.0 | 28 November | Cabby Quest in 3D, part 33: running, with Shift; the one following runs after the hero until it's caught up |
+| 1.48.0 | 28 November | Cabby Quest in 3D, part 34: over the world, flying all the way, no fade; a map of where each area is; the treetops between the woods and Pinewood |
 
 ---
 
@@ -2425,6 +2426,13 @@ tutorial 140, and chapter 140 of the manual. Shift held with an arrow,
 the hero runs: each step in half the time, leaning into it. The one
 following falls behind, and runs after them (its model's own run, if it
 has one) until it's caught up.
+
+*Version 1.48.0, Cabby Quest in 3D, part 34 (your idea):* tutorial 141,
+and chapter 141 of the manual. The world has a map, `quest/world.txt`,
+where each area outdoors is; and between the woods and Pinewood, the
+treetops (`wilds.txt`), a map of trees only flown over. Flying, the areas
+on the way are built, and the crow carries the hero all the way there in
+a straight line, the camera turned behind them, with no fade.
 
 ## Along the way (dates not recorded)
 
