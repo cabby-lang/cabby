@@ -1,6 +1,6 @@
 # The Cabby Manual
 
-*For Cabby 1.42.0 (2026-11-28).*
+*For Cabby 1.43.0 (2026-11-28).*
 
 A book for learning Cabby one idea at a time, and a reference to come back
 to afterwards.
@@ -241,6 +241,7 @@ int main {
 133. [A ticket for the train](#chapter-133-a-ticket-for-the-train): money, earned and spent; something open once the story's got that far; the hero carried off by the train; tiles laid on a map as it's read
 134. [The credits](#chapter-134-the-credits): a file written for people (a Markdown table), read by a program; text taken apart and put back together; words rolling up the screen; a crow that flies
 135. [Things](#chapter-135-things): a model in place of shapes; one model over several tiles; a fire's light, flickering; a model in a group that rocks
+136. [The deep forest](#chapter-136-the-deep-forest): a new area, and a new town, made only of their files; light made dimmer, not dark; someone who does something when talked to; a path that goes on beyond the map
 
 **[Appendices](#appendices)**
 
@@ -18903,7 +18904,73 @@ tools/prepare-model.py table.glb models/table.glb --height 0.75 --center --turn 
 * Make a campfire crackle as the hero walks by.
 * Let the yachts sail, slowly, round the bay.
 
-[← Chapter 134](#chapter-134-the-credits) · [Contents](#contents) · [Appendices →](#appendices)
+[← Chapter 134](#chapter-134-the-credits) · [Contents](#contents) · [Chapter 136 →](#chapter-136-the-deep-forest)
+
+### Chapter 136: The deep forest
+
+*Program: `136-quest-3d-forest.cby`, more of the world. Libraries: `use world`, `use files`, `use math`, `use json`, `use directories`, `use sound`.*
+
+At the top of the woods, a gap in the trees leads into the Deep Forest:
+dim under its trees even at noon, and full of tall grass, right across
+it, again and again, so the only way on is through. Beyond it is
+Pinewood, a village in the forest, whose innkeeper makes every Cabbymon
+well again.
+
+#### Made of files
+
+Most of this part is two new files, `quest/forest.txt` and
+`quest/village.txt`, and two lines in the woods' file. The forest is
+entered by a `way`, as the cave is (part 11): `3d way 14,0 forest 9,18`
+on a tile laid in the woods' top row as a path (`3d lay 14,0 =`). Its map
+is rows of trees, and bands of tall grass two rows deep across the whole
+of it, the gaps between them on one side and then the other, so each
+band is crossed from one end to the other. Its `wild` lines (part 23)
+say what's met there: crows, collies, and a bear now and then. Pinewood
+is a map, its signs, and its people's `folk` and `says` lines (part 25).
+
+None of the 3D quest's code needed to know either was there: the game
+reads every file in `quest/` (117.12), and a `way` goes to any of them.
+
+#### Dim, not dark
+
+A `dark` line makes a cave: no sun, no sky, only lamps (118). The
+forest's `dim` line keeps the sun, the sky and the time of day, and
+turns them down (117.5): the sun's light most of the way towards black,
+the light all round a little, towards a deep green, and the sky towards
+the dark green of a canopy. At night it's darker still, as the night
+outside is.
+
+#### A path on beyond the map
+
+Round every area, the woods go on (109.14): trees, beyond each edge.
+Where the edge is water, the water goes on, and where it's the railway,
+the rails. Now where it's a path, the path goes on, straight out into
+the trees, so the gap at the top of the woods, and the forest's two
+ends, look like the way somewhere.
+
+#### Someone who does something
+
+A `heals innkeeper` line in Pinewood's file makes talking to the
+innkeeper heal every Cabbymon (`talk_to_folk`, 132.4), before she says
+her line. It's the file that says who heals, so another village could
+have its own.
+
+#### After a wild one
+
+A wild one turned the hero to face it, wherever there was room (112.21),
+and after the battle they were left facing that way: walking on, the
+first arrow key only turned them back. Now `Going` keeps the way they
+were going, and when a wild battle's over (112.30) they face it again,
+to go straight on. In a forest of grass, that's often.
+
+#### Try this
+
+* Make the forest darker still at night, with fireflies.
+* Give Pinewood an elder of its own, and a `rest` line, so a hero worn
+  out in the forest wakes there.
+* Make a forest of your own: a map, and its lines, in a file.
+
+[← Chapter 135](#chapter-135-things) · [Contents](#contents) · [Appendices →](#appendices)
 
 ---
 ## Appendices
@@ -18963,7 +19030,7 @@ Run `cabby` with no file to type Cabby a piece at a time:
 
 ```text
 $ cabby
-Cabby 1.42.0 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
+Cabby 1.43.0 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
 Cabby comes with ABSOLUTELY NO WARRANTY, under the MIT License; "cabby.license" for details.
 >>> int add int a, int b {
 ... 	return a + b

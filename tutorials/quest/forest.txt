@@ -1,0 +1,38 @@
+// The Deep Forest, north of the woods: in through a gap in the woods'
+// trees, and out at its far end to Pinewood. Its tall grass (w) runs
+// right across it, again and again, so there's no going round: only
+// through. (The 3D quest's only, from tutorial 136.)
+//
+// The map comes first, a character for each tile (see town.txt for them
+// all); then, after a line of ---, what else is here, a line each. Its
+// own: "dim", for the light under the trees, darker than outside but
+// not dark, as a cave is.
+TTTTTTTTTT=TTTTTTTTT
+TTTTTTTTT.=.TTTTTTTT
+TTTwwwwwwwwwwwwwwTTT
+TTTwwwwwwwwwwwwwwTTT
+TTTTTTTTTTTTTTw.TTTT
+TTTTTT...TTTTTw.TTTT
+TTTwwwwwwwwwwwwwwTTT
+TTTwwwwwwwwwwwwwwTTT
+TTT.wTTTTTTTTTTTTTTT
+TTT.wTTTTT...TTTTTTT
+TTTwwwwwwwwwwwwwwTTT
+TTTwwwwwwwwwwwwwwTTT
+TTTTTTTTTTTTw..TTTTT
+TTTTT...TTTTw..TTTTT
+TTTwwwwwwwwwwwwwwTTT
+TTTwwwwwwwwwwwwwwTTT
+TTTTTTTTT..wTTTTTTTT
+TTTTTTTTT=..TTTTTTTT
+TTTTTTTTT=..TTTTTTTT
+TTTTTTTTT=TTTTTTTTTT
+---
+name The Deep Forest
+music woods
+dim
+way 9,19 woods 14,1
+way 10,0 village 8,8
+wild hill crow 3
+wild border collie 2
+wild bear 1
