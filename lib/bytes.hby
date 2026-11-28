@@ -44,6 +44,8 @@ extern long cby_bytes_number_at long b, long at, long size, int big, int is_unsi
 extern double cby_bytes_double_at long b, long at, int big
 extern void cby_bytes_put_number long b, long at, long size, int big, long v
 extern void cby_bytes_put_double long b, long at, int big, double d
+extern double cby_bytes_float_at long b, long at, int big
+extern void cby_bytes_put_float long b, long at, int big, double d
 extern long cby_bytes_text long b, long what
 extern void cby_bytes_take_text address char dst
 
@@ -163,6 +165,11 @@ object bytes {
 		return cby_bytes_double_at(Handle, At, 0)
 	}
 
+	// a float: 4 bytes (a 3D model's numbers, a sound's), read as a double
+	double float_at long At const {
+		return cby_bytes_float_at(Handle, At, 0)
+	}
+
 	void set_short_at long At, long Value {
 		cby_bytes_put_number Handle, At, 2, 0, Value
 	}
@@ -179,6 +186,10 @@ object bytes {
 		cby_bytes_put_double Handle, At, 0, Value
 	}
 
+	void set_float_at long At, double Value {
+		cby_bytes_put_float Handle, At, 0, Value
+	}
+
 	void add_short long Value {
 		cby_bytes_put_number Handle, -1, 2, 0, Value
 	}
@@ -193,6 +204,10 @@ object bytes {
 
 	void add_double double Value {
 		cby_bytes_put_double Handle, -1, 0, Value
+	}
+
+	void add_float double Value {
+		cby_bytes_put_float Handle, -1, 0, Value
 	}
 
 	// ---- the same, biggest byte first (big-endian)
@@ -221,6 +236,10 @@ object bytes {
 		return cby_bytes_double_at(Handle, At, 1)
 	}
 
+	double float_at_big long At const {
+		return cby_bytes_float_at(Handle, At, 1)
+	}
+
 	void set_short_at_big long At, long Value {
 		cby_bytes_put_number Handle, At, 2, 1, Value
 	}
@@ -237,6 +256,10 @@ object bytes {
 		cby_bytes_put_double Handle, At, 1, Value
 	}
 
+	void set_float_at_big long At, double Value {
+		cby_bytes_put_float Handle, At, 1, Value
+	}
+
 	void add_short_big long Value {
 		cby_bytes_put_number Handle, -1, 2, 1, Value
 	}
@@ -251,6 +274,10 @@ object bytes {
 
 	void add_double_big double Value {
 		cby_bytes_put_double Handle, -1, 1, Value
+	}
+
+	void add_float_big double Value {
+		cby_bytes_put_float Handle, -1, 1, Value
 	}
 
 	// ---- as text

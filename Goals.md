@@ -144,6 +144,27 @@ what's still to come has the detail.*
   when they're far ahead (done, 1.47.0, tutorial 140: the hero runs with
   Shift, and she runs to catch up).*
 
+## Kiln: a 3D modeller, written in Cabby
+
+A small modeller, as Blender is, with only what's needed at first, and
+more as it's needed; `.glb` in and out, and scripted in Cabby, as Blender
+is in Python. In `apps/kiln/`.
+
+- [x] The ground, in the libraries: shapes of your own (`add_mesh`,
+  `set_mesh`), lines, where a place is in the window, the mouse's buttons
+  and wheel; `bytes`'s floats. *Done (1.56.0).*
+- [ ] The model, in Cabby: corners and faces; a cube, plane, cylinder,
+  cone, sphere and grid; moving, turning and scaling what's chosen,
+  extruding, adding a corner, a face from corners, merging, deleting,
+  undo; `.glb` read and written.
+- [ ] The editor: orbiting, panning and zooming the view; a grid; objects,
+  and editing one (Tab); corners, edges, faces; G, R, S, with X, Y, Z;
+  E to extrude; Shift-A to add; Ctrl-S, Ctrl-Z.
+- [ ] Scripting: `use local kiln/model` in your own Cabby programs, and F5
+  in the editor running one on the model.
+- [ ] Rigging: an armature, bones, weights, posing; skins in `.glb`.
+- [ ] Animation: a timeline, keys, playing; animations in `.glb`.
+
 ## A third kind of game: open world, and physics
 
 - [ ] A tutorial series in an open-world style (as in Assassin's Creed or
