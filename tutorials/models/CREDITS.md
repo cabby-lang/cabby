@@ -30,6 +30,7 @@ it is, link to it and its licence, and say what they changed.
 | `store.glb` (Pinewood's store) | [Old Building](https://sketchfab.com/3d-models/old-building-f72b3723f2a34b6691455947fef598d6) | [Erroratten](https://sketchfab.com/erroratten) | Made 2.6 metres tall, its middle where it's put; its pictures made 512 pixels across. |
 | `oak.glb` (the farm's oak) | [Low Poly Tree Pack](https://sketchfab.com/3d-models/low-poly-tree-pack-ea6e844754da494a9c38501b4fff92ad) | [louieoliva](https://sketchfab.com/louieoliva) | Only one of its trees (Circle.005) kept; made 2.4 metres tall, its middle where it's put. |
 | `cypress.glb` (the farm's cypresses) | [Low Poly Tree Pack](https://sketchfab.com/3d-models/low-poly-tree-pack-ea6e844754da494a9c38501b4fff92ad) | [louieoliva](https://sketchfab.com/louieoliva) | Only one of its trees (Circle.004) kept; made 2.2 metres tall, its middle where it's put. |
+| `seagull.glb` (the isle's sea gulls, to battle) | [Low-Poly Seagull Animated](https://sketchfab.com/3d-models/low-poly-seagull-animated-bff3cd3d48e249e8b5afa7416c6c39f8) | [Jamie McFarlane](https://sketchfab.com/jamiemcfarlane) | As `gull.glb`, made 2.2 times as big, with a still "idle" (its flight's first moment). |
 
 `sentinel.glb` (the sentinel, on the mountain's top) isn't from Sketchfab:
 it's tutorial 90's `robot.glb`, made by `tools/make-test-model.py`, its

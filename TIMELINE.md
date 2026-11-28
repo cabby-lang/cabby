@@ -158,6 +158,7 @@ changing for.
 | 1.51.0 | 28 November | Cabby Quest in 3D, part 37: the summit, an edelweiss to pick, a post, and the sentinel, a rare Cabbymon battled once; things put at the ground's height. The world drawn from half as far as the nearest shape: no stripes far off |
 | 1.52.0 | 28 November | Cabby Quest in 3D, part 38: trainers on the mountain, who see the hero and battle them, and battle again, stronger, when talked to |
 | 1.53.0 | 28 November | Cabby Quest in 3D, part 39: the hollow, a cave in the mountain; its ledge, hopped down to a tunnel into the cave by the lake, one way only |
+| 1.54.0 | 28 November | Cabby Quest in 3D, part 40: the isle, sailed to from the coast with the sailor, over the sea; sea gulls in its tall grass |
 
 ---
 
@@ -2479,6 +2480,13 @@ side, its mouth in the first level's south face; at its far end a ledge,
 hopped down, and a tunnel beyond into the cave by the lake, under a
 ledge there: from the mountain to the lake's cave, but not back. New
 words `carve` and `tunnel`; ledges drawn in caves.
+
+*Version 1.54.0, Cabby Quest in 3D, part 40 (your idea):* tutorial 147,
+and chapter 147 of the manual. The isle, out at sea east of the coast:
+the sailor at the coast's pier sails the hero across in his boat, the way
+a flight goes (the areas between built, a straight line, eased), and
+back. Sea gulls, a new kind, in its tall grass (the gull model, bigger);
+the credits list it. New `ferry` lines.
 
 ## Along the way (dates not recorded)
 
