@@ -104,6 +104,10 @@ what's still to come has the detail.*
 - [x] A ticket, bought later in the game, to take the train to new areas
   without the long way round. *Done (1.40.0, tutorial 133): to the coast
   and back, once Rufus is beaten there; denarii, won in battles.*
+- [x] A forest, entered by a way as the cave is, dimmer outside but not
+  as dark as a cave, with lots of grass to go through, and a new town on
+  the other side. *Done (1.43.0, tutorial 136): the Deep Forest, and
+  Pinewood.*
 - [ ] Flying to a place on a Cabbymon: not off the screen with a fade,
   but across the whole map, the world seen passing below.
 - [ ] The 3D quest in a browser (using Cabby's own drawing).

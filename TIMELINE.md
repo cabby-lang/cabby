@@ -147,6 +147,7 @@ changing for.
 | 1.40.0 | 28 November | Cabby Quest in 3D, part 26: denarii, won in battles; the ticket office, open once Rufus is beaten at the coast; a ticket, and the train east to a new halt on the coast, and back; a tutorial's test can start from a saved game |
 | 1.41.0 | 28 November | Cabby Quest in 3D, part 27: the credits, read from models/CREDITS.md and rolling up over the town; the hill crow flapping after the hero |
 | 1.42.0 | 28 November | Cabby Quest in 3D, part 28: things from your models (a double bed, a fire in the oven, long tables, yachts) and campfires; `tools/prepare-model.py` measures and fits a model, and makes its pictures smaller |
+| 1.43.0 | 28 November | Cabby Quest in 3D, part 29: the Deep Forest, dim, its tall grass across it again and again; Pinewood beyond it, whose innkeeper heals; paths that go on beyond a map's edge; the hero facing on, after a wild battle |
 
 ---
 
@@ -2375,6 +2376,17 @@ the dark. New `3d lay` lines lay tiles for this part on. Part 27's test
 shows the new models in the credits. `tools/prepare-model.py` measures a
 model (its size in metres), and gains `--height`, `--center` and
 `--pictures`.
+
+*Version 1.43.0, Cabby Quest in 3D, part 29 (your idea):* tutorial 136,
+and chapter 136 of the manual. A gap at the top of the woods leads, by a
+`way` as the cave's does, into the Deep Forest: dim (a new `dim` line:
+the sun and sky turned down, not off), with bands of tall grass right
+across it, crossed one after another to reach its far end, and its own
+wild ones. Beyond it is Pinewood, a village of two houses, a forester
+(the low-poly dude) and an innkeeper (Kim) who heals every Cabbymon (a
+`heals` line). A path at a map's edge now goes on into the trees beyond
+it. And after a wild battle, the hero faces the way they were going.
+Part 27's credits show the two new models.
 
 ## Along the way (dates not recorded)
 

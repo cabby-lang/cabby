@@ -1,0 +1,31 @@
+// Pinewood, a village in the forest, at its far end. (The 3D quest's
+// only, from tutorial 136.)
+//
+// The map comes first, a character for each tile (see town.txt for them
+// all); then, after a line of ---, what else is here, a line each. Its
+// own: "heals innkeeper": talking to the innkeeper makes every Cabbymon
+// well again.
+TTTTTTTTTTTTTTTT
+T..f........f..T
+T.HHH....HHH...T
+T.HDH....HDH...T
+T..=......=....T
+T..==========..T
+T.......=....S.T
+T..f....=......T
+T.......=...f..T
+TTTTTTTT=TTTTTTT
+---
+name Pinewood
+music town
+way 8,9 forest 10,1
+sign 3,3 The door is locked.
+sign 10,3 The Pinewood Inn. "Rest your Cabbymon here."
+sign 13,6 Pinewood, in the forest. The way back is through it, south.
+folk 11,4 innkeeper down
+heals innkeeper
+says innkeeper Welcome to Pinewood! You've come through the forest? Your Cabbymon must be worn out. There: all rested, and well again.
+says innkeeper Rest here whenever you like. The forest's grass is never empty for long.
+folk 5,7 forester right wanders
+says forester I look after the forest. The crows nest high, the collies run wild, and the bear... well, you'll hear it before you see it.
+says forester The forest's dark even at noon: the trees keep the sun out. Mind you don't get lost.
