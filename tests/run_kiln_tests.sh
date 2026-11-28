@@ -41,7 +41,7 @@ for f in "$DIR"/tests/*-test.cby; do   # (the rest are what they use: a script)
 	fi
 done
 if [[ "$MODE" != compile ]]; then
-	for f in "$DIR"/kiln.cby "$DIR"/tests/*.cby; do   # (with what they use: model and the rest)
+	for f in "$DIR"/kiln.cby "$DIR"/tests/*.cby "$DIR"/examples/*.cby; do   # (with what they use: model and the rest)
 		[[ -f "$f" ]] || continue
 		if ! (cd "$DIR" && "$CLI" --style "$f") > "$TMP/style" 2>&1; then
 			fail=$((fail+1)); echo "FAIL kiln style: $(basename "$f")"; head -10 "$TMP/style" | sed 's/^/  | /'

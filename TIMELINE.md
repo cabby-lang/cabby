@@ -163,6 +163,7 @@ changing for.
 | 1.56.0 | 28 November | For Kiln, a 3D modeller in Cabby: `world`'s shapes of your own (`add_mesh`, `set_mesh`), lines (`add_line`), where a place is in the window (`screen_x`, `screen_y`), the mouse's buttons as keys and its wheel; `bytes`'s 4-byte floats |
 | 1.57.0 | 28 November | Kiln, stage 2: its model, in Cabby (`apps/kiln/model`): parts of corners and faces, six shapes to begin with, moving, turning, scaling, extruding, merging, deleting, undo; `.glb` files written and read |
 | 1.58.0 | 28 November | Kiln, stages 3 and 4: the editor (`cabby kiln.cby model.glb`): the view dragged round and zoomed; object and edit modes; corners, edges and faces chosen; G, R, S with X, Y, Z; E, F, M, X; Shift-A, Shift-D; Ctrl-S, Ctrl-Z; and F5, the model's own script run on it |
+| 1.59.0 | 28 November | Kiln, stages 5 and 6: rigging (bones added and extruded, parts skinned to them with automatic weights, posed) and animation (a timeline, keys, playing); skins and animations in `.glb`, written and read, played by the world library |
 
 ---
 
@@ -2532,6 +2533,19 @@ adds a shape, Shift-D copies a part, C colours it; Ctrl-S saves the
 `.glb`, Ctrl-Z undoes. F5 runs the model's own script (`house.cby` for
 `house.glb`) on it and reads it again: Kiln's scripting, in Cabby.
 `tests/editor-test.cby` drives it all from a script.
+
+*Version 1.59.0, Kiln, stages 5 and 6:* rigging and animation. The model
+has bones (each from its head to its tail, hanging from another),
+parts skinned to them (each corner moved by the two nearest, by weight),
+poses (each bone turned round its head, a quaternion), and animations
+(keys of bones' turns, turned between from one to the next). In the
+editor: B for bones mode (Shift-A, E to extrude, G a tail, X), Ctrl-P to
+skin a part, P for pose mode (R to turn a bone, Alt-R to rest it), and a
+timeline (, and . a frame, I keys every bone, Space plays). Written to
+`.glb` as its skin (joints, inverse bind matrices, weights) and
+animations (a rotation channel for each bone), and read back; the world
+library plays them (`play "action"`). `tests/rig-test.cby` and
+`tests/pose-test.cby` check them.
 
 ## Along the way (dates not recorded)
 

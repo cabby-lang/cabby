@@ -202,23 +202,142 @@ static void pad_to_four bytes &B, int Pad {
 	}
 }
 
+// ---- turns
+
+quat quat_turn const str &Axis, double Degrees {
+	double Half = Degrees * HALF_TURN / 360
+	double S = sin Half
+	if Axis == "x" {
+		return quat{cos(Half), S, 0, 0}
+	} else if Axis == "y" {
+		return quat{cos(Half), 0, S, 0}
+	}
+	return quat{cos(Half), 0, 0, S}
+}
+
+quat quat_times const quat &A, const quat &B {
+	return quat{A.W * B.W - A.X * B.X - A.Y * B.Y - A.Z * B.Z, A.W * B.X + A.X * B.W + A.Y * B.Z - A.Z * B.Y, A.W * B.Y - A.X * B.Z + A.Y * B.W + A.Z * B.X, A.W * B.Z + A.X * B.Y - A.Y * B.X + A.Z * B.W}
+}
+
+point3 quat_apply const quat &Q, const point3 &P {
+	// (P + 2W (U x P) + 2 U x (U x P), U being Q's X, Y, Z)
+	double Cx = Q.Y * P.Z - Q.Z * P.Y
+	double Cy = Q.Z * P.X - Q.X * P.Z
+	double Cz = Q.X * P.Y - Q.Y * P.X
+	double Dx = Q.Y * Cz - Q.Z * Cy
+	double Dy = Q.Z * Cx - Q.X * Cz
+	double Dz = Q.X * Cy - Q.Y * Cx
+	return point3{P.X + 2 * (Q.W * Cx + Dx), P.Y + 2 * (Q.W * Cy + Dy), P.Z + 2 * (Q.W * Cz + Dz)}
+}
+
+quat quat_back const quat &Q {
+	return quat{Q.W, -Q.X, -Q.Y, -Q.Z}
+}
+
+// T of the way from A to B (0: A, 1: B), the shorter way round
+quat quat_between const quat &A, const quat &B, double T {
+	double Sign = 1
+	if A.W * B.W + A.X * B.X + A.Y * B.Y + A.Z * B.Z < 0 {
+		Sign = -1
+	}
+	quat Q = {A.W + (Sign * B.W - A.W) * T, A.X + (Sign * B.X - A.X) * T, A.Y + (Sign * B.Y - A.Y) * T, A.Z + (Sign * B.Z - A.Z) * T}
+	double Long = sqrt Q.W * Q.W + Q.X * Q.X + Q.Y * Q.Y + Q.Z * Q.Z
+	return quat{Q.W / Long, Q.X / Long, Q.Y / Long, Q.Z / Long}
+}
+
+// ---- writing .glb
+
+// Numbers as floats in Bin, a buffer view of them (Target: 34962 for a
+// vertex's, 0 for none) and an accessor (Count of Kind: "VEC3"), with its
+// bounds each way if Bounds (as glTF asks of a place, and a time): its number
+static int add_floats json &Gltf, bytes &Bin, const list double &Numbers, int Count, const str &Kind, int Target, bool Bounds {
+	long At = Bin.length
+	for V in Numbers {
+		Bin.add_float V
+	}
+	int Size = (int)(Numbers.length / Count)
+	return add_accessor Gltf, At, Bin.length - At, 5126, Count, Kind, Target, Numbers, Size, Bounds
+}
+
+static int add_accessor json &Gltf, long At, long Length, int Component, int Count, const str &Kind, int Target, const list double &Numbers, int Size, bool Bounds {
+	json View = json.lookup
+	View["buffer"] = 0
+	View["byteOffset"] = At
+	View["byteLength"] = Length
+	if Target != 0 {
+		View["target"] = Target
+	}
+	Gltf["bufferViews"].add View
+	json Accessor = json.lookup
+	Accessor["bufferView"] = Gltf["bufferViews"].length - 1
+	Accessor["componentType"] = Component
+	Accessor["count"] = Count
+	Accessor["type"] = Kind
+	if Bounds {
+		json Min = json.list
+		json Max = json.list
+		for K in Size {
+			double Low = Numbers[K]
+			double High = Numbers[K]
+			for I in Count {
+				double V = Numbers[I * Size + K]
+				if V < Low {
+					Low = V
+				}
+				if V > High {
+					High = V
+				}
+			}
+			Min.add Low
+			Max.add High
+		}
+		Accessor["min"] = Min
+		Accessor["max"] = Max
+	}
+	Gltf["accessors"].add Accessor
+	return (int)Gltf["accessors"].length - 1
+}
+
 // a part's faces, each corner its own (so each face is flat, its own
-// way), as a glTF mesh: its places, its normals and its triangles, added
-// to Bin, and their accessors to Gltf
-static void write_part const part &P, int Index, bytes &Bin, json &Gltf {
+// way), as a glTF mesh: its places, its normals and its triangles (and,
+// skinned, its bones and weights), added to Bin and Gltf; and its node
+// (skinned, its corners where they are in the scene, and no place of its
+// own, as glTF has it)
+static void write_part const part &P, int Index, bool Skinned, bytes &Bin, json &Gltf {
+	double Ox = 0
+	double Oy = 0
+	double Oz = 0
+	if Skinned {
+		Ox = P.AtX
+		Oy = P.AtY
+		Oz = P.AtZ
+	}
 	list double Places
 	list double Normals
+	list double Weights
+	list int Joints
 	list int Tris
 	for F in P.Faces.length {
 		point3 N = P.normal_of((int)F)
 		int First = (int)(Places.length / 3)
 		for C in P.Faces[F] {
-			Places.add -P.Points[C].X       // (turned round: see FRONT)
-			Places.add P.Points[C].Y
-			Places.add -P.Points[C].Z
+			Places.add -(P.Points[C].X + Ox)   // (turned round: see FRONT)
+			Places.add P.Points[C].Y + Oy
+			Places.add -(P.Points[C].Z + Oz)
 			Normals.add -N.X
 			Normals.add N.Y
 			Normals.add -N.Z
+			if Skinned {
+				for K in 4 {
+					if K < P.Joints[C].length {
+						Joints.add P.Joints[C][K]
+						Weights.add P.Weights[C][K]
+					} else {
+						Joints.add 0
+						Weights.add 0
+					}
+				}
+			}
 		}
 		for I in 1 to P.Faces[F].length - 2 {
 			Tris.add First
@@ -227,44 +346,25 @@ static void write_part const part &P, int Index, bytes &Bin, json &Gltf {
 		}
 	}
 	int Count = (int)(Places.length / 3)
-	list double Low = {0, 0, 0}
-	list double High = {0, 0, 0}
-	for I in Count {
-		for K in 3 {
-			double V = Places[3 * I + K]
-			if I == 0 || V < Low[K] {
-				Low[K] = V
-			}
-			if I == 0 || V > High[K] {
-				High[K] = V
-			}
+	json Attributes = json.lookup
+	Attributes["POSITION"] = add_floats Gltf, Bin, Places, Count, "VEC3", 34962, true
+	Attributes["NORMAL"] = add_floats Gltf, Bin, Normals, Count, "VEC3", 34962, false
+	list double None
+	if Skinned {
+		long At = Bin.length
+		for J in Joints {
+			Bin.add_short J
 		}
+		Attributes["JOINTS_0"] = add_accessor Gltf, At, Bin.length - At, 5123, Count, "VEC4", 34962, None, 4, false
+		Attributes["WEIGHTS_0"] = add_floats Gltf, Bin, Weights, Count, "VEC4", 34962, false
 	}
-	add_view Gltf, Bin, Places, Count, "VEC3", Low, High
-	add_view Gltf, Bin, Normals, Count, "VEC3", Low, High
 	long At = Bin.length
 	for T in Tris {
 		Bin.add_int T
 	}
-	json View = json.lookup
-	View["buffer"] = 0
-	View["byteOffset"] = At
-	View["byteLength"] = Bin.length - At
-	View["target"] = 34963
-	Gltf["bufferViews"].add View
-	json Indices = json.lookup
-	Indices["bufferView"] = Gltf["bufferViews"].length - 1
-	Indices["componentType"] = 5125
-	Indices["count"] = Tris.length
-	Indices["type"] = "SCALAR"
-	Gltf["accessors"].add Indices
-	int Base = (int)Gltf["accessors"].length - 3
-	json Attributes = json.lookup
-	Attributes["POSITION"] = Base
-	Attributes["NORMAL"] = Base + 1
 	json Primitive = json.lookup
 	Primitive["attributes"] = Attributes
-	Primitive["indices"] = Base + 2
+	Primitive["indices"] = add_accessor Gltf, At, Bin.length - At, 5125, (int)Tris.length, "SCALAR", 34963, None, 1, false
 	Primitive["material"] = Index
 	json Primitives = json.list
 	Primitives.add Primitive
@@ -285,51 +385,134 @@ static void write_part const part &P, int Index, bytes &Bin, json &Gltf {
 	Material["name"] = P.Name.copy
 	Material["pbrMetallicRoughness"] = Pbr
 	Gltf["materials"].add Material
-	json At3 = json.list
-	At3.add -P.AtX
-	At3.add P.AtY
-	At3.add -P.AtZ
 	json Node = json.lookup
 	Node["name"] = P.Name.copy
 	Node["mesh"] = Index
-	Node["translation"] = At3
+	if Skinned {
+		Node["skin"] = 0
+	} else {
+		json At3 = json.list
+		At3.add -P.AtX
+		At3.add P.AtY
+		At3.add -P.AtZ
+		Node["translation"] = At3
+	}
 	Gltf["nodes"].add Node
 	Gltf["scenes"][0]["nodes"].add Index
 }
 
-// Numbers as floats in Bin, a buffer view of them and an accessor
-// (Count of Kind: "VEC3"), Low and High each way (for a place, as glTF
-// asks)
-static void add_view json &Gltf, bytes &Bin, const list double &Numbers, int Count, const str &Kind, const list double &Low, const list double &High {
-	long At = Bin.length
-	for V in Numbers {
-		Bin.add_float V
-	}
-	json View = json.lookup
-	View["buffer"] = 0
-	View["byteOffset"] = At
-	View["byteLength"] = Bin.length - At
-	View["target"] = 34962
-	Gltf["bufferViews"].add View
-	json Accessor = json.lookup
-	Accessor["bufferView"] = Gltf["bufferViews"].length - 1
-	Accessor["componentType"] = 5126
-	Accessor["count"] = Count
-	Accessor["type"] = Kind
-	if Gltf["accessors"].length % 3 == 0 {   // (a place's: its bounds)
-		json Min = json.list
-		json Max = json.list
-		for K in 3 {
-			Min.add Low[K]
-			Max.add High[K]
-		}
-		Accessor["min"] = Min
-		Accessor["max"] = Max
-	}
-	Gltf["accessors"].add Accessor
+// a point turned round (see FRONT), as a JSON list
+static json flipped const point3 &P {
+	json L = json.list
+	L.add -P.X
+	L.add P.Y
+	L.add -P.Z
+	return L
 }
 
-void save_parts_glb const list part &Parts, const str &Path {
+// the bones, as nodes (after the parts'), each where its head is from its
+// parent's (its tail kept too, in "extras", for Kiln to read again); and
+// the skin: the bones, and how each is undone from rest (its head, back)
+static void write_bones const list bone &Bones, int First, bytes &Bin, json &Gltf {
+	for I in Bones.length {
+		point3 Rel = Bones[I].Head
+		int Up = Bones[I].Parent
+		if Up >= 0 {
+			Rel = point3{Bones[I].Head.X - Bones[Up].Head.X, Bones[I].Head.Y - Bones[Up].Head.Y, Bones[I].Head.Z - Bones[Up].Head.Z}
+		}
+		json Node = json.lookup
+		Node["name"] = Bones[I].Name.copy
+		Node["translation"] = flipped Rel
+		json Extras = json.lookup
+		Extras["tail"] = flipped Bones[I].Tail
+		Node["extras"] = Extras
+		json Children = json.list
+		for C in Bones.length {
+			if Bones[C].Parent == I {
+				Children.add First + (int)C
+			}
+		}
+		if Children.length > 0 {
+			Node["children"] = Children
+		}
+		Gltf["nodes"].add Node
+		if Up < 0 {
+			Gltf["scenes"][0]["nodes"].add First + (int)I
+		}
+	}
+	list double Matrices
+	json Joints = json.list
+	for I in Bones.length {
+		list double M = {1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, Bones[I].Head.X, -Bones[I].Head.Y, Bones[I].Head.Z, 1}
+		for V in M {
+			Matrices.add V              // (the head, back: -(-x), -y, -(-z), turned round)
+		}
+		Joints.add First + (int)I
+	}
+	json Skin = json.lookup
+	Skin["joints"] = Joints
+	Skin["inverseBindMatrices"] = add_floats Gltf, Bin, Matrices, (int)Bones.length, "MAT4", 0, false
+	Gltf["skins"] = json.list
+	Gltf["skins"].add Skin
+}
+
+// each animation: for each bone it keys, its keys' times and turns
+static void write_actions const list action &Actions, int First, bytes &Bin, json &Gltf {
+	Gltf["animations"] = json.list
+	for A in Actions {
+		json Channels = json.list
+		json Samplers = json.list
+		lookup str bool Keyed
+		for K in A.Keys {
+			Keyed[K.Bone.text] = true
+		}
+		for B in Keyed.keys {
+			list double Times
+			list double Turns
+			list key Mine
+			for K in A.Keys {
+				if K.Bone.text == B {
+					Mine.add K
+				}
+			}
+			for I in Mine.length {     // (in time order)
+				for J in Mine.length - 1 - I {
+					if Mine[J].Time > Mine[J + 1].Time {
+						key T = Mine[J]
+						Mine[J] = Mine[J + 1]
+						Mine[J + 1] = T
+					}
+				}
+			}
+			for K in Mine {
+				Times.add K.Time
+				Turns.add -K.Turn.X         // (turned round: see FRONT)
+				Turns.add K.Turn.Y
+				Turns.add -K.Turn.Z
+				Turns.add K.Turn.W
+			}
+			json Sampler = json.lookup
+			Sampler["input"] = add_floats Gltf, Bin, Times, (int)Times.length, "SCALAR", 0, true
+			Sampler["output"] = add_floats Gltf, Bin, Turns, (int)Times.length, "VEC4", 0, false
+			Sampler["interpolation"] = "LINEAR"
+			Samplers.add Sampler
+			json Target = json.lookup
+			Target["node"] = First + B.to_int
+			Target["path"] = "rotation"
+			json Channel = json.lookup
+			Channel["sampler"] = Samplers.length - 1
+			Channel["target"] = Target
+			Channels.add Channel
+		}
+		json Animation = json.lookup
+		Animation["name"] = A.Name.copy
+		Animation["channels"] = Channels
+		Animation["samplers"] = Samplers
+		Gltf["animations"].add Animation
+	}
+}
+
+void save_scene_glb const list part &Parts, const list bone &Bones, const list action &Actions, const str &Path {
 	json Gltf = json.lookup
 	json Asset = json.lookup
 	Asset["version"] = "2.0"
@@ -347,7 +530,13 @@ void save_parts_glb const list part &Parts, const str &Path {
 	Gltf["bufferViews"] = json.list
 	bytes Bin
 	for I in Parts.length {
-		write_part Parts[I], (int)I, Bin, Gltf
+		write_part Parts[I], (int)I, Parts[I].skinned && Bones.length > 0, Bin, Gltf
+	}
+	if Bones.length > 0 {
+		write_bones Bones, (int)Parts.length, Bin, Gltf
+		if Actions.length > 0 {
+			write_actions Actions, (int)Parts.length, Bin, Gltf
+		}
 	}
 	pad_to_four Bin, 0
 	json Buffer = json.lookup
@@ -424,6 +613,13 @@ static part read_mesh const json &Gltf, const bytes &Bin, const json &Mesh {
 			continue
 		}
 		list double Places = numbers_of Gltf, Bin, (int)Primitive["attributes"]["POSITION"].long
+		list double Js
+		list double Ws
+		bool Skinned = Primitive["attributes"].has("JOINTS_0") && Primitive["attributes"].has("WEIGHTS_0")
+		if Skinned {
+			Js = numbers_of Gltf, Bin, (int)Primitive["attributes"]["JOINTS_0"].long
+			Ws = numbers_of Gltf, Bin, (int)Primitive["attributes"]["WEIGHTS_0"].long
+		}
 		list int Mine
 		for I in Places.length / 3 {
 			double X = -Places[3 * I]       // (turned round: see FRONT)
@@ -432,6 +628,18 @@ static part read_mesh const json &Gltf, const bytes &Bin, const json &Mesh {
 			str Key = ((long)(X * 100000)).text + " " + ((long)(Y * 100000)).text + " " + ((long)(Z * 100000)).text
 			if !Where.contains(Key) {
 				Where[Key] = P.add_point X, Y, Z
+				if Skinned {
+					list int Bones
+					list double Weights
+					for K in 4 {
+						if Ws[4 * I + K] > 0 {
+							Bones.add (int)Js[4 * I + K]
+							Weights.add Ws[4 * I + K]
+						}
+					}
+					P.Joints.add Bones.copy
+					P.Weights.add Weights.copy
+				}
 			}
 			Mine.add Where[Key]
 		}
@@ -527,5 +735,77 @@ scene load_glb const str &Path {
 		P.Name = S.free_name P.Name
 		S.Parts.add P
 	}
+	if Gltf.has "skins" {
+		read_bones Gltf, Bin, S
+	}
 	return S
+}
+
+// the first skin's bones, each where its node is (its parents' places
+// added up), its tail where Kiln kept it (or above it); and the
+// animations that turn them
+static void read_bones const json &Gltf, const bytes &Bin, scene &S {
+	json Joints = Gltf["skins"][0]["joints"]
+	lookup str int Bone             // a node's number: its bone's
+	for I in Joints.length {
+		Bone[Joints[I].long.text] = (int)I
+	}
+	for I in Joints.length {
+		long N = Joints[I].long
+		json Node = Gltf["nodes"][N]
+		int Parent = -1
+		point3 Head = {0, 0, 0}
+		long At = N
+		while At >= 0 {
+			json Here = Gltf["nodes"][At]
+			if Here.has "translation" {
+				Head.X -= Here["translation"][0].double   // (turned round: see FRONT)
+				Head.Y += Here["translation"][1].double
+				Head.Z -= Here["translation"][2].double
+			}
+			long Up = parent_of Gltf, At
+			if At == N && Up >= 0 && Bone.contains(Up.text) {
+				Parent = Bone[Up.text]
+			}
+			At = Up
+		}
+		point3 Tail = {Head.X, Head.Y + 0.3, Head.Z}
+		if Node.has("extras") && Node["extras"].has("tail") {
+			Tail = point3{-Node["extras"]["tail"][0].double, Node["extras"]["tail"][1].double, -Node["extras"]["tail"][2].double}
+		}
+		S.add_bone Node["name"].str_or("bone"), Parent, Head, Tail
+	}
+	if !Gltf.has "animations" {
+		return
+	}
+	for Animation in Gltf["animations"] {
+		int A = S.action_named Animation["name"].str_or("action")
+		for Channel in Animation["channels"] {
+			str Node = Channel["target"]["node"].long.text
+			if Channel["target"]["path"].str != "rotation" || !Bone.contains(Node) {
+				continue
+			}
+			json Sampler = Animation["samplers"][Channel["sampler"].long]
+			list double Times = numbers_of Gltf, Bin, (int)Sampler["input"].long
+			list double Turns = numbers_of Gltf, Bin, (int)Sampler["output"].long
+			for I in Times.length {
+				quat Q = {Turns[4 * I + 3], -Turns[4 * I], Turns[4 * I + 1], -Turns[4 * I + 2]}
+				S.Actions[A].set_key Bone[Node], Times[I], Q
+			}
+		}
+	}
+}
+
+// the node that has node N as a child (-1: none)
+static long parent_of const json &Gltf, long N {
+	for I in Gltf["nodes"].length {
+		if Gltf["nodes"][I].has "children" {
+			for C in Gltf["nodes"][I]["children"] {
+				if C.long == N {
+					return I
+				}
+			}
+		}
+	}
+	return -1
 }

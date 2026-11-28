@@ -1,0 +1,69 @@
+// Kiln's rigging and animation, without a window: an arm (a long box, in
+// three sections) with two bones; skinned to them; its lower bone turned,
+// and where its end goes; an animation of it, halfway; and all of it
+// written to a .glb file and read back.
+//> skinned: true the top corner's bones 2 the first lower
+//> the top corner, the lower bone turned 90 round z: -0.945 0.883 0.2
+//> the lower bone's tail: -1.0 1.0 0
+//> and the upper turned 90 round x, too: -1.0 0 1.0
+//> the wave, halfway: the lower bone's tail -0.707 1.707 0 ( 1.0 seconds )
+//> read back: 1 part, 2 bones, 1 animation
+//>   upper from 0 0 0 to 0 1.0 0 hanging from -1
+//>   lower from 0 1.0 0 to 0 2.0 0 hanging from 0
+//>   arm 8 corners, skinned: true
+//>   wave 2 keys, 1.0 seconds
+//>   posed at its end, the lower bone's tail -1.0 1.0 0
+
+use local ../model
+
+// to three places, the same on every computer
+str r3 double V {
+	long N = (long)round(V * 1000)
+	if N == 0 {
+		return "0"
+	}
+	return (N / 1000.0).text
+}
+
+str place const point3 &P {
+	return r3(P.X) + " " + r3(P.Y) + " " + r3(P.Z)
+}
+
+int main {
+	scene S
+	part Arm = cube_part 1
+	Arm.Name = "arm"
+	list int All = Arm.all_points
+	point3 Zero = {0, 0, 0}
+	Arm.scale_points All, 0.4, 2, 0.4, Zero
+	Arm.move_all 0, 1, 0                // (from 0 to 2 high)
+	list int Top = {4}
+	S.Parts.add Arm
+	int Upper = S.add_bone "upper", -1, point3{0, 0, 0}, point3{0, 1, 0}
+	int Lower = S.add_bone "lower", Upper, point3{0, 1, 0}, point3{0, 2, 0}
+	S.skin 0
+	println "skinned:", S.Parts[0].skinned, "the top corner's bones", S.Parts[0].Joints[6].length, "the first", S.Bones[S.Parts[0].Joints[6][0]].Name
+	S.Bones[Lower].Turn = quat_turn "z", 90
+	list point3 Posed = S.posed_points 0
+	println "the top corner, the lower bone turned 90 round z:", place(Posed[6])
+	println "the lower bone's tail:", place(S.posed_by(Lower, S.Bones[Lower].Tail))
+	S.Bones[Upper].Turn = quat_turn "x", 90
+	println "and the upper turned 90 round x, too:", place(S.posed_by(Lower, S.Bones[Lower].Tail))
+	S.rest
+	int Wave = S.action_named "wave"
+	S.Actions[Wave].set_key Lower, 0, quat{1, 0, 0, 0}
+	S.Actions[Wave].set_key Lower, 1, quat_turn("z", 90)
+	S.pose_at Wave, 0.5
+	println "the wave, halfway: the lower bone's tail", place(S.posed_by(Lower, S.Bones[Lower].Tail)), "(", S.Actions[Wave].length, "seconds )"
+	S.rest
+	S.save_glb "/tmp/kiln-rig-test.glb"
+	scene Back = load_glb "/tmp/kiln-rig-test.glb"
+	println "read back:", Back.Parts.length, "part,", Back.Bones.length, "bones,", Back.Actions.length, "animation"
+	for B in Back.Bones {
+		println " ", B.Name, "from", place(B.Head), "to", place(B.Tail), "hanging from", B.Parent
+	}
+	println " ", Back.Parts[0].Name, Back.Parts[0].Points.length, "corners, skinned:", Back.Parts[0].skinned
+	println " ", Back.Actions[0].Name, Back.Actions[0].Keys.length, "keys,", Back.Actions[0].length, "seconds"
+	Back.pose_at 0, 1
+	println "  posed at its end, the lower bone's tail", place(Back.posed_by(1, Back.Bones[1].Tail))
+}

@@ -165,8 +165,12 @@ is in Python. In `apps/kiln/`.
 - [x] Scripting: `use local kiln/model` in your own Cabby programs, and F5
   in the editor running one on the model. *Done (1.58.0): a model's own
   script, house.cby for house.glb.*
-- [ ] Rigging: an armature, bones, weights, posing; skins in `.glb`.
-- [ ] Animation: a timeline, keys, playing; animations in `.glb`.
+- [x] Rigging: an armature, bones, weights, posing; skins in `.glb`.
+  *Done (1.59.0): B, Ctrl-P, P.*
+  - [ ] *Weights painted by hand; bones turned at rest (their roll).*
+- [x] Animation: a timeline, keys, playing; animations in `.glb`. *Done
+  (1.59.0): one animation for now; moving the root bone, not only
+  turning, still to come.*
 
 ## A third kind of game: open world, and physics
 

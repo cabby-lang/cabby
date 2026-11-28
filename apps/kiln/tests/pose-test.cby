@@ -1,0 +1,38 @@
+// Kiln's editor, rigging and animating, following a script: a cylinder
+// added; B, bones: one added (Shift-A), and another extruded from it (E);
+// back to objects, and the cylinder skinned to them (Ctrl-P); P, pose: all
+// keyed at the start (I); on a second (24 frames, with .), the top bone
+// turned (R) and keyed again; back to the start, and played (Space); and
+// saved, and read back.
+//> added cylinder
+//> added bone bone
+//> extruded bone bone.2
+//> done
+//> skinned cylinder to 2 bones
+//> keyed 2 bones at frame 0
+//> turned bone.2
+//> keyed 2 bones at frame 24
+//> saved tests/pose.glb
+//> 1 part, 2 bones, 1 animation
+//> cylinder skinned: true
+//> bone hanging from -1
+//> bone.2 hanging from 0
+//> action 4 keys, 1.0 seconds
+// script: frames 2; hold shift; tap a; release shift; frames 1; tap 4; frames 1; tap b; frames 1; hold shift; tap a; release shift; frames 1; tap e; frames 1; tap enter; frames 1; tap tab; frames 1; hold ctrl; tap p; release ctrl; frames 1; tap p; frames 1; tap i; frames 1; tap .; tap .; tap .; tap .; tap .; tap .; tap .; tap .; tap .; tap .; tap .; tap .; tap .; tap .; tap .; tap .; tap .; tap .; tap .; tap .; tap .; tap .; tap .; tap .; frames 1; point 500 200; frames 1; tap r; point 300 200; frames 2; shot /tmp/p1.png; tap enter; frames 1; tap i; frames 1; hold shift; tap ,; release shift; frames 1; tap space; frames 12; shot /tmp/p2.png; tap space; frames 1; hold ctrl; tap s; release ctrl; frames 1; close
+
+use files
+use local ../editor
+
+int main {
+	kiln_editor K
+	K.Path = "tests/pose.glb"
+	K.run
+	scene S = load_glb "tests/pose.glb"
+	println S.Parts.length, "part,", S.Bones.length, "bones,", S.Actions.length, "animation"
+	println S.Parts[0].Name, "skinned:", S.Parts[0].skinned
+	for B in S.Bones {
+		println B.Name, "hanging from", B.Parent
+	}
+	println S.Actions[0].Name, S.Actions[0].Keys.length, "keys,", S.Actions[0].length, "seconds"
+	files.delete "tests/pose.glb"
+}

@@ -14,8 +14,9 @@ What's here:
 | File | What it is |
 |---|---|
 | `kiln.cby` | starts the editor, on the model named (or `untitled.glb`) |
-| `editor.hby` | the editor: the window, the view, choosing, and the keys |
+| `editor.hby` | the editor: the window, the view, choosing, the keys; bones, posing and the animation |
 | `model.hby`, `model.cby` | the model: parts made of corners and faces, what's done to them, and `.glb` files read and written |
+| `examples/` | scripts: `figure.cby` makes a small figure, rigged, that waves |
 | `tests/` | its tests (`tests/run_kiln_tests.sh`, from `make test`) |
 
 ## The editor
@@ -43,6 +44,28 @@ corners, edges or faces; a click chooses the nearest to the mouse, and
 | **C** | The part's next colour. |
 | **F5** | Runs the model's script on it (below). |
 | **Ctrl-S**, **Ctrl-Z** | Saves the `.glb`; undoes the last change. |
+
+### Bones, skinning and posing (rigging)
+
+| Key | Does |
+|---|---|
+| **B** (object mode) | Bones mode: the armature, at rest. A click chooses a bone (the one whose middle is nearest); **Shift-A** adds one where the view looks, a metre up; **E** extrudes a new bone from the chosen one's tail, and it follows the mouse; **G** moves the chosen bone's tail; **X** deletes it (those after it hang from what it hung from). **Tab** or **Escape**: back to objects. |
+| **Ctrl-P** (object mode) | Skins the part chosen to the bones: each corner moved by the two nearest, the nearer more (automatic weights). A part edited since is at rest until it's skinned again. |
+| **P** (object mode) | Pose mode: a click chooses a bone; **R** turns it round its head, following the mouse (round the axis most nearly towards you, or **X**, **Y**, **Z**); **Alt-R** puts it back at rest. The skinned parts move with the bones. |
+
+### Animation
+
+In pose mode, the time is at the top, in frames (24 a second):
+
+| Key | Does |
+|---|---|
+| **,** and **.** | A frame back, or on; **Shift-,** back to the start. The bones are posed as the animation has them there. |
+| **I** | Keys every bone's turn at this time, in the scene's animation (`action`, made by the first key). |
+| **Space** | Plays the animation, round and round, or stops it. |
+
+Between keys, each bone turns from one key's turn to the next's, the
+shorter way round. Saved, the bones are the `.glb`'s skin, and the
+animation one of its animations: a game plays it with `play "action"`.
 
 ### F5: a model's own script
 
@@ -120,3 +143,26 @@ Each is a part, its middle at 0, 0, 0, grey (`"#c8c8c8"`):
 
 `light_of "#rrggbb"` and `color_of R, G, B` turn a colour into the light a
 `.glb` keeps for it (0 to 1 each), and back.
+
+### Bones (rigging) and animations
+
+A scene's `Bones` are its armature; a part's `Joints` and `Weights` say
+which bones move each corner, and how much.
+
+| Member | What it is, or does |
+|---|---|
+| `int S.add_bone const str &Name, int Parent, const point3 &Head, const point3 &Tail` | A bone from Head to Tail, at rest, in the scene, hanging from Parent (-1: none): its number. |
+| `B.Name`, `B.Parent`, `B.Head`, `B.Tail`, `B.Turn` | A bone's name, parent, ends at rest, and its pose: a `quat`, turned from rest round its head. |
+| `void S.skin int Part` | Automatic weights: each corner moved by the two nearest bones, the nearer more. |
+| `bool P.skinned` | Whether a part has a weight for each corner. |
+| `list point3 S.posed_points int Part` | Its corners, as the bones have them now. |
+| `quat S.posed_turn int B`, `point3 S.posed_head int B`, `point3 S.posed_by int B, const point3 &P` | A bone's turn with its parents', its head, and a place moved with it, posed. |
+| `void S.rest` | Every bone at rest again. |
+| `int S.action_named const str &Name` | The animation called that (made, if it isn't there): its number. |
+| `void A.set_key int Bone, double Time, const quat &Turn`, `quat A.turn_at int Bone, double Time, const quat &As`, `double A.length` | A key; a bone's turn at a time, between keys; and the last key's time. |
+| `void S.pose_at int Action, double Time` | The bones posed as the animation has them then. |
+
+Turns are quaternions: `quat_turn "z", 90` is 90 degrees round z (as
+`turn_points` turns), `quat_times A, B` is B and then A, `quat_apply Q, P`
+turns a place, `quat_between A, B, T` is T of the way from A to B, and
+`quat_back Q` undoes Q.
