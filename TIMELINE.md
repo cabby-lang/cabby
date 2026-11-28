@@ -157,6 +157,7 @@ changing for.
 | 1.50.0 | 28 November | Cabby Quest in 3D, part 36: the whole world round the town on the title; no shadows high up; the mountain joined to the coast. `shapes_in` lists shapes in the order they were added, even in removed ones' places (the flight back from Pinewood) |
 | 1.51.0 | 28 November | Cabby Quest in 3D, part 37: the summit, an edelweiss to pick, a post, and the sentinel, a rare Cabbymon battled once; things put at the ground's height. The world drawn from half as far as the nearest shape: no stripes far off |
 | 1.52.0 | 28 November | Cabby Quest in 3D, part 38: trainers on the mountain, who see the hero and battle them, and battle again, stronger, when talked to |
+| 1.53.0 | 28 November | Cabby Quest in 3D, part 39: the hollow, a cave in the mountain; its ledge, hopped down to a tunnel into the cave by the lake, one way only |
 
 ---
 
@@ -2471,6 +2472,13 @@ mountain see the hero, come over and battle, as Rufus does, each with a
 Cabbymon; beaten, they stay, and talked to again, battle again, a level
 stronger each time. New mountain lines: `trainer`, `team`, `challenge`
 and `beaten`. People on high ground stand on top of it.
+
+*Version 1.53.0, Cabby Quest in 3D, part 39 (your idea):* tutorial 146,
+and chapter 146 of the manual. The hollow, a dark cave in the mountain's
+side, its mouth in the first level's south face; at its far end a ledge,
+hopped down, and a tunnel beyond into the cave by the lake, under a
+ledge there: from the mountain to the lake's cave, but not back. New
+words `carve` and `tunnel`; ledges drawn in caves.
 
 ## Along the way (dates not recorded)
 

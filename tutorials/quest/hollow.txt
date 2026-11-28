@@ -1,0 +1,31 @@
+// The hollow: a cave in the mountain's side (3D quest, part 39), dark,
+// entered from the mountain's south face. At its far end, a ledge (v),
+// hopped down, never up; and beyond it a tunnel to the cave by the lake,
+// coming out under a ledge there too: the way goes only from here to
+// there.
+//
+// The map comes first, a character for each tile (as the cave's map):
+//   R  rock          .  the floor     A  a stalagmite   X  a crystal
+//   ~  water         o  a way out     v  a ledge, hopped down (south)
+// Then, after a line of ---, what else is here, as in the town's map.
+RRRRRRRRRRRRRRRR
+RR....RRRR....RR
+R..A....RR..X..R
+R.......RR.....R
+RR..RR.......A.R
+RR..RR.RRRR....R
+R...RR.RRRR..RRR
+R.X.RR.RRRRvvvRR
+R...RR.RRRR...RR
+R.A....RRRR...RR
+RR.....RRRR.A.RR
+RRR....RRRR...RR
+RRRRRRoRRRRRoRRR
+RRRRRRRRRRRRRRRR
+---
+name The Hollow
+music cave
+dark
+bats 2
+way 6,12 mountain 4,13
+way 12,12 cave 16,1

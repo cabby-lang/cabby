@@ -1,6 +1,6 @@
 # The Cabby Manual
 
-*For Cabby 1.52.0 (2026-11-28).*
+*For Cabby 1.53.0 (2026-11-28).*
 
 A book for learning Cabby one idea at a time, and a reference to come back
 to afterwards.
@@ -251,6 +251,7 @@ int main {
 143. [The whole world](#chapter-143-the-whole-world): one function for two jobs, told which by what it's given; shadows turned off and on
 144. [The summit](#chapter-144-the-summit): things put at the ground's height, wherever it is; a battle that happens once (unless it's run from); remembering it
 145. [Trainers](#chapter-145-trainers): one way of doing something made to work for anyone the area's file names; a count kept in the story
+146. [The hollow](#chapter-146-the-hollow): a way that goes only one way; a map changed by its own file, for the new parts only
 
 **[Appendices](#appendices)**
 
@@ -19556,7 +19557,53 @@ People on high ground stand on top of it now, as things do (part 37).
 * Put a trainer in the hills, on the high ground, who sees down a path.
 * Let a trainer give the hero something, the first time they're beaten.
 
-[← Chapter 144](#chapter-144-the-summit) · [Contents](#contents) · [Appendices →](#appendices)
+[← Chapter 144](#chapter-144-the-summit) · [Contents](#contents) · [Chapter 146 →](#chapter-146-the-hollow)
+
+### Chapter 146: The hollow
+
+*Program: `146-quest-3d-hollow.cby`, a cave in the mountain. Libraries: `use world`, `use files`, `use math`, `use json`, `use directories`, `use sound`.*
+
+There's a cave in the mountain's side now: the hollow, its mouth in the
+first level's south face. It's dark, with crystals and bats, as the cave
+by the lake is (part 11); and at its far end there's a ledge. Hop down
+it, and the tunnel beyond comes out in the cave by the lake, under a
+ledge there too. There's no climbing back up either of them, so the way
+from the mountain to the lake's cave goes only that way.
+
+#### A ledge in the dark
+
+A ledge (`v`) is hopped over going down the map, never up (part 4's
+`hops_over`, unchanged), and it's in the way from below. In the hills
+it's grass; in a cave, `add_cave` (118.3) draws it as a wedge of rock,
+its drop towards the camera.
+
+The hollow's map (`quest/hollow.txt`) leads from its mouth up, round
+and down to the ledge; below the ledge, a passage of its own to the
+tunnel (`o`), with no way round back to the mouth. Its `way` line goes
+to the lake's cave, onto a tile under a ledge carved into that cave's
+north wall.
+
+#### Maps changed for the new parts only
+
+The mountain needs a mouth, and the lake's cave a ledge, but the parts
+before this one should keep both as they were. Two more new words:
+
+* `carve 4,12 C` lays tiles, as `lay` does (part 28): the mountain's map
+  gets a cliff face (`C`) there, which `add_mouths` (118.5) draws the
+  dark of a cave's mouth on, as it does by the lake. In the lake's cave's
+  file it's `3d carve 16,0 v`, since the 2D quest reads that file too.
+* `tunnel 4,12 hollow 6,11` is a way, as `way` is.
+
+`lay_tiles` (133.6) takes `carve` lines (with "3d " or without), and
+`for_the_3d_quest` (122.3) makes a `tunnel` a `way`.
+
+#### Try this
+
+* Put a rare one in the hollow (part 37's `rare` line), by its crystal.
+* Let the lake's cave have a ledge of its own, down to its water.
+* Make a second way into the hollow, from the mountain's top.
+
+[← Chapter 145](#chapter-145-trainers) · [Contents](#contents) · [Appendices →](#appendices)
 
 ---
 ## Appendices
@@ -19616,7 +19663,7 @@ Run `cabby` with no file to type Cabby a piece at a time:
 
 ```text
 $ cabby
-Cabby 1.52.0 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
+Cabby 1.53.0 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
 Cabby comes with ABSOLUTELY NO WARRANTY, under the MIT License; "cabby.license" for details.
 >>> int add int a, int b {
 ... 	return a + b
