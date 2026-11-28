@@ -1,0 +1,33 @@
+// The mountain, east of the meadow (3D quest, part 35): ground at levels,
+// one above another, with stairs up on every side.
+//
+// The map comes first, a character for each tile (as the hills' map, with):
+//   1 2 3  ground that high: a level up, two levels, three (a level is as
+//          high as the hills' high ground); next to ground at another
+//          level, it's a cliff: walked to only by stairs
+//   z      stairs, from one level up to the next: they climb towards
+//          whichever side is higher (north, south, east or west)
+// Then, after a line of ---, what else is here, as in the town's map.
+TTTTTTTTTTTTTTTTTTTTTTTT
+T......................T
+TT..1111111111111z111..T
+T...11111111111111111.TT
+Tf..11122222222222111..T
+T...11122222z22222111..T
+T...11122233333222111.fT
+====z1122233333222111..T
+T.=S11122z33333222z11..T
+T.=.11122233333222111wwT
+T.=.11122222222222111wwT
+TT=.111222z2222222111wwT
+TT=.11111111111111111TwT
+T.=.11111111z11111111wTT
+T.====f======.f.wwwww..T
+TTTTTTTTTTTTTTTTTTTTTTTT
+---
+name The Mountain
+music meadow
+join west meadow 0
+sign 3,8 The mountain. Stairs up on every side; the top is three levels up.
+wild hill crow 3
+wild bear 1

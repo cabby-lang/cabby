@@ -118,6 +118,10 @@ what's still to come has the detail.*
   - [x] *Up with the crow, the world seen below, and down out of the sky
     over the other town. Done (1.46.0, tutorial 139). Between the two,
     it was still a fade, the towns not on one map, until 1.48.0.*
+- [x] Mountains: levels one above another, with stairs up from every
+  side, not only from the south as in the hills. *Done (1.49.0, tutorial
+  142): the mountain east of the meadow, three levels high; behind a
+  cliff, the camera rises to see over it.*
 - [ ] The 3D quest in a browser (using Cabby's own drawing).
 - [ ] *Small ones: let the crow flap, not hop (its model has "flap" and
   "glide") (done, 1.41.0: as it follows); Ember running after the hero

@@ -153,6 +153,7 @@ changing for.
 | 1.46.0 | 28 November | Cabby Quest in 3D, part 32: the flight, seen: up over the town, the land below, and down out of the sky over the other town |
 | 1.47.0 | 28 November | Cabby Quest in 3D, part 33: running, with Shift; the one following runs after the hero until it's caught up |
 | 1.48.0 | 28 November | Cabby Quest in 3D, part 34: over the world, flying all the way, no fade; a map of where each area is; the treetops between the woods and Pinewood |
+| 1.49.0 | 28 November | Cabby Quest in 3D, part 35: a mountain east of the meadow, three levels high, stairs on every side climbing whichever way; the camera rising over a cliff |
 
 ---
 
@@ -2433,6 +2434,13 @@ where each area outdoors is; and between the woods and Pinewood, the
 treetops (`wilds.txt`), a map of trees only flown over. Flying, the areas
 on the way are built, and the crow carries the hero all the way there in
 a straight line, the camera turned behind them, with no fade.
+
+*Version 1.49.0, Cabby Quest in 3D, part 35 (your idea):* tutorial 142,
+and chapter 142 of the manual. The meadow's road east opens onto a
+mountain: ground at levels (digits on its map), and stairs that climb
+towards whichever side is higher, so they're climbed towards the camera,
+across, or away from it, behind a cliff; there, the camera rises to see
+over. New map words `open`, `signpost` and `mount`.
 
 ## Along the way (dates not recorded)
 

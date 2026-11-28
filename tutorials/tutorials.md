@@ -1,6 +1,6 @@
 # The Cabby Manual
 
-*For Cabby 1.48.0 (2026-11-28).*
+*For Cabby 1.49.0 (2026-11-28).*
 
 A book for learning Cabby one idea at a time, and a reference to come back
 to afterwards.
@@ -247,6 +247,7 @@ int main {
 139. [The flight](#chapter-139-the-flight): a journey in stages, counted in frames; easing in and out; a camera that rises with what it follows; land as far as can be seen
 140. [Running](#chapter-140-running): a key held with another; a step in half the time; a model's animations, asked for by name
 141. [Over the world](#chapter-141-over-the-world): a map of the world, from a file; building more of it on the way; a straight line between two places, and the way it points (atan2); a camera that turns to look that way
+142. [The mountain](#chapter-142-the-mountain): a character that's a number; working out which way something faces from what's round it; a camera that rises to see over what's in the way
 
 **[Appendices](#appendices)**
 
@@ -19289,7 +19290,83 @@ nothing seems to move; and the crow flies off.
 * Let Fly list the towns nearest first (how far each is, from
   `world.txt`).
 
-[← Chapter 140](#chapter-140-running) · [Contents](#contents) · [Appendices →](#appendices)
+[← Chapter 140](#chapter-140-running) · [Contents](#contents) · [Chapter 142 →](#chapter-142-the-mountain)
+
+### Chapter 142: The mountain
+
+*Program: `142-quest-3d-mountain.cby`, levels and stairs. Libraries: `use world`, `use files`, `use math`, `use json`, `use directories`, `use sound`.*
+
+East of the meadow, the road that was closed goes on now, to a mountain:
+ground at levels, one above another, three high, and stairs between them
+on every side. The hills (part 4) had one level, and stairs climbed only
+up the map, away from the camera; here they climb whichever way, so some
+are climbed walking towards the camera, some across, and some away from
+it, from behind a cliff.
+
+#### Levels on the map
+
+On `quest/mountain.txt`, a digit is ground that many levels up: `1`, `2`
+or `3` (a level is as high as the hills' high ground, `HIGH`). `level_at`
+(111.8) reads it: a `char` is a number, the character's code, and the
+digits' codes run in order, `'0'` 48 to `'9'` 57, so the code less
+`'0'`'s is the digit's value:
+
+```cabby
+return (int)Tile - (int)'0'
+```
+
+`add_ground_at` (142.4) draws it: rock up to its height, and grass over
+it, paler and greyer the higher it is, so each level stands apart from
+the one below. Next to ground at another level, it's a cliff: `can_go`
+(111.6) lets the hero onto a tile only at their own level, as before.
+
+#### Which way stairs climb
+
+Stairs (`z`) don't say which way they climb: `climb_of` (142.2) looks at
+the ground either side of them, up and down the map, then across. Where
+one side's a level higher than the other, they climb towards it; and
+the level at their foot (`low_of`) is the lower side's. So `z` between a
+`1` to the west and a `2` to the east climbs east, from the first level
+to the second. The hills' stairs, ground below and high ground above,
+still climb up the map.
+
+`add_stairs` (142.5) draws them from their foot: each step a little
+higher, laid across the way they climb (turned, when that's across the
+map). And everything that knew stairs climbed north now asks which way
+they do: onto stairs only at their foot, walking the way they climb, or
+at their top, walking back down them; off them, up onto the level at
+their top or down onto their foot, or across onto stairs beside them
+(`off_stairs`, 142.3); and how high the hero's feet are at each edge
+(`edge_height`, 111.12).
+
+#### Behind a cliff
+
+The camera is above and behind the hero, to the south. Walking behind a
+cliff, on the north side of the mountain, the ground between would hide
+them; so `cliff_between` (142.6) finds how much higher the ground is
+than the hero's in the three rows towards the camera, and `look_at_hero`
+(108.17) raises the camera that much and more, looking more steeply
+down. It's eased (`Raise` moves a little of the way each frame), so it
+rises and settles smoothly.
+
+#### The road, opened
+
+The meadow's road east ended at a sign saying it was closed. Three new
+words for the meadow's file open it: `open 17,7 ===` lays path where the
+sign and the trees were, and takes away the sign there; `signpost` puts
+a new one beside the road; and `mount east mountain 0` joins the
+mountain on. They're new words, so the parts before this one keep their
+meadow as it was (and the mountain has a place in `world.txt`).
+
+#### Try this
+
+* Make a mountain of your own, five levels high, and its stairs.
+* Put a sign at the top (a sign is drawn on the ground: draw it at the
+  ground's height there, with `height_at`).
+* Let a ledge (`v`) drop the hero a level on the mountain, as in the
+  hills.
+
+[← Chapter 141](#chapter-141-over-the-world) · [Contents](#contents) · [Appendices →](#appendices)
 
 ---
 ## Appendices
@@ -19349,7 +19426,7 @@ Run `cabby` with no file to type Cabby a piece at a time:
 
 ```text
 $ cabby
-Cabby 1.48.0 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
+Cabby 1.49.0 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
 Cabby comes with ABSOLUTELY NO WARRANTY, under the MIT License; "cabby.license" for details.
 >>> int add int a, int b {
 ... 	return a + b
