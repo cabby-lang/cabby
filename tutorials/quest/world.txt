@@ -1,0 +1,19 @@
+// Where each area is in the world, for flying over it (part 34 of the 3D
+// quest): its top left tile's column and row, counted from Cabby Town's
+// top left (north is up: a row above Cabby Town is below 0).
+//   place <area> <col>,<row>
+// The areas joined at their edges are where their joins put them; the
+// treetops (wilds.txt) are between the woods and Pinewood, where the Deep
+// Forest is. Areas entered by a way (a house, the cave, the Deep Forest
+// itself) have no place here: flying from one, the hero glides off into
+// a fade, as in part 32.
+---
+place town 0,0
+place woods 0,-14
+place meadow 24,0
+place hills 0,16
+place station -14,0
+place lake 24,16
+place coast 44,16
+place wilds 0,-34
+place village 4,-44
