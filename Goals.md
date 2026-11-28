@@ -128,7 +128,9 @@ what's still to come has the detail.*
 - [x] Crossing the sea from the coast to an island: a boat (the yacht),
   or a Cabbymon that swims. *Done (1.54.0, tutorial 147): the sailor's
   boat to the isle. A Cabbymon that swims is still to come.*
-- [ ] Pinewood's own quest: the forester, lost in the Deep Forest.
+- [x] Pinewood's own quest: the forester, lost in the Deep Forest.
+  *Done (1.55.0, tutorial 148): found, he thanks the hero, and his store
+  sells Cabbyballs.*
 - [ ] The 3D quest in a browser (using Cabby's own drawing).
 - [ ] *Small ones: let the crow flap, not hop (its model has "flap" and
   "glide") (done, 1.41.0: as it follows); Ember running after the hero
