@@ -477,6 +477,7 @@ typedef struct World {
 	int nshortcuts;
 	/* the camera: where it is, which way it faces */
 	double cx, cy, cz, cyaw, cpitch, fov;
+	float near;           /* the nearest drawn, this frame: half as far as the nearest shape */
 	int64_t follow;
 	double follow_distance, follow_height;
 	/* the light */
@@ -1334,7 +1335,31 @@ static M4 view_of(const World *w)
 #define NEAR 0.05f
 #define FAR 1000.0f
 
-static M4 lens_of(const World *w, float aspect) { return m_perspective(radians(w->fov), aspect, NEAR, FAR); }
+/* how near the camera anything is drawn: half as far as the nearest shape
+ * (its box), from NEAR up. The nearer it is, the less finely depth is
+ * kept far off, so a camera high above everything, NEAR away, can't tell
+ * a path from the grass a few millimetres under it, far off, and draws
+ * them both, in stripes */
+static void find_near(int64_t id)
+{
+	World *w = world(id);
+	V3 cam = v3((float)w->cx, (float)w->cy, (float)w->cz);
+	float nearest = 1e30f;
+	for (int i = 0; i < nshapes; i++) {
+		const Shape *s = &shapes[i];
+		if (s->world != id || !shown(s))
+			continue;
+		V3 lo, hi;
+		shape_box(s, &lo, &hi);
+		float dx = fmaxf(fmaxf(lo.x - cam.x, cam.x - hi.x), 0);
+		float dy = fmaxf(fmaxf(lo.y - cam.y, cam.y - hi.y), 0);
+		float dz = fmaxf(fmaxf(lo.z - cam.z, cam.z - hi.z), 0);
+		nearest = fminf(nearest, sqrtf(dx * dx + dy * dy + dz * dz));
+	}
+	w->near = fminf(fmaxf(nearest / 2, NEAR), 50);
+}
+
+static M4 lens_of(const World *w, float aspect) { return m_perspective(radians(w->fov), aspect, w->near > 0 ? w->near : NEAR, FAR); }
 
 /* ---- what's under the mouse: the nearest shape whose box the ray from
  * the camera through that pixel goes into */
@@ -1726,6 +1751,7 @@ static void draw_frame(int64_t id)
 {
 	World *w = world(id);
 	camera_follows(w);
+	find_near(id);
 	int pw, ph;
 	drawing_size(&pw, &ph);
 	int pts_w = pw;
@@ -2358,6 +2384,7 @@ static void frame_now(int64_t id)
 {
 	World *w = world(id);
 	camera_follows(w);
+	find_near(id);
 	if (use_gl) {
 		gl_draw(id, w->width, w->height, 1);
 		gl_read(&soft, w->width, w->height);

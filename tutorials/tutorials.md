@@ -1,6 +1,6 @@
 # The Cabby Manual
 
-*For Cabby 1.50.0 (2026-11-28).*
+*For Cabby 1.51.0 (2026-11-28).*
 
 A book for learning Cabby one idea at a time, and a reference to come back
 to afterwards.
@@ -249,6 +249,7 @@ int main {
 141. [Over the world](#chapter-141-over-the-world): a map of the world, from a file; building more of it on the way; a straight line between two places, and the way it points (atan2); a camera that turns to look that way
 142. [The mountain](#chapter-142-the-mountain): a character that's a number; working out which way something faces from what's round it; a camera that rises to see over what's in the way
 143. [The whole world](#chapter-143-the-whole-world): one function for two jobs, told which by what it's given; shadows turned off and on
+144. [The summit](#chapter-144-the-summit): things put at the ground's height, wherever it is; a battle that happens once (unless it's run from); remembering it
 
 **[Appendices](#appendices)**
 
@@ -19431,7 +19432,72 @@ promise now, so parts 34 and 35 fly as they should without a change.
   away: keep a list of every area entered, in the saved game.
 * Turn the shadows off when the camera's far back (Options: Far).
 
-[← Chapter 142](#chapter-142-the-mountain) · [Contents](#contents) · [Appendices →](#appendices)
+[← Chapter 142](#chapter-142-the-mountain) · [Contents](#contents) · [Chapter 144 →](#chapter-144-the-summit)
+
+### Chapter 144: The summit
+
+*Program: `144-quest-3d-summit.cby`, the top of the mountain. Libraries: `use world`, `use files`, `use math`, `use json`, `use directories`, `use sound`.*
+
+The top of the mountain is worth the climb now. A post there says where
+you are; an edelweiss grows there, to pick and keep; and a sentinel
+stands there, a golden machine left on the mountain long ago, that wakes
+when the hero looks at it: a Cabbymon met nowhere else, battled once,
+and caught, with luck.
+
+#### Things at the ground's height
+
+Signs, things to pick up and people were all made on the ground, at
+height 0: on high ground, they'd be inside it. `up_on` (144.3) is how
+high the ground is on a tile of high ground (`HIGH` times its level),
+and 0 anywhere else, so what's put there goes on top of it:
+
+* a thing to pick up (`add_item`, 114.7) is moved up that much when it's
+  made, and `turn_items` (114.9) bobs it about that height, not 0;
+* a post (`add_post`, 144.4) is a sign's post and board, that much
+  higher. A sign is drawn wherever the map has an `S`; a post is a line,
+  `post 7,8 ...`, on any tile, read as a sign is, and in the way.
+
+The mountain's map has two more words for these: `find 6,6 edelweiss`
+is an item (new, so the parts before this one don't put it inside the
+mountain), and `post`.
+
+#### Someone rare
+
+`rare 7,7 sentinel up` stands a Cabbymon on a tile (`add_rare`, 144.5),
+its model at the ground's height there, playing `"idle"`, in the way.
+Looking at it (`look_ahead`, 108.22) wakes it (`wake_rare`): a battle,
+as with a wild one, but begun at once, with it close in front of the
+hero (there's no room up there for more), and its standing model hidden
+meanwhile. `appearing` says it's woken, not appeared.
+
+When the battle's over (`rare_after`), if it was beaten or caught, the
+story remembers (`Story.Answers["rare sentinel"]`, kept in the saved
+game) and it's gone for good; `rare_here` won't find it again. Run from,
+or lost to, it stands there still, for another try.
+
+#### The sentinel
+
+It's a new kind (144.1): level 12, slow but strong and very hard to
+hurt, with Gleam and Clank. Its model is tutorial 90's robot, its
+animations renamed for the game's (Hop to walk, Nod to idle) with
+`tools/prepare-model.py`.
+
+#### Drawn without stripes
+
+Seen from high up (flying, part 34), far-off paths and water were drawn
+in stripes. How near the camera anything is drawn sets how finely its
+depth is kept further off; it was always 5 centimetres, so far off,
+the path and the grass a few millimetres under it couldn't be told
+apart. The world library now draws from half as far as the nearest
+shape, so high up, depth is kept a hundred times more finely.
+
+#### Try this
+
+* Put a rare one at the end of the Deep Forest, or on the lake's island.
+* Let the sentinel, beaten, leave something behind to pick up.
+* Make it come back, after the hero's slept: once a day.
+
+[← Chapter 143](#chapter-143-the-whole-world) · [Contents](#contents) · [Appendices →](#appendices)
 
 ---
 ## Appendices
@@ -19491,7 +19557,7 @@ Run `cabby` with no file to type Cabby a piece at a time:
 
 ```text
 $ cabby
-Cabby 1.50.0 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
+Cabby 1.51.0 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
 Cabby comes with ABSOLUTELY NO WARRANTY, under the MIT License; "cabby.license" for details.
 >>> int add int a, int b {
 ... 	return a + b

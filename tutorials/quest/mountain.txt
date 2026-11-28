@@ -10,6 +10,11 @@
 //   z      stairs, from one level up to the next: they climb towards
 //          whichever side is higher (north, south, east or west)
 // Then, after a line of ---, what else is here, as in the town's map.
+// And (tutorial 144 on), on any tile, high ground too, at its height:
+//   find <col>,<row> <name>                  a thing to pick up, as item
+//   post <col>,<row> <what it says>          a sign, on a post
+//   rare <col>,<row> <kind> <facing>         a Cabbymon standing there,
+//                                            battled once, when looked at
 TTTTTTTTTTTTTsss~~~~
 Tf..........fsss~~~~
 T.111111z111.sss~~~~
@@ -36,3 +41,6 @@ join south coast 0
 sign 8,14 The mountain. Stairs up on every side; the top is three levels up. South: the coast.
 wild hill crow 3
 wild bear 1
+find 6,6 edelweiss
+post 7,8 The top of the mountain. On a clear day you can see Pinewood from here.
+rare 7,7 sentinel up
