@@ -23,6 +23,9 @@
 //                                            their Cabbymon
 //   challenge <who> <words>                  what they say, to battle
 //   beaten <who> <words>                     and what they say, beaten
+// And (tutorial 146 on):
+//   carve <col>,<row> <tiles>                as lay: the hollow's mouth (C)
+//   tunnel <col>,<row> <area> <col>,<row>    as way
 TTTTTTTTTTTTTsss~~~~
 Tf..........fsss~~~~
 T.111111z111.sss~~~~
@@ -60,3 +63,5 @@ trainer 9,4 climber left 3
 team climber Climber Ines: hill crow 11
 challenge climber The wind's strong up here, and so is my crow. Ready?
 beaten climber Blown away! Come back any time: we'll be stronger.
+carve 4,12 C
+tunnel 4,12 hollow 6,11
