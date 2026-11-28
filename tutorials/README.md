@@ -1,6 +1,6 @@
 # Cabby tutorials
 
-*For Cabby 1.54.0 (2026-11-28).*
+*For Cabby 1.55.0 (2026-11-28).*
 
 A hundred and six short programs, each about one keyword, feature or library, in
 an order where each uses only what came before it. Each one
@@ -307,6 +307,7 @@ between `{` and `}` to run them as one input and see them as a program would. (`
 | 145 | `145-quest-3d-trainers.cby` | Cabby Quest in 3D, part 38: trainers on the mountain, who see the hero and battle them; and battle again, stronger, when talked to |
 | 146 | `146-quest-3d-hollow.cby` | Cabby Quest in 3D, part 39: the hollow, a cave in the mountain, and its ledge, hopped down to a tunnel into the cave by the lake: one way only |
 | 147 | `147-quest-3d-isle.cby` | Cabby Quest in 3D, part 40: the isle, out at sea east of the coast, sailed to with the sailor; sea gulls in its tall grass |
+| 148 | `148-quest-3d-forester.cby` | Cabby Quest in 3D, part 41: Pinewood's own quest, the forester lost in the Deep Forest, found; his thanks, and his store, selling Cabbyballs |
 
 Every keyword in the language appears in at least one tutorial. The manual's
 appendices and the main README (installed as
