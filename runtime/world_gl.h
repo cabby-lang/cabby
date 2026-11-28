@@ -422,6 +422,13 @@ static void gl_stop(void)
 
 static void gl_mesh(Mesh *m)
 {
+	if (m->gl_vao && m->remade) {   /* (a mesh shape's, made again: its own size now) */
+		glDeleteVertexArrays(1, &m->gl_vao);
+		glDeleteBuffers(1, &m->gl_vbo);
+		glDeleteBuffers(1, &m->gl_ebo);
+		m->gl_vao = m->gl_vbo = m->gl_ebo = 0;
+	}
+	m->remade = 0;
 	if (m->gl_vao && m->changed) {   /* (a skin bent: its vertices again) */
 		glBindBuffer(GL_ARRAY_BUFFER, m->gl_vbo);
 		glBufferData(GL_ARRAY_BUFFER, (GLsizeiptr)(sizeof(float) * VERT * (size_t)m->nv), m->v, GL_DYNAMIC_DRAW);

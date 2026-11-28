@@ -1,0 +1,52 @@
+// Shapes of one's own, for run_world_tests.sh: add_mesh (a triangle), its
+// box (top, bottom), set_mesh (a square, two triangles, instead), a line
+// laid between two places, where a place is on the window (screen_x and
+// screen_y), the mouse's buttons held as keys, and its wheel. The colors
+// drawn (mesh.pixels) must be the same by Cabby and by OpenGL.
+//> top 1.5 bottom 0.0
+//> middle on the window: 99 99
+//> behind the camera: -1 -1
+//> top 1.0
+//> the left button held
+//> the wheel: 2.0
+// script: frames 2; pixel 100 100; pixel 100 30; pixel 100 143; tap space; frames 2; pixel 100 30; pixel 70 80; hold mouse left; frames 1; release mouse left; wheel 2; frames 1; close
+use world
+
+object tester : world.window {
+	world.shape Shape
+	world.shape Line
+
+	void build {
+		set_size 200, 200
+		list double Points = {-1, 0, 0, 1, 0, 0, 0, 1.5, 0}
+		list int Triangles = {0, 1, 2}
+		Shape = add_mesh Points, Triangles, "orange", 0, 0, 0
+		Line = add_line -1, -0.5, 0, 1, -0.5, 0, 0.05, "black"
+		move_camera_to 0, 0.5, 4
+		point_camera_at 0, 0.5, 0
+		println "top", Shape.top, "bottom", Shape.bottom
+		println "middle on the window:", (int)screen_x(0, 0.5, 0), (int)screen_y(0, 0.5, 0)
+		println "behind the camera:", (int)screen_x(0, 0.5, 9), (int)screen_y(0, 0.5, 9)
+		on_frame step
+	}
+
+	void step {
+		if key_press "space" {
+			list double Points = {-1, 0, 0, 1, 0, 0, 1, 1, 0, -1, 1, 0}
+			list int Triangles = {0, 1, 2, 0, 2, 3}
+			Shape.set_mesh Points, Triangles
+			println "top", Shape.top
+		}
+		if key_press "mouse left" {
+			println "the left button held"
+		}
+		if mouse_wheel != 0 {
+			println "the wheel:", mouse_wheel
+		}
+	}
+}
+
+int main {
+	tester T
+	T.run
+}
