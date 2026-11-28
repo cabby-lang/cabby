@@ -1,6 +1,6 @@
 # The Cabby Manual
 
-*For Cabby 1.44.0 (2026-11-28).*
+*For Cabby 1.45.0 (2026-11-28).*
 
 A book for learning Cabby one idea at a time, and a reference to come back
 to afterwards.
@@ -243,6 +243,7 @@ int main {
 135. [Things](#chapter-135-things): a model in place of shapes; one model over several tiles; a fire's light, flickering; a model in a group that rocks
 136. [The deep forest](#chapter-136-the-deep-forest): a new area, and a new town, made only of their files; light made dimmer, not dark; someone who does something when talked to; a path that goes on beyond the map
 137. [A farm, and a store](#chapter-137-a-farm-and-a-store): buildings that are models, each over a block of tiles; trees that are models, swaying; one model each from a pack of them
+138. [Flying](#chapter-138-flying): a choice there only when something's true; a list of places, grown as they're visited; a model carrying the hero up and away; firelight kept where its fire is
 
 **[Appendices](#appendices)**
 
@@ -19023,7 +19024,58 @@ lowest was well below the ground, and fitted by that, it floated.
 * Use another tree from the pack for the forest's clearings.
 * Let the farmer go to his barn by day (part 21's hours).
 
-[← Chapter 136](#chapter-136-the-deep-forest) · [Contents](#contents) · [Appendices →](#appendices)
+[← Chapter 136](#chapter-136-the-deep-forest) · [Contents](#contents) · [Chapter 138 →](#chapter-138-flying)
+
+### Chapter 138: Flying
+
+*Program: `138-quest-3d-fly.cby`, the hero carried. Libraries: `use world`, `use files`, `use math`, `use json`, `use directories`, `use sound`.*
+
+With a bird in the party, the hero can fly: the menu's "Fly" lists every
+town they've been to, and choosing one, a crow carries them up out of
+sight, and sets them down there. Only towns already visited: the way
+there has to be walked once first.
+
+#### Towns been to
+
+A town's file says where to land in it: `fly 16,7` (Cabby Town's, a `3d`
+line; Pinewood's, plain, as its file is only the 3D quest's). Going to an
+area with a `fly` line (109.5) adds it to `Story.Visited` (114.1), once,
+so the saved game keeps where the hero's been.
+
+#### A choice that's only sometimes there
+
+The menu (115.8) has "Fly" only while `has_bird` (138.2) is true (one of
+the party is a hill crow) and there's somewhere been to. Its question,
+"Fly where?" (`ask_where`, 138.3), lists each town been to by its name,
+from its file's `name` line, but not the one the hero's in.
+
+#### Up and away
+
+`take_off` (138.4) puts a crow (its model, twice as big) over the hero,
+flapping, and starts `FlyFrame`. While it's counting, `walk_or_look`
+(108.19) does nothing but `fly_on`, as with the train (part 26): each
+frame, the crow and the hero rise, a little faster each time (`0.0006 *
+FlyFrame * FlyFrame`: the square of the time, as anything speeding up
+goes). The camera follows the hero over the ground but not up (108.17), so
+they rise out of sight; then the fade, to the town's `fly` tile.
+
+#### Firelight, kept with its fire
+
+An area's shapes are made at their tiles on its own map, and then moved
+to where it is in the world (`to_its_place`, 116.11), and so are its
+lamps: the windows', the cave's, the lighthouse's. Part 28's fires'
+lamps weren't, so walking over an edge into an area with a campfire,
+its light was left where the area had been made. Now they're moved too
+(parts 28, 29 and 30 have the same fix).
+
+#### Try this
+
+* Let the coast's halt be somewhere to fly to as well, with a `fly` line.
+* Make the crow come down out of the sky at the town, setting the hero
+  down, rather than the fade's ending with them there.
+* Let a bigger bird carry the hero further, and only it fly to Pinewood.
+
+[← Chapter 137](#chapter-137-a-farm-and-a-store) · [Contents](#contents) · [Appendices →](#appendices)
 
 ---
 ## Appendices
@@ -19083,7 +19135,7 @@ Run `cabby` with no file to type Cabby a piece at a time:
 
 ```text
 $ cabby
-Cabby 1.44.0 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
+Cabby 1.45.0 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
 Cabby comes with ABSOLUTELY NO WARRANTY, under the MIT License; "cabby.license" for details.
 >>> int add int a, int b {
 ... 	return a + b

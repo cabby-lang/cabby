@@ -1286,7 +1286,7 @@ object quest : world.window {
 		look_at_hero
 	}
 
-	// ==== 116.11  One world  (changed in 117, 118) =======================
+	// ==== 116.11  One world  (changed in 117, 118, 135) ==================
 
 	// everything just built (made at its tile on the area's own map) moved
 	// to where the area is in the world: so walking over an edge, nothing
@@ -1306,6 +1306,9 @@ object quest : world.window {
 		}
 		for Lamp in Beacons {
 			Lamp.move_to Lamp.x + OriginX, Lamp.y, Lamp.z + OriginZ   // (120)
+		}
+		for Lamp in Fires {
+			Lamp.move_to Lamp.x + OriginX, Lamp.y, Lamp.z + OriginZ   // (135)
 		}
 	}
 

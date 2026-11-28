@@ -109,6 +109,8 @@ what's still to come has the detail.*
   as dark as a cave, with lots of grass to go through, and a new town on
   the other side. *Done (1.43.0, tutorial 136): the Deep Forest, and
   Pinewood.*
+- [x] Fly, with a bird in the party, but only to towns been to. *Done
+  (1.45.0, tutorial 138): up and away, and a fade.*
 - [ ] Flying to a place on a Cabbymon: not off the screen with a fade,
   but across the whole map, the world seen passing below.
 - [ ] The 3D quest in a browser (using Cabby's own drawing).
