@@ -119,7 +119,8 @@ what's still to come has the detail.*
 - [ ] The 3D quest in a browser (using Cabby's own drawing).
 - [ ] *Small ones: let the crow flap, not hop (its model has "flap" and
   "glide") (done, 1.41.0: as it follows); Ember running after the hero
-  when they're far ahead.*
+  when they're far ahead (done, 1.47.0, tutorial 140: the hero runs with
+  Shift, and she runs to catch up).*
 
 ## A third kind of game: open world, and physics
 
