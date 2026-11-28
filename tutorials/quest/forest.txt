@@ -36,3 +36,4 @@ way 10,0 village 8,8
 wild hill crow 3
 wild border collie 2
 wild bear 1
+astray 7,5 forester down
