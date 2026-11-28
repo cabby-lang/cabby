@@ -13,8 +13,44 @@ What's here:
 
 | File | What it is |
 |---|---|
+| `kiln.cby` | starts the editor, on the model named (or `untitled.glb`) |
+| `editor.hby` | the editor: the window, the view, choosing, and the keys |
 | `model.hby`, `model.cby` | the model: parts made of corners and faces, what's done to them, and `.glb` files read and written |
 | `tests/` | its tests (`tests/run_kiln_tests.sh`, from `make test`) |
+
+## The editor
+
+The view: the **middle mouse button** (or **Alt** and the left) drags it
+round what it looks at, with **Shift** across; the **wheel** (or `=` and
+`-`) brings it nearer or further; the arrow keys turn it too, and **Home**
+looks at the middle again. The grid is a metre a square, the red line x,
+the blue z.
+
+In **object mode**, a click chooses a part (its edges orange). **Tab**
+edits it, and back. In **edit mode**, **1**, **2** and **3** choose
+corners, edges or faces; a click chooses the nearest to the mouse, and
+**Shift**-click adds more (or takes one away); **A** chooses all, or none.
+
+| Key | Does |
+|---|---|
+| **G**, **R**, **S** | Moves, turns or scales what's chosen, following the mouse; then **X**, **Y** or **Z** keeps it to that axis. A click or **Enter** is done; **Escape** (or the right button) puts it back. Turning goes round the axis most nearly towards you, unless one's said. |
+| **E** | Extrudes the faces chosen, then pulls them out, along the way they face. |
+| **F** | A face of the corners chosen, in the order they were chosen. |
+| **M** | Merges the corners chosen into one, at their middle. |
+| **X**, **Delete** | Deletes what's chosen: a part, corners (and their faces), or faces. |
+| **Shift-A**, then **1** to **6** | Adds a cube, plane, grid, cylinder, cone or sphere where the view looks: a new part, or (editing) more of this one. |
+| **Shift-D** | A copy of the part, a metre along. |
+| **C** | The part's next colour. |
+| **F5** | Runs the model's script on it (below). |
+| **Ctrl-S**, **Ctrl-Z** | Saves the `.glb`; undoes the last change. |
+
+### F5: a model's own script
+
+A model's script is beside it, its name with `.cby`: `house.cby` for
+`house.glb`. F5 saves the model, runs the script with the model's path
+(`Argv[1]`), and reads the model again, with whatever the script did. If
+the script fails, the model is as it was. (`cabby` is run by name; set
+`CABBY` to where it is, if it isn't found.) `tests/grow.cby` is one.
 
 ## The model, for scripts
 

@@ -157,11 +157,14 @@ is in Python. In `apps/kiln/`.
   cone, sphere and grid; moving, turning and scaling what's chosen,
   extruding, adding a corner, a face from corners, merging, deleting,
   undo; `.glb` read and written. *Done (1.57.0): `apps/kiln/model`.*
-- [ ] The editor: orbiting, panning and zooming the view; a grid; objects,
+- [x] The editor: orbiting, panning and zooming the view; a grid; objects,
   and editing one (Tab); corners, edges, faces; G, R, S, with X, Y, Z;
-  E to extrude; Shift-A to add; Ctrl-S, Ctrl-Z.
-- [ ] Scripting: `use local kiln/model` in your own Cabby programs, and F5
-  in the editor running one on the model.
+  E to extrude; Shift-A to add; Ctrl-S, Ctrl-Z. *Done (1.58.0).*
+  - [ ] *Typed amounts (G X 2 Enter), snapping to the grid, a 3D cursor,
+    loop cuts, choosing by dragging a box.*
+- [x] Scripting: `use local kiln/model` in your own Cabby programs, and F5
+  in the editor running one on the model. *Done (1.58.0): a model's own
+  script, house.cby for house.glb.*
 - [ ] Rigging: an armature, bones, weights, posing; skins in `.glb`.
 - [ ] Animation: a timeline, keys, playing; animations in `.glb`.
 

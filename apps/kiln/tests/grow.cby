@@ -1,0 +1,21 @@
+// grow.cby — a script for Kiln: F5 runs it on grow.glb (editor-test.cby
+// does), as a script is run on any model: house.cby on house.glb. Every
+// part made twice as big, and a cone put on top.
+
+use local ../model
+
+int main int Argc, str Argv[] {
+	scene S = load_glb Argv[1]
+	point3 Middle = {0, 0, 0}
+	for I in S.Parts.length {
+		list int All = S.Parts[I].all_points
+		S.Parts[I].scale_points All, 2, 2, 2, Middle
+	}
+	part Cone = cone_part 8, 0.5, 1
+	Cone.Name = S.free_name "cone"
+	Cone.Color = "#f2c14e"
+	Cone.AtY = 2.5
+	S.Parts.add Cone
+	S.save_glb Argv[1]
+	println "grow.cby: twice as big, and a cone"
+}

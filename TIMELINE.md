@@ -162,6 +162,7 @@ changing for.
 | 1.55.0 | 28 November | Cabby Quest in 3D, part 41: the forester, lost in the Deep Forest, found; his thanks, and his store, selling Cabbyballs for denarii |
 | 1.56.0 | 28 November | For Kiln, a 3D modeller in Cabby: `world`'s shapes of your own (`add_mesh`, `set_mesh`), lines (`add_line`), where a place is in the window (`screen_x`, `screen_y`), the mouse's buttons as keys and its wheel; `bytes`'s 4-byte floats |
 | 1.57.0 | 28 November | Kiln, stage 2: its model, in Cabby (`apps/kiln/model`): parts of corners and faces, six shapes to begin with, moving, turning, scaling, extruding, merging, deleting, undo; `.glb` files written and read |
+| 1.58.0 | 28 November | Kiln, stages 3 and 4: the editor (`cabby kiln.cby model.glb`): the view dragged round and zoomed; object and edit modes; corners, edges and faces chosen; G, R, S with X, Y, Z; E, F, M, X; Shift-A, Shift-D; Ctrl-S, Ctrl-Z; and F5, the model's own script run on it |
 
 ---
 
@@ -2519,6 +2520,18 @@ library turns a model) and read (corners in one place made one again,
 a face's triangles joined back into it), in Cabby, with `bytes`'s floats
 and `json`. Any Cabby program can use it to make or change a model:
 Kiln's scripting. `tests/run_kiln_tests.sh` runs its tests.
+
+*Version 1.58.0, Kiln, stages 3 and 4:* the editor, `apps/kiln/kiln.cby`
+and `editor.hby`, mostly as Blender is: the middle mouse button (or Alt)
+drags the view round, with Shift across, and the wheel zooms; a grid and
+axes; a click chooses a part, Tab edits it; 1, 2, 3 choose corners, edges
+or faces (Shift for more, A for all); G, R and S follow the mouse, X, Y or
+Z keeping to an axis, Escape putting it back; E extrudes and pulls the
+faces out along their way; F makes a face, M merges, X deletes; Shift-A
+adds a shape, Shift-D copies a part, C colours it; Ctrl-S saves the
+`.glb`, Ctrl-Z undoes. F5 runs the model's own script (`house.cby` for
+`house.glb`) on it and reads it again: Kiln's scripting, in Cabby.
+`tests/editor-test.cby` drives it all from a script.
 
 ## Along the way (dates not recorded)
 

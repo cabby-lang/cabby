@@ -1,0 +1,22 @@
+// kiln.cby — Kiln, a small 3D modeller, as Blender is, written in Cabby.
+//
+//     cabby kiln.cby [model.glb]
+//
+// Opens the model (or a new one, saved as untitled.glb), in a window: the
+// middle mouse button (or Alt and the left) drags the view round, with
+// Shift across, and the wheel zooms. README.md says what the keys do.
+
+use files
+use local editor
+
+int main int Argc, str Argv[] {
+	kiln_editor K
+	K.Path = "untitled.glb"
+	if Argc > 1 {
+		K.Path = Argv[1].copy
+		if files.exists K.Path {
+			K.S = load_glb K.Path
+		}
+	}
+	K.run
+}

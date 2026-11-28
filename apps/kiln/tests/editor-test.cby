@@ -1,0 +1,31 @@
+// Kiln's editor, in a window, following a script: a cube added (Shift-A,
+// 1); Tab, faces (3), its top clicked, extruded (E) and pulled up; Tab
+// back, the part moved along x (G, X); copied (Shift-D), and that undone
+// (Ctrl-Z); F5, its script (grow.cby) run on it; and saved (Ctrl-S), and
+// read back.
+//> added cube
+//> extruded 1 face
+//> done
+//> done
+//> copied to cube.2
+//> undone
+//> grow.cby: twice as big, and a cone
+//> ran tests/grow.cby
+//> saved tests/grow.glb
+//> cube #c8c8c8 12 corners, 10 faces, at 0.72 0.0
+//> cone #f2c14e 9 corners, 9 faces, at 0.0 2.5
+// script: frames 2; hold shift; tap a; release shift; frames 1; tap 1; frames 2; tap tab; frames 1; tap 3; frames 1; point 394 266; frames 1; hold mouse left; frames 1; release mouse left; frames 1; tap e; frames 1; point 394 200; frames 2; hold mouse left; frames 1; release mouse left; frames 1; tap tab; frames 1; tap g; frames 1; tap x; point 460 200; frames 2; tap enter; frames 1; hold shift; tap d; release shift; frames 1; hold ctrl; tap z; release ctrl; frames 1; tap f5; frames 1; hold ctrl; tap s; release ctrl; frames 1; close
+
+use files
+use local ../editor
+
+int main {
+	kiln_editor K
+	K.Path = "tests/grow.glb"
+	K.run
+	scene S = load_glb "tests/grow.glb"
+	for P in S.Parts {
+		println P.Name, P.Color, P.Points.length, "corners,", P.Faces.length, "faces, at", (long)round(P.AtX * 100) / 100.0, P.AtY
+	}
+	files.delete "tests/grow.glb"
+}

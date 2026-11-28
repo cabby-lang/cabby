@@ -15,14 +15,14 @@ DIR=$ROOT/apps/kiln
 TMP=$(mktemp -d)
 trap 'rm -rf "$TMP"' EXIT
 pass=0 fail=0 skipped=0
-for f in "$DIR"/tests/*.cby; do
+for f in "$DIR"/tests/*-test.cby; do   # (the rest are what they use: a script)
 	name=$(basename "$f" .cby)
 	script=$(sed -n 's/^\/\/ script: //p' "$f" | head -1)
 	if [[ -n "$script" && ! -f "$LIBDIR/libcabbyworld.so" && ! -f "$LIBDIR/libcabbyworld.dylib" ]]; then
 		skipped=$((skipped+1)); continue
 	fi
 	sed -n 's/^\/\/> \{0,1\}//p' "$f" > "$TMP/want"
-	runner=(env CABBY_GUI_SCRIPT="$script")
+	runner=(env CABBY_GUI_SCRIPT="$script" CABBY="$CLI")
 	if [[ "$MODE" == compile ]]; then
 		if ! (cd "$DIR" && "$CLI" -c "$f" -o "$TMP/$name") > "$TMP/err" 2>&1; then
 			fail=$((fail+1)); echo "FAIL kiln/$name (compile)"; head -20 "$TMP/err" | sed 's/^/  | /'; continue

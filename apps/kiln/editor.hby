@@ -1,0 +1,872 @@
+// editor.hby — Kiln's editor: a window onto a scene (model.hby), seen from
+// any side, its parts chosen and changed with the mouse and keys, mostly
+// as in Blender. kiln.cby opens it.
+
+use world
+use math
+use files
+use shell
+use local model
+
+const double PICK = 14             // pixels: how near the mouse a corner, edge or face is, to choose it
+const double DOT = 0.045            // a corner's dot, in edit mode, metres across
+const double WIRE = 0.012           // an edge's line
+const str CHOSEN = "#ff8c1a"        // what's chosen, orange as Blender's
+const str LINES = "#1d1d1d"
+const str PALETTE = "#c8c8c8 #e06030 #f2c14e #6fbf4a #3a7bd5 #8e5bd5 #7a4a24 #f4f1e6 #303030"
+
+object kiln_editor : world.window {
+	scene S
+	str Path                        // the .glb it's saved to
+	int Current                     // the part being looked after (-1: none)
+	str Mode                        // "object" or "edit"
+	str Select                      // in edit mode, choosing "point", "edge" or "face"
+	list int Points                 // the corners chosen (edit mode), in the order they were
+	list int Faces                  // the faces chosen
+	list world.shape Shown          // each part, drawn
+	list world.shape Marks          // the edges and corners drawn over the part being edited
+	double Yaw                      // the camera: its angle round the middle it looks at,
+	double Pitch                    // up from level, and how far away
+	double Away
+	double LookX                    // what it looks at
+	double LookY
+	double LookZ
+	int LastX                       // where the mouse was last frame
+	int LastY
+	str Doing                       // "", or "move", "turn", "scale": following the mouse
+	str Axis                        // "", "x", "y", "z", or "normal": only that way
+	double FromX                    // where the mouse was when it began
+	double FromY
+	point3 Middle                   // what's moved is turned and scaled round this
+	part Was                        // the part as it was before (Escape puts it back)
+	point3 Normal                   // the way an extrusion goes
+	bool Adding                     // Shift-A: a number picks a shape
+	world.text Top                  // what's what, at the top
+	world.text Help                 // the keys, at the bottom
+	world.text Said                 // what was just done
+
+	void build {
+		set_title "Kiln"
+		set_background "#3b3b3e"
+		set_ambient "#8a8a96"
+		set_sun -0.4, -1, -0.6
+		set_shadows false
+		Mode = "object"
+		Select = "point"
+		Current = -1
+		Yaw = 35
+		Pitch = 28
+		Away = 7
+		add_floor
+		Top = add_text "", 10, 8
+		Said = add_text "", 10, 30
+		Said.set_color "#f2c14e"
+		Help = add_text "", 10, height - 26
+		Help.set_size 16
+		show_all
+		on_frame step
+	}
+
+	// ---- the scene, drawn
+
+	// a grid on the ground, a metre a square, and the x (red) and z
+	// (blue) axes through the middle
+	void add_floor {
+		for I in -5 to 5 {
+			str Color = "#55555a"
+			if I == 0 {
+				Color = "#7a7a80"
+			}
+			add_line I, 0, -5, I, 0, 5, 0.008, Color
+			add_line -5, 0, I, 5, 0, I, 0.008, Color
+		}
+		add_line -5, 0.002, 0, 5, 0.002, 0, 0.016, "#d04040"
+		add_line 0, 0.002, -5, 0, 0.002, 5, 0.016, "#4060d0"
+	}
+
+	// every part drawn again, and the marks over the one being edited
+	void show_all {
+		for Shape in Shown {
+			Shape.remove
+		}
+		Shown.clear
+		for I in S.Parts.length {
+			world.shape Drawn = draw_part((int)I)
+			Shown.add Drawn
+		}
+		show_marks
+		show_words
+	}
+
+	world.shape draw_part int I {
+		list double Points3
+		list int Tris
+		S.Parts[I].triangles_into Points3, Tris
+		str Color = S.Parts[I].Color.copy
+		double X = S.Parts[I].AtX
+		double Y = S.Parts[I].AtY
+		double Z = S.Parts[I].AtZ
+		return add_mesh Points3, Tris, Color, X, Y, Z
+	}
+
+	// just the part being looked after drawn again (as it's changed)
+	void show_current {
+		if Current < 0 {
+			return
+		}
+		list double Points3
+		list int Tris
+		S.Parts[Current].triangles_into Points3, Tris
+		Shown[Current].set_mesh Points3, Tris
+		Shown[Current].move_to S.Parts[Current].AtX, S.Parts[Current].AtY, S.Parts[Current].AtZ
+		show_marks
+	}
+
+	// its edges, and (editing) its corners: what's chosen orange
+	void show_marks {
+		for Mark in Marks {
+			Mark.remove
+		}
+		Marks.clear
+		if Current < 0 {
+			return
+		}
+		part P = S.Parts[Current].copy
+		list int Pairs = P.edges
+		lookup str bool Lit
+		if Mode == "object" {
+			for C in P.all_points {
+				Lit[C.text] = true      // (the whole part, chosen)
+			}
+		} else {
+			for C in Points {
+				Lit[C.text] = true
+			}
+		}
+		for I in Pairs.length / 2 {
+			int A = Pairs[2 * I]
+			int B = Pairs[2 * I + 1]
+			str Color = LINES.copy
+			if Lit.contains(A.text) && Lit.contains(B.text) {
+				Color = CHOSEN.copy
+			}
+			point3 Pa = world_of P, A
+			point3 Pb = world_of P, B
+			world.shape Line = add_line Pa.X, Pa.Y, Pa.Z, Pb.X, Pb.Y, Pb.Z, WIRE, Color
+			Marks.add Line
+		}
+		if Mode == "edit" && Select != "face" {
+			for C in P.Points.length {
+				str Color = LINES.copy
+				if Lit.contains C.text {
+					Color = CHOSEN.copy
+				}
+				point3 W = world_of P, (int)C
+				world.shape Dot = add_box DOT, DOT, DOT, Color, W.X, W.Y, W.Z
+				Marks.add Dot
+			}
+		}
+		list int Marked = Faces.copy
+		if Mode == "edit" {
+			for F in Marked {
+				point3 M = P.middle_of P.Faces[F]
+				world.shape Dot = add_box DOT * 1.5, DOT * 1.5, DOT * 1.5, CHOSEN, M.X + P.AtX, M.Y + P.AtY, M.Z + P.AtZ
+				Marks.add Dot
+			}
+		}
+	}
+
+	// a corner of a part, in the scene
+	point3 world_of const part &P, int C const {
+		return point3{P.Points[C].X + P.AtX, P.Points[C].Y + P.AtY, P.Points[C].Z + P.AtZ}
+	}
+
+	// what's what, at the top; and the keys there are, at the bottom
+	void show_words {
+		str Name = "nothing chosen"
+		if Current >= 0 {
+			Name = S.Parts[Current].Name.copy
+		}
+		str Line = "Kiln  " + Path + "  |  " + Mode + " mode  |  " + Name
+		if Mode == "edit" {
+			Line += "  |  choosing " + Select + "s  |  " + count(Points.length, "corner") + ", " + count(Faces.length, "face") + " chosen"
+		}
+		Top.set_text Line
+		if Adding {
+			Help.set_text "Add: 1 cube  2 plane  3 grid  4 cylinder  5 cone  6 sphere  (Escape: none)"
+		} else if Doing != "" {
+			Help.set_text Doing + ": move the mouse  X Y Z: only that way  click or Enter: done  Escape: as it was"
+		} else if Mode == "object" {
+			Help.set_text "Tab: edit  G R S  Shift-A: add  Shift-D: copy  X: delete  C: colour  F5: script  Ctrl-S  Ctrl-Z"
+		} else {
+			Help.set_text "click (Shift: more)  1 2 3  A: all  G R S  E: extrude  F: face  M: merge  X: delete  Tab: objects"
+		}
+	}
+
+	// "1 face", "2 faces"
+	str count long N, const str &Thing const {
+		if N == 1 {
+			return "1 " + Thing
+		}
+		return N.text + " " + Thing + "s"
+	}
+
+	void say_done const str &What {
+		Said.set_text What
+		println What
+	}
+
+	// ---- each frame
+
+	void step {
+		look_round
+		if Adding {
+			choose_shape
+		} else if Doing != "" {
+			follow_mouse
+		} else {
+			keys
+		}
+		LastX = mouse_x
+		LastY = mouse_y
+	}
+
+	// the camera: the middle button (or Alt and the left) drags it round,
+	// with Shift across; the wheel brings it nearer, or further
+	void look_round {
+		int Dx = mouse_x - LastX
+		int Dy = mouse_y - LastY
+		bool Dragging = key_hold("mouse middle") || (key_hold("alt") && key_hold("mouse left"))
+		if Dragging && key_hold("shift") {
+			double K = Away * 0.0019
+			double A = Yaw * HALF_TURN / 180
+			double Up = Pitch * HALF_TURN / 180
+			LookX -= (cos(A) * Dx - sin(A) * sin(Up) * Dy) * K
+			LookY += cos(Up) * Dy * K
+			LookZ -= (-sin(A) * Dx - cos(A) * sin(Up) * Dy) * K
+		} else if Dragging {
+			Yaw -= Dx * 0.4
+			Pitch += Dy * 0.4
+		}
+		if key_hold "left" {
+			Yaw += 1.5
+		} else if key_hold "right" {
+			Yaw -= 1.5
+		}
+		if key_hold("up") && !key_hold("shift") {
+			Pitch += 1
+		} else if key_hold("down") && !key_hold("shift") {
+			Pitch -= 1
+		}
+		if Pitch > 89 {
+			Pitch = 89
+		} else if Pitch < -89 {
+			Pitch = -89
+		}
+		if mouse_wheel != 0 {
+			Away *= pow 0.88, mouse_wheel
+		}
+		if key_press("=") || key_press("+") {
+			Away *= 0.8
+		} else if key_press "-" {
+			Away *= 1.25
+		}
+		place_camera
+	}
+
+	void place_camera {
+		double A = Yaw * HALF_TURN / 180
+		double Up = Pitch * HALF_TURN / 180
+		move_camera_to LookX + Away * cos(Up) * sin(A), LookY + Away * sin(Up), LookZ + Away * cos(Up) * cos(A)
+		point_camera_at LookX, LookY, LookZ
+	}
+
+	// ---- keys, when nothing's following the mouse
+
+	void keys {
+		bool Ctrl = key_hold "ctrl"
+		bool Shift = key_hold "shift"
+		if key_press("mouse left") && !key_hold("alt") {
+			click Shift
+		} else if Ctrl && key_press("s") {
+			save
+		} else if Ctrl && key_press("z") {
+			undo
+		} else if key_press "tab" {
+			switch_mode
+		} else if Shift && key_press("a") {
+			Adding = true
+			show_words
+		} else if Shift && key_press("d") {
+			duplicate
+		} else if key_press "g" {
+			begin "move"
+		} else if key_press "r" {
+			begin "turn"
+		} else if key_press "s" {
+			begin "scale"
+		} else if key_press("x") || key_press("delete") {
+			delete_chosen
+		} else if key_press "c" {
+			next_colour
+		} else if key_press "f5" {
+			run_script
+		} else if key_press "home" {
+			LookX = 0
+			LookY = 0
+			LookZ = 0
+		} else if Mode == "edit" {
+			edit_keys
+		}
+	}
+
+	void edit_keys {
+		if key_press "1" {
+			choose_by "point"
+		} else if key_press "2" {
+			choose_by "edge"
+		} else if key_press "3" {
+			choose_by "face"
+		} else if key_press "a" {
+			all_or_none
+		} else if key_press "e" {
+			extrude
+		} else if key_press "f" {
+			make_face
+		} else if key_press "m" {
+			merge
+		}
+	}
+
+	// ---- choosing
+
+	// the nearest thing to the mouse: a part (object mode); a corner, an
+	// edge or a face (edit mode). Shift adds it (or takes it away).
+	void click bool More {
+		if Mode == "object" {
+			int Was = Current
+			Current = part_at_mouse
+			if Current != Was {
+				show_marks
+				show_words
+			}
+			return
+		}
+		if !More {
+			Points.clear
+			Faces.clear
+		}
+		if Select == "point" {
+			int C = point_at_mouse
+			if C >= 0 {
+				toggle_point C
+			}
+		} else if Select == "edge" {
+			list int Edge = edge_at_mouse
+			if Edge.length == 2 {
+				toggle_point Edge[0]
+				toggle_point Edge[1]
+			}
+		} else {
+			int F = face_at_mouse
+			if F >= 0 {
+				toggle_face F
+			}
+		}
+		show_marks
+		show_words
+	}
+
+	void toggle_point int C {
+		if Points.contains C {
+			Points.remove_at (int)Points.find(C)
+		} else {
+			Points.add C
+		}
+	}
+
+	// a face chosen: its corners too (and the other way)
+	void toggle_face int F {
+		if Faces.contains F {
+			Faces.remove_at (int)Faces.find(F)
+			for C in S.Parts[Current].Faces[F] {
+				if Points.contains C {
+					Points.remove_at (int)Points.find(C)
+				}
+			}
+		} else {
+			Faces.add F
+			for C in S.Parts[Current].Faces[F] {
+				if !Points.contains(C) {
+					Points.add C
+				}
+			}
+		}
+	}
+
+	// the part whose drawn shape is under the mouse (-1: none)
+	int part_at_mouse const {
+		if !mouse_on_shape {
+			return -1
+		}
+		world.shape Hit = shape_at_mouse
+		for I in Shown.length {
+			if Shown[I].same_as Hit {
+				return (int)I
+			}
+		}
+		return -1
+	}
+
+	// how far a place in the scene is from the mouse, on the window (a
+	// long way, behind the camera)
+	double from_mouse double X, double Y, double Z const {
+		double Sx = screen_x X, Y, Z
+		double Sy = screen_y X, Y, Z
+		if Sx < 0 && Sy < 0 {
+			return 1000000
+		}
+		double Dx = Sx - mouse_x
+		double Dy = Sy - mouse_y
+		return sqrt Dx * Dx + Dy * Dy
+	}
+
+	int point_at_mouse const {
+		int Best = -1
+		double Near = PICK
+		for C in S.Parts[Current].Points.length {
+			point3 W = world_of S.Parts[Current], (int)C
+			double D = from_mouse W.X, W.Y, W.Z
+			if D < Near {
+				Near = D
+				Best = (int)C
+			}
+		}
+		return Best
+	}
+
+	list int edge_at_mouse const {
+		list int Pairs = S.Parts[Current].edges
+		list int Best
+		double Near = PICK
+		for I in Pairs.length / 2 {
+			point3 A = world_of S.Parts[Current], Pairs[2 * I]
+			point3 B = world_of S.Parts[Current], Pairs[2 * I + 1]
+			double D = from_mouse 0.5 * (A.X + B.X), 0.5 * (A.Y + B.Y), 0.5 * (A.Z + B.Z)
+			if D < Near {
+				Near = D
+				Best = {Pairs[2 * I], Pairs[2 * I + 1]}
+			}
+		}
+		return Best
+	}
+
+	// the face whose middle is nearest the mouse, of those facing it
+	int face_at_mouse const {
+		int Best = -1
+		double Near = PICK * 2
+		for F in S.Parts[Current].Faces.length {
+			point3 M = S.Parts[Current].middle_of S.Parts[Current].Faces[F]
+			double D = from_mouse M.X + S.Parts[Current].AtX, M.Y + S.Parts[Current].AtY, M.Z + S.Parts[Current].AtZ
+			if D < Near {
+				Near = D
+				Best = (int)F
+			}
+		}
+		return Best
+	}
+
+	void choose_by const str &Kind {
+		Select = Kind.copy
+		Faces.clear
+		show_marks
+		show_words
+	}
+
+	void all_or_none {
+		bool Any = Points.length > 0
+		Points.clear
+		Faces.clear
+		if !Any {
+			Points = S.Parts[Current].all_points
+			for F in S.Parts[Current].Faces.length {
+				Faces.add (int)F
+			}
+		}
+		show_marks
+		show_words
+	}
+
+	void switch_mode {
+		if Mode == "object" && Current >= 0 {
+			Mode = "edit"
+		} else {
+			Mode = "object"
+		}
+		Points.clear
+		Faces.clear
+		show_marks
+		show_words
+	}
+
+	// ---- moving, turning and scaling, following the mouse
+
+	// what's chosen begins to follow the mouse
+	void begin const str &What {
+		if Current < 0 || (Mode == "edit" && Points.length == 0) {
+			return
+		}
+		S.keep
+		Was = S.Parts[Current].copy
+		Doing = What.copy
+		Axis = ""
+		FromX = mouse_x
+		FromY = mouse_y
+		Middle = S.Parts[Current].middle_of moving
+		show_words
+	}
+
+	// the corners that move: those chosen, or (object mode) all of them
+	list int moving const {
+		if Mode == "object" {
+			return S.Parts[Current].all_points
+		}
+		return Points.copy
+	}
+
+	void follow_mouse {
+		if key_press "x" {
+			Axis = "x"
+		} else if key_press "y" {
+			Axis = "y"
+		} else if key_press "z" {
+			Axis = "z"
+		}
+		S.Parts[Current] = Was.copy
+		double Dx = mouse_x - FromX
+		double Dy = mouse_y - FromY
+		if Doing == "move" {
+			move_by Dx, Dy
+		} else if Doing == "turn" {
+			turn_by
+		} else {
+			scale_by
+		}
+		show_current
+		if key_press("mouse left") || key_press("enter") {
+			Doing = ""
+			say_done "done"
+			show_all
+		} else if key_press("escape") || key_press("mouse right") {
+			S.Parts[Current] = Was.copy
+			S.undo
+			Doing = ""
+			say_done "put back"
+			show_all
+		}
+	}
+
+	// the mouse's way across the window, as a way in the scene, as far
+	// as it seems to have gone there; along one axis, only that way
+	void move_by double Dx, double Dy {
+		double K = Away * 0.0019
+		double A = Yaw * HALF_TURN / 180
+		double Up = Pitch * HALF_TURN / 180
+		double X = (cos(A) * Dx - sin(A) * sin(Up) * Dy) * K
+		double Y = -cos(Up) * Dy * K
+		double Z = (-sin(A) * Dx - cos(A) * sin(Up) * Dy) * K
+		if Axis == "x" {
+			Y = 0
+			Z = 0
+		} else if Axis == "y" {
+			X = 0
+			Z = 0
+		} else if Axis == "z" {
+			X = 0
+			Y = 0
+		} else if Axis == "normal" {
+			double Along = X * Normal.X + Y * Normal.Y + Z * Normal.Z
+			X = Normal.X * Along
+			Y = Normal.Y * Along
+			Z = Normal.Z * Along
+		}
+		if Mode == "object" {
+			S.Parts[Current].AtX += X
+			S.Parts[Current].AtY += Y
+			S.Parts[Current].AtZ += Z
+		} else {
+			S.Parts[Current].move_points Points, X, Y, Z
+		}
+	}
+
+	// round the middle, as far as the mouse has gone round it on the
+	// window; round the axis that's towards the camera, unless one's said
+	void turn_by {
+		point3 W = {Middle.X + S.Parts[Current].AtX, Middle.Y + S.Parts[Current].AtY, Middle.Z + S.Parts[Current].AtZ}
+		double Cx = screen_x W.X, W.Y, W.Z
+		double Cy = screen_y W.X, W.Y, W.Z
+		double Before = atan2 FromY - Cy, FromX - Cx
+		double Now = atan2 mouse_y - Cy, mouse_x - Cx
+		double Degrees = (Before - Now) * 180 / HALF_TURN
+		str Round = Axis.copy
+		if Round == "" || Round == "normal" {
+			Round = facing_axis
+		}
+		S.Parts[Current].turn_points moving, Round, Degrees, Middle
+	}
+
+	// the axis most nearly towards the camera
+	str facing_axis const {
+		double A = Yaw * HALF_TURN / 180
+		double Up = Pitch * HALF_TURN / 180
+		double X = fabs cos(Up) * sin(A)
+		double Y = fabs sin(Up)
+		double Z = fabs cos(Up) * cos(A)
+		if Y >= X && Y >= Z {
+			return "y"
+		} else if X >= Z {
+			return "x"
+		}
+		return "z"
+	}
+
+	// as many times as far from the middle as the mouse now is, on the
+	// window, to as far as it was
+	void scale_by {
+		point3 W = {Middle.X + S.Parts[Current].AtX, Middle.Y + S.Parts[Current].AtY, Middle.Z + S.Parts[Current].AtZ}
+		double Cx = screen_x W.X, W.Y, W.Z
+		double Cy = screen_y W.X, W.Y, W.Z
+		double Before = sqrt((FromX - Cx) * (FromX - Cx) + (FromY - Cy) * (FromY - Cy))
+		double Now = sqrt((mouse_x - Cx) * (mouse_x - Cx) + (mouse_y - Cy) * (mouse_y - Cy))
+		double K = 1
+		if Before > 1 {
+			K = Now / Before
+		}
+		double Kx = K
+		double Ky = K
+		double Kz = K
+		if Axis == "x" {
+			Ky = 1
+			Kz = 1
+		} else if Axis == "y" {
+			Kx = 1
+			Kz = 1
+		} else if Axis == "z" {
+			Kx = 1
+			Ky = 1
+		}
+		S.Parts[Current].scale_points moving, Kx, Ky, Kz, Middle
+	}
+
+	// ---- changes
+
+	void extrude {
+		if Faces.length == 0 {
+			say_done "choose faces to extrude (3, then click them)"
+			return
+		}
+		S.keep
+		Normal = S.Parts[Current].normal_of_faces Faces
+		list int Made = S.Parts[Current].extrude Faces
+		Points = Made.copy
+		show_all
+		say_done "extruded " + count(Faces.length, "face")
+		Was = S.Parts[Current].copy
+		Doing = "move"
+		Axis = "normal"
+		FromX = mouse_x
+		FromY = mouse_y
+		Middle = S.Parts[Current].middle_of Points
+		show_words
+	}
+
+	void make_face {
+		if Points.length < 3 {
+			say_done "choose three corners or more, in turn, for a face"
+			return
+		}
+		S.keep
+		S.Parts[Current].add_face Points
+		show_all
+		say_done "a face of " + Points.length.text + " corners"
+	}
+
+	void merge {
+		if Points.length < 2 {
+			return
+		}
+		S.keep
+		S.Parts[Current].merge_points Points
+		Points.clear
+		Faces.clear
+		show_all
+		say_done "merged"
+	}
+
+	void delete_chosen {
+		if Current < 0 {
+			return
+		}
+		S.keep
+		if Mode == "object" {
+			say_done "deleted " + S.Parts[Current].Name
+			S.Parts.remove_at Current
+			Current = -1
+		} else if Select == "face" && Faces.length > 0 {
+			S.Parts[Current].delete_faces Faces
+			say_done "deleted " + count(Faces.length, "face")
+		} else if Points.length > 0 {
+			S.Parts[Current].delete_points Points
+			say_done "deleted " + count(Points.length, "corner")
+		}
+		Points.clear
+		Faces.clear
+		show_all
+	}
+
+	// Shift-A, then a number: a shape, at the middle of the view; a new
+	// part (object mode), or more of this one (edit mode)
+	void choose_shape {
+		list str Keys = {"1", "2", "3", "4", "5", "6"}
+		for I in Keys.length {
+			if key_press Keys[I] {
+				Adding = false
+				add_shape (int)I
+				return
+			}
+		}
+		if key_press "escape" {
+			Adding = false
+			show_words
+		}
+	}
+
+	void add_shape int Which {
+		part New = shape_number Which
+		S.keep
+		if Mode == "edit" && Current >= 0 {
+			int First = (int)S.Parts[Current].Points.length
+			for P in New.Points {
+				S.Parts[Current].add_point P.X + LookX - S.Parts[Current].AtX, P.Y + LookY - S.Parts[Current].AtY, P.Z + LookZ - S.Parts[Current].AtZ
+			}
+			Points.clear
+			Faces.clear
+			for Face in New.Faces {
+				list int Corners
+				for C in Face {
+					Corners.add C + First
+					if !Points.contains(C + First) {
+						Points.add C + First
+					}
+				}
+				S.Parts[Current].add_face Corners
+			}
+			say_done "added a " + New.Name + " to " + S.Parts[Current].Name
+		} else {
+			New.Name = S.free_name New.Name
+			New.AtX = LookX
+			New.AtY = LookY
+			New.AtZ = LookZ
+			say_done "added " + New.Name
+			S.Parts.add New
+			Current = (int)S.Parts.length - 1
+		}
+		show_all
+	}
+
+	part shape_number int Which const {
+		if Which == 1 {
+			return plane_part 2
+		} else if Which == 2 {
+			return grid_part 4, 2
+		} else if Which == 3 {
+			return cylinder_part 16, 0.5, 1
+		} else if Which == 4 {
+			return cone_part 16, 0.5, 1
+		} else if Which == 5 {
+			return sphere_part 8, 16, 0.5
+		}
+		return cube_part 1
+	}
+
+	void duplicate {
+		if Current < 0 || Mode != "object" {
+			return
+		}
+		S.keep
+		part New = S.Parts[Current].copy
+		New.Name = S.free_name New.Name
+		New.AtX += 1
+		say_done "copied to " + New.Name
+		S.Parts.add New
+		Current = (int)S.Parts.length - 1
+		show_all
+	}
+
+	void next_colour {
+		if Current < 0 {
+			return
+		}
+		S.keep
+		list str Colours = PALETTE.split " "
+		int At = (int)Colours.find(S.Parts[Current].Color)
+		S.Parts[Current].Color = Colours[(At + 1) % Colours.length].copy
+		say_done S.Parts[Current].Name + " is " + S.Parts[Current].Color
+		show_all
+	}
+
+	void undo {
+		if S.undo {
+			if Current >= S.Parts.length {
+				Current = (int)S.Parts.length - 1
+			}
+			Points.clear
+			Faces.clear
+			say_done "undone"
+			show_all
+		}
+	}
+
+	void save {
+		S.save_glb Path
+		say_done "saved " + Path
+	}
+
+	// ---- a script
+
+	// F5: the model's own script (house.cby, for house.glb) run on it, as
+	// it is now: saved, the script run with its path (Argv[1]), and read
+	// again, the script's changes and all. CABBY says where cabby is, if
+	// it isn't found by its name.
+	void run_script {
+		str Script = Path[0 to Path.length - 5] + ".cby"
+		if !Path.ends_with(".glb") || !files.exists(Script) {
+			say_done "no script: " + Script + " runs on " + Path + " with F5"
+			return
+		}
+		S.keep
+		S.save_glb Path
+		str Cabby = "cabby"
+		if shell.has "CABBY" {
+			Cabby = shell.get "CABBY"
+		}
+		list str Command = {Cabby, Script.copy, Path.copy}
+		int Status = shell.program_status Command
+		if Status != 0 {
+			say_done Script + " stopped (" + Status.text + "): the model's as it was"
+			S.undo
+			return
+		}
+		scene Read = load_glb Path
+		S.Parts.clear
+		for P in Read.Parts {
+			S.Parts.add P.copy
+		}
+		Current = -1
+		Mode = "object"
+		Points.clear
+		Faces.clear
+		say_done "ran " + Script
+		show_all
+	}
+}
