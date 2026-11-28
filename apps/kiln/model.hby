@@ -1,0 +1,459 @@
+// model.hby — Kiln's model: parts made of corners and faces, what's done to
+// them, and .glb files read and written. The editor (kiln.cby) uses it,
+// and so can any Cabby program, to make or change a model by script:
+//
+//     use local kiln/model             // (from beside the kiln folder)
+//
+//     int main {
+//         scene S = load_glb "house.glb"
+//         part Roof = cone_part 8, 1.5, 1.0
+//         Roof.Name = "roof"
+//         Roof.move_all 0, 2, 0
+//         S.Parts.add Roof
+//         S.save_glb "house.glb"
+//     }
+//
+// Distances are in metres, y is up, and -z is forward, as in the world
+// library. A face's corners go round counterclockwise, seen from the side
+// it faces.
+
+use math
+use bytes
+use json
+use files
+
+const double HALF_TURN = 3.141592653589793   // (pi: half a turn, in radians)
+
+// a corner: where it is, from the part's own middle
+struct point3 {
+	double X
+	double Y
+	double Z
+}
+
+// ---- a part: a mesh of its own, named, coloured, somewhere
+
+object part {
+	str Name
+	str Color                       // "#rrggbb", as a screen shows it
+	list point3 Points              // its corners
+	list list int Faces             // each face, its corners in turn (3 or more)
+	double AtX                      // where it is in the scene
+	double AtY
+	double AtZ
+
+	// ---- corners and faces
+
+	// a corner, at X, Y, Z: its number
+	int add_point double Px, double Py, double Pz {
+		Points.add point3{Px, Py, Pz}
+		return (int)Points.length - 1
+	}
+
+	// a face of these corners (3 or more, in turn): its number
+	int add_face const list int &Corners {
+		Faces.add Corners.copy
+		return (int)Faces.length - 1
+	}
+
+	// the way face F faces: its corners' cross products added up (Newell's
+	// way: right for any face, even one not quite flat), a metre long
+	point3 normal_of int F const {
+		double Nx = 0
+		double Ny = 0
+		double Nz = 0
+		int Count = (int)Faces[F].length
+		for I in Count {
+			point3 A = Points[Faces[F][I]]
+			point3 B = Points[Faces[F][(I + 1) % Count]]
+			Nx += (A.Y - B.Y) * (A.Z + B.Z)
+			Ny += (A.Z - B.Z) * (A.X + B.X)
+			Nz += (A.X - B.X) * (A.Y + B.Y)
+		}
+		double Long = sqrt Nx * Nx + Ny * Ny + Nz * Nz
+		if Long < 0.000000001 {
+			return point3{0, 1, 0}
+		}
+		return point3{Nx / Long, Ny / Long, Nz / Long}
+	}
+
+	// the middle of some corners (0, 0, 0 for none)
+	point3 middle_of const list int &Corners const {
+		point3 Sum = {0, 0, 0}
+		for C in Corners {
+			Sum.X += Points[C].X
+			Sum.Y += Points[C].Y
+			Sum.Z += Points[C].Z
+		}
+		if Corners.length > 0 {
+			Sum.X /= Corners.length
+			Sum.Y /= Corners.length
+			Sum.Z /= Corners.length
+		}
+		return Sum
+	}
+
+	// every corner's number: 0, 1, 2 ...
+	list int all_points const {
+		list int All
+		for I in Points.length {
+			All.add (int)I
+		}
+		return All
+	}
+
+	// each edge once: two corners each, the smaller first
+	list int edges const {
+		list int Pairs
+		lookup str bool Seen
+		for Face in Faces {
+			for I in Face.length {
+				int A = Face[I]
+				int B = Face[(I + 1) % Face.length]
+				if A > B {
+					int T = A
+					A = B
+					B = T
+				}
+				str Key = A.text + " " + B.text
+				if !Seen.contains(Key) {
+					Seen[Key] = true
+					Pairs.add A
+					Pairs.add B
+				}
+			}
+		}
+		return Pairs
+	}
+
+	// its faces as triangles, for drawing: Out's points (x, y, z each)
+	// and three of them a triangle; each face a fan from its first corner
+	void triangles_into list double &Out, list int &Tris const {
+		for P in Points {
+			Out.add P.X
+			Out.add P.Y
+			Out.add P.Z
+		}
+		for Face in Faces {
+			for I in 1 to Face.length - 2 {
+				Tris.add Face[0]
+				Tris.add Face[I]
+				Tris.add Face[I + 1]
+			}
+		}
+	}
+
+	// ---- moving, turning and scaling corners
+
+	void move_points const list int &Chosen, double Dx, double Dy, double Dz {
+		for C in Chosen {
+			Points[C].X += Dx
+			Points[C].Y += Dy
+			Points[C].Z += Dz
+		}
+	}
+
+	void move_all double Dx, double Dy, double Dz {
+		move_points all_points, Dx, Dy, Dz
+	}
+
+	// each of them Kx, Ky, Kz times as far from Middle (1: as it was)
+	void scale_points const list int &Chosen, double Kx, double Ky, double Kz, const point3 &Middle {
+		for C in Chosen {
+			Points[C].X = Middle.X + (Points[C].X - Middle.X) * Kx
+			Points[C].Y = Middle.Y + (Points[C].Y - Middle.Y) * Ky
+			Points[C].Z = Middle.Z + (Points[C].Z - Middle.Z) * Kz
+		}
+	}
+
+	// turned Degrees round an axis ("x", "y" or "z") through Middle:
+	// counterclockwise, looking from that axis's far end back at it
+	void turn_points const list int &Chosen, const str &Axis, double Degrees, const point3 &Middle {
+		double A = Degrees * HALF_TURN / 180
+		double C = cos A
+		double S = sin A
+		for I in Chosen {
+			double X = Points[I].X - Middle.X
+			double Y = Points[I].Y - Middle.Y
+			double Z = Points[I].Z - Middle.Z
+			if Axis == "x" {
+				Points[I].Y = Middle.Y + Y * C - Z * S
+				Points[I].Z = Middle.Z + Y * S + Z * C
+			} else if Axis == "y" {
+				Points[I].X = Middle.X + X * C + Z * S
+				Points[I].Z = Middle.Z - X * S + Z * C
+			} else {
+				Points[I].X = Middle.X + X * C - Y * S
+				Points[I].Y = Middle.Y + X * S + Y * C
+			}
+		}
+	}
+
+	// ---- extruding
+
+	// the faces chosen, pulled away from the rest: their corners copied,
+	// the faces moved onto the copies, and a side (four corners) along
+	// each of their edges that isn't between two of them. The new corners
+	// are returned, to move (the editor moves them along the faces' way).
+	list int extrude const list int &Chosen {
+		lookup str int Copy
+		list int Corners
+		for F in Chosen {
+			for C in Faces[F] {
+				if !Copy.contains(C.text) {
+					Copy[C.text] = -1
+					Corners.add C
+				}
+			}
+		}
+		list int Made
+		for C in Corners {
+			Copy[C.text] = add_point Points[C].X, Points[C].Y, Points[C].Z
+			Made.add Copy[C.text]
+		}
+		lookup str bool Inside            // "a b": an edge, a to b, of a chosen face
+		for F in Chosen {
+			int Count = (int)Faces[F].length
+			for I in Count {
+				Inside[Faces[F][I].text + " " + Faces[F][(I + 1) % Count].text] = true
+			}
+		}
+		list list int Sides
+		for F in Chosen {
+			int Count = (int)Faces[F].length
+			for I in Count {
+				int A = Faces[F][I]
+				int B = Faces[F][(I + 1) % Count]
+				if !Inside.contains(B.text + " " + A.text) {
+					list int Side = {A, B, Copy[B.text], Copy[A.text]}   // (round outwards, as the face goes)
+					Sides.add Side.copy
+				}
+			}
+		}
+		for F in Chosen {
+			for I in Faces[F].length {
+				Faces[F][I] = Copy[Faces[F][I].text]
+			}
+		}
+		for Side in Sides {
+			Faces.add Side.copy
+		}
+		return Made
+	}
+
+	// the faces' way, together: the editor pulls an extrusion along it
+	point3 normal_of_faces const list int &Chosen const {
+		point3 Sum = {0, 0, 0}
+		for F in Chosen {
+			point3 N = normal_of F
+			Sum.X += N.X
+			Sum.Y += N.Y
+			Sum.Z += N.Z
+		}
+		double Long = sqrt Sum.X * Sum.X + Sum.Y * Sum.Y + Sum.Z * Sum.Z
+		if Long < 0.000000001 {
+			return point3{0, 1, 0}
+		}
+		return point3{Sum.X / Long, Sum.Y / Long, Sum.Z / Long}
+	}
+
+	// ---- taking away, and joining
+
+	// these corners gone, and every face that used one of them
+	void delete_points const list int &Chosen {
+		lookup str bool Gone
+		for C in Chosen {
+			Gone[C.text] = true
+		}
+		list list int Kept
+		for Face in Faces {
+			bool Keep = true
+			for C in Face {
+				if Gone.contains C.text {
+					Keep = false
+				}
+			}
+			if Keep {
+				Kept.add Face.copy
+			}
+		}
+		Faces = Kept
+		drop_points Gone
+	}
+
+	// these faces gone, and the corners only they used
+	void delete_faces const list int &Chosen {
+		lookup str bool Gone
+		for F in Chosen {
+			Gone[F.text] = true
+		}
+		list list int Kept
+		for I in Faces.length {
+			if !Gone.contains(I.text) {
+				Kept.add Faces[I].copy
+			}
+		}
+		Faces = Kept
+		lookup str bool Used
+		for Face in Faces {
+			for C in Face {
+				Used[C.text] = true
+			}
+		}
+		lookup str bool Unused
+		for I in Points.length {
+			if !Used.contains(I.text) {
+				Unused[I.text] = true
+			}
+		}
+		drop_points Unused
+	}
+
+	// the corners named in Gone taken out, and the faces' numbers for the
+	// rest counted again
+	void drop_points const lookup str bool &Gone {
+		lookup str int Now
+		list point3 Kept
+		for I in Points.length {
+			if !Gone.contains(I.text) {
+				Now[I.text] = (int)Kept.length
+				Kept.add Points[I]
+			}
+		}
+		Points = Kept
+		for F in Faces.length {
+			for I in Faces[F].length {
+				Faces[F][I] = Now[Faces[F][I].text]
+			}
+		}
+	}
+
+	// these corners made one, at their middle; faces left with fewer than
+	// three corners go
+	void merge_points const list int &Chosen {
+		if Chosen.length < 2 {
+			return
+		}
+		point3 Middle = middle_of Chosen
+		int Into = Chosen[0]
+		Points[Into] = Middle
+		lookup str bool Gone
+		for C in Chosen {
+			if C != Into {
+				Gone[C.text] = true
+			}
+		}
+		list list int Kept
+		for Face in Faces {
+			list int Corners
+			for C in Face {
+				int Now = C
+				if Gone.contains C.text {
+					Now = Into
+				}
+				if Corners.length == 0 || Corners[Corners.length - 1] != Now {
+					Corners.add Now
+				}
+			}
+			int Last = (int)Corners.length - 1
+			if Last > 0 && Corners[0] == Corners[Last] {
+				Corners.remove_at Last
+			}
+			if Corners.length >= 3 {
+				Kept.add Corners.copy
+			}
+		}
+		Faces = Kept
+		drop_points Gone
+	}
+
+	// ---- its own copy
+
+	part copy const {
+		part Other
+		Other.Name = Name.copy
+		Other.Color = Color.copy
+		Other.Points = Points.copy
+		Other.Faces = Faces.copy
+		Other.AtX = AtX
+		Other.AtY = AtY
+		Other.AtZ = AtZ
+		return Other
+	}
+}
+
+// ---- shapes to begin with, each a metre or so across, its middle at 0, 0, 0
+
+part cube_part double Size
+part plane_part double Size
+part grid_part int Across, double Size
+part cylinder_part int Sides, double Radius, double Height
+part cone_part int Sides, double Radius, double Height
+part sphere_part int Rings, int Sides, double Radius
+
+// the parts written as a .glb file (meshes, their colours and places)
+void save_parts_glb const list part &Parts, const str &Path
+
+// ---- a scene: all the parts, and what's been done (to undo)
+
+object scene {
+	list part Parts
+	list list part Before           // (each time something's changed, how it was)
+
+	// how it is now, kept, before something's changed (to undo it)
+	void keep {
+		list part Now
+		for P in Parts {
+			Now.add P.copy
+		}
+		Before.add Now
+		if Before.length > 100 {
+			Before.remove_at 0
+		}
+	}
+
+	// back to how it was before the last change (false: nothing to undo)
+	bool undo {
+		if Before.length == 0 {
+			return false
+		}
+		Parts = Before.take_last
+		return true
+	}
+
+	// the part called Name (-1: none)
+	int part_named const str &Name const {
+		for I in Parts.length {
+			if Parts[I].Name == Name {
+				return (int)I
+			}
+		}
+		return -1
+	}
+
+	// a name not taken yet: "cube", or "cube.2", "cube.3" ...
+	str free_name const str &Name const {
+		if part_named(Name) < 0 {
+			return Name.copy
+		}
+		int N = 2
+		while part_named(Name + "." + N.text) >= 0 {
+			N++
+		}
+		return Name + "." + N.text
+	}
+
+	// written as a .glb file (meshes, their colours and places)
+	void save_glb const str &Path const {
+		save_parts_glb Parts, Path
+	}
+}
+
+// a .glb file, read: each mesh a part (its triangles, joined again into
+// the faces they were where Kiln wrote them), its colour and place
+scene load_glb const str &Path
+
+// "#rrggbb" and the three numbers, 0 to 1, a .glb file keeps for it (as
+// light is: a screen's colours are brighter than the light they show)
+list double light_of const str &Color
+str color_of double R, double G, double B

@@ -161,6 +161,7 @@ changing for.
 | 1.54.0 | 28 November | Cabby Quest in 3D, part 40: the isle, sailed to from the coast with the sailor, over the sea; sea gulls in its tall grass |
 | 1.55.0 | 28 November | Cabby Quest in 3D, part 41: the forester, lost in the Deep Forest, found; his thanks, and his store, selling Cabbyballs for denarii |
 | 1.56.0 | 28 November | For Kiln, a 3D modeller in Cabby: `world`'s shapes of your own (`add_mesh`, `set_mesh`), lines (`add_line`), where a place is in the window (`screen_x`, `screen_y`), the mouse's buttons as keys and its wheel; `bytes`'s 4-byte floats |
+| 1.57.0 | 28 November | Kiln, stage 2: its model, in Cabby (`apps/kiln/model`): parts of corners and faces, six shapes to begin with, moving, turning, scaling, extruding, merging, deleting, undo; `.glb` files written and read |
 
 ---
 
@@ -2507,6 +2508,17 @@ buttons read as keys (`key_hold "mouse left"`) and its wheel
 reads and writes 4-byte floats (`float_at`, `add_float`), as `.glb`
 files keep their numbers. `tests/world/mesh.cby` checks them, drawn by
 Cabby and by OpenGL alike.
+
+*Version 1.57.0, Kiln, stage 2:* `apps/kiln/model.hby` and `model.cby`,
+the model, in Cabby, with no window: a scene of parts, each of corners
+and faces of any number of corners; a cube, plane, grid, cylinder, cone
+and sphere; corners moved, turned and scaled, faces extruded, corners
+merged, corners and faces deleted, and undo. `.glb` files are written
+(each face flat, its colour, its place; turned round, as the world
+library turns a model) and read (corners in one place made one again,
+a face's triangles joined back into it), in Cabby, with `bytes`'s floats
+and `json`. Any Cabby program can use it to make or change a model:
+Kiln's scripting. `tests/run_kiln_tests.sh` runs its tests.
 
 ## Along the way (dates not recorded)
 

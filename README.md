@@ -17,7 +17,7 @@ cabby --check     prog.cby              type- and ownership-check only
 cabby --style     prog.cby              list names and calls that don't follow STYLE.md
 cabby --dump-ast  prog.cby              print the syntax tree
 cabby --dump-tokens prog.cby            print the token stream
-cabby --version                         which Cabby this is: "Cabby 1.56.0 (2026-11-28)"
+cabby --version                         which Cabby this is: "Cabby 1.57.0 (2026-11-28)"
 cabby --license                         Cabby's license (MIT)
 ```
 
@@ -1239,7 +1239,7 @@ Run `cabby` with no file to type Cabby a piece at a time:
 
 ```
 $ cabby
-Cabby 1.56.0 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
+Cabby 1.57.0 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
 Cabby comes with ABSOLUTELY NO WARRANTY, under the MIT License; "cabby.license" for details.
 >>> int add int a, int b {
 ... 	return a + b

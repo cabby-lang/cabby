@@ -153,10 +153,10 @@ is in Python. In `apps/kiln/`.
 - [x] The ground, in the libraries: shapes of your own (`add_mesh`,
   `set_mesh`), lines, where a place is in the window, the mouse's buttons
   and wheel; `bytes`'s floats. *Done (1.56.0).*
-- [ ] The model, in Cabby: corners and faces; a cube, plane, cylinder,
+- [x] The model, in Cabby: corners and faces; a cube, plane, cylinder,
   cone, sphere and grid; moving, turning and scaling what's chosen,
   extruding, adding a corner, a face from corners, merging, deleting,
-  undo; `.glb` read and written.
+  undo; `.glb` read and written. *Done (1.57.0): `apps/kiln/model`.*
 - [ ] The editor: orbiting, panning and zooming the view; a grid; objects,
   and editing one (Tab); corners, edges, faces; G, R, S, with X, Y, Z;
   E to extrude; Shift-A to add; Ctrl-S, Ctrl-Z.
