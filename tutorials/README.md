@@ -1,6 +1,6 @@
 # Cabby tutorials
 
-*For Cabby 1.44.0 (2026-11-28).*
+*For Cabby 1.45.0 (2026-11-28).*
 
 A hundred and six short programs, each about one keyword, feature or library, in
 an order where each uses only what came before it. Each one
@@ -297,6 +297,7 @@ between `{` and `}` to run them as one input and see them as a program would. (`
 | 135 | `135-quest-3d-things.cby` | Cabby Quest in 3D, part 28: things from your models: a double bed, a fire in the oven, long tables, yachts at anchor, and campfires, lighting the dark |
 | 136 | `136-quest-3d-forest.cby` | Cabby Quest in 3D, part 29: the Deep Forest, through a gap at the top of the woods, dim, its tall grass right across it again and again; and Pinewood beyond it, whose innkeeper heals |
 | 137 | `137-quest-3d-farm.cby` | Cabby Quest in 3D, part 30: a farm in the meadow (a thatched barn, an oak and cypresses) and the forester's store in Pinewood, from your models |
+| 138 | `138-quest-3d-fly.cby` | Cabby Quest in 3D, part 31: flying, with a bird in the party, to any town been to; and the campfires' light, kept with them over a map's edge |
 
 Every keyword in the language appears in at least one tutorial. The manual's
 appendices and the main README (installed as

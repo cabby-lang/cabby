@@ -75,6 +75,9 @@
 //   plant <col>,<row> <tiles>                (3D, tutorial 137 on) as lay,
 //                                            for trees: an oak (k), a
 //                                            cypress (y)
+//   fly <col>,<row>                          (3D, tutorial 138 on) a town
+//                                            to fly to, once it's been to,
+//                                            landing there
 //   wild <kind> <chance>                     (3D, tutorial 130 on) <kind> is
 //                                            met in the tall grass here, as
 //                                            often as <chance> is of all
@@ -111,6 +114,7 @@ watch 8,1 elder
 sign 16,8 Cabby Town. The bakery is the house to the west.
 sign 16,5 The door is locked.
 3d way 16,5 home 6,7
+3d fly 16,7
 3d rest 11,4
 way 4,5 bakery 6,7
 person 11,3 elder down wanders

@@ -149,6 +149,7 @@ changing for.
 | 1.42.0 | 28 November | Cabby Quest in 3D, part 28: things from your models (a double bed, a fire in the oven, long tables, yachts) and campfires; `tools/prepare-model.py` measures and fits a model, and makes its pictures smaller |
 | 1.43.0 | 28 November | Cabby Quest in 3D, part 29: the Deep Forest, dim, its tall grass across it again and again; Pinewood beyond it, whose innkeeper heals; paths that go on beyond a map's edge; the hero facing on, after a wild battle |
 | 1.44.0 | 28 November | Cabby Quest in 3D, part 30: a farm in the meadow (the barn, an oak, cypresses) and a store in Pinewood (the old building), from your models; `tools/prepare-model.py --only`, and measuring from every point |
+| 1.45.0 | 28 November | Cabby Quest in 3D, part 31: flying, with a hill crow in the party, to any town been to; campfires' light kept with them over a map's edge (parts 28 to 30 too) |
 
 ---
 
@@ -2399,6 +2400,15 @@ any size; trees sway as the others do. New `build` and `plant` lines.
 of the pack), lists a model's parts, and measures from every point of
 it (the barn's file had its lowest point wrong, and floated). Part 27's
 credits show the new models.
+
+*Version 1.45.0, Cabby Quest in 3D, part 31 (your idea, and a fix from
+your playing):* tutorial 138, and chapter 138 of the manual. With a hill
+crow in the party, the menu's "Fly" lists the towns been to (`fly`
+lines, kept in the saved game as they're visited): a crow carries the
+hero up out of sight, and the fade sets them down there. And a
+campfire's glow stayed where its area was first made: walking over an
+edge into an area with one, its light was left behind. The fires' lamps
+are moved with the rest now, in parts 28, 29 and 30 as well.
 
 ## Along the way (dates not recorded)
 
