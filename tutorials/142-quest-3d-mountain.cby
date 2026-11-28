@@ -6849,12 +6849,11 @@ int main {
 
 // (Cabby's tests: from a saved game (quest-saves/142-mountain.json): the
 // hero in the meadow, on the road east; along it, onto the mountain, and
-// up its stairs on the west (climbing east), round on the first level to
-// its stairs on the east (climbing west), up, round on the second to the
-// stairs on the north (climbing south, behind a cliff), and up to the
-// top:)
+// up its stairs on the west (climbing east); round on the first level to
+// its stairs on the north (climbing south, behind a cliff), up; and on
+// the second, the stairs on the north again, up to the top:)
 // saved: quest-saves/142-mountain.json Cabby Quest 3D
-// script: frames 60; tap right; frames 3; tap space; frames 120; hold right; frames 172; release right; frames 14; hold up; frames 68; release up; frames 14; hold right; frames 212; release right; frames 14; hold down; frames 84; release down; frames 14; hold left; frames 36; release left; frames 14; hold up; frames 68; release up; frames 14; hold left; frames 84; release left; frames 14; hold down; frames 36; release down; frames 14; close
+// script: frames 60; tap right; frames 3; tap space; frames 120; hold right; frames 124; release right; frames 14; hold up; frames 84; release up; frames 14; hold right; frames 52; release right; frames 14; hold down; frames 36; release down; frames 14; hold right; frames 20; release right; frames 14; hold down; frames 36; release down; frames 14; close
 //
 // Try this:
 //  - Make a mountain of your own, five levels high, and its stairs.
@@ -6876,44 +6875,19 @@ int main {
 //> at 1 7
 //> at 2 7
 //> at 3 7
-//> at 4 7
-//> at 5 7
 //> up high
-//> at 6 7
-//> at 6 6
-//> at 6 5
-//> at 6 4
+//> at 3 6
+//> at 3 5
+//> at 3 4
+//> at 3 3
+//> at 3 2
+//> at 4 2
+//> at 5 2
+//> at 6 2
 //> at 6 3
-//> at 7 3
-//> at 8 3
-//> at 9 3
-//> at 10 3
-//> at 11 3
-//> at 12 3
-//> at 13 3
-//> at 14 3
-//> at 15 3
-//> at 16 3
-//> at 17 3
-//> at 18 3
-//> at 19 3
-//> at 19 4
-//> at 19 5
-//> at 19 6
-//> at 19 7
-//> at 19 8
-//> at 18 8
-//> at 17 8
+//> at 6 4
 //> up to level 2
-//> at 17 7
-//> at 17 6
-//> at 17 5
-//> at 17 4
-//> at 16 4
-//> at 15 4
-//> at 14 4
-//> at 13 4
-//> at 12 4
-//> at 12 5
-//> at 12 6
+//> at 7 4
+//> at 7 5
+//> at 7 6
 //> up to level 3

@@ -9,6 +9,7 @@
 //> distance: 5.0
 //> coins: 3, touching the walker: 1
 //> removed, and the slots again: true true false 5.0
+//> listed as added: 3.0 4.0
 //> unjoined, and left: false
 //> camera: 0.0 1.6 6.0, angle 0.0, tilt 0.0
 //> looking at 6, 1.6, 0: angle 315.0
@@ -100,6 +101,14 @@ object tester : world.window {
 		Old.move_to 0, 0, 0
 		Leg.move_to 0, 0, 0
 		println "removed, and the slots again:", Old.removed, Leg.removed, New.removed, New.x
+		world.shape A = add_box 1, 1, 1, "white", 1, 0, 1
+		world.shape B = add_box 1, 1, 1, "white", 2, 0, 2
+		A.remove
+		B.remove
+		world.shape First = add_box 1, 1, 1, "white", 3, 0, 3   // (in B's slot, the later)
+		world.shape Second = add_box 1, 1, 1, "white", 4, 0, 4  // (in A's, the earlier)
+		list world.shape All = shapes_in ""
+		println "listed as added:", All[All.length - 2].x, All[All.length - 1].x
 		world.shape Wheel = add_ball 0.2, "black", 5, 0, 5
 		Wheel.join New
 		Wheel.unjoin

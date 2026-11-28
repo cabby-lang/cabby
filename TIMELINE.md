@@ -154,6 +154,7 @@ changing for.
 | 1.47.0 | 28 November | Cabby Quest in 3D, part 33: running, with Shift; the one following runs after the hero until it's caught up |
 | 1.48.0 | 28 November | Cabby Quest in 3D, part 34: over the world, flying all the way, no fade; a map of where each area is; the treetops between the woods and Pinewood |
 | 1.49.0 | 28 November | Cabby Quest in 3D, part 35: a mountain east of the meadow, three levels high, stairs on every side climbing whichever way; the camera rising over a cliff |
+| 1.50.0 | 28 November | Cabby Quest in 3D, part 36: the whole world round the town on the title; no shadows high up; the mountain joined to the coast. `shapes_in` lists shapes in the order they were added, even in removed ones' places (the flight back from Pinewood) |
 
 ---
 
@@ -2441,6 +2442,17 @@ mountain: ground at levels (digits on its map), and stairs that climb
 towards whichever side is higher, so they're climbed towards the camera,
 across, or away from it, behind a cliff; there, the camera rises to see
 over. New map words `open`, `signpost` and `mount`.
+
+*Version 1.50.0, Cabby Quest in 3D, part 36 (from your playing):*
+tutorial 143, and chapter 143 of the manual. Flying back from Pinewood,
+Pinewood went blank and the hero landed among stray trees: the world
+library's `shapes_in` listed shapes by their place, and a removed
+shape's place is used again, so the flight moved the wrong ones. It
+lists them in the order they were added now, as it said (and
+`tests/world/api.cby` checks). The title shows the whole world round the
+town, the coast and the mountain too; flying, there are no shadows high
+up; and the mountain goes on south to the coast, the beach down its
+east side (part 35's test walks the new mountain).
 
 ## Along the way (dates not recorded)
 
