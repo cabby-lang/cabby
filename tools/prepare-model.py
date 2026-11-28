@@ -4,7 +4,7 @@
     tools/prepare-model.py IN.glb OUT.glb [--scale S] [--turn DEGREES]
         [--lift Y] [--forward Z] [--rename OLD=NEW ...] [--keep NAME ...]
         [--still NEW=OLD ...] [--color MATERIAL=#rrggbb ...]
-        [--height H] [--center] [--pictures PIXELS]
+        [--height H] [--center] [--pictures PIXELS] [--only NODE]
 
   --scale S         made S times as big
   --turn DEGREES    turned round, to its left (as `turn` turns a shape):
@@ -20,6 +20,8 @@
                     model with only a walk can stand still with it (idle)
   --height H        made H metres tall (instead of --scale), its feet at 0
   --center          its middle, seen from above, where it's put (0, 0)
+  --only NODE       only that part of it (a node, by name, and what hangs
+                    from it), where it stands: one tree of a pack of them
   --pictures PIXELS its pictures made no bigger than that, across or down
                     (with Pillow: pip install pillow), so the file's smaller
   --color MATERIAL=#rrggbb
@@ -224,10 +226,11 @@ def local_matrix(node):
                     multiply(r, [sx, 0, 0, 0, 0, sy, 0, 0, 0, 0, sz, 0, 0, 0, 0, 1]))
 
 
-def bounds(gltf):
+def bounds(gltf, binary):
     """the box round its meshes, as they're placed in its scene (as made:
     a skinned one's bones, as they stand, aren't counted): (lowest x, y, z),
-    (highest x, y, z); or None, with no meshes"""
+    (highest x, y, z); or None, with no meshes. From every point of them
+    (a file's own lowest and highest can be wrong)"""
     lo, hi = [float('inf')] * 3, [float('-inf')] * 3
 
     def visit(i, parent):
@@ -236,14 +239,17 @@ def bounds(gltf):
         if 'mesh' in node:
             for q in gltf['meshes'][node['mesh']]['primitives']:
                 acc = gltf['accessors'][q['attributes']['POSITION']]
-                a, b = acc['min'], acc['max']
-                for cx in (a[0], b[0]):
-                    for cy in (a[1], b[1]):
-                        for cz in (a[2], b[2]):
-                            p = [m[k] * cx + m[4 + k] * cy + m[8 + k] * cz + m[12 + k] for k in range(3)]
-                            for k in range(3):
-                                lo[k] = min(lo[k], p[k])
-                                hi[k] = max(hi[k], p[k])
+                if acc.get('componentType') != 5126 or 'bufferView' not in acc:
+                    continue
+                v = gltf['bufferViews'][acc['bufferView']]
+                stride = v.get('byteStride', 12)
+                start = v.get('byteOffset', 0) + acc.get('byteOffset', 0)
+                for i in range(acc['count']):
+                    cx, cy, cz = struct.unpack_from('<3f', binary, start + i * stride)
+                    p = [m[k] * cx + m[4 + k] * cy + m[8 + k] * cz + m[12 + k] for k in range(3)]
+                    for k in range(3):
+                        lo[k] = min(lo[k], p[k])
+                        hi[k] = max(hi[k], p[k])
         for c in node.get('children', []):
             visit(c, m)
     for i in gltf['scenes'][gltf.get('scene', 0)]['nodes']:
@@ -273,6 +279,44 @@ def smaller_pictures(gltf, binary, most):
         picture.save(out, 'JPEG' if jpeg else 'PNG', **({'quality': 88} if jpeg else {'optimize': True}))
         data = out.getvalue()
         img['bufferView'] = add_view(gltf, binary, data)   # (the old one's left out, as it's used no more)
+
+
+def keep_only(gltf, name):
+    """the scene only that node (and what hangs from it), placed as it was:
+    a new root, with the matrix of all that was above it"""
+    nodes = gltf['nodes']
+    found = [i for i, n in enumerate(nodes) if n.get('name') == name]
+    if not found:
+        sys.exit(f'no part named "{name}"')
+    parent = {c: i for i, n in enumerate(nodes) for c in n.get('children', [])}
+    above = []
+    i = found[0]
+    while i in parent:
+        i = parent[i]
+        above.append(i)
+    m = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]
+    for i in reversed(above):
+        m = multiply(m, local_matrix(nodes[i]))
+    nodes.append({'name': 'above ' + name, 'matrix': m, 'children': [found[0]]})
+    gltf['scenes'][gltf.get('scene', 0)]['nodes'] = [len(nodes) - 1]
+    # (the rest, left out of the scene, is left out of the file too)
+    used, todo = set(), [len(nodes) - 1]
+    while todo:
+        i = todo.pop()
+        used.add(i)
+        todo += nodes[i].get('children', [])
+    for i, n in enumerate(nodes):
+        if i not in used:
+            n.pop('mesh', None)
+            n.pop('children', None)
+    meshes, renumbered = [], {}
+    for n in nodes:
+        if 'mesh' in n:
+            if n['mesh'] not in renumbered:
+                renumbered[n['mesh']] = len(meshes)
+                meshes.append(gltf['meshes'][n['mesh']])
+            n['mesh'] = renumbered[n['mesh']]
+    gltf['meshes'] = meshes
 
 
 def fill_animations(gltf, binary):
@@ -314,6 +358,7 @@ def main():
     p.add_argument('--height', type=float, default=0)
     p.add_argument('--center', action='store_true')
     p.add_argument('--pictures', type=int, default=0)
+    p.add_argument('--only', default='')
     a = p.parse_args()
     gltf, binary = read_glb(a.input)
     if not a.output:
@@ -324,7 +369,10 @@ def main():
         for anim in gltf.get('animations', []):
             end = max(gltf['accessors'][s['input']].get('max', [0])[0] for s in anim['samplers'])
             print(f'  animation "{anim.get("name", "")}": {end:.2f} seconds')
-        box = bounds(gltf)
+        parts = [n.get('name', '') for n in gltf.get('nodes', []) if 'mesh' not in n and n.get('children')]
+        if len(parts) > 1:
+            print(f'  parts (for --only): {", ".join(parts)}')
+        box = bounds(gltf, binary)
         if box:
             lo, hi = box
             print(f'  size: {hi[0] - lo[0]:.2f} across, {hi[1] - lo[1]:.2f} high, {hi[2] - lo[2]:.2f} deep '
@@ -363,10 +411,12 @@ def main():
         gltf['animations'] = [x for x in gltf.get('animations', []) if x.get('name') in a.keep]
         if not gltf['animations']:
             del gltf['animations']
+    if a.only:
+        keep_only(gltf, a.only)
     if a.pictures:
         smaller_pictures(gltf, binary, a.pictures)
     fill_animations(gltf, binary)
-    box = bounds(gltf)
+    box = bounds(gltf, binary)
     if a.height and box:
         a.scale = a.height / (box[1][1] - box[0][1])
     if (a.height or a.center) and box:

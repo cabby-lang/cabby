@@ -87,13 +87,14 @@ what's still to come has the detail.*
   *Done (1.39.0, tutorial 132): the baker (the casual woman), the farmer
   (the bearded man), the traveller (the low-poly man). The low-poly
   woman's sportswear didn't suit the baker; the dude isn't used yet.*
-- [ ] Buildings and things from your models: the barn, the old building,
+- [x] Buildings and things from your models: the barn, the old building,
   the double bed (the hero's home), a fire (the bakery's oven, a camp
   fire); the yacht for the coast's boats; a few trees from the tree pack
   (split into a file each).
   - [x] *The double bed, the fire (the oven, campfires), the yacht, and
     the long table. Done (1.42.0, tutorial 135).*
-  - [ ] *The barn, the old building, and trees from the tree pack.*
+  - [x] *The barn, the old building, and trees from the tree pack. Done
+    (1.44.0, tutorial 137): a farm in the meadow, and Pinewood's store.*
   - [ ] *Make the big pictures smaller first: the bus station (5 MB), the
     old house (17 MB).*
     *(`tools/prepare-model.py --pictures 1024` does it now, 1.42.0.)*

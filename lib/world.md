@@ -226,7 +226,9 @@ its animations, and `--still idle=walk` (a model with only a walk can
 stand still with its first moment), and `--color MATERIAL=#rrggbb`
 (one of its materials made a color: a baker's clothes white), and
 `--pictures 512` (its pictures no bigger than that: a smaller file; it
-needs Pillow, `pip install pillow`). It also
+needs Pillow, `pip install pillow`), and `--only NAME` (only one part of
+it, where it stands: one tree from a pack of them; the parts are listed
+when it's given only the model). It also
 makes every animation move
 every bone that any of them moves, so one played after another never
 leaves a leg where the last put it, and keeps only what's used, so the
