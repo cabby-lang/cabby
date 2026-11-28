@@ -150,6 +150,7 @@ changing for.
 | 1.43.0 | 28 November | Cabby Quest in 3D, part 29: the Deep Forest, dim, its tall grass across it again and again; Pinewood beyond it, whose innkeeper heals; paths that go on beyond a map's edge; the hero facing on, after a wild battle |
 | 1.44.0 | 28 November | Cabby Quest in 3D, part 30: a farm in the meadow (the barn, an oak, cypresses) and a store in Pinewood (the old building), from your models; `tools/prepare-model.py --only`, and measuring from every point |
 | 1.45.0 | 28 November | Cabby Quest in 3D, part 31: flying, with a hill crow in the party, to any town been to; campfires' light kept with them over a map's edge (parts 28 to 30 too) |
+| 1.46.0 | 28 November | Cabby Quest in 3D, part 32: the flight, seen: up over the town, the land below, and down out of the sky over the other town |
 
 ---
 
@@ -2409,6 +2410,14 @@ hero up out of sight, and the fade sets them down there. And a
 campfire's glow stayed where its area was first made: walking over an
 edge into an area with one, its light was left behind. The fires' lamps
 are moved with the rest now, in parts 28, 29 and 30 as well.
+
+*Version 1.46.0, Cabby Quest in 3D, part 32 (your goal):* tutorial 139,
+and chapter 139 of the manual. Flying is seen now: the camera rises with
+the crow and the hero, the town and the areas round it shrinking below,
+over land as far as can be seen; the crow glides off into the fade, and
+at the other end comes down out of the sky over the town, sets the hero
+down and flies off. Four stages counted in frames, eased in and out.
+"Fly" is only offered outside.
 
 ## Along the way (dates not recorded)
 

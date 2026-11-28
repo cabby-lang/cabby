@@ -1,6 +1,6 @@
 # The Cabby Manual
 
-*For Cabby 1.45.0 (2026-11-28).*
+*For Cabby 1.46.0 (2026-11-28).*
 
 A book for learning Cabby one idea at a time, and a reference to come back
 to afterwards.
@@ -244,6 +244,7 @@ int main {
 136. [The deep forest](#chapter-136-the-deep-forest): a new area, and a new town, made only of their files; light made dimmer, not dark; someone who does something when talked to; a path that goes on beyond the map
 137. [A farm, and a store](#chapter-137-a-farm-and-a-store): buildings that are models, each over a block of tiles; trees that are models, swaying; one model each from a pack of them
 138. [Flying](#chapter-138-flying): a choice there only when something's true; a list of places, grown as they're visited; a model carrying the hero up and away; firelight kept where its fire is
+139. [The flight](#chapter-139-the-flight): a journey in stages, counted in frames; easing in and out; a camera that rises with what it follows; land as far as can be seen
 
 **[Appendices](#appendices)**
 
@@ -19075,7 +19076,75 @@ its light was left where the area had been made. Now they're moved too
   down, rather than the fade's ending with them there.
 * Let a bigger bird carry the hero further, and only it fly to Pinewood.
 
-[← Chapter 137](#chapter-137-a-farm-and-a-store) · [Contents](#contents) · [Appendices →](#appendices)
+[← Chapter 137](#chapter-137-a-farm-and-a-store) · [Contents](#contents) · [Chapter 139 →](#chapter-139-the-flight)
+
+### Chapter 139: The flight
+
+*Program: `139-quest-3d-flight.cby`, the hero carried, and seen. Libraries: `use world`, `use files`, `use math`, `use json`, `use directories`, `use sound`.*
+
+Part 31's crow carried the hero up out of sight, and the fade did the
+rest. Now the camera goes up with them: the town, and the areas round
+it, shrink below; the crow glides off over the land, into the fade; and
+at the other end it comes down out of the sky over the town, from the
+south, sets the hero on their feet, and flaps off ahead until it's gone.
+
+#### A journey in stages
+
+The flight is four stages, one after another, each so many frames long
+(138.1): `RISE`, `GLIDE`, `DESCEND` and `LET_GO`. `FlyFrame` counts on
+through all four, and `fly_on` (139.4) asks which stage it's in by where
+the count has got to: up to `RISE`, rising; up to `RISE + GLIDE`,
+gliding; and so on. The last frame of the glide is when the other town
+is built (`set_down_over_town`, 139.5), in the dark, with the hero put
+back up in the sky over it, and the crow with them (`add_carrier`,
+139.1: a new crow, as building an area takes everything away).
+
+The fade is the light going down over the glide's last `FADE_FRAMES`,
+and up over the descent's first (`fade_over`): the same light as going
+through a door (109.16), but counted by the flight.
+
+#### Easing
+
+Rising, the hero doesn't jump to full speed, nor stop dead at the top:
+`ease` (139.3) turns how far along a stage is, from 0 to 1, into how far
+they've got, slow at both ends and fastest in the middle:
+
+```cabby
+double ease double Done {
+	return Done * Done * (3 - 2 * Done)
+}
+```
+
+At 0 it's 0, at 1 it's 1, at a half a half; but near either end it hardly
+moves. Coming down, `1 - ease(...)` of the height is left, so they slow
+as they settle.
+
+#### The camera, up with them
+
+`look_at_hero` (108.17) adds `Lift`, how high they are, to the camera's
+height and how far behind it is, and looks further ahead the higher they
+go: walking, `Lift` is 0, and it's as it always was.
+
+#### Land as far as can be seen
+
+From up there, the edge of the ground under the areas (109.9) would show,
+and the sky under it. So while flying, `add_far_land` (139.2) lays a
+field six hundred metres across, a little darker, just under it, and
+woods on it here and there, far off: flattened balls, in the group
+`"far"`, taken away again once the hero is down.
+
+And the menu's "Fly" is there only outside now (`!Inside`): not from in
+a house, or a cave.
+
+#### Try this
+
+* Fly higher and further, for Pinewood (it's further away): `GLIDE`
+  longer for it than for Cabby Town.
+* Let the crow circle the town once before it comes down.
+* Put clouds up there (big white balls, flattened), for the hero to fly
+  through on the way.
+
+[← Chapter 138](#chapter-138-flying) · [Contents](#contents) · [Appendices →](#appendices)
 
 ---
 ## Appendices
@@ -19135,7 +19204,7 @@ Run `cabby` with no file to type Cabby a piece at a time:
 
 ```text
 $ cabby
-Cabby 1.45.0 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
+Cabby 1.46.0 interactive session. Type statements and declarations; "exit" to finish, "cabby.help" for more.
 Cabby comes with ABSOLUTELY NO WARRANTY, under the MIT License; "cabby.license" for details.
 >>> int add int a, int b {
 ... 	return a + b
